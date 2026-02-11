@@ -95,6 +95,8 @@ class AmenityPoint:
     lat: float
     lon: float
     categories: tuple[str, ...]
+    name: str
+    opening_hours: str
 
 
 AMENITY_RULES: tuple[AmenityRule, ...] = (
@@ -112,6 +114,7 @@ AMENITY_RULES: tuple[AmenityRule, ...] = (
     AmenityRule("park", (("leisure", "park"),)),
     AmenityRule("ice_cream", (("amenity", "ice_cream"),)),
 )
+AMENITY_EXAMPLES_PER_STATION = 12
 
 
 def parse_args() -> argparse.Namespace:
@@ -630,6 +633,67 @@ def classify_tags(tags: dict[str, Any]) -> list[str]:
     return matched
 
 
+def normalize_optional_text(value: Any) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip()
+    if not text:
+        return ""
+    # Collapse whitespace to keep popup payload compact and readable.
+    return re.sub(r"\s+", " ", text)
+
+
+def build_amenity_example(
+    *,
+    category: str,
+    name: str,
+    opening_hours: str,
+    distance_m: float | None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "category": category,
+    }
+    if name:
+        payload["name"] = name
+    if opening_hours:
+        payload["opening_hours"] = opening_hours
+    if distance_m is not None:
+        payload["distance_m"] = int(round(max(0.0, distance_m)))
+    return payload
+
+
+def limit_amenity_examples(examples: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def sort_key(item: dict[str, Any]) -> tuple[int, str, str]:
+        distance = item.get("distance_m")
+        distance_int = int(distance) if isinstance(distance, (int, float)) else 10_000_000
+        category = str(item.get("category", ""))
+        name = str(item.get("name", ""))
+        return (distance_int, category, name.lower())
+
+    ranked = sorted(examples, key=sort_key)
+    if len(ranked) <= AMENITY_EXAMPLES_PER_STATION:
+        return ranked
+    return ranked[:AMENITY_EXAMPLES_PER_STATION]
+
+
+def encode_amenity_examples(examples: list[dict[str, Any]]) -> str:
+    return json.dumps(examples, ensure_ascii=False, separators=(",", ":"))
+
+
+def decode_amenity_examples(raw: Any) -> list[dict[str, Any]]:
+    if isinstance(raw, list):
+        return [item for item in raw if isinstance(item, dict)]
+    if not isinstance(raw, str) or not raw:
+        return []
+    try:
+        payload = json.loads(raw)
+        if isinstance(payload, list):
+            return [item for item in payload if isinstance(item, dict)]
+    except json.JSONDecodeError:
+        return []
+    return []
+
+
 def resolve_amenity_backend(requested: str, osm_pbf_path: Path) -> str:
     if requested == AMENITY_BACKEND_AUTO:
         if osm_pbf_path.exists():
@@ -824,11 +888,16 @@ def collect_amenity_points_from_pbf(
             if cell_key(lat, lon, coarse_lat_step, coarse_lon_step) not in station_cells:
                 return
 
+            name = normalize_optional_text(tags.get("name"))
+            opening_hours = normalize_optional_text(tags.get("opening_hours"))
+
             self.points.append(
                 AmenityPoint(
                     lat=lat,
                     lon=lon,
                     categories=tuple(categories),
+                    name=name,
+                    opening_hours=opening_hours,
                 )
             )
             if source == "node":
@@ -880,6 +949,8 @@ def collect_amenity_points_from_pbf(
                     lat=lat,
                     lon=lon,
                     categories=tuple(categories),
+                    name=normalize_optional_text(way.tags.get("name")),
+                    opening_hours=normalize_optional_text(way.tags.get("opening_hours")),
                 )
             )
             self.ways_kept += 1
@@ -919,7 +990,7 @@ def lookup_amenities(
     lat: float,
     lon: float,
     radius_m: int,
-) -> dict[str, int]:
+) -> tuple[dict[str, int], list[dict[str, Any]]]:
     query = build_overpass_query(lat, lon, radius_m)
     response = request_with_retries(
         "POST",
@@ -932,6 +1003,8 @@ def lookup_amenities(
 
     counts: dict[str, int] = {f"amenity_{rule.key}": 0 for rule in AMENITY_RULES}
     seen: set[tuple[str, int, str]] = set()
+    seen_examples: set[tuple[str, int, str]] = set()
+    examples: list[dict[str, Any]] = []
 
     for element in payload.get("elements", []):
         if not isinstance(element, dict):
@@ -945,6 +1018,21 @@ def lookup_amenities(
             continue
 
         categories = classify_tags(tags)
+        name = normalize_optional_text(tags.get("name"))
+        opening_hours = normalize_optional_text(tags.get("opening_hours"))
+
+        elem_lat: float | None = None
+        elem_lon: float | None = None
+        if isinstance(element.get("lat"), (int, float)) and isinstance(element.get("lon"), (int, float)):
+            elem_lat = float(element["lat"])
+            elem_lon = float(element["lon"])
+        else:
+            center = element.get("center")
+            if isinstance(center, dict):
+                if isinstance(center.get("lat"), (int, float)) and isinstance(center.get("lon"), (int, float)):
+                    elem_lat = float(center["lat"])
+                    elem_lon = float(center["lon"])
+
         for cat in categories:
             marker = (elem_type, elem_id, cat)
             if marker in seen:
@@ -952,7 +1040,24 @@ def lookup_amenities(
             seen.add(marker)
             counts[f"amenity_{cat}"] += 1
 
-    return counts
+            example_marker = (elem_type, elem_id, cat)
+            if example_marker in seen_examples:
+                continue
+            seen_examples.add(example_marker)
+
+            distance_m: float | None = None
+            if elem_lat is not None and elem_lon is not None:
+                distance_m = haversine_distance_m(lat, lon, elem_lat, elem_lon)
+            examples.append(
+                build_amenity_example(
+                    category=cat,
+                    name=name,
+                    opening_hours=opening_hours,
+                    distance_m=distance_m,
+                )
+            )
+
+    return counts, limit_amenity_examples(examples)
 
 
 def enrich_with_amenities_overpass(
@@ -986,6 +1091,7 @@ def enrich_with_amenities_overpass(
 
     df["amenities_total"] = 0
     df["amenities_source"] = ""
+    df["amenity_examples"] = "[]"
 
     total_rows = len(df)
     started = time.monotonic()
@@ -1041,6 +1147,7 @@ def enrich_with_amenities_overpass(
 
         if use_cache:
             counts = cache_entry.get("counts", {})
+            examples = decode_amenity_examples(cache_entry.get("examples", ""))
             cache_hits += 1
             source = "cache"
         else:
@@ -1049,9 +1156,10 @@ def enrich_with_amenities_overpass(
                 deferred += 1
                 source = "deferred"
                 counts = {col: 0 for col in amenity_columns}
+                examples = []
             else:
                 try:
-                    counts = lookup_amenities(
+                    counts, examples = lookup_amenities(
                         session,
                         lat=float(row["lat"]),
                         lon=float(row["lon"]),
@@ -1060,6 +1168,7 @@ def enrich_with_amenities_overpass(
                     source = "live"
                 except Exception:
                     counts = {col: 0 for col in amenity_columns}
+                    examples = []
                     source = "error"
                     lookup_errors += 1
 
@@ -1070,6 +1179,7 @@ def enrich_with_amenities_overpass(
                     "checked_at": now.isoformat(),
                     "radius_m": radius_m,
                     "counts": counts,
+                    "examples": examples,
                 }
 
                 if overpass_delay_ms > 0:
@@ -1082,6 +1192,7 @@ def enrich_with_amenities_overpass(
         total = int(sum(int(counts.get(col, 0)) for col in amenity_columns))
         df.at[idx, "amenities_total"] = total
         df.at[idx, "amenities_source"] = source
+        df.at[idx, "amenity_examples"] = encode_amenity_examples(examples)
         emit_progress(idx + 1)
 
     if total_rows == 0:
@@ -1125,6 +1236,7 @@ def enrich_with_amenities_osm_pbf(
 
     df["amenities_total"] = 0
     df["amenities_source"] = "osm-pbf"
+    df["amenity_examples"] = "[]"
 
     total_rows = len(df)
     if total_rows == 0:
@@ -1233,13 +1345,23 @@ def enrich_with_amenities_osm_pbf(
                 candidate_indices.update(point_grid.get((lat_idx + d_lat, lon_idx + d_lon), []))
 
         counts = {col: 0 for col in amenity_columns}
+        examples: list[dict[str, Any]] = []
         for point_idx in candidate_indices:
             point = points[point_idx]
-            if haversine_distance_m(lat, lon, point.lat, point.lon) > radius_m:
+            distance_m = haversine_distance_m(lat, lon, point.lat, point.lon)
+            if distance_m > radius_m:
                 continue
             for category in point.categories:
                 key = f"amenity_{category}"
                 counts[key] += 1
+                examples.append(
+                    build_amenity_example(
+                        category=category,
+                        name=point.name,
+                        opening_hours=point.opening_hours,
+                        distance_m=distance_m,
+                    )
+                )
 
         for col in amenity_columns:
             value = int(counts.get(col, 0))
@@ -1247,6 +1369,7 @@ def enrich_with_amenities_osm_pbf(
 
         total = int(sum(int(counts.get(col, 0)) for col in amenity_columns))
         df.at[idx, "amenities_total"] = total
+        df.at[idx, "amenity_examples"] = encode_amenity_examples(limit_amenity_examples(examples))
         emit_progress(idx + 1)
 
     stats = {
@@ -1330,6 +1453,7 @@ def dataframe_to_geojson(df: pd.DataFrame, source_meta: dict[str, Any]) -> dict[
             "address": row["address"],
             "amenities_total": int(row["amenities_total"]),
             "amenities_source": row["amenities_source"],
+            "amenity_examples": decode_amenity_examples(row.get("amenity_examples", "[]")),
         }
 
         for rule in AMENITY_RULES:

@@ -174,6 +174,13 @@ button:disabled {
   text-decoration: none;
 }
 
+.popup-amenity-examples {
+  margin: 0.4rem 0 0.55rem;
+  color: #2f3c38;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
 @media (max-width: 980px) {
   .controls {
     grid-template-columns: 1fr 1fr;

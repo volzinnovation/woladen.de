@@ -70,6 +70,7 @@ function createMarker(feature) {
     .map((key) => `${AMENITY_LABELS[key]}: ${p[key]}`)
     .slice(0, 6)
     .join("<br>");
+  const amenityExamples = renderAmenityExamples(p.amenity_examples);
 
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
   const popupHtml = `
@@ -78,6 +79,7 @@ function createMarker(feature) {
     Leistung: ${Math.round(Number(p.max_power_kw || 0))} kW<br>
     Amenities gesamt: ${p.amenities_total || 0}<br>
     ${amenitySummary || "Keine Details"}<br>
+    ${amenityExamples}
     <a class="popup-link" href="${mapsUrl}" target="_blank" rel="noreferrer">Externe Navigation</a>
   `;
 
@@ -88,6 +90,40 @@ function createMarker(feature) {
   });
 
   return marker;
+}
+
+function renderAmenityExamples(rawExamples) {
+  if (!Array.isArray(rawExamples) || rawExamples.length === 0) {
+    return "";
+  }
+
+  const lines = rawExamples
+    .filter((item) => item && typeof item === "object")
+    .slice(0, 8)
+    .map((item) => {
+      const category = String(item.category || "").trim();
+      const label = AMENITY_LABELS[`amenity_${category}`] || category || "Amenity";
+      const name = String(item.name || "").trim();
+      const opening = String(item.opening_hours || "").trim();
+      const distance = Number(item.distance_m);
+      const distanceText = Number.isFinite(distance) ? ` (~${Math.max(0, Math.round(distance))}m)` : "";
+
+      if (name && opening) {
+        return `• ${escapeHtml(label)}${distanceText}: ${escapeHtml(name)} (${escapeHtml(opening)})`;
+      }
+      if (name) {
+        return `• ${escapeHtml(label)}${distanceText}: ${escapeHtml(name)}`;
+      }
+      if (opening) {
+        return `• ${escapeHtml(label)}${distanceText}: ${escapeHtml(opening)}`;
+      }
+      return `• ${escapeHtml(label)}${distanceText}`;
+    });
+
+  if (lines.length === 0) {
+    return "";
+  }
+  return `<div class="popup-amenity-examples">${lines.join("<br>")}</div>`;
 }
 
 function renderOperatorOptions(operators) {
