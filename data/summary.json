@@ -1,17 +1,17 @@
 {
   "run": {
-    "started_at": "2026-02-11T20:29:11+00:00",
-    "finished_at": "2026-02-11T21:13:32+00:00"
+    "started_at": "2026-02-11T21:37:05+00:00",
+    "finished_at": "2026-02-11T23:22:19+00:00"
   },
   "source": {
     "source_url": "https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-01-28.csv",
-    "fetched_at": "2026-02-11T20:29:20.786548+00:00",
+    "fetched_at": "2026-02-11T21:38:03.789517+00:00",
     "bytes": 46811612,
     "content_type": "application/octet-stream"
   },
   "params": {
     "min_power_kw": 50.0,
-    "radius_m": 200,
+    "radius_m": 250,
     "amenity_backend": "osm-pbf",
     "query_budget": 500,
     "refresh_days": 30,
@@ -21,7 +21,7 @@
   "records": {
     "raw_rows": 106091,
     "fast_chargers_total": 16485,
-    "stations_with_amenities": 14442
+    "stations_with_amenities": 15006
   },
   "amenity_lookup": {
     "backend": "osm-pbf",
@@ -31,16 +31,16 @@
     "deferred": 0,
     "lookup_errors": 0,
     "cache_entries": 0,
-    "osm_pbf_path": "/Users/raphaelvolz/Github/woladen.de/data/germany-latest.osm.pbf",
+    "osm_pbf_path": "data/germany-latest.osm.pbf",
     "osm_pbf_bytes": 4696943259,
-    "osm_pbf_downloaded": false,
-    "osm_pbf_points": 327624,
-    "osm_pbf_grid_cells": 137912,
+    "osm_pbf_downloaded": true,
+    "osm_pbf_points": 333601,
+    "osm_pbf_grid_cells": 120047,
     "osm_pbf_nodes_seen": 428421303,
     "osm_pbf_ways_seen": 69448908,
     "osm_pbf_relations_seen": 880520,
-    "osm_pbf_nodes_kept": 202428,
-    "osm_pbf_ways_kept": 125196
+    "osm_pbf_nodes_kept": 205499,
+    "osm_pbf_ways_kept": 128102
   },
   "operators": {
     "min_stations": 100,
