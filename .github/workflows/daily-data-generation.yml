@@ -33,7 +33,8 @@ jobs:
             --radius-m 250 \
             --amenity-backend osm-pbf \
             --query-budget 500 \
-            --refresh-days 30
+            --refresh-days 30 \
+            --download-osm-pbf 
 
       - name: Commit generated artifacts
         run: |
