@@ -17,7 +17,8 @@ Fast chargers in Germany with nearby amenities from OpenStreetMap.
 - `scripts/build_site.py`: Creates deployable `site/` bundle.
 - `web/`: Frontend app (Leaflet + vanilla JS/CSS/HTML).
 - `data/`: Cached source and generated analytics outputs.
-- `.github/workflows/daily-data-and-pages.yml`: Daily build + GitHub Pages deploy.
+- `.github/workflows/daily-data-generation.yml`: Daily data generation + commit.
+- `.github/workflows/pages-deploy.yml`: GitHub Pages build + deploy.
 
 ## GitHub Setup
 
