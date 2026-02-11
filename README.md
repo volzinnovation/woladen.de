@@ -54,7 +54,7 @@ python scripts/build_site.py
 <!-- DATA_STATUS_START -->
 ## Data Build Status
 
-- Last build (UTC): `2026-02-11T13:30:16+00:00`
+- Last build (UTC): `2026-02-11T13:43:45+00:00`
 - Source: `https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-01-28.csv`
 - Fast chargers (>= 50.0 kW): `19816`
 - Chargers with >=1 nearby amenity: `0`
