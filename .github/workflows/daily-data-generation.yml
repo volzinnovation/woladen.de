@@ -30,7 +30,7 @@ jobs:
         run: |
           python scripts/build_data.py \
             --min-power-kw 50 \
-            --radius-m 100 \
+            --radius-m 250 \
             --amenity-backend auto \
             --query-budget 500 \
             --refresh-days 30
