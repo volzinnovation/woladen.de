@@ -52,6 +52,7 @@ README_START = "<!-- DATA_STATUS_START -->"
 README_END = "<!-- DATA_STATUS_END -->"
 
 AMENITY_SCHEMA_VERSION = 1
+CSV_ENCODINGS = ("utf-8-sig", "utf-8", "cp1252", "latin-1")
 
 
 @dataclass(frozen=True)
@@ -149,8 +150,19 @@ def to_float(series: pd.Series) -> pd.Series:
     return pd.to_numeric(clean, errors="coerce")
 
 
-def detect_header_row(csv_path: Path) -> int:
-    with csv_path.open("r", encoding="utf-8", errors="replace") as handle:
+def detect_csv_encoding(csv_path: Path) -> str:
+    sample = csv_path.read_bytes()[:256_000]
+    for encoding in CSV_ENCODINGS:
+        try:
+            sample.decode(encoding)
+            return encoding
+        except UnicodeDecodeError:
+            continue
+    return "latin-1"
+
+
+def detect_header_row(csv_path: Path, encoding: str) -> int:
+    with csv_path.open("r", encoding=encoding, errors="replace") as handle:
         for idx, line in enumerate(handle):
             if idx > 80:
                 break
@@ -253,13 +265,29 @@ def fetch_bnetza_csv(session: requests.Session, cache_path: Path, meta_path: Pat
 
 
 def load_raw_dataframe(path: Path) -> pd.DataFrame:
-    header_row = detect_header_row(path)
+    sample = path.read_bytes()[:8_192]
+    sample_lower = sample.lower()
+
+    if sample.startswith(b"PK\x03\x04"):
+        raise RuntimeError(
+            "BNetzA source appears to be XLSX/ZIP instead of CSV. "
+            "Please provide/download the CSV endpoint."
+        )
+
+    if b"<html" in sample_lower or b"<!doctype html" in sample_lower:
+        raise RuntimeError(
+            "BNetzA source appears to be HTML instead of CSV. "
+            "The download URL likely changed or returned an error page."
+        )
+
+    encoding = detect_csv_encoding(path)
+    header_row = detect_header_row(path, encoding=encoding)
     df = pd.read_csv(
         path,
         sep=";",
         skiprows=header_row,
         dtype=str,
-        encoding="utf-8",
+        encoding=encoding,
         engine="python",
         on_bad_lines="skip",
     )
