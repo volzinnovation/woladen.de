@@ -54,11 +54,11 @@ python scripts/build_site.py
 <!-- DATA_STATUS_START -->
 ## Data Build Status
 
-- Last build (UTC): `bootstrap-placeholder`
-- Source: `bootstrap-placeholder`
-- Fast chargers (>= 50 kW): `0`
+- Last build (UTC): `2026-02-11T13:30:16+00:00`
+- Source: `https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-01-28.csv`
+- Fast chargers (>= 50.0 kW): `19816`
 - Chargers with >=1 nearby amenity: `0`
-- Overpass queries this run: `0` (cache hits: `0`, deferred: `0`)
+- Overpass queries this run: `0` (cache hits: `0`, deferred: `19816`)
 
 Generated files:
 - `data/bnetza_cache.csv`
