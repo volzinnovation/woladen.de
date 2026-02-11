@@ -5,6 +5,7 @@ Fast chargers in Germany with nearby amenities from OpenStreetMap.
 ## What This Repo Does
 
 - Ingests the official Bundesnetzagentur charging registry.
+  Source discovery starts from the BNetzA E-Mobilitaet start page (`Downloads und Formulare`) and selects the newest CSV/XLSX link.
 - Filters to active chargers with at least `50 kW` nominal power.
 - Enriches each charger with nearby amenities (`100m` radius) from OSM Overpass.
 - Publishes a mobile-ready static web map with filters (operator + amenities).

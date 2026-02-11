@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import html
 import json
 import re
 import time
@@ -21,17 +22,21 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin, urlparse
 
 import pandas as pd
 import requests
 
-BNETZA_INDEX_URL = (
-    "https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/"
-    "ElektrizitaetundGas/E-Mobilitaet/"
+BNETZA_START_URL = (
+    "https://www.bundesnetzagentur.de/DE/Fachthemen/ElektrizitaetundGas/"
+    "E-Mobilitaet/start.html"
 )
-BNETZA_CSV_FALLBACKS = [
+BNETZA_FILE_FALLBACKS = [
     "https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/"
     "ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA.csv",
+    "https://data.bundesnetzagentur.de/Bundesnetzagentur/SharedDocs/Downloads/DE/"
+    "Sachgebiete/Energie/Unternehmen_Institutionen/E_Mobilitaet/"
+    "Ladesaeulenregister_BNetzA.xlsx",
     "https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/"
     "ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-01-28.csv",
 ]
@@ -59,6 +64,13 @@ CSV_ENCODINGS = ("utf-8-sig", "utf-8", "cp1252", "latin-1")
 class AmenityRule:
     key: str
     selectors: tuple[tuple[str, str], ...]
+
+
+@dataclass(frozen=True)
+class DownloadCandidate:
+    url: str
+    filetype: str
+    date_token: str
 
 
 AMENITY_RULES: tuple[AmenityRule, ...] = (
@@ -200,31 +212,74 @@ def request_with_retries(
     raise RuntimeError("retry loop terminated unexpectedly")
 
 
-def discover_latest_bnetza_csv(session: requests.Session) -> str | None:
-    try:
-        response = request_with_retries("GET", BNETZA_INDEX_URL, session, timeout=25)
-    except requests.RequestException:
-        return None
+def extract_download_candidates(html_text: str) -> list[DownloadCandidate]:
+    scopes: list[str] = []
+    for match in re.finditer(r"downloads?\s+und\s+formulare", html_text, flags=re.IGNORECASE):
+        start = max(0, match.start() - 2000)
+        end = min(len(html_text), match.end() + 20000)
+        scopes.append(html_text[start:end])
 
-    links = re.findall(r"Ladesaeulenregister_BNetzA_(\d{4}-\d{2}-\d{2})\.csv", response.text)
-    if not links:
-        return None
+    if not scopes:
+        scopes = [html_text]
 
-    newest = max(links)
-    return (
-        "https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/"
-        f"ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_{newest}.csv"
+    href_pattern = re.compile(r"""href\s*=\s*(["'])(.*?)\1""", re.IGNORECASE | re.DOTALL)
+    seen: set[str] = set()
+    candidates: list[DownloadCandidate] = []
+
+    for scope in scopes:
+        for _, raw_href in href_pattern.findall(scope):
+            decoded_href = html.unescape(raw_href.strip())
+            absolute_url = urljoin(BNETZA_START_URL, decoded_href)
+            parsed = urlparse(absolute_url)
+            path_lower = parsed.path.lower()
+
+            if "ladesaeulenregister" not in path_lower:
+                continue
+
+            if path_lower.endswith(".csv"):
+                filetype = "csv"
+            elif path_lower.endswith(".xlsx"):
+                filetype = "xlsx"
+            else:
+                continue
+
+            if absolute_url in seen:
+                continue
+            seen.add(absolute_url)
+
+            date_match = re.search(r"(20\d{2}-\d{2}-\d{2})", absolute_url)
+            date_token = date_match.group(1) if date_match else ""
+            candidates.append(
+                DownloadCandidate(
+                    url=absolute_url,
+                    filetype=filetype,
+                    date_token=date_token,
+                )
+            )
+
+    candidates.sort(
+        key=lambda c: (c.date_token, c.filetype == "csv", c.url),
+        reverse=True,
     )
+    return candidates
+
+
+def discover_latest_bnetza_downloads(session: requests.Session) -> list[str]:
+    try:
+        response = request_with_retries("GET", BNETZA_START_URL, session, timeout=25)
+    except requests.RequestException:
+        return []
+
+    candidates = extract_download_candidates(response.text)
+    return [candidate.url for candidate in candidates]
 
 
 def fetch_bnetza_csv(session: requests.Session, cache_path: Path, meta_path: Path) -> dict[str, Any]:
     cache_path.parent.mkdir(parents=True, exist_ok=True)
 
     candidate_urls: list[str] = []
-    discovered = discover_latest_bnetza_csv(session)
-    if discovered:
-        candidate_urls.append(discovered)
-    candidate_urls.extend(BNETZA_CSV_FALLBACKS)
+    candidate_urls.extend(discover_latest_bnetza_downloads(session))
+    candidate_urls.extend(BNETZA_FILE_FALLBACKS)
 
     errors: list[str] = []
 
@@ -237,6 +292,7 @@ def fetch_bnetza_csv(session: requests.Session, cache_path: Path, meta_path: Pat
                 "source_url": url,
                 "fetched_at": utc_now().isoformat(),
                 "bytes": len(content),
+                "content_type": response.headers.get("content-type", ""),
             }
             meta_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
             return metadata
@@ -264,19 +320,40 @@ def fetch_bnetza_csv(session: requests.Session, cache_path: Path, meta_path: Pat
     )
 
 
+def detect_header_row_excel(xlsx_path: Path) -> int:
+    preview = pd.read_excel(
+        xlsx_path,
+        sheet_name=0,
+        header=None,
+        dtype=str,
+    )
+    max_rows = min(80, len(preview))
+    for idx in range(max_rows):
+        row_text = ";".join(str(value) for value in preview.iloc[idx].tolist() if pd.notna(value))
+        norm = normalize_text(row_text)
+        if "breitengrad" in norm and "laengengrad" in norm:
+            return idx
+    return 0
+
+
 def load_raw_dataframe(path: Path) -> pd.DataFrame:
     sample = path.read_bytes()[:8_192]
     sample_lower = sample.lower()
 
     if sample.startswith(b"PK\x03\x04"):
-        raise RuntimeError(
-            "BNetzA source appears to be XLSX/ZIP instead of CSV. "
-            "Please provide/download the CSV endpoint."
+        header_row = detect_header_row_excel(path)
+        df = pd.read_excel(
+            path,
+            sheet_name=0,
+            header=header_row,
+            dtype=str,
         )
+        df = df.dropna(axis=1, how="all")
+        return df
 
     if b"<html" in sample_lower or b"<!doctype html" in sample_lower:
         raise RuntimeError(
-            "BNetzA source appears to be HTML instead of CSV. "
+            "BNetzA source appears to be HTML instead of CSV/XLSX. "
             "The download URL likely changed or returned an error page."
         )
 
