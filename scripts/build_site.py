@@ -14,6 +14,7 @@ SITE_DATA_DIR = SITE_DIR / "data"
 
 REQUIRED_DATA = [
     "chargers_fast.geojson",
+    "operators.json",
     "summary.json",
 ]
 

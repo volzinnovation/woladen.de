@@ -90,11 +90,7 @@ function createMarker(feature) {
   return marker;
 }
 
-function renderOperatorOptions() {
-  const operators = Array.from(
-    new Set(state.features.map((f) => f.properties.operator || "Unbekannt"))
-  ).sort((a, b) => a.localeCompare(b));
-
+function renderOperatorOptions(operators) {
   operatorSelect.innerHTML = '<option value="">Alle Betreiber</option>';
   operators.forEach((operator) => {
     const option = document.createElement("option");
@@ -102,6 +98,21 @@ function renderOperatorOptions() {
     option.textContent = operator;
     operatorSelect.appendChild(option);
   });
+}
+
+function parseOperatorNames(payload) {
+  if (!payload || !Array.isArray(payload.operators)) {
+    return [];
+  }
+
+  const minStations = Number(payload.min_stations || 100);
+  const names = payload.operators
+    .filter((item) => item && typeof item.name === "string")
+    .filter((item) => Number(item.stations || 0) >= minStations)
+    .map((item) => item.name.trim())
+    .filter((name) => name.length > 0);
+
+  return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
 }
 
 function renderAmenityFilters() {
@@ -181,25 +192,38 @@ function setBuildMeta(geojson) {
 
 async function loadData() {
   try {
-    const response = await fetch("./data/chargers_fast.geojson", { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    const [geoResponse, operatorsResponse] = await Promise.all([
+      fetch("./data/chargers_fast.geojson", { cache: "no-store" }),
+      fetch("./data/operators.json", { cache: "no-store" }),
+    ]);
+
+    if (!geoResponse.ok) {
+      throw new Error(`chargers_fast.geojson HTTP ${geoResponse.status}`);
+    }
+    if (!operatorsResponse.ok) {
+      throw new Error(`operators.json HTTP ${operatorsResponse.status}`);
     }
 
-    const geojson = await response.json();
+    const [geojson, operatorsPayload] = await Promise.all([
+      geoResponse.json(),
+      operatorsResponse.json(),
+    ]);
+
     state.features = geojson.features || [];
+    const operators = parseOperatorNames(operatorsPayload);
 
     if (state.features.length === 0) {
       stats.textContent = "Keine Daten gefunden. Fuehre die Pipeline aus.";
       return;
     }
 
-    renderOperatorOptions();
+    renderOperatorOptions(operators);
     renderAmenityFilters();
     setBuildMeta(geojson);
     applyFilters();
   } catch (error) {
-    stats.textContent = "Daten konnten nicht geladen werden. Erwartet wird ./data/chargers_fast.geojson";
+    stats.textContent =
+      "Daten konnten nicht geladen werden. Erwartet werden ./data/chargers_fast.geojson und ./data/operators.json";
     buildMeta.textContent = String(error);
   }
 }

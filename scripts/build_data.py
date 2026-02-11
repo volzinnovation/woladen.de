@@ -51,6 +51,7 @@ AMENITY_CACHE_PATH = DATA_DIR / "osm_amenity_cache.json"
 FAST_CSV_PATH = DATA_DIR / "chargers_fast.csv"
 FAST_GEOJSON_PATH = DATA_DIR / "chargers_fast.geojson"
 SUMMARY_JSON_PATH = DATA_DIR / "summary.json"
+OPERATORS_JSON_PATH = DATA_DIR / "operators.json"
 RUN_HISTORY_PATH = DATA_DIR / "run_history.csv"
 
 README_START = "<!-- DATA_STATUS_START -->"
@@ -58,6 +59,7 @@ README_END = "<!-- DATA_STATUS_END -->"
 
 AMENITY_SCHEMA_VERSION = 1
 CSV_ENCODINGS = ("utf-8-sig", "utf-8", "cp1252", "latin-1")
+BNETZA_POWER_COLUMN_INDEX = 6  # 7th column in source file
 
 
 @dataclass(frozen=True)
@@ -113,6 +115,12 @@ def parse_args() -> argparse.Namespace:
         help="Optional cap for processed chargers (0 = no cap)",
     )
     parser.add_argument("--overpass-delay-ms", type=int, default=250)
+    parser.add_argument(
+        "--operator-min-stations",
+        type=int,
+        default=100,
+        help="Minimum station count per operator in the precomputed UI list",
+    )
     parser.add_argument("--force-refresh", action="store_true")
     return parser.parse_args()
 
@@ -389,16 +397,14 @@ def build_fast_charger_frame(raw_df: pd.DataFrame, min_power_kw: float) -> pd.Da
     if not lat_col or not lon_col:
         raise RuntimeError("Could not identify latitude/longitude columns in BNetzA CSV")
 
-    power_cols = [
-        col
-        for col in df.columns
-        if "nennleistung" in normalize_text(col) or "leistung" in normalize_text(col)
-    ]
-    if not power_cols:
-        raise RuntimeError("Could not identify power columns in BNetzA CSV")
-
-    numeric_power = pd.DataFrame({col: to_float(df[col]) for col in power_cols})
-    df["max_power_kw"] = numeric_power.max(axis=1, skipna=True)
+    if len(df.columns) <= BNETZA_POWER_COLUMN_INDEX:
+        raise RuntimeError(
+            "BNetzA CSV does not have a 7th column for power extraction "
+            f"(found {len(df.columns)} columns)"
+        )
+    power_col = df.columns[BNETZA_POWER_COLUMN_INDEX]
+    # to_float() explicitly normalizes comma decimals (e.g. \"150,0\" -> 150.0).
+    df["max_power_kw"] = to_float(df[power_col])
 
     df["lat"] = to_float(df[lat_col])
     df["lon"] = to_float(df[lon_col])
@@ -736,6 +742,31 @@ def dataframe_to_geojson(df: pd.DataFrame, source_meta: dict[str, Any]) -> dict[
     }
 
 
+def build_operator_list(df: pd.DataFrame, min_stations: int) -> dict[str, Any]:
+    normalized_operators = (
+        df["operator"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .replace("", "Unbekannt")
+    )
+    counts = normalized_operators.value_counts()
+    filtered = counts[counts >= int(min_stations)]
+
+    operators = [
+        {"name": operator, "stations": int(station_count)}
+        for operator, station_count in filtered.items()
+    ]
+    operators.sort(key=lambda item: (-item["stations"], item["name"].lower()))
+
+    return {
+        "generated_at": utc_now().isoformat(),
+        "min_stations": int(min_stations),
+        "total_operators": len(operators),
+        "operators": operators,
+    }
+
+
 def write_run_history(path: Path, summary: dict[str, Any]) -> None:
     fieldnames = [
         "timestamp",
@@ -796,6 +827,7 @@ def update_readme_status(readme_path: Path, summary: dict[str, Any]) -> None:
             "- `data/bnetza_cache.csv`",
             "- `data/chargers_fast.csv`",
             "- `data/chargers_fast.geojson`",
+            "- `data/operators.json`",
             "- `data/summary.json`",
             README_END,
         ]
@@ -862,6 +894,15 @@ def main() -> None:
         encoding="utf-8",
     )
 
+    operators_payload = build_operator_list(
+        enriched_df,
+        min_stations=args.operator_min_stations,
+    )
+    OPERATORS_JSON_PATH.write_text(
+        json.dumps(operators_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
     stations_with_amenities = int((enriched_df["amenities_total"] > 0).sum())
 
     summary = {
@@ -876,6 +917,7 @@ def main() -> None:
             "query_budget": args.query_budget,
             "refresh_days": args.refresh_days,
             "max_stations": args.max_stations,
+            "operator_min_stations": args.operator_min_stations,
         },
         "records": {
             "raw_rows": int(len(raw_df)),
@@ -883,6 +925,10 @@ def main() -> None:
             "stations_with_amenities": stations_with_amenities,
         },
         "amenity_lookup": amenity_stats,
+        "operators": {
+            "min_stations": int(args.operator_min_stations),
+            "listed_operators": int(operators_payload["total_operators"]),
+        },
     }
 
     SUMMARY_JSON_PATH.write_text(

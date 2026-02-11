@@ -1,0 +1,583 @@
+{
+  "generated_at": "2026-02-11T15:20:10.311908+00:00",
+  "min_stations": 10,
+  "total_operators": 144,
+  "operators": [
+    {
+      "name": "EnBW mobility+ AG und Co.KG",
+      "stations": 1954
+    },
+    {
+      "name": "EWE Go GmbH",
+      "stations": 879
+    },
+    {
+      "name": "Shell Deutschland GmbH",
+      "stations": 823
+    },
+    {
+      "name": "Pfalzwerke AG",
+      "stations": 749
+    },
+    {
+      "name": "Allego GmbH",
+      "stations": 676
+    },
+    {
+      "name": "BP Europa SE",
+      "stations": 668
+    },
+    {
+      "name": "Lidl Dienstleistung GmbH & Co. KG",
+      "stations": 605
+    },
+    {
+      "name": "Kaufland Dienstleistung GmbH & Co. KG",
+      "stations": 431
+    },
+    {
+      "name": "ALDI SÜD Immobilienverwaltungs-GmbH & Co. oHG",
+      "stations": 387
+    },
+    {
+      "name": "Vattenfall Smarter Living GmbH",
+      "stations": 318
+    },
+    {
+      "name": "Tesla Germany GmbH",
+      "stations": 301
+    },
+    {
+      "name": "E.ON Drive Infrastructure GmbH",
+      "stations": 297
+    },
+    {
+      "name": "Mer Germany GmbH",
+      "stations": 246
+    },
+    {
+      "name": "Citywatt GmbH",
+      "stations": 239
+    },
+    {
+      "name": "IONITY GmbH",
+      "stations": 224
+    },
+    {
+      "name": "TEAG Mobil GmbH",
+      "stations": 207
+    },
+    {
+      "name": "EDEKA-MIHA Charge GmbH",
+      "stations": 206
+    },
+    {
+      "name": "Comfortcharge GmbH",
+      "stations": 199
+    },
+    {
+      "name": "E.ON Drive GmbH",
+      "stations": 165
+    },
+    {
+      "name": "TotalEnergies Charging Solutions Deutschland GmbH",
+      "stations": 115
+    },
+    {
+      "name": "ALDI Nord Deutschland Stiftung & Co. KG",
+      "stations": 108
+    },
+    {
+      "name": "Autostrom plus GmbH",
+      "stations": 101
+    },
+    {
+      "name": "TankE GmbH",
+      "stations": 101
+    },
+    {
+      "name": "Circle K Deutschland GmbH",
+      "stations": 95
+    },
+    {
+      "name": "SachsenEnergie AG",
+      "stations": 95
+    },
+    {
+      "name": "Jolt Energy GmbH",
+      "stations": 89
+    },
+    {
+      "name": "amperio GmbH",
+      "stations": 85
+    },
+    {
+      "name": "enercity AG",
+      "stations": 81
+    },
+    {
+      "name": "JET Tankstellen Deutschland GmbH",
+      "stations": 77
+    },
+    {
+      "name": "Energie Südbayern GmbH",
+      "stations": 76
+    },
+    {
+      "name": "EAM Natur Energie GmbH",
+      "stations": 71
+    },
+    {
+      "name": "Hamburger Energiewerke Mobil GmbH",
+      "stations": 70
+    },
+    {
+      "name": "Westfalen AG",
+      "stations": 69
+    },
+    {
+      "name": "GreenCharge GmbH",
+      "stations": 68
+    },
+    {
+      "name": "Energielösung GmbH",
+      "stations": 67
+    },
+    {
+      "name": "Numbat GmbH",
+      "stations": 65
+    },
+    {
+      "name": "GP Joule Connect GmbH",
+      "stations": 64
+    },
+    {
+      "name": "Claus Heinemann Elektroanlagen GmbH",
+      "stations": 56
+    },
+    {
+      "name": "Westfalen Weser Ladeservice GmbH",
+      "stations": 56
+    },
+    {
+      "name": "Q1 Energie AG",
+      "stations": 55
+    },
+    {
+      "name": "Energie- und Wasserversorgung Bonn/Rhein-Sieg GmbH",
+      "stations": 52
+    },
+    {
+      "name": "Fastned Deutschland GmbH & Co. KG",
+      "stations": 52
+    },
+    {
+      "name": "Bilkraft GmbH",
+      "stations": 50
+    },
+    {
+      "name": "LEW Natur GmbH",
+      "stations": 50
+    },
+    {
+      "name": "MVV Energie AG",
+      "stations": 50
+    },
+    {
+      "name": "Mercedes-Benz High-Power Charging Europe GmbH",
+      "stations": 45
+    },
+    {
+      "name": "Stadtwerke Leipzig GmbH",
+      "stations": 45
+    },
+    {
+      "name": "Netto Marken-Discount Stiftung & Co. KG",
+      "stations": 43
+    },
+    {
+      "name": "NEW Niederrhein Energie und Wasser GmbH",
+      "stations": 43
+    },
+    {
+      "name": "team energie GmbH & Co. KG",
+      "stations": 42
+    },
+    {
+      "name": "Numbat Schnellladenetz GmbH & Co. KG",
+      "stations": 41
+    },
+    {
+      "name": "Präg Energiedienstleistungen GmbH & Co. KG",
+      "stations": 41
+    },
+    {
+      "name": "Stadtwerke Bochum GmbH",
+      "stations": 40
+    },
+    {
+      "name": "Backcharge GmbH",
+      "stations": 39
+    },
+    {
+      "name": "envia Mitteldeutsche Energie AG",
+      "stations": 39
+    },
+    {
+      "name": "Regioladen+ GmbH & Co.KG",
+      "stations": 39
+    },
+    {
+      "name": "naturenergie hochrhein AG",
+      "stations": 38
+    },
+    {
+      "name": "EWE Go HOCHTIEF Ladepartner GmbH & Co. KG",
+      "stations": 36
+    },
+    {
+      "name": "SMATRICS GmbH & Co KG",
+      "stations": 36
+    },
+    {
+      "name": "Allgäuer Überlandwerk GmbH",
+      "stations": 35
+    },
+    {
+      "name": "HomE of Mobility GmbH",
+      "stations": 35
+    },
+    {
+      "name": "Team-Emobility GmbH",
+      "stations": 35
+    },
+    {
+      "name": "BayWa Mobility Solutions GmbH",
+      "stations": 34
+    },
+    {
+      "name": "EnBW Ostwürttemberg DonauRies AG",
+      "stations": 34
+    },
+    {
+      "name": "Mainova AG",
+      "stations": 33
+    },
+    {
+      "name": "Fred Pfennings GmbH & Co. KG",
+      "stations": 29
+    },
+    {
+      "name": "mblty GmbH",
+      "stations": 29
+    },
+    {
+      "name": "Stadtwerke Lübeck Energie GmbH",
+      "stations": 29
+    },
+    {
+      "name": "BS|ENERGY, Braunschweiger Versorgungs-AG & Co. KG",
+      "stations": 27
+    },
+    {
+      "name": "STAWAG - Stadt- und Städteregionswerke Aachen AG",
+      "stations": 27
+    },
+    {
+      "name": "Ladegrün! eG",
+      "stations": 26
+    },
+    {
+      "name": "N-ERGIE Aktiengesellschaft",
+      "stations": 26
+    },
+    {
+      "name": "Stadtwerke Würzburg AG",
+      "stations": 26
+    },
+    {
+      "name": "Hahn Automobile GmbH & Co. KG",
+      "stations": 25
+    },
+    {
+      "name": "nvb smart GmbH",
+      "stations": 25
+    },
+    {
+      "name": "Plenitude On The Road  S.r.l.",
+      "stations": 25
+    },
+    {
+      "name": "Dortmunder Energie- und Wasserversorgung GmbH",
+      "stations": 23
+    },
+    {
+      "name": "Energieversorgung Mittelrhein AG",
+      "stations": 23
+    },
+    {
+      "name": "Glinicke Energie+Service GmbH",
+      "stations": 23
+    },
+    {
+      "name": "Ladestationen Südwest GmbH & Co. KG",
+      "stations": 22
+    },
+    {
+      "name": "Osnabrücker Parkstätten-Betriebsgesellschaft mbH",
+      "stations": 22
+    },
+    {
+      "name": "REWAG KG",
+      "stations": 22
+    },
+    {
+      "name": "Stark Energy GmbH",
+      "stations": 22
+    },
+    {
+      "name": "EW Eichsfeldgas GmbH",
+      "stations": 21
+    },
+    {
+      "name": "Audi AG",
+      "stations": 20
+    },
+    {
+      "name": "ESWE Versorgungs AG",
+      "stations": 20
+    },
+    {
+      "name": "Ladesonne GmbH & Co. KG",
+      "stations": 20
+    },
+    {
+      "name": "Sonnenstrom Saarpfalz OHG",
+      "stations": 20
+    },
+    {
+      "name": "Stadtwerke Düsseldorf AG",
+      "stations": 20
+    },
+    {
+      "name": "SÜC GmbH",
+      "stations": 20
+    },
+    {
+      "name": "Daimler Truck AG",
+      "stations": 19
+    },
+    {
+      "name": "eliso GmbH",
+      "stations": 19
+    },
+    {
+      "name": "SWM Versorgungs GmbH",
+      "stations": 19
+    },
+    {
+      "name": "Fraunhofer-Gesellschaft e. V.",
+      "stations": 18
+    },
+    {
+      "name": "Greenman Energy Operations GmbH & Co. KG",
+      "stations": 18
+    },
+    {
+      "name": "Städtische Werke AG",
+      "stations": 18
+    },
+    {
+      "name": "ESEL.CAB GmbH",
+      "stations": 17
+    },
+    {
+      "name": "Ladefix Wolfram Cüppers Einzelunternehmen",
+      "stations": 17
+    },
+    {
+      "name": "SolarLoader+ GmbH",
+      "stations": 17
+    },
+    {
+      "name": "Stadtwerke Ingolstadt Energie GmbH",
+      "stations": 17
+    },
+    {
+      "name": "Chargeforce GmbH & CO. KG",
+      "stations": 15
+    },
+    {
+      "name": "Electra Germany GmbH",
+      "stations": 15
+    },
+    {
+      "name": "Energieversorgung Gera GmbH",
+      "stations": 15
+    },
+    {
+      "name": "Eulektro GmbH",
+      "stations": 14
+    },
+    {
+      "name": "Evry Operations GmbH",
+      "stations": 14
+    },
+    {
+      "name": "NürnbergMesse GmbH",
+      "stations": 14
+    },
+    {
+      "name": "reon Infrastruktur GmbH & Co. KG",
+      "stations": 14
+    },
+    {
+      "name": "SWLB Mobilität GmbH",
+      "stations": 14
+    },
+    {
+      "name": "VWEW Kommunal GmbH",
+      "stations": 14
+    },
+    {
+      "name": "Berliner Stadtwerke KommunalPartner GmbH",
+      "stations": 13
+    },
+    {
+      "name": "e-con AG",
+      "stations": 13
+    },
+    {
+      "name": "EM1 GmbH",
+      "stations": 13
+    },
+    {
+      "name": "EnergieZukunft Hildesheim GmbH",
+      "stations": 13
+    },
+    {
+      "name": "SWU Energie GmbH",
+      "stations": 13
+    },
+    {
+      "name": "VIOCON GmbH",
+      "stations": 13
+    },
+    {
+      "name": "Entega Plus GmbH",
+      "stations": 12
+    },
+    {
+      "name": "Robert Bosch GmbH",
+      "stations": 12
+    },
+    {
+      "name": "smopi® - Multi Chargepoint Solution GmbH",
+      "stations": 12
+    },
+    {
+      "name": "Stadtwerke Stendal GmbH",
+      "stations": 12
+    },
+    {
+      "name": "Tank & Rast Entwicklungsgesellschaft mbH",
+      "stations": 12
+    },
+    {
+      "name": "17er Oberlandenergie GmbH",
+      "stations": 11
+    },
+    {
+      "name": "Autohaus Heermann und Rhein GmbH",
+      "stations": 11
+    },
+    {
+      "name": "deer GmbH",
+      "stations": 11
+    },
+    {
+      "name": "e-jIn GmbH",
+      "stations": 11
+    },
+    {
+      "name": "Eichberger Schiffservice GmbH",
+      "stations": 11
+    },
+    {
+      "name": "EWV Energie- und Wasser-Versorgung GmbH",
+      "stations": 11
+    },
+    {
+      "name": "Fraport AG",
+      "stations": 11
+    },
+    {
+      "name": "Lother GmbH",
+      "stations": 11
+    },
+    {
+      "name": "Midorion  GmbH & Co. KG",
+      "stations": 11
+    },
+    {
+      "name": "REA eCharge GmbH",
+      "stations": 11
+    },
+    {
+      "name": "Stadtwerke Kiel AG",
+      "stations": 11
+    },
+    {
+      "name": "SWS Energie GmbH",
+      "stations": 11
+    },
+    {
+      "name": "Thüga Energie GmbH",
+      "stations": 11
+    },
+    {
+      "name": "Verkehrsbetriebe Speyer GmbH",
+      "stations": 11
+    },
+    {
+      "name": "Bauer Energietechnik e.K.",
+      "stations": 10
+    },
+    {
+      "name": "Cut! Energy GmbH",
+      "stations": 10
+    },
+    {
+      "name": "Elektrizitätswerk Mittelbaden AG & Co. KG",
+      "stations": 10
+    },
+    {
+      "name": "Gemeindewerke Kiefersfelden",
+      "stations": 10
+    },
+    {
+      "name": "infra fürth service gmbh",
+      "stations": 10
+    },
+    {
+      "name": "schnellDC - Sabine Schmiemann",
+      "stations": 10
+    },
+    {
+      "name": "Stadtwerke Uelzen GmbH",
+      "stations": 10
+    },
+    {
+      "name": "SWN Stadtwerke Neumünster GmbH",
+      "stations": 10
+    },
+    {
+      "name": "SWP Stadtwerke Pforzheim GmbH&Co.KG",
+      "stations": 10
+    },
+    {
+      "name": "WEMAG AG",
+      "stations": 10
+    }
+  ]
+}

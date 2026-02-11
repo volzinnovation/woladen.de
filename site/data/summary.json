@@ -1,11 +1,11 @@
 {
   "run": {
-    "started_at": "2026-02-11T13:43:45+00:00",
-    "finished_at": "2026-02-11T13:44:01+00:00"
+    "started_at": "2026-02-11T15:19:56+00:00",
+    "finished_at": "2026-02-11T15:20:10+00:00"
   },
   "source": {
     "source_url": "https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-01-28.csv",
-    "fetched_at": "2026-02-11T13:43:56.231834+00:00",
+    "fetched_at": "2026-02-11T15:20:06.337243+00:00",
     "bytes": 46811612,
     "content_type": "application/octet-stream"
   },
@@ -14,19 +14,24 @@
     "radius_m": 100,
     "query_budget": 0,
     "refresh_days": 30,
-    "max_stations": 0
+    "max_stations": 0,
+    "operator_min_stations": 10
   },
   "records": {
     "raw_rows": 106091,
-    "fast_chargers_total": 19816,
+    "fast_chargers_total": 16485,
     "stations_with_amenities": 0
   },
   "amenity_lookup": {
     "queries_used": 0,
     "cache_hits": 0,
-    "cache_misses": 19816,
-    "deferred": 19816,
+    "cache_misses": 16485,
+    "deferred": 16485,
     "lookup_errors": 0,
     "cache_entries": 0
+  },
+  "operators": {
+    "min_stations": 10,
+    "listed_operators": 144
   }
 }
