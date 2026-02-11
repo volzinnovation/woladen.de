@@ -1,0 +1,21 @@
+{
+  "run": {
+    "started_at": "1970-01-01T00:00:00+00:00",
+    "finished_at": "1970-01-01T00:00:00+00:00"
+  },
+  "source": {
+    "source_url": "bootstrap-placeholder"
+  },
+  "records": {
+    "raw_rows": 0,
+    "fast_chargers_total": 0,
+    "stations_with_amenities": 0
+  },
+  "amenity_lookup": {
+    "queries_used": 0,
+    "cache_hits": 0,
+    "cache_misses": 0,
+    "deferred": 0,
+    "cache_entries": 0
+  }
+}
