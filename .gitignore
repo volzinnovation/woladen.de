@@ -8,3 +8,4 @@ __pycache__/
 # Local virtual envs
 .venv/
 venv/
+data/germany-latest.osm.pbf

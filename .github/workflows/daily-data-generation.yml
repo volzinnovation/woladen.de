@@ -3,7 +3,7 @@ name: Daily Data Generation
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 11 * * *"
+    - cron: "0 0 1 * *"
 
 permissions:
   contents: write
@@ -31,6 +31,7 @@ jobs:
           python scripts/build_data.py \
             --min-power-kw 50 \
             --radius-m 100 \
+            --amenity-backend auto \
             --query-budget 500 \
             --refresh-days 30
 

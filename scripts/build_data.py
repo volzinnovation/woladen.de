@@ -4,7 +4,7 @@
 Pipeline steps:
 1. Fetch latest BNetzA charging registry CSV (with local cache fallback).
 2. Filter to active fast chargers (>= min power).
-3. Enrich chargers with nearby OSM amenities via Overpass (with local cache).
+3. Enrich chargers with nearby OSM amenities via local Germany PBF or Overpass.
 4. Write derived CSV + GeoJSON + summary artifacts and update README status block.
 """
 
@@ -14,10 +14,14 @@ import argparse
 import csv
 import hashlib
 import html
+import importlib.util
 import json
+import math
 import re
+import sys
 import time
 import unicodedata
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -41,6 +45,7 @@ BNETZA_FILE_FALLBACKS = [
     "ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-01-28.csv",
 ]
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+OSM_GERMANY_PBF_URL = "https://download.geofabrik.de/europe/germany-latest.osm.pbf"
 
 DATA_DIR = Path("data")
 README_PATH = Path("README.md")
@@ -60,6 +65,16 @@ README_END = "<!-- DATA_STATUS_END -->"
 AMENITY_SCHEMA_VERSION = 1
 CSV_ENCODINGS = ("utf-8-sig", "utf-8", "cp1252", "latin-1")
 BNETZA_POWER_COLUMN_INDEX = 6  # 7th column in source file
+EARTH_RADIUS_M = 6_371_000.0
+
+AMENITY_BACKEND_OVERPASS = "overpass"
+AMENITY_BACKEND_OSM_PBF = "osm-pbf"
+AMENITY_BACKEND_AUTO = "auto"
+AMENITY_BACKEND_CHOICES = (
+    AMENITY_BACKEND_AUTO,
+    AMENITY_BACKEND_OVERPASS,
+    AMENITY_BACKEND_OSM_PBF,
+)
 
 
 @dataclass(frozen=True)
@@ -73,6 +88,13 @@ class DownloadCandidate:
     url: str
     filetype: str
     date_token: str
+
+
+@dataclass(frozen=True)
+class AmenityPoint:
+    lat: float
+    lon: float
+    categories: tuple[str, ...]
 
 
 AMENITY_RULES: tuple[AmenityRule, ...] = (
@@ -97,16 +119,26 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-power-kw", type=float, default=50.0)
     parser.add_argument("--radius-m", type=int, default=100)
     parser.add_argument(
+        "--amenity-backend",
+        type=str,
+        default=AMENITY_BACKEND_AUTO,
+        choices=AMENITY_BACKEND_CHOICES,
+        help=(
+            "Amenity lookup backend: auto=prefer local osm-pbf if file exists, "
+            "otherwise use overpass"
+        ),
+    )
+    parser.add_argument(
         "--query-budget",
         type=int,
         default=500,
-        help="Maximum new Overpass lookups per run (cache hits are free)",
+        help="Maximum new Overpass lookups per run (overpass backend only)",
     )
     parser.add_argument(
         "--refresh-days",
         type=int,
         default=30,
-        help="Refresh cached amenity lookups older than this many days",
+        help="Refresh cached amenity lookups older than this many days (overpass only)",
     )
     parser.add_argument(
         "--max-stations",
@@ -115,6 +147,35 @@ def parse_args() -> argparse.Namespace:
         help="Optional cap for processed chargers (0 = no cap)",
     )
     parser.add_argument("--overpass-delay-ms", type=int, default=250)
+    parser.add_argument(
+        "--osm-pbf-path",
+        type=str,
+        default=str(DATA_DIR / "germany-latest.osm.pbf"),
+        help="Path to local Germany OSM PBF file (used by osm-pbf backend)",
+    )
+    parser.add_argument(
+        "--osm-pbf-url",
+        type=str,
+        default=OSM_GERMANY_PBF_URL,
+        help="Download URL for Germany OSM PBF when --download-osm-pbf is enabled",
+    )
+    parser.add_argument(
+        "--download-osm-pbf",
+        action="store_true",
+        help="Download osm-pbf file if missing and osm-pbf backend is selected",
+    )
+    parser.add_argument(
+        "--pbf-progress-every",
+        type=int,
+        default=1_000_000,
+        help="Progress interval while scanning local OSM PBF objects",
+    )
+    parser.add_argument(
+        "--progress-every",
+        type=int,
+        default=250,
+        help="Progress update frequency while processing stations",
+    )
     parser.add_argument(
         "--operator-min-stations",
         type=int,
@@ -127,6 +188,20 @@ def parse_args() -> argparse.Namespace:
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def log_info(message: str) -> None:
+    timestamp = utc_now().replace(microsecond=0).isoformat()
+    print(f"[{timestamp}] {message}", flush=True)
+
+
+def format_duration(total_seconds: float) -> str:
+    total_seconds = int(max(0, total_seconds))
+    hours, rem = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(rem, 60)
+    if hours > 0:
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    return f"{minutes:02d}:{seconds:02d}"
 
 
 def normalize_text(value: str) -> str:
@@ -288,11 +363,15 @@ def fetch_bnetza_csv(session: requests.Session, cache_path: Path, meta_path: Pat
     candidate_urls: list[str] = []
     candidate_urls.extend(discover_latest_bnetza_downloads(session))
     candidate_urls.extend(BNETZA_FILE_FALLBACKS)
+    # Keep discovery order but avoid duplicate attempts.
+    candidate_urls = list(dict.fromkeys(candidate_urls))
+    log_info(f"Source candidates: {len(candidate_urls)} URL(s)")
 
     errors: list[str] = []
 
     for url in candidate_urls:
         try:
+            log_info(f"Fetching source candidate: {url}")
             response = request_with_retries("GET", url, session, timeout=60)
             content = response.content
             cache_path.write_bytes(content)
@@ -303,9 +382,11 @@ def fetch_bnetza_csv(session: requests.Session, cache_path: Path, meta_path: Pat
                 "content_type": response.headers.get("content-type", ""),
             }
             meta_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+            log_info(f"Fetched source ({len(content)} bytes)")
             return metadata
         except requests.RequestException as exc:
             errors.append(f"{url}: {exc}")
+            log_info(f"Source fetch failed: {url}")
 
     if cache_path.exists():
         fallback_meta: dict[str, Any] = {
@@ -549,6 +630,289 @@ def classify_tags(tags: dict[str, Any]) -> list[str]:
     return matched
 
 
+def resolve_amenity_backend(requested: str, osm_pbf_path: Path) -> str:
+    if requested == AMENITY_BACKEND_AUTO:
+        if osm_pbf_path.exists():
+            if importlib.util.find_spec("osmium") is None:
+                log_info(
+                    "Local OSM PBF file found but python package 'osmium' is not installed; "
+                    "falling back to overpass backend (auto mode)."
+                )
+                return AMENITY_BACKEND_OVERPASS
+            return AMENITY_BACKEND_OSM_PBF
+        return AMENITY_BACKEND_OVERPASS
+    return requested
+
+
+def ensure_osm_pbf_file(
+    *,
+    session: requests.Session,
+    osm_pbf_path: Path,
+    osm_pbf_url: str,
+    download_if_missing: bool,
+) -> dict[str, Any]:
+    if osm_pbf_path.exists() and osm_pbf_path.stat().st_size > 0:
+        return {
+            "downloaded": False,
+            "path": str(osm_pbf_path),
+            "bytes": int(osm_pbf_path.stat().st_size),
+        }
+
+    if not download_if_missing:
+        raise RuntimeError(
+            "Local OSM PBF backend selected but file is missing. "
+            f"Expected: {osm_pbf_path}. "
+            "Provide --download-osm-pbf or set --amenity-backend overpass."
+        )
+
+    osm_pbf_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = osm_pbf_path.with_suffix(osm_pbf_path.suffix + ".part")
+    if temp_path.exists():
+        temp_path.unlink()
+
+    log_info(f"Downloading OSM PBF: {osm_pbf_url}")
+    response = request_with_retries(
+        "GET",
+        osm_pbf_url,
+        session,
+        timeout=120,
+        stream=True,
+    )
+    total_bytes = int(response.headers.get("content-length", "0") or 0)
+    downloaded = 0
+    started = time.monotonic()
+    last_log = started
+
+    with temp_path.open("wb") as handle:
+        for chunk in response.iter_content(chunk_size=4 * 1024 * 1024):
+            if not chunk:
+                continue
+            handle.write(chunk)
+            downloaded += len(chunk)
+            now_mono = time.monotonic()
+            if now_mono - last_log >= 5.0:
+                elapsed = max(0.001, now_mono - started)
+                rate = downloaded / elapsed
+                if total_bytes > 0:
+                    pct = downloaded / total_bytes * 100.0
+                    remaining = max(0, total_bytes - downloaded)
+                    eta = remaining / rate if rate > 0 else 0
+                    log_info(
+                        "OSM PBF download "
+                        f"{pct:5.1f}% ({downloaded / 1_048_576:.1f}/{total_bytes / 1_048_576:.1f} MiB) "
+                        f"rate {rate / 1_048_576:.1f} MiB/s eta {format_duration(eta)}"
+                    )
+                else:
+                    log_info(
+                        "OSM PBF download "
+                        f"{downloaded / 1_048_576:.1f} MiB, rate {rate / 1_048_576:.1f} MiB/s"
+                    )
+                last_log = now_mono
+
+    temp_path.replace(osm_pbf_path)
+    file_size = int(osm_pbf_path.stat().st_size)
+    log_info(f"OSM PBF ready: {osm_pbf_path} ({file_size / 1_048_576:.1f} MiB)")
+    return {
+        "downloaded": True,
+        "path": str(osm_pbf_path),
+        "bytes": file_size,
+        "source_url": osm_pbf_url,
+    }
+
+
+def radius_deltas_deg(radius_m: int, lat_deg: float) -> tuple[float, float]:
+    lat_delta = float(radius_m) / 111_320.0
+    cos_lat = max(0.1, math.cos(math.radians(lat_deg)))
+    lon_delta = float(radius_m) / (111_320.0 * cos_lat)
+    return lat_delta, lon_delta
+
+
+def cell_key(lat: float, lon: float, lat_step: float, lon_step: float) -> tuple[int, int]:
+    return (
+        int(math.floor(lat / lat_step)),
+        int(math.floor(lon / lon_step)),
+    )
+
+
+def haversine_distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    d_phi = math.radians(lat2 - lat1)
+    d_lambda = math.radians(lon2 - lon1)
+    a = (
+        math.sin(d_phi / 2.0) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2.0) ** 2
+    )
+    return 2.0 * EARTH_RADIUS_M * math.atan2(math.sqrt(a), math.sqrt(max(0.0, 1.0 - a)))
+
+
+def build_coarse_station_cells(
+    df: pd.DataFrame,
+    *,
+    radius_m: int,
+    lat_step: float,
+    lon_step: float,
+) -> set[tuple[int, int]]:
+    cells: set[tuple[int, int]] = set()
+
+    for _, row in df.iterrows():
+        lat = float(row["lat"])
+        lon = float(row["lon"])
+        lat_delta, lon_delta = radius_deltas_deg(radius_m, lat)
+
+        lat_min_idx = int(math.floor((lat - lat_delta) / lat_step))
+        lat_max_idx = int(math.floor((lat + lat_delta) / lat_step))
+        lon_min_idx = int(math.floor((lon - lon_delta) / lon_step))
+        lon_max_idx = int(math.floor((lon + lon_delta) / lon_step))
+
+        for lat_idx in range(lat_min_idx, lat_max_idx + 1):
+            for lon_idx in range(lon_min_idx, lon_max_idx + 1):
+                cells.add((lat_idx, lon_idx))
+
+    return cells
+
+
+def collect_amenity_points_from_pbf(
+    *,
+    pbf_path: Path,
+    station_cells: set[tuple[int, int]],
+    coarse_lat_step: float,
+    coarse_lon_step: float,
+    pbf_progress_every: int,
+) -> tuple[list[AmenityPoint], dict[str, int]]:
+    try:
+        import osmium  # type: ignore
+    except Exception as exc:
+        install_cmd = f"{sys.executable} -m pip install osmium"
+        raise RuntimeError(
+            "The osm-pbf backend requires the Python package 'osmium'. "
+            f"Install with this interpreter: {install_cmd}"
+        ) from exc
+
+    class AmenityCollector(osmium.SimpleHandler):  # type: ignore[misc]
+        def __init__(self) -> None:
+            super().__init__()
+            self.points: list[AmenityPoint] = []
+            self.nodes_seen = 0
+            self.ways_seen = 0
+            self.relations_seen = 0
+            self.nodes_kept = 0
+            self.ways_kept = 0
+            self.started = time.monotonic()
+            self.last_log = self.started
+
+        def _maybe_log(self) -> None:
+            seen = self.nodes_seen + self.ways_seen + self.relations_seen
+            if pbf_progress_every <= 0:
+                return
+            if seen <= 0 or seen % pbf_progress_every != 0:
+                return
+            elapsed = max(0.001, time.monotonic() - self.started)
+            rate = seen / elapsed
+            log_info(
+                "PBF scan progress: "
+                f"objects={seen:,} (nodes={self.nodes_seen:,}, ways={self.ways_seen:,}, relations={self.relations_seen:,}) "
+                f"kept_points={len(self.points):,} rate={rate:,.0f} obj/s"
+            )
+            self.last_log = time.monotonic()
+
+        def _append_if_relevant(self, *, lat: float, lon: float, tags: Any, source: str) -> None:
+            categories = classify_tags(tags)
+            if not categories:
+                return
+
+            if cell_key(lat, lon, coarse_lat_step, coarse_lon_step) not in station_cells:
+                return
+
+            self.points.append(
+                AmenityPoint(
+                    lat=lat,
+                    lon=lon,
+                    categories=tuple(categories),
+                )
+            )
+            if source == "node":
+                self.nodes_kept += 1
+            elif source == "way":
+                self.ways_kept += 1
+
+        def node(self, node: Any) -> None:
+            self.nodes_seen += 1
+            self._maybe_log()
+            if not node.location.valid():
+                return
+            self._append_if_relevant(
+                lat=float(node.location.lat),
+                lon=float(node.location.lon),
+                tags=node.tags,
+                source="node",
+            )
+
+        def way(self, way: Any) -> None:
+            self.ways_seen += 1
+            self._maybe_log()
+
+            categories = classify_tags(way.tags)
+            if not categories:
+                return
+
+            sum_lat = 0.0
+            sum_lon = 0.0
+            count = 0
+            for node_ref in way.nodes:
+                if not node_ref.location.valid():
+                    continue
+                sum_lat += float(node_ref.location.lat)
+                sum_lon += float(node_ref.location.lon)
+                count += 1
+
+            if count <= 0:
+                return
+
+            lat = sum_lat / count
+            lon = sum_lon / count
+
+            if cell_key(lat, lon, coarse_lat_step, coarse_lon_step) not in station_cells:
+                return
+
+            self.points.append(
+                AmenityPoint(
+                    lat=lat,
+                    lon=lon,
+                    categories=tuple(categories),
+                )
+            )
+            self.ways_kept += 1
+
+        def relation(self, relation: Any) -> None:
+            self.relations_seen += 1
+            self._maybe_log()
+
+    collector = AmenityCollector()
+    collector.apply_file(str(pbf_path), locations=True)
+
+    stats = {
+        "nodes_seen": collector.nodes_seen,
+        "ways_seen": collector.ways_seen,
+        "relations_seen": collector.relations_seen,
+        "nodes_kept": collector.nodes_kept,
+        "ways_kept": collector.ways_kept,
+    }
+    return collector.points, stats
+
+
+def build_point_grid_index(
+    points: list[AmenityPoint],
+    *,
+    lat_step: float,
+    lon_step: float,
+) -> dict[tuple[int, int], list[int]]:
+    grid: dict[tuple[int, int], list[int]] = defaultdict(list)
+    for idx, point in enumerate(points):
+        grid[cell_key(point.lat, point.lon, lat_step, lon_step)].append(idx)
+    return grid
+
+
 def lookup_amenities(
     session: requests.Session,
     *,
@@ -591,7 +955,7 @@ def lookup_amenities(
     return counts
 
 
-def enrich_with_amenities(
+def enrich_with_amenities_overpass(
     df: pd.DataFrame,
     *,
     session: requests.Session,
@@ -599,6 +963,7 @@ def enrich_with_amenities(
     query_budget: int,
     refresh_days: int,
     overpass_delay_ms: int,
+    progress_every: int,
     force_refresh: bool,
     cache_path: Path,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
@@ -621,6 +986,40 @@ def enrich_with_amenities(
 
     df["amenities_total"] = 0
     df["amenities_source"] = ""
+
+    total_rows = len(df)
+    started = time.monotonic()
+    last_log = started
+    tty_progress = sys.stdout.isatty()
+
+    def emit_progress(processed: int, *, force: bool = False) -> None:
+        nonlocal last_log
+        now_mono = time.monotonic()
+        interval_hit = (now_mono - last_log) >= 8.0
+        step_hit = progress_every > 0 and (processed % progress_every == 0)
+        done = processed >= total_rows
+        if not (force or interval_hit or step_hit or done):
+            return
+        elapsed = max(0.001, now_mono - started)
+        rate = processed / elapsed
+        remaining = max(0, total_rows - processed)
+        eta_seconds = (remaining / rate) if rate > 0 else 0
+        pct = (processed / total_rows * 100.0) if total_rows > 0 else 100.0
+        line = (
+            f"Amenities {processed}/{total_rows} ({pct:5.1f}%) | "
+            f"live:{queries_used} cache:{cache_hits} deferred:{deferred} errors:{lookup_errors} | "
+            f"{rate:5.1f} rows/s | elapsed {format_duration(elapsed)} | eta {format_duration(eta_seconds)}"
+        )
+        if tty_progress:
+            suffix = "\n" if done else ""
+            sys.stdout.write("\r" + line.ljust(160) + suffix)
+            sys.stdout.flush()
+        else:
+            log_info(line)
+        last_log = now_mono
+
+    if total_rows > 0:
+        emit_progress(0, force=True)
 
     for idx, row in df.iterrows():
         key = f"{row['lat']:.5f},{row['lon']:.5f}"
@@ -683,6 +1082,10 @@ def enrich_with_amenities(
         total = int(sum(int(counts.get(col, 0)) for col in amenity_columns))
         df.at[idx, "amenities_total"] = total
         df.at[idx, "amenities_source"] = source
+        emit_progress(idx + 1)
+
+    if total_rows == 0:
+        log_info("Amenities 0/0 (100.0%) | no rows to process")
 
     cache["meta"] = {
         "schema_version": AMENITY_SCHEMA_VERSION,
@@ -694,6 +1097,7 @@ def enrich_with_amenities(
     cache_path.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
 
     stats = {
+        "backend": AMENITY_BACKEND_OVERPASS,
         "queries_used": queries_used,
         "cache_hits": cache_hits,
         "cache_misses": cache_misses,
@@ -702,6 +1106,214 @@ def enrich_with_amenities(
         "cache_entries": len(entries),
     }
     return df, stats
+
+
+def enrich_with_amenities_osm_pbf(
+    df: pd.DataFrame,
+    *,
+    session: requests.Session,
+    radius_m: int,
+    progress_every: int,
+    osm_pbf_path: Path,
+    osm_pbf_url: str,
+    download_osm_pbf: bool,
+    pbf_progress_every: int,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    amenity_columns = [f"amenity_{rule.key}" for rule in AMENITY_RULES]
+    for col in amenity_columns:
+        df[col] = 0
+
+    df["amenities_total"] = 0
+    df["amenities_source"] = "osm-pbf"
+
+    total_rows = len(df)
+    if total_rows == 0:
+        stats: dict[str, Any] = {
+            "backend": AMENITY_BACKEND_OSM_PBF,
+            "queries_used": 0,
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "deferred": 0,
+            "lookup_errors": 0,
+            "cache_entries": 0,
+            "osm_pbf_path": str(osm_pbf_path),
+            "osm_pbf_points": 0,
+        }
+        return df, stats
+
+    pbf_file_meta = ensure_osm_pbf_file(
+        session=session,
+        osm_pbf_path=osm_pbf_path,
+        osm_pbf_url=osm_pbf_url,
+        download_if_missing=download_osm_pbf,
+    )
+
+    log_info("Building station coarse grid for local PBF filtering")
+    coarse_lat_step = 0.02
+    coarse_lon_step = 0.03
+    station_cells = build_coarse_station_cells(
+        df,
+        radius_m=radius_m,
+        lat_step=coarse_lat_step,
+        lon_step=coarse_lon_step,
+    )
+    log_info(f"Station coarse cells: {len(station_cells):,}")
+
+    log_info("Scanning OSM PBF for relevant amenity tags")
+    pbf_scan_started = time.monotonic()
+    points, pbf_scan_stats = collect_amenity_points_from_pbf(
+        pbf_path=osm_pbf_path,
+        station_cells=station_cells,
+        coarse_lat_step=coarse_lat_step,
+        coarse_lon_step=coarse_lon_step,
+        pbf_progress_every=pbf_progress_every,
+    )
+    log_info(
+        "PBF scan done: "
+        f"points={len(points):,}, nodes_seen={pbf_scan_stats['nodes_seen']:,}, "
+        f"ways_seen={pbf_scan_stats['ways_seen']:,}, took={format_duration(time.monotonic() - pbf_scan_started)}"
+    )
+
+    fine_lat_step = max(0.0005, radius_m / 111_320.0)
+    fine_lon_step = max(
+        0.0005,
+        radius_m / (111_320.0 * max(0.1, math.cos(math.radians(56.5)))),
+    )
+    point_grid = build_point_grid_index(
+        points,
+        lat_step=fine_lat_step,
+        lon_step=fine_lon_step,
+    )
+    log_info(f"Amenity grid cells indexed: {len(point_grid):,}")
+
+    started = time.monotonic()
+    last_log = started
+    tty_progress = sys.stdout.isatty()
+
+    def emit_progress(processed: int, *, force: bool = False) -> None:
+        nonlocal last_log
+        now_mono = time.monotonic()
+        interval_hit = (now_mono - last_log) >= 8.0
+        step_hit = progress_every > 0 and (processed % progress_every == 0)
+        done = processed >= total_rows
+        if not (force or interval_hit or step_hit or done):
+            return
+        elapsed = max(0.001, now_mono - started)
+        rate = processed / elapsed
+        remaining = max(0, total_rows - processed)
+        eta_seconds = (remaining / rate) if rate > 0 else 0
+        pct = (processed / total_rows * 100.0) if total_rows > 0 else 100.0
+        line = (
+            f"Amenities {processed}/{total_rows} ({pct:5.1f}%) | "
+            f"backend:osm-pbf points:{len(points):,} | "
+            f"{rate:5.1f} rows/s | elapsed {format_duration(elapsed)} | eta {format_duration(eta_seconds)}"
+        )
+        if tty_progress:
+            suffix = "\n" if done else ""
+            sys.stdout.write("\r" + line.ljust(160) + suffix)
+            sys.stdout.flush()
+        else:
+            log_info(line)
+        last_log = now_mono
+
+    emit_progress(0, force=True)
+
+    for idx, row in df.iterrows():
+        lat = float(row["lat"])
+        lon = float(row["lon"])
+        lat_delta, lon_delta = radius_deltas_deg(radius_m, lat)
+
+        lat_idx, lon_idx = cell_key(lat, lon, fine_lat_step, fine_lon_step)
+        lat_reach = max(1, int(math.ceil(lat_delta / fine_lat_step)) + 1)
+        lon_reach = max(1, int(math.ceil(lon_delta / fine_lon_step)) + 1)
+
+        candidate_indices: set[int] = set()
+        for d_lat in range(-lat_reach, lat_reach + 1):
+            for d_lon in range(-lon_reach, lon_reach + 1):
+                candidate_indices.update(point_grid.get((lat_idx + d_lat, lon_idx + d_lon), []))
+
+        counts = {col: 0 for col in amenity_columns}
+        for point_idx in candidate_indices:
+            point = points[point_idx]
+            if haversine_distance_m(lat, lon, point.lat, point.lon) > radius_m:
+                continue
+            for category in point.categories:
+                key = f"amenity_{category}"
+                counts[key] += 1
+
+        for col in amenity_columns:
+            value = int(counts.get(col, 0))
+            df.at[idx, col] = value
+
+        total = int(sum(int(counts.get(col, 0)) for col in amenity_columns))
+        df.at[idx, "amenities_total"] = total
+        emit_progress(idx + 1)
+
+    stats = {
+        "backend": AMENITY_BACKEND_OSM_PBF,
+        "queries_used": 0,
+        "cache_hits": 0,
+        "cache_misses": 0,
+        "deferred": 0,
+        "lookup_errors": 0,
+        "cache_entries": 0,
+        "osm_pbf_path": str(osm_pbf_path),
+        "osm_pbf_bytes": int(pbf_file_meta.get("bytes", 0)),
+        "osm_pbf_downloaded": bool(pbf_file_meta.get("downloaded", False)),
+        "osm_pbf_points": int(len(points)),
+        "osm_pbf_grid_cells": int(len(point_grid)),
+        "osm_pbf_nodes_seen": int(pbf_scan_stats["nodes_seen"]),
+        "osm_pbf_ways_seen": int(pbf_scan_stats["ways_seen"]),
+        "osm_pbf_relations_seen": int(pbf_scan_stats["relations_seen"]),
+        "osm_pbf_nodes_kept": int(pbf_scan_stats["nodes_kept"]),
+        "osm_pbf_ways_kept": int(pbf_scan_stats["ways_kept"]),
+    }
+    return df, stats
+
+
+def enrich_with_amenities(
+    df: pd.DataFrame,
+    *,
+    session: requests.Session,
+    radius_m: int,
+    query_budget: int,
+    refresh_days: int,
+    overpass_delay_ms: int,
+    progress_every: int,
+    force_refresh: bool,
+    cache_path: Path,
+    amenity_backend: str,
+    osm_pbf_path: Path,
+    osm_pbf_url: str,
+    download_osm_pbf: bool,
+    pbf_progress_every: int,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    backend = resolve_amenity_backend(amenity_backend, osm_pbf_path)
+    log_info(f"Amenity backend resolved to: {backend}")
+
+    if backend == AMENITY_BACKEND_OSM_PBF:
+        return enrich_with_amenities_osm_pbf(
+            df,
+            session=session,
+            radius_m=radius_m,
+            progress_every=progress_every,
+            osm_pbf_path=osm_pbf_path,
+            osm_pbf_url=osm_pbf_url,
+            download_osm_pbf=download_osm_pbf,
+            pbf_progress_every=pbf_progress_every,
+        )
+
+    return enrich_with_amenities_overpass(
+        df,
+        session=session,
+        radius_m=radius_m,
+        query_budget=query_budget,
+        refresh_days=refresh_days,
+        overpass_delay_ms=overpass_delay_ms,
+        progress_every=progress_every,
+        force_refresh=force_refresh,
+        cache_path=cache_path,
+    )
 
 
 def dataframe_to_geojson(df: pd.DataFrame, source_meta: dict[str, Any]) -> dict[str, Any]:
@@ -770,6 +1382,7 @@ def build_operator_list(df: pd.DataFrame, min_stations: int) -> dict[str, Any]:
 def write_run_history(path: Path, summary: dict[str, Any]) -> None:
     fieldnames = [
         "timestamp",
+        "amenity_backend",
         "source_url",
         "stations_total",
         "stations_with_amenities",
@@ -782,6 +1395,7 @@ def write_run_history(path: Path, summary: dict[str, Any]) -> None:
 
     row = {
         "timestamp": summary["run"]["started_at"],
+        "amenity_backend": summary["amenity_lookup"].get("backend", "overpass"),
         "source_url": summary["source"].get("source_url", ""),
         "stations_total": summary["records"]["fast_chargers_total"],
         "stations_with_amenities": summary["records"]["stations_with_amenities"],
@@ -793,12 +1407,44 @@ def write_run_history(path: Path, summary: dict[str, Any]) -> None:
     }
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    exists = path.exists()
-    with path.open("a", encoding="utf-8", newline="") as handle:
+    rows: list[dict[str, Any]] = []
+
+    if path.exists():
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for previous in reader:
+                normalized = {key: previous.get(key, "") for key in fieldnames}
+                if not normalized.get("amenity_backend"):
+                    normalized["amenity_backend"] = "overpass"
+
+                # Repair rows written with the new schema but an old header.
+                shifted = (
+                    str(normalized.get("source_url", "")) in AMENITY_BACKEND_CHOICES
+                    and str(normalized.get("stations_total", "")).startswith("http")
+                )
+                if shifted:
+                    repaired_deferred = str(normalized.get("deferred", ""))
+                    normalized = {
+                        "timestamp": str(normalized.get("timestamp", "")),
+                        "amenity_backend": str(normalized.get("source_url", "")) or "overpass",
+                        "source_url": str(normalized.get("stations_total", "")),
+                        "stations_total": str(normalized.get("stations_with_amenities", "")),
+                        "stations_with_amenities": str(normalized.get("query_budget", "")),
+                        "query_budget": str(normalized.get("queries_used", "")),
+                        "queries_used": str(normalized.get("cache_hits", "")),
+                        "cache_hits": str(normalized.get("cache_misses", "")),
+                        "cache_misses": str(normalized.get("deferred", "")),
+                        "deferred": repaired_deferred,
+                    }
+
+                rows.append(normalized)
+
+    rows.append(row)
+
+    with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
-        if not exists:
-            writer.writeheader()
-        writer.writerow(row)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def update_readme_status(readme_path: Path, summary: dict[str, Any]) -> None:
@@ -821,7 +1467,11 @@ def update_readme_status(readme_path: Path, summary: dict[str, Any]) -> None:
             f"- Source: `{source.get('source_url', 'unknown')}`",
             f"- Fast chargers (>= {summary['params']['min_power_kw']} kW): `{records['fast_chargers_total']}`",
             f"- Chargers with >=1 nearby amenity: `{records['stations_with_amenities']}`",
-            f"- Overpass queries this run: `{lookup['queries_used']}` (cache hits: `{lookup['cache_hits']}`, deferred: `{lookup['deferred']}`)",
+            f"- Amenity backend: `{lookup.get('backend', 'overpass')}`",
+            (
+                f"- Live amenity lookups this run: `{lookup['queries_used']}` "
+                f"(cache hits: `{lookup['cache_hits']}`, deferred: `{lookup['deferred']}`)"
+            ),
             "",
             "Generated files:",
             "- `data/bnetza_cache.csv`",
@@ -849,10 +1499,20 @@ def update_readme_status(readme_path: Path, summary: dict[str, Any]) -> None:
 
 def main() -> None:
     args = parse_args()
+    osm_pbf_path = Path(args.osm_pbf_path)
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     started_at = utc_now().replace(microsecond=0).isoformat()
+    pipeline_started = time.monotonic()
+    log_info("Pipeline started")
+    log_info(
+        "Params: "
+        f"min_power_kw={args.min_power_kw}, radius_m={args.radius_m}, "
+        f"query_budget={args.query_budget}, refresh_days={args.refresh_days}, "
+        f"max_stations={args.max_stations}, operator_min_stations={args.operator_min_stations}, "
+        f"amenity_backend={args.amenity_backend}, osm_pbf_path={osm_pbf_path}"
+    )
 
     session = requests.Session()
     session.headers.update(
@@ -862,14 +1522,23 @@ def main() -> None:
         }
     )
 
+    log_info("Stage 1/6: Fetching BNetzA source")
     source_meta = fetch_bnetza_csv(session, RAW_CACHE_PATH, RAW_META_PATH)
+    log_info(f"Source ready: {source_meta.get('source_url', 'unknown')}")
 
+    log_info("Stage 2/6: Loading and normalizing raw source")
     raw_df = load_raw_dataframe(RAW_CACHE_PATH)
+    log_info(f"Raw rows loaded: {len(raw_df)}")
+
+    log_info("Stage 3/6: Building filtered fast charger frame")
     fast_df = build_fast_charger_frame(raw_df, min_power_kw=args.min_power_kw)
+    log_info(f"Fast chargers after filter: {len(fast_df)}")
 
     if args.max_stations and args.max_stations > 0:
         fast_df = fast_df.head(args.max_stations).reset_index(drop=True)
+        log_info(f"Applied max_stations cap: {len(fast_df)} rows")
 
+    log_info("Stage 4/6: Enriching chargers with nearby amenities")
     enriched_df, amenity_stats = enrich_with_amenities(
         fast_df,
         session=session,
@@ -877,8 +1546,20 @@ def main() -> None:
         query_budget=args.query_budget,
         refresh_days=args.refresh_days,
         overpass_delay_ms=args.overpass_delay_ms,
+        progress_every=args.progress_every,
         force_refresh=args.force_refresh,
         cache_path=AMENITY_CACHE_PATH,
+        amenity_backend=args.amenity_backend,
+        osm_pbf_path=osm_pbf_path,
+        osm_pbf_url=args.osm_pbf_url,
+        download_osm_pbf=args.download_osm_pbf,
+        pbf_progress_every=args.pbf_progress_every,
+    )
+    log_info(
+        "Amenity enrichment done: "
+        f"queries_used={amenity_stats['queries_used']}, "
+        f"cache_hits={amenity_stats['cache_hits']}, "
+        f"deferred={amenity_stats['deferred']}, errors={amenity_stats['lookup_errors']}"
     )
 
     enriched_df = enriched_df.sort_values(
@@ -886,6 +1567,7 @@ def main() -> None:
         ascending=[False, False],
     ).reset_index(drop=True)
 
+    log_info("Stage 5/6: Writing data artifacts")
     FAST_CSV_PATH.write_text(enriched_df.to_csv(index=False), encoding="utf-8")
 
     geojson = dataframe_to_geojson(enriched_df, source_meta)
@@ -914,6 +1596,7 @@ def main() -> None:
         "params": {
             "min_power_kw": args.min_power_kw,
             "radius_m": args.radius_m,
+            "amenity_backend": args.amenity_backend,
             "query_budget": args.query_budget,
             "refresh_days": args.refresh_days,
             "max_stations": args.max_stations,
@@ -935,8 +1618,11 @@ def main() -> None:
         json.dumps(summary, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+
+    log_info("Stage 6/6: Updating run history and README status")
     write_run_history(RUN_HISTORY_PATH, summary)
     update_readme_status(README_PATH, summary)
+    log_info(f"Pipeline completed in {format_duration(time.monotonic() - pipeline_started)}")
 
     print(json.dumps(summary, indent=2, ensure_ascii=False))
 

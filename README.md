@@ -7,9 +7,10 @@ Fast chargers in Germany with nearby amenities from OpenStreetMap.
 - Ingests the official Bundesnetzagentur charging registry.
   Source discovery starts from the BNetzA E-Mobilitaet start page (`Downloads und Formulare`) and selects the newest CSV/XLSX link.
 - Filters to active chargers with at least `50 kW` nominal power.
-- Enriches each charger with nearby amenities (`100m` radius) from OSM Overpass.
+- Enriches each charger with nearby amenities (`100m` radius) from OSM
+  using either local `germany-latest.osm.pbf` or Overpass fallback.
 - Publishes a mobile-ready static web map with filters (operator + amenities).
-- Runs daily via GitHub Actions at `11:00 UTC`.
+- Runs monthly via GitHub Actions on day 1 at `00:00 UTC` (`01:00 CET`).
 
 ## Project Structure
 
@@ -31,13 +32,29 @@ Fast chargers in Germany with nearby amenities from OpenStreetMap.
 Install dependencies:
 
 ```bash
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
 Build data:
 
 ```bash
-python scripts/build_data.py --min-power-kw 50 --radius-m 100 --query-budget 500 --refresh-days 30
+python scripts/build_data.py \
+  --min-power-kw 50 \
+  --radius-m 100 \
+  --amenity-backend osm-pbf \
+  --osm-pbf-path data/germany-latest.osm.pbf \
+  --download-osm-pbf
+```
+
+Overpass fallback:
+
+```bash
+python scripts/build_data.py \
+  --min-power-kw 50 \
+  --radius-m 100 \
+  --amenity-backend overpass \
+  --query-budget 500 \
+  --refresh-days 30
 ```
 
 Build site bundle:
@@ -48,18 +65,20 @@ python scripts/build_site.py
 
 ## Notes
 
-- The pipeline is cache-first for OSM amenity lookups and refreshes stale cache entries.
+- `--amenity-backend auto` (default) uses local `data/germany-latest.osm.pbf` if present, otherwise Overpass.
+- `--query-budget`, `--refresh-days`, and `--overpass-delay-ms` only apply to the Overpass backend.
 - If BNetzA fetch fails and no local cache exists, the pipeline fails intentionally.
 - On first successful run, artifacts in `data/` are updated and committed by CI.
 
 <!-- DATA_STATUS_START -->
 ## Data Build Status
 
-- Last build (UTC): `2026-02-11T15:23:00+00:00`
+- Last build (UTC): `2026-02-11T19:24:00+00:00`
 - Source: `https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-01-28.csv`
 - Fast chargers (>= 50.0 kW): `16485`
-- Chargers with >=1 nearby amenity: `0`
-- Overpass queries this run: `0` (cache hits: `0`, deferred: `16485`)
+- Chargers with >=1 nearby amenity: `11877`
+- Amenity backend: `osm-pbf`
+- Live amenity lookups this run: `0` (cache hits: `0`, deferred: `0`)
 
 Generated files:
 - `data/bnetza_cache.csv`
