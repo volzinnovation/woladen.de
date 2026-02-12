@@ -7,12 +7,6 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <title>woladen.de | Ladestationen & Amenities</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -71,14 +65,14 @@
         <!-- LIST VIEW -->
         <div id="view-list" class="view active">
           <header class="view-header">
-            <h2>Stationen in der Nähe</h2>
+            <h2>Schnelllader in der Nähe</h2>
             <div class="header-actions">
               <button id="btn-list-filter" class="text-btn">Filter</button>
             </div>
           </header>
           <div id="charger-list" class="list-container">
             <!-- Cards injected here -->
-            <div class="loading-state">Lade Stationen...</div>
+            <div class="loading-state">Lade Ladesäulen...</div>
           </div>
         </div>
 
@@ -102,7 +96,7 @@
               <h3>Über woladen.de</h3>
               <p>
                 Finde Schnelllader mit der besten Aufenthaltsqualität. Wir
-                zeigen dir, wo es sich lohnt zu laden.
+                zeigen dir, wo es sich lohnt zu laden. Ohne Ladeweile.
               </p>
               <div id="app-meta" class="meta-block"></div>
             </div>
@@ -110,10 +104,16 @@
             <div class="info-card">
               <h3>Legende</h3>
               <ul class="legend-list">
-                <li><span class="dot gold"></span> >10 Amenities (Gold)</li>
-                <li><span class="dot silver"></span> >5 Amenities (Silber)</li>
-                <li><span class="dot bronze"></span> >1 Amenity (Bronze)</li>
-                <li><span class="dot grey"></span> Keine Amenities</li>
+                <li>
+                  <span class="dot gold"></span> >10 Annehmlichkeiten (Gold)
+                </li>
+                <li>
+                  <span class="dot silver"></span> >5 Annehmlichkeiten (Silber)
+                </li>
+                <li>
+                  <span class="dot bronze"></span> >1 Annehmlichkeiten (Bronze)
+                </li>
+                <li><span class="dot grey"></span> Keine Annehmlichkeiten</li>
               </ul>
             </div>
 
@@ -247,7 +247,7 @@
             </label>
 
             <div class="filter-group">
-              <span class="label-text">Amenities</span>
+              <span class="label-text">Annehmlichkeiten</span>
               <div id="filter-amenities" class="amenity-grid">
                 <!-- Icons injected by JS -->
               </div>
@@ -314,7 +314,7 @@
               </div>
               <div class="stat-pill">
                 <span class="icon">🏪</span>
-                <span id="detail-amenity-count">5 Amenities</span>
+                <span id="detail-amenity-count">5 Annehmlichkeiten</span>
               </div>
             </div>
 

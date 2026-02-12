@@ -12,11 +12,11 @@ const AMENITY_MAPPING = {
   amenity_bakery: { label: "Bäckerei", icon: "shop_bakery.png" },
   amenity_convenience: { label: "Kiosk", icon: "shop_convenience.png" },
   amenity_pharmacy: { label: "Apotheke", icon: "amenity_pharmacy.png" },
-  amenity_hotel: { label: "Hotel", icon: "amenity_hotel.png" }, // tourism_hotel.png also avail
+  amenity_hotel: { label: "Hotel", icon: "tourism_hotel.png" }, // tourism_hotel.png also avail
   amenity_museum: { label: "Museum", icon: "tourism_museum.png" },
   amenity_playground: { label: "Spielplatz", icon: "leisure_playground.png" },
   amenity_park: { label: "Park", icon: "leisure_park.png" },
-  amenity_ice_cream: { label: "Eis", icon: "amenity_ice_cream.png" }, // Not found, maybe generic?
+  amenity_ice_cream: { label: "Eis", icon: "amenity_cafe.png" }, // Not found, maybe generic?
   amenity_bbq: { label: "Grillplatz", icon: "amenity_bbq.png" },
   amenity_biergarten: { label: "Biergarten", icon: "amenity_biergarten.png" },
   amenity_cinema: { label: "Kino", icon: "amenity_cinema.png" },
