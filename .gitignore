@@ -9,3 +9,5 @@ __pycache__/
 .venv/
 venv/
 data/germany-latest.osm.pbf
+test-results/desktop_test.mp4
+test-results/mobile_test.mp4

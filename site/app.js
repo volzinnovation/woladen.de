@@ -543,7 +543,7 @@ function openDetail(feature) {
   els.detail.appleBtn.href = `http://maps.apple.com/?daddr=${lat},${lon}`;
 
   // Mini Map
-  state.views.detailMap.setView([lat, lon], 15);
+  state.views.detailMap.setView([lat, lon], 16);
   // Clear old markers from detail map? Not strictly needed if we just pan,
   // but better to add a marker for the station
   if (state.views.detailMap.stationMarker)
