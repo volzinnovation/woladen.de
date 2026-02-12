@@ -510,8 +510,8 @@ function createStationCard(feature) {
       ${distance ? `<span class="card-distance">${distance}</span>` : ""}
     </div>
     <div class="card-meta">
-      ${escapeHtml(p.address || "")}, ${escapeHtml(p.city || "")}<br>
-      ${Math.round(p.max_power_kw)} kW • ${p.amenities_total} Amenities
+      ${escapeHtml(p.city || "")}<br>
+      ${Math.round(p.max_power_kw)} kW • ${p.amenities_total} Annehmlichkeit(en)
     </div>
     <div class="card-badges">
       ${badges}
@@ -556,13 +556,16 @@ function openDetail(feature) {
     radius: 8,
   }).addTo(state.views.detailMap);
 
-  // Force map resize after modal transition
-  setTimeout(() => state.views.detailMap.invalidateSize(), 300);
-
   // Amenity List
   renderDetailAmenities(p);
 
   openModal("detail");
+  
+  // Force map resize immediately and after transition
+  if (state.views.detailMap) {
+    state.views.detailMap.invalidateSize();
+    setTimeout(() => state.views.detailMap.invalidateSize(), 350);
+  }
 }
 
 function renderDetailAmenities(props) {

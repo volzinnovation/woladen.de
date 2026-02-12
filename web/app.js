@@ -556,13 +556,16 @@ function openDetail(feature) {
     radius: 8,
   }).addTo(state.views.detailMap);
 
-  // Force map resize after modal transition
-  setTimeout(() => state.views.detailMap.invalidateSize(), 300);
-
   // Amenity List
   renderDetailAmenities(p);
 
   openModal("detail");
+  
+  // Force map resize immediately and after transition
+  if (state.views.detailMap) {
+    state.views.detailMap.invalidateSize();
+    setTimeout(() => state.views.detailMap.invalidateSize(), 350);
+  }
 }
 
 function renderDetailAmenities(props) {
