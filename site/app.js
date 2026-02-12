@@ -173,6 +173,7 @@ async function loadData() {
 
     populateOperators(opData);
     setAppMeta(geoData);
+    renderAmenityFilters(); // Render dynamic amenity filters
 
     applyFilters(); // Initial render
 
@@ -345,15 +346,32 @@ function initFilters() {
     els.filter.powerVal.textContent = state.filters.minPower;
     updateFilters();
   });
+}
 
-  // Amenities
+function renderAmenityFilters() {
+  els.filter.amenities.innerHTML = "";
+  
+  // Find all available amenities in data
+  const availableAmenities = new Set();
   const amenityKeys = Object.keys(AMENITY_MAPPING);
-  amenityKeys.forEach((key) => {
+  
+  state.features.forEach(f => {
+    const p = f.properties;
+    amenityKeys.forEach(key => {
+      if (p[key] > 0) availableAmenities.add(key);
+    });
+  });
+
+  // Sort by name for better UX
+  const sortedKeys = Array.from(availableAmenities).sort((a, b) => {
+    const labelA = AMENITY_MAPPING[a].label;
+    const labelB = AMENITY_MAPPING[b].label;
+    return labelA.localeCompare(labelB);
+  });
+
+  sortedKeys.forEach((key) => {
     const config = AMENITY_MAPPING[key];
     const path = getAmenityIconPath(key);
-
-    // Only show if we have an icon? Or show all with text?
-    // Let's show all, using text fallback if no icon
 
     const div = document.createElement("div");
     div.className = "amenity-toggle";
@@ -362,7 +380,6 @@ function initFilters() {
     if (path) {
       div.innerHTML = `<img src="${path}" alt="${config.label}" loading="lazy"><span class="amenity-name">${config.label}</span>`;
     } else {
-      // Placeholder icon or just text
       div.innerHTML = `<div style="width:32px;height:32px;background:#eee;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px">?</div><span class="amenity-name">${config.label}</span>`;
     }
 
