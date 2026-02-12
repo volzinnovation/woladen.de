@@ -233,6 +233,19 @@ body {
   margin-bottom: 0.5rem;
 }
 
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.amenity-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .card-title {
   font-weight: 600;
   font-size: 1.05rem;

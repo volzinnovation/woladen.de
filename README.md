@@ -1,3 +1,5 @@
+![Mobile test](test-results/mobile_test.webp)
+
 # woladen.de
 
 Fast chargers in Germany with nearby amenities from OpenStreetMap.

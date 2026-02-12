@@ -499,9 +499,14 @@ function createStationCard(feature) {
     .map((k) => `<span class="badge">${AMENITY_MAPPING[k].label}</span>`)
     .join("");
 
+  const markerColor = getMarkerColor(p);
+  
   div.innerHTML = `
     <div class="card-header">
-      <h3 class="card-title">${escapeHtml(p.operator || "Unbekannt")}</h3>
+      <div class="card-title-row">
+        <span class="amenity-dot" style="background-color: ${markerColor}"></span>
+        <h3 class="card-title">${escapeHtml(p.operator || "Unbekannt")}</h3>
+      </div>
       ${distance ? `<span class="card-distance">${distance}</span>` : ""}
     </div>
     <div class="card-meta">
