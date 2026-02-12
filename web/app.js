@@ -1,358 +1,740 @@
-const AMENITY_LABELS = {
-  amenity_restaurant: "Restaurant",
-  amenity_cafe: "Cafe",
-  amenity_fast_food: "Fast Food",
-  amenity_toilets: "Toiletten",
-  amenity_supermarket: "Supermarkt",
-  amenity_bakery: "Baeckerei",
-  amenity_convenience: "Kiosk",
-  amenity_pharmacy: "Apotheke",
-  amenity_hotel: "Hotel",
-  amenity_museum: "Museum",
-  amenity_playground: "Spielplatz",
-  amenity_park: "Park",
-  amenity_ice_cream: "Eis",
+/**
+ * woladen.de - Modern Frontend Logic
+ */
+
+/* --- CONFIGURATION & CONSTANTS --- */
+const AMENITY_MAPPING = {
+  amenity_restaurant: { label: "Restaurant", icon: "amenity_restaurant.png" },
+  amenity_cafe: { label: "Café", icon: "amenity_cafe.png" },
+  amenity_fast_food: { label: "Fast Food", icon: "amenity_fast_food.png" },
+  amenity_toilets: { label: "Toiletten", icon: "amenity_toilets.png" },
+  amenity_supermarket: { label: "Supermarkt", icon: "shop_supermarket.png" },
+  amenity_bakery: { label: "Bäckerei", icon: "shop_bakery.png" },
+  amenity_convenience: { label: "Kiosk", icon: "shop_convenience.png" },
+  amenity_pharmacy: { label: "Apotheke", icon: "amenity_pharmacy.png" },
+  amenity_hotel: { label: "Hotel", icon: "amenity_hotel.png" }, // tourism_hotel.png also avail
+  amenity_museum: { label: "Museum", icon: "tourism_museum.png" },
+  amenity_playground: { label: "Spielplatz", icon: "leisure_playground.png" },
+  amenity_park: { label: "Park", icon: "leisure_park.png" },
+  amenity_ice_cream: { label: "Eis", icon: "amenity_ice_cream.png" }, // Not found, maybe generic?
+  amenity_bbq: { label: "Grillplatz", icon: "amenity_bbq.png" },
+  amenity_biergarten: { label: "Biergarten", icon: "amenity_biergarten.png" },
+  amenity_cinema: { label: "Kino", icon: "amenity_cinema.png" },
+  amenity_library: { label: "Bibliothek", icon: "amenity_library.png" },
+  amenity_theatre: { label: "Theater", icon: "amenity_theatre.png" },
+  amenity_atm: { label: "Geldautomat", icon: "amenity_atm.png" },
+  amenity_bank: { label: "Bank", icon: "amenity_bank.png" },
+  amenity_bench: { label: "Bank (Sitz)", icon: "amenity_bench.png" },
+  amenity_bicycle_rental: { label: "Fahrradverleih", icon: "amenity_bicycle_rental.png" },
+  amenity_car_sharing: { label: "Car Sharing", icon: "amenity_car_sharing.png" },
+  amenity_fuel: { label: "Tankstelle", icon: "amenity_fuel.png" },
+  amenity_hospital: { label: "Krankenhaus", icon: "amenity_hospital.png" },
+  amenity_police: { label: "Polizei", icon: "amenity_police.png" },
+  amenity_post_box: { label: "Briefkasten", icon: "amenity_post_box.png" },
+  amenity_post_office: { label: "Post", icon: "amenity_post_office.png" },
+  amenity_pub: { label: "Kneipe", icon: "amenity_pub.png" },
+  amenity_school: { label: "Schule", icon: "amenity_school.png" },
+  amenity_taxi: { label: "Taxi", icon: "amenity_taxi.png" },
+  amenity_waste_basket: { label: "Mülleimer", icon: "amenity_waste_basket.png" },
+  amenity_swimming: { label: "Schwimmbad", icon: "sport_swimming.png" },
+  amenity_gym: { label: "Fitness", icon: "leisure_sports_centre.png" },
+  amenity_camp_site: { label: "Camping", icon: "tourism_camp_site.png" },
+  amenity_viewpoint: { label: "Aussichtspunkt", icon: "tourism_viewpoint.png" },
+  amenity_zoo: { label: "Zoo", icon: "tourism_zoo.png" },
+  shop_mall: { label: "Einkaufszentrum", icon: "shop_mall_.png" },
+  shop_doityourself: { label: "Baumarkt", icon: "shop_doityourself.png" },
+  shop_electronics: { label: "Elektronik", icon: "shop_electronics.png" },
 };
 
-const map = L.map("map", { zoomControl: true }).setView([51.2, 10.4], 6);
+// Fallback for missing icons or just generic usage
+function getAmenityIconPath(key) {
+  const config = AMENITY_MAPPING[key];
+  if (config && config.icon) {
+    return `./img/${config.icon}`;
+  }
+  return null;
+}
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-}).addTo(map);
-
-const layers = {
-  chargers: L.layerGroup().addTo(map),
-  route: L.layerGroup().addTo(map),
-  user: L.layerGroup().addTo(map),
-};
-
+/* --- STATE --- */
 const state = {
-  features: [],
-  filtered: [],
-  selectedFeature: null,
-  selectedOperator: "",
-  selectedAmenities: new Set(),
-  minPowerKw: 50,
-  userPosition: null,
+  features: [], // All charger features
+  filtered: [], // Currently filtered features
+  favorites: new Set(), // Set of station_ids
+  userPos: null, // { lat, lon }
+  filters: {
+    operator: "",
+    minPower: 50,
+    amenities: new Set(),
+  },
+  views: {
+    map: null, // Leaflet map instance
+    detailMap: null, // Mini map in detail view
+    layers: {
+      chargers: null,
+      user: null,
+    },
+  },
 };
 
-const operatorSelect = document.getElementById("operatorSelect");
-const powerRange = document.getElementById("powerRange");
-const powerRangeValue = document.getElementById("powerRangeValue");
-const amenityOptions = document.getElementById("amenityOptions");
-const stats = document.getElementById("stats");
-const buildMeta = document.getElementById("buildMeta");
-const locateBtn = document.getElementById("locateBtn");
-const routeBtn = document.getElementById("routeBtn");
+/* --- DOM ELEMENTS --- */
+const els = {
+  app: document.getElementById("app"),
+  views: {
+    map: document.getElementById("view-map"),
+    list: document.getElementById("view-list"),
+    favorites: document.getElementById("view-favorites"),
+    info: document.getElementById("view-info"),
+  },
+  navItems: document.querySelectorAll(".nav-item"),
+  modals: {
+    filter: document.getElementById("modal-filter"),
+    detail: document.getElementById("modal-detail"),
+  },
+  lists: {
+    chargers: document.getElementById("charger-list"),
+    favorites: document.getElementById("favorites-list"),
+  },
+  filter: {
+    trigger: document.getElementById("filter-trigger"),
+    label: document.getElementById("filter-label"),
+    operator: document.getElementById("filter-operator"),
+    power: document.getElementById("filter-power"),
+    powerVal: document.getElementById("filter-power-val"),
+    amenities: document.getElementById("filter-amenities"),
+    applyBtn: document.getElementById("btn-apply-filter"),
+    listFilterBtn: document.getElementById("btn-list-filter"),
+  },
+  detail: {
+    title: document.getElementById("detail-title"),
+    address: document.getElementById("detail-address"),
+    power: document.getElementById("detail-power"),
+    amenityCount: document.getElementById("detail-amenity-count"),
+    amenityList: document.getElementById("detail-amenities-list"),
+    favBtn: document.getElementById("btn-toggle-fav"),
+    googleBtn: document.getElementById("btn-nav-google"),
+    appleBtn: document.getElementById("btn-nav-apple"),
+    mapContainer: document.getElementById("detail-map"),
+  },
+  buttons: {
+    locate: document.getElementById("btn-locate"),
+    closeFilter: document.querySelector('[data-close="modal-filter"]'),
+    closeDetail: document.querySelector('[data-close="modal-detail"]'),
+  },
+  meta: document.getElementById("app-meta"),
+};
 
-function markerColor(feature) {
-  const total = feature.properties.amenities_total || 0;
-  if (total >= 6) return "#0b9d7a";
-  if (total >= 3) return "#0f7dbe";
-  if (total >= 1) return "#d86f22";
-  return "#7f8b87";
-}
+/* --- INITIALIZATION --- */
+async function init() {
+  loadFavorites();
+  initMap();
+  initNavigation();
+  initFilters();
 
-function createMarker(feature) {
-  const [lon, lat] = feature.geometry.coordinates;
-  const marker = L.circleMarker([lat, lon], {
-    radius: 7,
-    fillOpacity: 0.86,
-    color: "#1e2d28",
-    weight: 1,
-    fillColor: markerColor(feature),
+  // Event Listeners
+  els.buttons.locate.addEventListener("click", requestUserLocation);
+  els.filter.trigger.addEventListener("click", () => openModal("filter"));
+  els.filter.listFilterBtn.addEventListener("click", () => openModal("filter"));
+  els.filter.applyBtn.addEventListener("click", () => closeModal("filter"));
+
+  els.buttons.closeFilter.addEventListener("click", () => closeModal("filter"));
+  els.buttons.closeDetail.addEventListener("click", () => closeModal("detail"));
+
+  // Close modals on backdrop click
+  Object.values(els.modals).forEach((modal) => {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal)
+        closeModal(modal.id === "modal-filter" ? "filter" : "detail");
+    });
   });
 
-  const p = feature.properties;
-  const amenitySummary = Object.keys(AMENITY_LABELS)
-    .filter((key) => (p[key] || 0) > 0)
-    .map((key) => `${AMENITY_LABELS[key]}: ${p[key]}`)
-    .slice(0, 6)
-    .join("<br>");
-  const amenityExamples = renderAmenityExamples(p.amenity_examples);
+  els.detail.favBtn.addEventListener("click", toggleDetailFavorite);
 
-  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
-  const popupHtml = `
-    <strong>${escapeHtml(p.operator || "Unbekannt")}</strong><br>
-    ${escapeHtml(p.address || "")}, ${escapeHtml(p.postcode || "")} ${escapeHtml(p.city || "")}<br>
-    Leistung: ${Math.round(Number(p.max_power_kw || 0))} kW<br>
-    Amenities gesamt: ${p.amenities_total || 0}<br>
-    ${amenitySummary || "Keine Details"}<br>
-    ${amenityExamples}
-    <a class="popup-link" href="${mapsUrl}" target="_blank" rel="noreferrer">Externe Navigation</a>
-  `;
-
-  marker.bindPopup(popupHtml);
-  marker.on("click", () => {
-    state.selectedFeature = feature;
-    routeBtn.disabled = !state.userPosition;
-  });
-
-  return marker;
+  // Load Data
+  await loadData();
 }
 
-function renderAmenityExamples(rawExamples) {
-  if (!Array.isArray(rawExamples) || rawExamples.length === 0) {
-    return "";
+/* --- DATA LOADING --- */
+async function loadData() {
+  try {
+    const [geoRes, opRes] = await Promise.all([
+      fetch("./data/chargers_fast.geojson"),
+      fetch("./data/operators.json"),
+    ]);
+
+    if (!geoRes.ok || !opRes.ok) throw new Error("Network response was not ok");
+
+    const geoData = await geoRes.json();
+    const opData = await opRes.json();
+
+    state.features = geoData.features || [];
+
+    // Sort features initially just to have a defined order, strictly standard
+    // Real sorting happens when we have location
+
+    populateOperators(opData);
+    setAppMeta(geoData);
+
+    applyFilters(); // Initial render
+
+    // Try getting location silently
+    requestUserLocation(true);
+  } catch (err) {
+    console.error("Failed to load data", err);
+    els.lists.chargers.innerHTML = `<div class="empty-state">Fehler beim Laden der Daten.<br>${err.message}</div>`;
   }
+}
 
-  const lines = rawExamples
-    .filter((item) => item && typeof item === "object")
-    .slice(0, 8)
-    .map((item) => {
-      const category = String(item.category || "").trim();
-      const label = AMENITY_LABELS[`amenity_${category}`] || category || "Amenity";
-      const name = String(item.name || "").trim();
-      const opening = String(item.opening_hours || "").trim();
-      const distance = Number(item.distance_m);
-      const distanceText = Number.isFinite(distance) ? ` (~${Math.max(0, Math.round(distance))}m)` : "";
+function setAppMeta(geoData) {
+  if (els.meta && geoData.generated_at) {
+    const date = new Date(geoData.generated_at).toLocaleDateString("de-DE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    els.meta.textContent = `Datenstand: ${date}`;
+  }
+}
 
-      if (name && opening) {
-        return `• ${escapeHtml(label)}${distanceText}: ${escapeHtml(name)} (${escapeHtml(opening)})`;
-      }
-      if (name) {
-        return `• ${escapeHtml(label)}${distanceText}: ${escapeHtml(name)}`;
-      }
-      if (opening) {
-        return `• ${escapeHtml(label)}${distanceText}: ${escapeHtml(opening)}`;
-      }
-      return `• ${escapeHtml(label)}${distanceText}`;
+function populateOperators(opData) {
+  const operators = opData.operators
+    .filter((o) => o.stations >= 100) // Only major ones
+    .map((o) => o.name)
+    .sort();
+
+  operators.forEach((op) => {
+    const opt = document.createElement("option");
+    opt.value = op;
+    opt.textContent = op;
+    els.filter.operator.appendChild(opt);
+  });
+}
+
+/* --- MAP LOGIC --- */
+function initMap() {
+  state.views.map = L.map("map", { zoomControl: false }).setView(
+    [51.1657, 10.4515],
+    6,
+  );
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "© OpenStreetMap",
+  }).addTo(state.views.map);
+
+  state.views.layers.chargers = L.markerClusterGroup
+    ? L.markerClusterGroup()
+    : L.layerGroup();
+  state.views.layers.chargers.addTo(state.views.map);
+
+  state.views.layers.user = L.layerGroup().addTo(state.views.map);
+
+  // Detail Mini Map
+  state.views.detailMap = L.map("detail-map", {
+    zoomControl: false,
+    dragging: false,
+    touchZoom: false,
+    boxZoom: false,
+    scrollWheelZoom: false,
+    doubleClickZoom: false,
+    attributionControl: false,
+  });
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+  }).addTo(state.views.detailMap);
+}
+
+function getMarkerColor(props) {
+  const total = props.amenities_total || 0;
+  if (total > 10) return "#f59e0b"; // Gold
+  if (total > 5) return "#94a3b8"; // Silver
+  if (total > 0) return "#b45309"; // Bronze
+  return "#64748b"; // Grey
+}
+
+function renderMapMarkers() {
+  state.views.layers.chargers.clearLayers();
+
+  const markers = state.filtered.map((feature) => {
+    const [lon, lat] = feature.geometry.coordinates;
+    const color = getMarkerColor(feature.properties);
+
+    // Simple Circle Marker for performance and clean look
+    const marker = L.circleMarker([lat, lon], {
+      color: "#ffffff",
+      weight: 1,
+      fillColor: color,
+      fillOpacity: 1,
+      radius: 8,
     });
 
-  if (lines.length === 0) {
-    return "";
-  }
-  return `<div class="popup-amenity-examples">${lines.join("<br>")}</div>`;
+    marker.on("click", () => openDetail(feature));
+    return marker;
+  });
+
+  markers.forEach((m) => m.addTo(state.views.layers.chargers));
 }
 
-function renderOperatorOptions(operators) {
-  operatorSelect.innerHTML = '<option value="">Alle Betreiber</option>';
-  operators.forEach((operator) => {
-    const option = document.createElement("option");
-    option.value = operator;
-    option.textContent = operator;
-    operatorSelect.appendChild(option);
+function updateUserMarker() {
+  if (!state.userPos || !state.views.layers.user) return;
+  state.views.layers.user.clearLayers();
+
+  L.circleMarker([state.userPos.lat, state.userPos.lon], {
+    color: "#ffffff",
+    weight: 2,
+    fillColor: "#3b82f6", // Blue
+    fillOpacity: 1,
+    radius: 10,
+  }).addTo(state.views.layers.user);
+}
+
+/* --- NAVIGATION & VIEWS --- */
+function initNavigation() {
+  els.navItems.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      // Switch active state
+      els.navItems.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      const targetId = btn.dataset.target;
+      switchView(targetId);
+    });
   });
 }
 
-function parseOperatorNames(payload) {
-  if (!payload || !Array.isArray(payload.operators)) {
-    return [];
+function switchView(viewId) {
+  // Hide all views
+  Object.values(els.views).forEach((el) => {
+    el.classList.remove("active");
+    el.classList.add("hidden");
+    // Small delay to allow display:none to apply before opacity transition if needed
+    // But CSS transitions handle opacity/visibility
+  });
+
+  // Show target
+  const target = document.getElementById(viewId);
+  if (target) {
+    target.classList.remove("hidden");
+    // Force reflow
+    void target.offsetWidth;
+    target.classList.add("active");
   }
 
-  const minStations = Number(payload.min_stations || 100);
-  const names = payload.operators
-    .filter((item) => item && typeof item.name === "string")
-    .filter((item) => Number(item.stations || 0) >= minStations)
-    .map((item) => item.name.trim())
-    .filter((name) => name.length > 0);
+  // Refresh lists if needed
+  if (viewId === "view-list") renderList();
+  if (viewId === "view-favorites") renderFavorites();
 
-  return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
+  // Map resize fix
+  if (viewId === "view-map" && state.views.map) {
+    setTimeout(() => state.views.map.invalidateSize(), 100);
+  }
 }
 
-function renderAmenityFilters() {
-  amenityOptions.innerHTML = "";
-  Object.entries(AMENITY_LABELS).forEach(([key, label]) => {
-    const wrapper = document.createElement("label");
-    const input = document.createElement("input");
-    input.type = "checkbox";
-    input.value = key;
-    input.addEventListener("change", () => {
-      if (input.checked) {
-        state.selectedAmenities.add(key);
+/* --- FILTER LOGIC --- */
+function initFilters() {
+  // Operator
+  els.filter.operator.addEventListener("change", (e) => {
+    state.filters.operator = e.target.value;
+    updateFilters();
+  });
+
+  // Power
+  els.filter.power.addEventListener("input", (e) => {
+    state.filters.minPower = Number(e.target.value);
+    els.filter.powerVal.textContent = state.filters.minPower;
+    updateFilters();
+  });
+
+  // Amenities
+  const amenityKeys = Object.keys(AMENITY_MAPPING);
+  amenityKeys.forEach((key) => {
+    const config = AMENITY_MAPPING[key];
+    const path = getAmenityIconPath(key);
+
+    // Only show if we have an icon? Or show all with text?
+    // Let's show all, using text fallback if no icon
+
+    const div = document.createElement("div");
+    div.className = "amenity-toggle";
+    div.dataset.key = key;
+
+    if (path) {
+      div.innerHTML = `<img src="${path}" alt="${config.label}" loading="lazy"><span class="amenity-name">${config.label}</span>`;
+    } else {
+      // Placeholder icon or just text
+      div.innerHTML = `<div style="width:32px;height:32px;background:#eee;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px">?</div><span class="amenity-name">${config.label}</span>`;
+    }
+
+    div.addEventListener("click", () => {
+      div.classList.toggle("active");
+      if (div.classList.contains("active")) {
+        state.filters.amenities.add(key);
       } else {
-        state.selectedAmenities.delete(key);
+        state.filters.amenities.delete(key);
       }
-      applyFilters();
+      updateFilters();
     });
 
-    const span = document.createElement("span");
-    span.textContent = label;
-    wrapper.append(input, span);
-    amenityOptions.appendChild(wrapper);
+    els.filter.amenities.appendChild(div);
   });
+}
+
+function updateFilters() {
+  applyFilters();
+
+  const total = state.filtered.length;
+  // Update UI hint if needed
+  const filterCount =
+    (state.filters.operator ? 1 : 0) +
+    (state.filters.minPower > 50 ? 1 : 0) +
+    state.filters.amenities.size;
+
+  els.filter.label.textContent =
+    filterCount > 0 ? `Filter (${filterCount})` : "Alle Filter";
 }
 
 function applyFilters() {
-  state.filtered = state.features.filter((feature) => {
-    const p = feature.properties;
-    if (state.selectedOperator && p.operator !== state.selectedOperator) {
-      return false;
-    }
-    if (Number(p.max_power_kw || 0) < state.minPowerKw) {
-      return false;
-    }
+  state.filtered = state.features.filter((f) => {
+    const p = f.properties;
 
-    if (state.selectedAmenities.size > 0) {
-      for (const key of state.selectedAmenities) {
-        if (Number(p[key] || 0) <= 0) {
-          return false;
-        }
+    // Operator
+    if (state.filters.operator && p.operator !== state.filters.operator)
+      return false;
+
+    // Power
+    if ((p.max_power_kw || 0) < state.filters.minPower) return false;
+
+    // Amenities
+    if (state.filters.amenities.size > 0) {
+      for (const key of state.filters.amenities) {
+        if (!p[key] || p[key] <= 0) return false;
       }
     }
 
     return true;
   });
 
-  layers.chargers.clearLayers();
-  state.filtered.forEach((feature) => {
-    createMarker(feature).addTo(layers.chargers);
-  });
-
-  const withAmenities = state.filtered.filter((f) => (f.properties.amenities_total || 0) > 0).length;
-  stats.textContent = `${state.filtered.length} Ladepunkte im Filter, davon ${withAmenities} mit >=1 Amenity.`;
-
-  if (state.filtered.length > 0) {
-    const group = L.featureGroup(layers.chargers.getLayers());
-    map.fitBounds(group.getBounds().pad(0.15), { animate: false, maxZoom: 12 });
+  // Re-sort if we have location
+  if (state.userPos) {
+    state.filtered.sort((a, b) => getDistance(a) - getDistance(b));
   }
 
-  if (
-    state.selectedFeature &&
-    !state.filtered.some((feature) => feature.properties.station_id === state.selectedFeature.properties.station_id)
-  ) {
-    state.selectedFeature = null;
-    routeBtn.disabled = true;
+  // Update Views
+  renderMapMarkers();
+
+  // If list is active, re-render it
+  if (els.views.list.classList.contains("active")) {
+    renderList();
   }
 }
 
-function setBuildMeta(geojson) {
-  const generated = geojson.generated_at
-    ? new Date(geojson.generated_at).toISOString().replace("T", " ").replace(".000Z", " UTC")
-    : "unbekannt";
+/* --- LIST RENDERING --- */
+function renderList() {
+  const container = els.lists.chargers;
+  container.innerHTML = "";
 
-  const source = geojson.source?.source_url || "unbekannt";
-  buildMeta.textContent = `Stand: ${generated} | Quelle: ${source}`;
-}
+  // Limit to first 50 items for performance
+  const displayItems = state.filtered.slice(0, 50);
 
-async function loadData() {
-  try {
-    const [geoResponse, operatorsResponse] = await Promise.all([
-      fetch("./data/chargers_fast.geojson", { cache: "no-store" }),
-      fetch("./data/operators.json", { cache: "no-store" }),
-    ]);
-
-    if (!geoResponse.ok) {
-      throw new Error(`chargers_fast.geojson HTTP ${geoResponse.status}`);
-    }
-    if (!operatorsResponse.ok) {
-      throw new Error(`operators.json HTTP ${operatorsResponse.status}`);
-    }
-
-    const [geojson, operatorsPayload] = await Promise.all([
-      geoResponse.json(),
-      operatorsResponse.json(),
-    ]);
-
-    state.features = geojson.features || [];
-    const operators = parseOperatorNames(operatorsPayload);
-
-    if (state.features.length === 0) {
-      stats.textContent = "Keine Daten gefunden. Fuehre die Pipeline aus.";
-      return;
-    }
-
-    renderOperatorOptions(operators);
-    renderAmenityFilters();
-    setBuildMeta(geojson);
-    applyFilters();
-  } catch (error) {
-    stats.textContent =
-      "Daten konnten nicht geladen werden. Erwartet werden ./data/chargers_fast.geojson und ./data/operators.json";
-    buildMeta.textContent = String(error);
-  }
-}
-
-function setUserPosition(lat, lon) {
-  state.userPosition = { lat, lon };
-  layers.user.clearLayers();
-
-  L.circleMarker([lat, lon], {
-    radius: 8,
-    color: "#1a2856",
-    fillColor: "#2563eb",
-    fillOpacity: 0.9,
-    weight: 1,
-  }).addTo(layers.user).bindPopup("Dein Standort");
-
-  map.flyTo([lat, lon], 11, { duration: 0.9 });
-  routeBtn.disabled = !state.selectedFeature;
-}
-
-function requestGeolocation() {
-  if (!navigator.geolocation) {
-    stats.textContent = "Geolocation wird in diesem Browser nicht unterstuetzt.";
+  if (displayItems.length === 0) {
+    container.innerHTML = `<div class="empty-state">Keine Ladestationen gefunden.</div>`;
     return;
   }
 
-  locateBtn.disabled = true;
+  displayItems.forEach((feature) => {
+    const card = createStationCard(feature);
+    container.appendChild(card);
+  });
+
+  if (state.filtered.length > 50) {
+    const more = document.createElement("div");
+    more.style.textAlign = "center";
+    more.style.padding = "1rem";
+    more.style.color = "#888";
+    more.textContent = `...und ${state.filtered.length - 50} weitere`;
+    container.appendChild(more);
+  }
+}
+
+function renderFavorites() {
+  const container = els.lists.favorites;
+  container.innerHTML = "";
+
+  if (state.favorites.size === 0) {
+    container.innerHTML = `<div class="empty-state" style="text-align:center; padding:2rem; color:#888;">
+      Noch keine Favoriten gespeichert.<br>
+      Klicke auf den <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> Stern in der Detailansicht um Stationen zu merken.
+    </div>`;
+    return;
+  }
+
+  // Find feature objects for favorites
+  const favFeatures = state.features.filter((f) =>
+    state.favorites.has(f.properties.station_id),
+  );
+
+  if (state.userPos) {
+    favFeatures.sort((a, b) => getDistance(a) - getDistance(b));
+  }
+
+  favFeatures.forEach((feature) => {
+    const card = createStationCard(feature);
+    container.appendChild(card);
+  });
+}
+
+function createStationCard(feature) {
+  const p = feature.properties;
+  const div = document.createElement("div");
+  div.className = "station-card";
+
+  const distance = getDistanceFormatted(feature);
+
+  // Top Amenities (max 3 badges)
+  const badges = Object.keys(AMENITY_MAPPING)
+    .filter((k) => p[k] > 0)
+    .sort((a, b) => p[b] - p[a]) // Most frequent first
+    .slice(0, 3)
+    .map((k) => `<span class="badge">${AMENITY_MAPPING[k].label}</span>`)
+    .join("");
+
+  div.innerHTML = `
+    <div class="card-header">
+      <h3 class="card-title">${escapeHtml(p.operator || "Unbekannt")}</h3>
+      ${distance ? `<span class="card-distance">${distance}</span>` : ""}
+    </div>
+    <div class="card-meta">
+      ${escapeHtml(p.address || "")}, ${escapeHtml(p.city || "")}<br>
+      ${Math.round(p.max_power_kw)} kW • ${p.amenities_total} Amenities
+    </div>
+    <div class="card-badges">
+      ${badges}
+    </div>
+  `;
+
+  div.addEventListener("click", () => openDetail(feature));
+  return div;
+}
+
+/* --- DETAIL MODAL --- */
+let currentDetailFeature = null;
+
+function openDetail(feature) {
+  currentDetailFeature = feature;
+  const p = feature.properties;
+
+  els.detail.title.textContent = p.operator || "Unbekannt";
+  els.detail.address.textContent = `${p.address || ""}, ${p.postcode || ""} ${p.city || ""}`;
+  els.detail.power.textContent = `${Math.round(p.max_power_kw || 0)} kW`;
+  els.detail.amenityCount.textContent = `${p.amenities_total || 0} Amenities`;
+
+  // Favorite Button State
+  updateFavBtnState();
+
+  // Navigation Links
+  const [lon, lat] = feature.geometry.coordinates;
+  els.detail.googleBtn.href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+  els.detail.appleBtn.href = `http://maps.apple.com/?daddr=${lat},${lon}`;
+
+  // Mini Map
+  state.views.detailMap.setView([lat, lon], 15);
+  // Clear old markers from detail map? Not strictly needed if we just pan,
+  // but better to add a marker for the station
+  if (state.views.detailMap.stationMarker)
+    state.views.detailMap.removeLayer(state.views.detailMap.stationMarker);
+
+  state.views.detailMap.stationMarker = L.circleMarker([lat, lon], {
+    color: "#fff",
+    fillColor: "#0f766e",
+    fillOpacity: 1,
+    radius: 8,
+  }).addTo(state.views.detailMap);
+
+  // Force map resize after modal transition
+  setTimeout(() => state.views.detailMap.invalidateSize(), 300);
+
+  // Amenity List
+  renderDetailAmenities(p);
+
+  openModal("detail");
+}
+
+function renderDetailAmenities(props) {
+  els.detail.amenityList.innerHTML = "";
+  const examples = props.amenity_examples || [];
+
+  if (examples.length === 0) {
+    els.detail.amenityList.innerHTML = `<div style="color:#888">Keine Details verfügbar.</div>`;
+    return;
+  }
+
+  examples.slice(0, 15).forEach((item) => {
+    // item: { category, name, opening_hours, distance_m }
+    const catConfig = AMENITY_MAPPING[`amenity_${item.category}`] || {
+      label: item.category,
+    };
+    const iconPath = getAmenityIconPath(`amenity_${item.category}`);
+
+    // Helper to format text
+    const name = item.name || catConfig.label;
+    const meta = [
+      item.distance_m ? `~${Math.round(item.distance_m)}m` : null,
+      item.opening_hours,
+    ]
+      .filter(Boolean)
+      .join(" • ");
+
+    const div = document.createElement("div");
+    div.className = "amenity-item";
+
+    let iconHtml = iconPath
+      ? `<img src="${iconPath}" alt="${catConfig.label}">`
+      : `<div style="width:24px;height:24px;background:#eee;border-radius:4px"></div>`;
+
+    div.innerHTML = `
+      ${iconHtml}
+      <div class="amenity-detail">
+        <span class="amenity-detail-name">${escapeHtml(name)}</span>
+        <span class="amenity-detail-meta">${escapeHtml(meta)}</span>
+      </div>
+    `;
+    els.detail.amenityList.appendChild(div);
+  });
+}
+
+function toggleDetailFavorite() {
+  if (!currentDetailFeature) return;
+  const id = currentDetailFeature.properties.station_id;
+
+  if (state.favorites.has(id)) {
+    state.favorites.delete(id);
+  } else {
+    state.favorites.add(id);
+  }
+
+  updateFavBtnState();
+  saveFavorites();
+
+  // If we are in favorites view, refresh
+  if (els.views.favorites.classList.contains("active")) {
+    renderFavorites();
+  }
+}
+
+function updateFavBtnState() {
+  if (!currentDetailFeature) return;
+  const id = currentDetailFeature.properties.station_id;
+  const isFav = state.favorites.has(id);
+
+  if (isFav) {
+    els.detail.favBtn.classList.add("active");
+    els.detail.favBtn
+      .querySelector("polygon")
+      .setAttribute("fill", "currentColor");
+  } else {
+    els.detail.favBtn.classList.remove("active");
+    els.detail.favBtn.querySelector("polygon").setAttribute("fill", "none");
+  }
+}
+
+/* --- UTILS --- */
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function getDistance(feature) {
+  if (!state.userPos) return Infinity;
+  const [lon, lat] = feature.geometry.coordinates;
+  // Haversine approx is enough for sorting
+  const R = 6371e3; // meters
+  const φ1 = (state.userPos.lat * Math.PI) / 180;
+  const φ2 = (lat * Math.PI) / 180;
+  const Δφ = ((lat - state.userPos.lat) * Math.PI) / 180;
+  const Δλ = ((lon - state.userPos.lon) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // meters
+}
+
+function getDistanceFormatted(feature) {
+  const d = getDistance(feature);
+  if (d === Infinity) return "";
+  if (d > 1000) return (d / 1000).toFixed(1) + " km";
+  return Math.round(d) + " m";
+}
+
+function requestUserLocation(silent = false) {
+  if (!navigator.geolocation) {
+    if (!silent) alert("Geolocation nicht unterstützt.");
+    return;
+  }
+
   navigator.geolocation.getCurrentPosition(
-    (position) => {
-      locateBtn.disabled = false;
-      setUserPosition(position.coords.latitude, position.coords.longitude);
+    (pos) => {
+      state.userPos = {
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+      };
+      updateUserMarker();
+      // Use Leaflet distanceTo for better accuracy if desired, but custom calc is fine
+      // Sort list if needed
+      applyFilters();
+
+      // Fly to user on map if not silent
+      if (!silent && state.views.map) {
+        state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
+      }
     },
     (err) => {
-      locateBtn.disabled = false;
-      stats.textContent = `Standort konnte nicht gelesen werden: ${err.message}`;
+      console.warn("Location error", err);
+      if (!silent) alert("Standort konnte nicht ermittelt werden.");
     },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 120000 }
+    { enableHighAccuracy: true, timeout: 5000 },
   );
 }
 
-async function routeToSelected() {
-  if (!state.userPosition || !state.selectedFeature) {
-    return;
-  }
-
-  const [destLon, destLat] = state.selectedFeature.geometry.coordinates;
-  const start = `${state.userPosition.lon},${state.userPosition.lat}`;
-  const end = `${destLon},${destLat}`;
-
-  const url = `https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson`;
-
-  routeBtn.disabled = true;
+/* --- LOCALSTORAGE --- */
+function loadFavorites() {
   try {
-    const response = await fetch(url);
-    const payload = await response.json();
-    if (!payload.routes || payload.routes.length === 0) {
-      throw new Error("Keine Route gefunden");
+    const raw = localStorage.getItem("woladen_favs");
+    if (raw) {
+      const arr = JSON.parse(raw);
+      state.favorites = new Set(arr);
     }
-
-    const route = payload.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon]);
-    layers.route.clearLayers();
-    L.polyline(route, { color: "#d86f22", weight: 4, opacity: 0.85 }).addTo(layers.route);
-
-    const routeBounds = L.latLngBounds(route);
-    map.fitBounds(routeBounds.pad(0.2), { animate: false });
-  } catch (error) {
-    stats.textContent = `Route konnte nicht berechnet werden: ${error}`;
-  } finally {
-    routeBtn.disabled = !state.selectedFeature;
+  } catch (e) {
+    console.error("Error loading favorites", e);
   }
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+function saveFavorites() {
+  try {
+    const arr = Array.from(state.favorites);
+    localStorage.setItem("woladen_favs", JSON.stringify(arr));
+  } catch (e) {
+    console.error("Error saving favorites", e);
+  }
 }
 
-operatorSelect.addEventListener("change", () => {
-  state.selectedOperator = operatorSelect.value;
-  applyFilters();
-});
+/* --- MODAL UTILS --- */
+function openModal(name) {
+  const m = els.modals[name];
+  if (m) m.classList.remove("hidden");
+}
 
-powerRange.addEventListener("input", () => {
-  state.minPowerKw = Number(powerRange.value);
-  powerRangeValue.textContent = `>= ${state.minPowerKw}`;
-  applyFilters();
-});
+function closeModal(name) {
+  const m = els.modals[name];
+  if (m) m.classList.add("hidden");
+}
 
-locateBtn.addEventListener("click", requestGeolocation);
-routeBtn.addEventListener("click", routeToSelected);
-
-loadData();
+/* --- BOOTSTRAP --- */
+init();

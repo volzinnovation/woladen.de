@@ -2,12 +2,15 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>woladen.de | Schnelllader mit Umfeld</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>woladen.de | Ladestationen & Amenities</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link
@@ -19,45 +22,320 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="app-shell">
-      <header class="hero">
-        <div>
-          <h1>woladen.de</h1>
-          <p>Schnelllader in Deutschland mit Amenities im 100m Umfeld.</p>
+    <div id="app" class="app-shell">
+      <!-- MAIN VIEWS -->
+      <main class="viewport">
+        <!-- MAP VIEW -->
+        <div id="view-map" class="view active">
+          <div id="map"></div>
+
+          <!-- Floating Controls for Map -->
+          <div class="map-controls-overlay">
+            <div class="search-bar">
+              <button
+                id="btn-locate"
+                class="icon-btn"
+                aria-label="Mein Standort"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M12 2L12 22M2 12L22 12" opacity="0.3" />
+                  <circle cx="12" cy="12" r="4" />
+                </svg>
+              </button>
+              <div class="filter-summary" id="filter-trigger">
+                <span id="filter-label">Alle Filter</span>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="hero-meta" id="buildMeta">Lade Daten...</div>
-      </header>
 
-      <section class="controls" aria-label="Filter">
-        <label>
-          Betreiber
-          <select id="operatorSelect">
-            <option value="">Alle Betreiber</option>
-          </select>
-        </label>
-
-        <label>
-          Mindestleistung (kW)
-          <input id="powerRange" type="range" min="50" max="400" step="10" value="50" />
-          <span id="powerRangeValue">>= 50</span>
-        </label>
-
-        <div class="amenities">
-          <span>Gesuchte Amenities</span>
-          <div id="amenityOptions" class="amenity-options"></div>
+        <!-- LIST VIEW -->
+        <div id="view-list" class="view hidden">
+          <header class="view-header">
+            <h2>Stationen in der Nähe</h2>
+            <div class="header-actions">
+              <button id="btn-list-filter" class="text-btn">Filter</button>
+            </div>
+          </header>
+          <div id="charger-list" class="list-container">
+            <!-- Cards injected here -->
+            <div class="loading-state">Lade Stationen...</div>
+          </div>
         </div>
 
-        <div class="actions">
-          <button id="locateBtn" type="button">Meinen Standort nutzen</button>
-          <button id="routeBtn" type="button" disabled>Route zum gewählten Ladepunkt</button>
+        <!-- FAVORITES VIEW -->
+        <div id="view-favorites" class="view hidden">
+          <header class="view-header">
+            <h2>Favoriten</h2>
+          </header>
+          <div id="favorites-list" class="list-container">
+            <div class="empty-state">Noch keine Favoriten gespeichert.</div>
+          </div>
         </div>
 
-        <p id="stats" class="stats"></p>
-      </section>
+        <!-- INFO VIEW -->
+        <div id="view-info" class="view hidden">
+          <header class="view-header">
+            <h2>Info & Hilfe</h2>
+          </header>
+          <div class="content-container">
+            <div class="info-card">
+              <h3>Über woladen.de</h3>
+              <p>
+                Finde Schnelllader mit der besten Aufenthaltsqualität. Wir
+                zeigen dir, wo es sich lohnt zu laden.
+              </p>
+              <div id="app-meta" class="meta-block"></div>
+            </div>
 
-      <section class="map-wrap" aria-label="Karte">
-        <div id="map"></div>
-      </section>
+            <div class="info-card">
+              <h3>Legende</h3>
+              <ul class="legend-list">
+                <li><span class="dot gold"></span> >10 Amenities (Gold)</li>
+                <li><span class="dot silver"></span> >5 Amenities (Silber)</li>
+                <li><span class="dot bronze"></span> >1 Amenity (Bronze)</li>
+                <li><span class="dot grey"></span> Keine Amenities</li>
+              </ul>
+            </div>
+
+            <div class="info-card">
+              <h3>Kontakt & Code</h3>
+              <p>Entwickelt von Raphael Volz.</p>
+              <a
+                href="https://github.com/volzinnovation/woladen.de"
+                target="_blank"
+                class="link-btn"
+                >GitHub Projekt</a
+              >
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- NAVIGATION BAR -->
+      <nav class="bottom-nav">
+        <button class="nav-item active" data-target="view-map">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polygon
+              points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"
+            ></polygon>
+            <line x1="8" y1="2" x2="8" y2="18"></line>
+            <line x1="16" y1="6" x2="16" y2="22"></line>
+          </svg>
+          <span>Karte</span>
+        </button>
+        <button class="nav-item" data-target="view-list">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          <span>Liste</span>
+        </button>
+        <button class="nav-item" data-target="view-favorites">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polygon
+              points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+            ></polygon>
+          </svg>
+          <span>Favoriten</span>
+        </button>
+        <button class="nav-item" data-target="view-info">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>Info</span>
+        </button>
+      </nav>
+
+      <!-- FILTER MODAL (Overlay) -->
+      <div id="modal-filter" class="modal-overlay hidden">
+        <div class="modal-content bottom-sheet">
+          <header class="modal-header">
+            <h3>Filter</h3>
+            <button class="close-btn" data-close="modal-filter">&times;</button>
+          </header>
+          <div class="modal-body">
+            <label class="filter-group">
+              <span class="label-text">Betreiber</span>
+              <select id="filter-operator">
+                <option value="">Alle Betreiber</option>
+              </select>
+            </label>
+
+            <label class="filter-group">
+              <span class="label-text"
+                >Min. Leistung: <span id="filter-power-val">50</span> kW</span
+              >
+              <input
+                type="range"
+                id="filter-power"
+                min="50"
+                max="350"
+                step="50"
+                value="50"
+              />
+              <div class="range-labels">
+                <span>50</span><span>150</span><span>300+</span>
+              </div>
+            </label>
+
+            <div class="filter-group">
+              <span class="label-text">Amenities</span>
+              <div id="filter-amenities" class="amenity-grid">
+                <!-- Icons injected by JS -->
+              </div>
+            </div>
+          </div>
+          <footer class="modal-footer">
+            <button id="btn-apply-filter" class="primary-btn">Anwenden</button>
+          </footer>
+        </div>
+      </div>
+
+      <!-- DETAIL MODAL -->
+      <div id="modal-detail" class="modal-overlay hidden">
+        <div class="modal-content full-sheet">
+          <button class="close-btn-float" data-close="modal-detail">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+
+          <div class="detail-hero">
+            <div id="detail-map" class="detail-mini-map"></div>
+          </div>
+
+          <div class="detail-body">
+            <div class="detail-header">
+              <h2 id="detail-title">Operator Name</h2>
+              <button
+                id="btn-toggle-fav"
+                class="fav-btn-round"
+                aria-label="Favorit"
+              >
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <polygon
+                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                  ></polygon>
+                </svg>
+              </button>
+            </div>
+
+            <p id="detail-address" class="detail-address">
+              Musterstraße 1, 12345 Berlin
+            </p>
+
+            <div class="detail-stats">
+              <div class="stat-pill">
+                <span class="icon">⚡</span>
+                <span id="detail-power">150 kW</span>
+              </div>
+              <div class="stat-pill">
+                <span class="icon">🏪</span>
+                <span id="detail-amenity-count">5 Amenities</span>
+              </div>
+            </div>
+
+            <div class="detail-actions">
+              <a
+                id="btn-nav-google"
+                href="#"
+                target="_blank"
+                class="action-btn"
+              >
+                Google Maps
+              </a>
+              <a
+                id="btn-nav-apple"
+                href="#"
+                target="_blank"
+                class="action-btn secondary"
+              >
+                Apple Maps
+              </a>
+            </div>
+
+            <div class="amenity-list-section">
+              <h3>In der Nähe</h3>
+              <div id="detail-amenities-list" class="amenity-list">
+                <!-- List items -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script
