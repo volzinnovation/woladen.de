@@ -510,7 +510,7 @@ function createStationCard(feature) {
       ${distance ? `<span class="card-distance">${distance}</span>` : ""}
     </div>
     <div class="card-meta">
-      ${escapeHtml(p.address || "")}, ${escapeHtml(p.city || "")}<br>
+      ${escapeHtml(p.city || "")}<br>
       ${Math.round(p.max_power_kw)} kW • ${p.amenities_total} Annehmlichkeit(en)
     </div>
     <div class="card-badges">
