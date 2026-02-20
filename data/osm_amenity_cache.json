@@ -2,7 +2,56 @@
   "meta": {
     "schema_version": 1,
     "radius_m": 100,
-    "updated_at": "2026-02-11T19:22:15.420642+00:00"
+    "updated_at": "2026-02-20T20:23:22.134694+00:00"
   },
-  "entries": {}
+  "entries": {
+    "47.40555,10.27626": {
+      "checked_at": "2026-02-20T20:22:52.703916+00:00",
+      "radius_m": 100,
+      "counts": {
+        "amenity_restaurant": 1,
+        "amenity_cafe": 0,
+        "amenity_fast_food": 0,
+        "amenity_toilets": 0,
+        "amenity_supermarket": 0,
+        "amenity_bakery": 0,
+        "amenity_convenience": 0,
+        "amenity_pharmacy": 0,
+        "amenity_hotel": 0,
+        "amenity_museum": 0,
+        "amenity_playground": 2,
+        "amenity_park": 1,
+        "amenity_ice_cream": 0
+      },
+      "examples": [
+        {
+          "category": "playground",
+          "distance_m": 31,
+          "lat": 47.405566,
+          "lon": 10.27584
+        },
+        {
+          "category": "restaurant",
+          "name": "Königliches Jagdhaus",
+          "distance_m": 67,
+          "lat": 47.405264,
+          "lon": 10.27704
+        },
+        {
+          "category": "playground",
+          "name": "Oberstdorfer Dorf-Spielplatz",
+          "distance_m": 103,
+          "lat": 47.406463,
+          "lon": 10.276016
+        },
+        {
+          "category": "park",
+          "name": "Fuggerpark",
+          "distance_m": 127,
+          "lat": 47.406647,
+          "lon": 10.275776
+        }
+      ]
+    }
+  }
 }

@@ -490,6 +490,32 @@ def build_fast_charger_frame(raw_df: pd.DataFrame, min_power_kw: float) -> pd.Da
     # to_float() explicitly normalizes comma decimals (e.g. \"150,0\" -> 150.0).
     df["max_power_kw"] = to_float(df[power_col])
 
+    charging_points_col = find_column(
+        df,
+        ["anzahl ladepunkte", "anzahlladepunkte", "ladepunkte"],
+        contains=True,
+    )
+    if charging_points_col:
+        df["charging_points_count_row"] = to_float(df[charging_points_col]).fillna(1.0)
+    else:
+        df["charging_points_count_row"] = 1.0
+    df["charging_points_count_row"] = df["charging_points_count_row"].clip(lower=1.0)
+
+    connector_power_cols = [
+        col for col in df.columns if normalize_text(col).startswith("nennleistungstecker")
+    ]
+    if connector_power_cols:
+        connector_power_frame = pd.DataFrame(
+            {col: to_float(df[col]) for col in connector_power_cols},
+            index=df.index,
+        )
+        connector_max = connector_power_frame.max(axis=1, skipna=True)
+    else:
+        connector_max = pd.Series([pd.NA] * len(df), index=df.index, dtype="float64")
+
+    per_point_fallback = df["max_power_kw"] / df["charging_points_count_row"].replace(0, pd.NA)
+    df["max_individual_power_kw_row"] = connector_max.fillna(per_point_fallback)
+
     df["lat"] = to_float(df[lat_col])
     df["lon"] = to_float(df[lon_col])
 
@@ -551,7 +577,39 @@ def build_fast_charger_frame(raw_df: pd.DataFrame, min_power_kw: float) -> pd.Da
     else:
         df["status"] = ""
 
-    df = df.drop_duplicates(subset=["lat", "lon", "operator"]).reset_index(drop=True)
+    def first_nonempty(series: pd.Series) -> str:
+        for value in series:
+            text = str(value).strip()
+            if text:
+                return text
+        return ""
+
+    df = (
+        df.groupby(["lat", "lon", "operator"], as_index=False)
+        .agg(
+            status=("status", first_nonempty),
+            max_power_kw=("max_power_kw", "max"),
+            charging_points_count=("charging_points_count_row", "sum"),
+            max_individual_power_kw=("max_individual_power_kw_row", "max"),
+            postcode=("postcode", first_nonempty),
+            city=("city", first_nonempty),
+            address=("address", first_nonempty),
+        )
+        .reset_index(drop=True)
+    )
+
+    df["charging_points_count"] = (
+        df["charging_points_count"]
+        .fillna(1.0)
+        .round()
+        .astype(int)
+        .clip(lower=1)
+    )
+    df["max_individual_power_kw"] = (
+        df["max_individual_power_kw"]
+        .fillna(df["max_power_kw"])
+        .fillna(0.0)
+    )
 
     def station_id(row: pd.Series) -> str:
         raw = f"{row['lat']:.5f}|{row['lon']:.5f}|{row['operator']}|{row['address']}"
@@ -564,6 +622,8 @@ def build_fast_charger_frame(raw_df: pd.DataFrame, min_power_kw: float) -> pd.Da
         "operator",
         "status",
         "max_power_kw",
+        "charging_points_count",
+        "max_individual_power_kw",
         "lat",
         "lon",
         "postcode",
@@ -649,6 +709,8 @@ def build_amenity_example(
     name: str,
     opening_hours: str,
     distance_m: float | None,
+    amenity_lat: float | None = None,
+    amenity_lon: float | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "category": category,
@@ -659,6 +721,9 @@ def build_amenity_example(
         payload["opening_hours"] = opening_hours
     if distance_m is not None:
         payload["distance_m"] = int(round(max(0.0, distance_m)))
+    if amenity_lat is not None and amenity_lon is not None:
+        payload["lat"] = round(float(amenity_lat), 6)
+        payload["lon"] = round(float(amenity_lon), 6)
     return payload
 
 
@@ -1054,6 +1119,8 @@ def lookup_amenities(
                     name=name,
                     opening_hours=opening_hours,
                     distance_m=distance_m,
+                    amenity_lat=elem_lat,
+                    amenity_lon=elem_lon,
                 )
             )
 
@@ -1360,6 +1427,8 @@ def enrich_with_amenities_osm_pbf(
                         name=point.name,
                         opening_hours=point.opening_hours,
                         distance_m=distance_m,
+                        amenity_lat=point.lat,
+                        amenity_lon=point.lon,
                     )
                 )
 
@@ -1448,6 +1517,8 @@ def dataframe_to_geojson(df: pd.DataFrame, source_meta: dict[str, Any]) -> dict[
             "operator": row["operator"],
             "status": row["status"],
             "max_power_kw": float(row["max_power_kw"]),
+            "charging_points_count": int(row["charging_points_count"]),
+            "max_individual_power_kw": float(row["max_individual_power_kw"]),
             "postcode": row["postcode"],
             "city": row["city"],
             "address": row["address"],

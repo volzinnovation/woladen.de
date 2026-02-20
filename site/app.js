@@ -72,6 +72,7 @@ const state = {
     layers: {
       chargers: null,
       user: null,
+      detailAmenities: null,
     },
   },
 };
@@ -244,6 +245,7 @@ function initMap() {
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
   }).addTo(state.views.detailMap);
+  state.views.layers.detailAmenities = L.layerGroup().addTo(state.views.detailMap);
 }
 
 function getMarkerColor(props) {
@@ -528,7 +530,7 @@ function createStationCard(feature) {
     </div>
     <div class="card-meta">
       ${escapeHtml(p.city || "")}<br>
-      ${Math.round(p.max_power_kw)} kW • ${p.amenities_total} Annehmlichkeit(en)
+      ${Math.round(getDisplayedMaxPowerKw(p))} kW max • ${getChargingPointCount(p)} Ladepunkte • ${p.amenities_total} Annehmlichkeit(en)
     </div>
     <div class="card-badges">
       ${badges}
@@ -537,6 +539,23 @@ function createStationCard(feature) {
 
   div.addEventListener("click", () => openDetail(feature));
   return div;
+}
+
+function getDisplayedMaxPowerKw(props) {
+  const maxIndividual = Number(props.max_individual_power_kw || 0);
+  if (Number.isFinite(maxIndividual) && maxIndividual > 0) {
+    return maxIndividual;
+  }
+  const fallback = Number(props.max_power_kw || 0);
+  return Number.isFinite(fallback) && fallback > 0 ? fallback : 0;
+}
+
+function getChargingPointCount(props) {
+  const count = Number(props.charging_points_count || 0);
+  if (Number.isFinite(count) && count > 0) {
+    return Math.round(count);
+  }
+  return 1;
 }
 
 /* --- DETAIL MODAL --- */
@@ -548,7 +567,7 @@ function openDetail(feature) {
 
   els.detail.title.textContent = p.operator || "Unbekannt";
   els.detail.address.textContent = `${p.address || ""}, ${p.postcode || ""} ${p.city || ""}`;
-  els.detail.power.textContent = `${Math.round(p.max_power_kw || 0)} kW`;
+  els.detail.power.textContent = `${Math.round(getDisplayedMaxPowerKw(p))} kW max / ${getChargingPointCount(p)} Ladepunkte`;
   els.detail.amenityCount.textContent = `${p.amenities_total || 0} Amenities`;
 
   // Favorite Button State
@@ -560,11 +579,13 @@ function openDetail(feature) {
   els.detail.appleBtn.href = `http://maps.apple.com/?daddr=${lat},${lon}`;
 
   // Mini Map
-  state.views.detailMap.setView([lat, lon], 16);
   // Clear old markers from detail map? Not strictly needed if we just pan,
   // but better to add a marker for the station
   if (state.views.detailMap.stationMarker)
     state.views.detailMap.removeLayer(state.views.detailMap.stationMarker);
+  if (state.views.layers.detailAmenities) {
+    state.views.layers.detailAmenities.clearLayers();
+  }
 
   state.views.detailMap.stationMarker = L.circleMarker([lat, lon], {
     color: "#fff",
@@ -572,6 +593,15 @@ function openDetail(feature) {
     fillOpacity: 1,
     radius: 8,
   }).addTo(state.views.detailMap);
+
+  const amenityBounds = renderDetailAmenityMarkers(p.amenity_examples || []);
+  if (amenityBounds.length > 0) {
+    const bounds = L.latLngBounds([[lat, lon], [lat, lon]]);
+    amenityBounds.forEach((pair) => bounds.extend(pair));
+    state.views.detailMap.fitBounds(bounds.pad(0.25), { animate: false, maxZoom: 17 });
+  } else {
+    state.views.detailMap.setView([lat, lon], 16);
+  }
 
   // Amenity List
   renderDetailAmenities(p);
@@ -585,6 +615,47 @@ function openDetail(feature) {
   }
 }
 
+function renderDetailAmenityMarkers(examples) {
+  if (!state.views.layers.detailAmenities) {
+    return [];
+  }
+
+  const bounds = [];
+  examples.slice(0, 20).forEach((item) => {
+    const lat = Number(item?.lat);
+    const lon = Number(item?.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      return;
+    }
+
+    const amenityKey = `amenity_${item.category || ""}`;
+    const amenityLabel = AMENITY_MAPPING[amenityKey]?.label || item.category || "Amenity";
+    const amenityName = item.name ? `${item.name}` : amenityLabel;
+    const iconPath = getAmenityIconPath(amenityKey);
+    const markerIcon = iconPath
+      ? L.divIcon({
+          className: "mini-amenity-marker",
+          html: `<img src="${iconPath}" alt="${escapeHtml(amenityLabel)}" loading="lazy">`,
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
+        })
+      : L.divIcon({
+          className: "mini-amenity-marker fallback",
+          html: "<span>•</span>",
+          iconSize: [16, 16],
+          iconAnchor: [8, 8],
+        });
+
+    const marker = L.marker([lat, lon], {
+      icon: markerIcon,
+      keyboard: false,
+    }).addTo(state.views.layers.detailAmenities);
+    marker.bindTooltip(escapeHtml(amenityName), { direction: "top", offset: [0, -8] });
+    bounds.push([lat, lon]);
+  });
+  return bounds;
+}
+
 function renderDetailAmenities(props) {
   els.detail.amenityList.innerHTML = "";
   const examples = props.amenity_examples || [];
@@ -595,7 +666,7 @@ function renderDetailAmenities(props) {
   }
 
   examples.slice(0, 15).forEach((item) => {
-    // item: { category, name, opening_hours, distance_m }
+    // item: { category, name, opening_hours, distance_m, lat, lon }
     const catConfig = AMENITY_MAPPING[`amenity_${item.category}`] || {
       label: item.category,
     };

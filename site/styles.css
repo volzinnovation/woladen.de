@@ -475,6 +475,31 @@ input[type="range"] {
   height: 100%;
 }
 
+.mini-amenity-marker {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.mini-amenity-marker img {
+  width: 16px;
+  height: 16px;
+}
+
+.mini-amenity-marker.fallback {
+  width: 16px;
+  height: 16px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1;
+}
+
 .close-btn-float {
   position: absolute;
   top: 1rem;
