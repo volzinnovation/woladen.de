@@ -75,12 +75,12 @@ python scripts/build_site.py
 <!-- DATA_STATUS_START -->
 ## Data Build Status
 
-- Last build (UTC): `2026-02-20T20:23:11+00:00`
+- Last build (UTC): `2026-02-20T20:28:15+00:00`
 - Source: `https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-01-28.csv`
 - Fast chargers (>= 50.0 kW): `16485`
-- Chargers with >=1 nearby amenity: `1`
-- Amenity backend: `overpass`
-- Live amenity lookups this run: `0` (cache hits: `1`, deferred: `16484`)
+- Chargers with >=1 nearby amenity: `15007`
+- Amenity backend: `osm-pbf`
+- Live amenity lookups this run: `0` (cache hits: `0`, deferred: `0`)
 
 Generated files:
 - `data/bnetza_cache.csv`
