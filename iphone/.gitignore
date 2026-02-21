@@ -1,0 +1,10 @@
+# Generated project files
+Woladen.xcodeproj/
+
+# Xcode user state
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+
+# macOS
+.DS_Store
