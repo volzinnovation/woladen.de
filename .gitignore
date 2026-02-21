@@ -15,3 +15,8 @@ test-results/mobile_test.mp4
 site/index.html
 /site
 /site/data
+site/data/chargers_fast.geojson
+site/data/operators.json
+site/data/summary.json
+site/app.js
+site/index.html

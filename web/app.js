@@ -245,6 +245,7 @@ function initMap() {
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
   }).addTo(state.views.detailMap);
+  state.views.detailMap.setView([51.1657, 10.4515], 6, { animate: false });
   state.views.layers.detailAmenities = L.layerGroup().addTo(state.views.detailMap);
 }
 
@@ -615,16 +616,22 @@ function openDetail(feature) {
     state.views.detailMap.setView([lat, lon], 16, { animate: false });
   };
 
-  // The detail map is hidden before the modal opens; fit only after layout is visible.
-  requestAnimationFrame(() => {
-    state.views.detailMap.invalidateSize();
-    applyDetailViewport();
-  });
-  setTimeout(() => {
-    if (els.modals.detail.classList.contains("hidden")) return;
-    state.views.detailMap.invalidateSize();
-    applyDetailViewport();
-  }, 350);
+  const ensureViewportWhenReady = (attempt = 0) => {
+    if (!state.views.detailMap || els.modals.detail.classList.contains("hidden")) return;
+    const mapEl = els.detail.mapContainer;
+    state.views.detailMap.invalidateSize({ pan: false, animate: false });
+    const hasSize = !!mapEl && mapEl.clientWidth > 0 && mapEl.clientHeight > 0;
+    if (hasSize || attempt >= 12) {
+      applyDetailViewport();
+      return;
+    }
+    requestAnimationFrame(() => ensureViewportWhenReady(attempt + 1));
+  };
+
+  // Fit only when the modal layout is actually measurable.
+  ensureViewportWhenReady();
+  setTimeout(() => ensureViewportWhenReady(), 200);
+  setTimeout(() => ensureViewportWhenReady(), 500);
 }
 
 function renderDetailAmenityMarkers(examples) {
