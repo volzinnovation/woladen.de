@@ -595,24 +595,36 @@ function openDetail(feature) {
   }).addTo(state.views.detailMap);
 
   const amenityBounds = renderDetailAmenityMarkers(p.amenity_examples || []);
-  if (amenityBounds.length > 0) {
-    const bounds = L.latLngBounds([[lat, lon], [lat, lon]]);
-    amenityBounds.forEach((pair) => bounds.extend(pair));
-    state.views.detailMap.fitBounds(bounds.pad(0.25), { animate: false, maxZoom: 17 });
-  } else {
-    state.views.detailMap.setView([lat, lon], 16);
-  }
 
   // Amenity List
   renderDetailAmenities(p);
 
   openModal("detail");
-  
-  // Force map resize immediately and after transition
-  if (state.views.detailMap) {
-    state.views.detailMap.invalidateSize();
-    setTimeout(() => state.views.detailMap.invalidateSize(), 350);
+
+  if (!state.views.detailMap) {
+    return;
   }
+
+  const applyDetailViewport = () => {
+    if (amenityBounds.length > 0) {
+      const bounds = L.latLngBounds([[lat, lon], [lat, lon]]);
+      amenityBounds.forEach((pair) => bounds.extend(pair));
+      state.views.detailMap.fitBounds(bounds.pad(0.25), { animate: false, maxZoom: 17 });
+      return;
+    }
+    state.views.detailMap.setView([lat, lon], 16, { animate: false });
+  };
+
+  // The detail map is hidden before the modal opens; fit only after layout is visible.
+  requestAnimationFrame(() => {
+    state.views.detailMap.invalidateSize();
+    applyDetailViewport();
+  });
+  setTimeout(() => {
+    if (els.modals.detail.classList.contains("hidden")) return;
+    state.views.detailMap.invalidateSize();
+    applyDetailViewport();
+  }, 350);
 }
 
 function renderDetailAmenityMarkers(examples) {

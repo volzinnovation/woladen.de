@@ -466,6 +466,8 @@ input[type="range"] {
 /* DETAIL MODAL SPECIFIC */
 .detail-hero {
   height: 200px;
+  min-height: 200px;
+  flex: 0 0 200px;
   position: relative;
   background: var(--color-surface-dim);
 }
