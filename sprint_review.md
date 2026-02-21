@@ -87,3 +87,28 @@ The project now has a strong technical base. The highest-leverage work from here
 2. Add UI regression test in CI for detail minimap first-open zoom and locate-button behavior.
 3. Add a lightweight production post-deploy check script for `summary.json` sanity + key UI smoke probes.
 4. Document a release checklist: `build_data -> build_site -> local smoke -> deploy`.
+
+## Sprint Wrap-Up (App Submitted)
+### Outcome
+- Native iPhone app in `iphone/` was completed and submitted to App Store.
+- Core scope is operational: offline bundled data/assets, nearby charger discovery, shared list/map state, map-driven accumulation, favorites persistence, station detail with amenities, and navigation handoff.
+
+### What Worked
+- Local-first testing before CI iteration reduced workflow noise.
+- Packaging charger/operator data and assets into the app improved offline reliability.
+- Shared model between list and map reduced state drift and behavior inconsistencies.
+
+### What Did Not Work
+- UI safe-area troubleshooting was too incremental for too long.
+- Runtime layout verification happened too late compared to compile-time checks.
+
+### Learnings
+- For iOS rendering bugs, inspect runtime hierarchy and container behavior early.
+- Escalate from cosmetic tweaks to structural fixes faster when repeated attempts fail.
+- Treat screenshots and device behavior as primary evidence over static assumptions.
+
+### Recommended Next Steps
+1. Post-submission readiness: prepare review-response templates and finalize metadata/privacy wording.
+2. Add lightweight UI regression coverage for map/list/tab layout behavior on device classes.
+3. Clean data presentation edge cases (for example `300.300 kW` formatting artifacts).
+4. Plan v1.1 scope: search, route-aware ranking, and production CarPlay track.
