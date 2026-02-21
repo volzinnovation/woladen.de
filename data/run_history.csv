@@ -22,3 +22,4 @@ timestamp,amenity_backend,source_url,stations_total,stations_with_amenities,quer
 2026-02-20T20:22:41+00:00,overpass,https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-01-28.csv,30,1,1,1,0,30,29
 2026-02-20T20:23:11+00:00,overpass,https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-01-28.csv,16485,1,0,0,1,16484,16484
 2026-02-20T20:28:15+00:00,osm-pbf,https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-01-28.csv,16485,15007,500,0,0,0,0
+2026-02-21T08:09:19+00:00,osm-pbf,https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-01-28.csv,16485,15006,500,0,0,0,0
