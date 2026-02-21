@@ -132,7 +132,7 @@ async function init() {
   initFilters();
 
   // Event Listeners
-  els.buttons.locate.addEventListener("click", requestUserLocation);
+  els.buttons.locate.addEventListener("click", () => requestUserLocation(false));
   els.filter.trigger.addEventListener("click", () => openModal("filter"));
   els.filter.listFilterBtn.addEventListener("click", () => openModal("filter"));
   els.filter.applyBtn.addEventListener("click", () => closeModal("filter"));
@@ -789,8 +789,9 @@ function getDistanceFormatted(feature) {
 }
 
 function requestUserLocation(silent = false) {
+  const silentMode = silent === true;
   if (!navigator.geolocation) {
-    if (!silent) alert("Geolocation nicht unterstützt.");
+    if (!silentMode) alert("Geolocation nicht unterstützt.");
     return;
   }
 
@@ -806,13 +807,13 @@ function requestUserLocation(silent = false) {
       applyFilters();
 
       // Fly to user on map if not silent
-      if (!silent && state.views.map) {
+      if (!silentMode && state.views.map) {
         state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
       }
     },
     (err) => {
       console.warn("Location error", err);
-      if (!silent) alert("Standort konnte nicht ermittelt werden.");
+      if (!silentMode) alert("Standort konnte nicht ermittelt werden.");
     },
     { enableHighAccuracy: true, timeout: 5000 },
   );
