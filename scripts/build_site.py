@@ -29,8 +29,8 @@ ROOT_URLS = [
 ]
 
 AMENITY_LABELS = {
-    "bakery": "Baeckerei",
-    "cafe": "Cafe",
+    "bakery": "Bäckerei",
+    "cafe": "Café",
     "convenience": "Kiosk",
     "fast_food": "Fast Food",
     "hotel": "Hotel",
@@ -130,7 +130,7 @@ def render_amenity_items(properties: dict[str, object]) -> str:
     return "".join(
         "<li>"
         f"<strong>{html.escape(label)}</strong>"
-        "In der Naehe dieser Station vorhanden."
+        "In der Nähe dieser Station vorhanden."
         "</li>"
         for label in summary
     )
@@ -146,8 +146,8 @@ def build_station_description(properties: dict[str, object]) -> str:
     amenity_text = ", ".join(summary[:3]) if summary else "Annehmlichkeiten"
     place = city or address or "Deutschland"
     return (
-        f"Schnellladesaeule von {operator} in {place}. "
-        f"Bis zu {power} kW, {amenities_total} Annehmlichkeiten in der Naehe, darunter {amenity_text}."
+        f"Schnellladesäule von {operator} in {place}. "
+        f"Bis zu {power} kW, {amenities_total} Annehmlichkeiten in der Nähe, darunter {amenity_text}."
     )
 
 
@@ -183,7 +183,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
     google_maps_url = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
     amenity_items = render_amenity_items(properties)
     amenity_paragraph = (
-        f"In der Naehe findest du unter anderem {html.escape(amenity_text)}."
+        f"In der Nähe findest du unter anderem {html.escape(amenity_text)}."
         if amenity_text
         else "Diese Station ist als Direktlink in der woladen.de Web-App hinterlegt."
     )
@@ -210,7 +210,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
     <main class="station-shell">
       <a href="{app_url}" class="legal-back">Zur Web-App</a>
       <section class="station-hero">
-        <p class="legal-kicker">Direktlink Schnellladesaeule</p>
+        <p class="legal-kicker">Direktlink Schnellladesäule</p>
         <h1>{format_text(operator)}</h1>
         <p class="station-summary">{format_text(address)}<br />{format_text(postcode)} {format_text(city)}</p>
         <div class="station-chip-row">
@@ -220,24 +220,24 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
         </div>
         <p class="station-summary">{amenity_paragraph}</p>
         <div class="station-actions">
-          <a href="{app_url}" class="link-btn">In Web-App oeffnen</a>
+          <a href="{app_url}" class="link-btn">In Web-App öffnen</a>
           <a href="{google_maps_url}" target="_blank" rel="noopener noreferrer" class="link-btn secondary-link">Navigation</a>
         </div>
       </section>
 
       <section class="legal-card">
-        <h2>Station im Ueberblick</h2>
+        <h2>Station im Überblick</h2>
         <p class="legal-intro">
-          woladen.de zeigt Schnellladesaeulen mit Aufenthaltsqualitaet. Diese Stationsseite ist fuer direkte Links und bessere Auffindbarkeit in Suchmaschinen gedacht.
+          woladen.de zeigt Schnellladesäulen mit Aufenthaltsqualität. Diese Stationsseite ist für direkte Links und bessere Auffindbarkeit in Suchmaschinen gedacht.
         </p>
         <h3>Adresse</h3>
         <p>{format_text(address)}<br />{format_text(postcode)} {format_text(city)}</p>
-        <h3>Annehmlichkeiten in der Naehe</h3>
+        <h3>Annehmlichkeiten in der Nähe</h3>
         <ul class="station-list">
           {amenity_items}
         </ul>
         <p class="station-note">
-          Datenquelle: Bundesnetzagentur Ladesaeulenregister und OpenStreetMap. Karten- und POI-Daten © OpenStreetMap-Mitwirkende.
+          Datenquelle: Bundesnetzagentur Ladesäulenregister und OpenStreetMap. Karten- und POI-Daten © OpenStreetMap-Mitwirkende.
         </p>
       </section>
     </main>
