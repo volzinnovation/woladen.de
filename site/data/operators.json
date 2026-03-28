@@ -1,71 +1,71 @@
 {
-  "generated_at": "2026-02-20T20:23:24.868876+00:00",
+  "generated_at": "2026-03-28T13:34:44.157120+00:00",
   "min_stations": 100,
   "total_operators": 23,
   "operators": [
     {
       "name": "EnBW mobility+ AG und Co.KG",
-      "stations": 1954
+      "stations": 1961
     },
     {
       "name": "EWE Go GmbH",
-      "stations": 879
+      "stations": 886
     },
     {
       "name": "Shell Deutschland GmbH",
-      "stations": 823
+      "stations": 847
     },
     {
       "name": "Pfalzwerke AG",
-      "stations": 749
+      "stations": 832
     },
     {
       "name": "Allego GmbH",
-      "stations": 676
+      "stations": 700
     },
     {
       "name": "BP Europa SE",
-      "stations": 668
+      "stations": 665
     },
     {
       "name": "Lidl Dienstleistung GmbH & Co. KG",
-      "stations": 605
+      "stations": 635
     },
     {
       "name": "Kaufland Dienstleistung GmbH & Co. KG",
-      "stations": 431
+      "stations": 437
     },
     {
       "name": "ALDI SÜD Immobilienverwaltungs-GmbH & Co. oHG",
-      "stations": 387
+      "stations": 393
     },
     {
       "name": "Vattenfall Smarter Living GmbH",
-      "stations": 318
+      "stations": 393
+    },
+    {
+      "name": "E.ON Drive Infrastructure GmbH",
+      "stations": 308
     },
     {
       "name": "Tesla Germany GmbH",
       "stations": 301
     },
     {
-      "name": "E.ON Drive Infrastructure GmbH",
-      "stations": 297
+      "name": "Citywatt GmbH",
+      "stations": 242
     },
     {
       "name": "Mer Germany GmbH",
-      "stations": 246
-    },
-    {
-      "name": "Citywatt GmbH",
-      "stations": 239
+      "stations": 241
     },
     {
       "name": "IONITY GmbH",
-      "stations": 224
+      "stations": 225
     },
     {
       "name": "TEAG Mobil GmbH",
-      "stations": 207
+      "stations": 224
     },
     {
       "name": "EDEKA-MIHA Charge GmbH",
@@ -73,23 +73,23 @@
     },
     {
       "name": "Comfortcharge GmbH",
-      "stations": 199
+      "stations": 198
     },
     {
       "name": "E.ON Drive GmbH",
-      "stations": 165
-    },
-    {
-      "name": "TotalEnergies Charging Solutions Deutschland GmbH",
-      "stations": 115
+      "stations": 164
     },
     {
       "name": "ALDI Nord Deutschland Stiftung & Co. KG",
-      "stations": 108
+      "stations": 133
+    },
+    {
+      "name": "TotalEnergies Charging Solutions Deutschland GmbH",
+      "stations": 119
     },
     {
       "name": "Autostrom plus GmbH",
-      "stations": 101
+      "stations": 102
     },
     {
       "name": "TankE GmbH",

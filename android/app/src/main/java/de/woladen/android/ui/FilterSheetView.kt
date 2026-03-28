@@ -57,7 +57,27 @@ fun FilterSheetView(
                 .testTag("filter-sheet"),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("Filter", style = MaterialTheme.typography.titleLarge)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Filter", style = MaterialTheme.typography.titleLarge)
+                Button(
+                    onClick = {
+                        onApply(
+                            FilterState(
+                                operatorName = draftOperator,
+                                minPowerKw = draftMinPower,
+                                selectedAmenities = draftAmenities
+                            )
+                        )
+                    },
+                    modifier = Modifier.testTag("filter-apply-button")
+                ) {
+                    Text("Anwenden")
+                }
+            }
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Betreiber", style = MaterialTheme.typography.titleSmall)
@@ -139,24 +159,11 @@ fun FilterSheetView(
                     .padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                    Text("Abbrechen")
-                }
-                Button(
-                    onClick = {
-                        onApply(
-                            FilterState(
-                                operatorName = draftOperator,
-                                minPowerKw = draftMinPower,
-                                selectedAmenities = draftAmenities
-                            )
-                        )
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("filter-apply-button")
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Anwenden")
+                    Text("Abbrechen")
                 }
             }
         }

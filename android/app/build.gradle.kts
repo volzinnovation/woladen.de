@@ -1,7 +1,30 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use(keystoreProperties::load)
+}
+
+fun signingProperty(propertyName: String, envName: String): String? =
+    (keystoreProperties.getProperty(propertyName) ?: System.getenv(envName))?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = signingProperty("storeFile", "ANDROID_KEYSTORE_FILE")
+val releaseStorePassword = signingProperty("storePassword", "ANDROID_KEYSTORE_PASSWORD")
+val releaseKeyAlias = signingProperty("keyAlias", "ANDROID_KEY_ALIAS")
+val releaseKeyPassword = signingProperty("keyPassword", "ANDROID_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { it != null }
 
 android {
     namespace = "de.woladen.android"
@@ -20,9 +43,23 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            if (hasReleaseSigning) {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -87,4 +124,19 @@ dependencies {
     debugImplementation(composeBom)
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+}
+
+gradle.taskGraph.whenReady {
+    val releaseTasks = setOf("assembleRelease", "bundleRelease", "packageRelease")
+    val needsReleaseSigning = allTasks.any { task ->
+        task.name in releaseTasks || releaseTasks.any { task.path.endsWith(":$it") }
+    }
+
+    if (needsReleaseSigning && !hasReleaseSigning) {
+        throw GradleException(
+            "Release signing is not configured. Provide android/keystore.properties " +
+                "or ANDROID_KEYSTORE_FILE, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, " +
+                "and ANDROID_KEY_PASSWORD."
+        )
+    }
 }

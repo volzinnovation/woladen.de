@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import de.woladen.android.service.LocationAuthorizationStatus
 import de.woladen.android.service.LocationService
 import de.woladen.android.ui.components.MainMapView
 import de.woladen.android.viewmodel.AppViewModel
@@ -38,11 +39,11 @@ import org.maplibre.android.maps.MapLibreMap
 fun MapTabView(
     viewModel: AppViewModel,
     locationService: LocationService,
+    onRequestLocationPermission: () -> Unit,
     onShowFilter: () -> Unit
 ) {
     var mapViewRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var centerOnNextLocationUpdate by remember { mutableStateOf(false) }
-    var hasCenteredInitialLocation by remember { mutableStateOf(false) }
     var lastQueriedCenter by remember { mutableStateOf<Pair<Double, Double>?>(null) }
 
     fun centerMap(location: Location) {
@@ -86,8 +87,13 @@ fun MapTabView(
             IconButton(
                 onClick = {
                     centerOnNextLocationUpdate = true
-                    locationService.requestSingleLocation()
-                    locationService.currentLocation?.let(::centerMap)
+                    if (locationService.authorizationStatus == LocationAuthorizationStatus.AUTHORIZED_WHEN_IN_USE) {
+                        locationService.requestSingleLocation()
+                        locationService.startUpdates()
+                        locationService.currentLocation?.let(::centerMap)
+                    } else {
+                        onRequestLocationPermission()
+                    }
                 },
                 modifier = Modifier.background(
                     color = MaterialTheme.colorScheme.surfaceVariant,
@@ -128,22 +134,8 @@ fun MapTabView(
 
     LaunchedEffect(mapViewRef, locationService.currentLocation) {
         val location = locationService.currentLocation
-        if (location != null && (centerOnNextLocationUpdate || !hasCenteredInitialLocation)) {
+        if (location != null && centerOnNextLocationUpdate) {
             centerMap(location)
-            hasCenteredInitialLocation = true
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        if (!hasCenteredInitialLocation) {
-            val current = locationService.currentLocation
-            if (current != null) {
-                centerMap(current)
-                hasCenteredInitialLocation = true
-            } else {
-                centerOnNextLocationUpdate = true
-                locationService.requestSingleLocation()
-            }
         }
     }
 }

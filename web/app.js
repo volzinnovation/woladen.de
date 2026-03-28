@@ -179,9 +179,6 @@ async function loadData() {
     renderAmenityFilters(); // Render dynamic amenity filters
 
     applyFilters(); // Initial render
-
-    // Try getting location silently
-    requestUserLocation(true);
   } catch (err) {
     console.error("Failed to load data", err);
     els.lists.chargers.innerHTML = `<div class="empty-state">Fehler beim Laden der Daten.<br>${err.message}</div>`;

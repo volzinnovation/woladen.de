@@ -53,53 +53,59 @@ fun WoladenAppScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .semantics { testTagsAsResourceId = true }
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            when (viewModel.selectedTab) {
-                AppViewModel.AppTab.LIST -> {
-                    ListTabView(
-                        viewModel = viewModel,
-                        locationService = locationService,
-                        onShowFilter = { showingFilter = true }
-                    )
-                }
+            Box(
+                modifier = Modifier.weight(1f)
+            ) {
+                when (viewModel.selectedTab) {
+                    AppViewModel.AppTab.LIST -> {
+                        ListTabView(
+                            viewModel = viewModel,
+                            locationService = locationService,
+                            onShowFilter = { showingFilter = true }
+                        )
+                    }
 
-                AppViewModel.AppTab.MAP -> {
-                    MapTabView(
-                        viewModel = viewModel,
-                        locationService = locationService,
-                        onShowFilter = { showingFilter = true }
-                    )
-                }
+                    AppViewModel.AppTab.MAP -> {
+                        MapTabView(
+                            viewModel = viewModel,
+                            locationService = locationService,
+                            onRequestLocationPermission = onRequestLocationPermission,
+                            onShowFilter = { showingFilter = true }
+                        )
+                    }
 
-                AppViewModel.AppTab.FAVORITES -> {
-                    FavoritesTabView(
-                        viewModel = viewModel,
-                        favoritesStore = favoritesStore,
-                        locationService = locationService
-                    )
-                }
+                    AppViewModel.AppTab.FAVORITES -> {
+                        FavoritesTabView(
+                            viewModel = viewModel,
+                            favoritesStore = favoritesStore,
+                            locationService = locationService
+                        )
+                    }
 
-                AppViewModel.AppTab.INFO -> {
-                    InfoTabView(
-                        viewModel = viewModel,
-                        locationService = locationService,
-                        onRequestLocationPermission = onRequestLocationPermission
-                    )
+                    AppViewModel.AppTab.INFO -> {
+                        InfoTabView(
+                            viewModel = viewModel,
+                            locationService = locationService,
+                            onRequestLocationPermission = onRequestLocationPermission
+                        )
+                    }
                 }
             }
-        }
 
-        BottomTabBar(
-            selectedTab = viewModel.selectedTab,
-            onTabSelected = { viewModel.selectedTab = it },
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
+            BottomTabBar(
+                selectedTab = viewModel.selectedTab,
+                onTabSelected = { viewModel.selectedTab = it },
+                modifier = Modifier.navigationBarsPadding()
+            )
+        }
     }
 
     if (showingFilter) {
@@ -163,7 +169,6 @@ private fun BottomTabBar(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
-            .navigationBarsPadding()
     ) {
         Divider()
         Row(modifier = Modifier.fillMaxWidth()) {

@@ -56,6 +56,27 @@ Then build with:
 ./gradlew :app:assembleDebug
 ```
 
+## Release Signing
+
+Release builds read signing credentials from either:
+
+- `android/keystore.properties`
+- environment variables:
+  - `ANDROID_KEYSTORE_FILE`
+  - `ANDROID_KEYSTORE_PASSWORD`
+  - `ANDROID_KEY_ALIAS`
+  - `ANDROID_KEY_PASSWORD`
+
+Use `keystore.properties.example` as the template for a local `keystore.properties` file.
+If you generate the keystore with `keytool`'s default `PKCS12` format, use the same value for
+`storePassword` and `keyPassword`.
+
+Build a signed app bundle with:
+
+```bash
+./gradlew :app:bundleRelease
+```
+
 ## Automated Pre-User-Testing Checks
 
 Run instrumentation smoke/regression tests on a connected device:

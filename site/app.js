@@ -132,7 +132,7 @@ async function init() {
   initFilters();
 
   // Event Listeners
-  els.buttons.locate.addEventListener("click", requestUserLocation);
+  els.buttons.locate.addEventListener("click", () => requestUserLocation(false));
   els.filter.trigger.addEventListener("click", () => openModal("filter"));
   els.filter.listFilterBtn.addEventListener("click", () => openModal("filter"));
   els.filter.applyBtn.addEventListener("click", () => closeModal("filter"));
@@ -157,15 +157,17 @@ async function init() {
 /* --- DATA LOADING --- */
 async function loadData() {
   try {
-    const [geoRes, opRes] = await Promise.all([
+    const [geoRes, opRes, summaryRes] = await Promise.all([
       fetch("./data/chargers_fast.geojson"),
       fetch("./data/operators.json"),
+      fetch("./data/summary.json"),
     ]);
 
-    if (!geoRes.ok || !opRes.ok) throw new Error("Network response was not ok");
+    if (!geoRes.ok || !opRes.ok || !summaryRes.ok) throw new Error("Network response was not ok");
 
     const geoData = await geoRes.json();
     const opData = await opRes.json();
+    const summaryData = await summaryRes.json();
 
     state.features = geoData.features || [];
 
@@ -173,22 +175,27 @@ async function loadData() {
     // Real sorting happens when we have location
 
     populateOperators(opData);
-    setAppMeta(geoData);
+    setAppMeta(geoData, summaryData);
     renderAmenityFilters(); // Render dynamic amenity filters
 
     applyFilters(); // Initial render
-
-    // Try getting location silently
-    requestUserLocation(true);
   } catch (err) {
     console.error("Failed to load data", err);
     els.lists.chargers.innerHTML = `<div class="empty-state">Fehler beim Laden der Daten.<br>${err.message}</div>`;
   }
 }
 
-function setAppMeta(geoData) {
-  if (els.meta && geoData.generated_at) {
-    const date = new Date(geoData.generated_at).toLocaleDateString("de-DE", {
+function setAppMeta(geoData, summaryData) {
+  if (!els.meta) return;
+
+  const generatedAt =
+    summaryData?.run?.finished_at ||
+    geoData?.generated_at ||
+    null;
+
+  if (generatedAt) {
+    const parsed = new Date(generatedAt);
+    const date = Number.isNaN(parsed.getTime()) ? generatedAt : parsed.toLocaleString("de-DE", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -789,8 +796,9 @@ function getDistanceFormatted(feature) {
 }
 
 function requestUserLocation(silent = false) {
+  const silentMode = silent === true;
   if (!navigator.geolocation) {
-    if (!silent) alert("Geolocation nicht unterstützt.");
+    if (!silentMode) alert("Geolocation nicht unterstützt.");
     return;
   }
 
@@ -806,13 +814,13 @@ function requestUserLocation(silent = false) {
       applyFilters();
 
       // Fly to user on map if not silent
-      if (!silent && state.views.map) {
+      if (!silentMode && state.views.map) {
         state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
       }
     },
     (err) => {
       console.warn("Location error", err);
-      if (!silent) alert("Standort konnte nicht ermittelt werden.");
+      if (!silentMode) alert("Standort konnte nicht ermittelt werden.");
     },
     { enableHighAccuracy: true, timeout: 5000 },
   );
