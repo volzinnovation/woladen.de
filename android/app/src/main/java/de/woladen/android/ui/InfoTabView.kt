@@ -113,7 +113,7 @@ fun InfoTabView(
                 Text("Hochschule Pforzheim")
                 LinkButton("raphael.volz@hs-pforzheim.de", "mailto:raphael.volz@hs-pforzheim.de")
                 LinkButton("GitHub Projekt", "https://github.com/volzinnovation/woladen.de")
-                Text("Distribution und Außenvertretung: Moonshots Studios GmbH")
+                Text("Vertrieben von: Moonshots Studios GmbH")
                 LinkButton("Moonshots Studios GmbH", STUDIOS_URL)
                 LinkButton("Impressum", IMPRINT_URL)
             }

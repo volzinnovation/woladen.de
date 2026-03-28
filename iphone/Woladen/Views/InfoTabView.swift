@@ -2,6 +2,10 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct InfoTabView: View {
+    private let privacyPolicyURL = URL(string: "https://woladen.de/privacy.html")!
+    private let imprintURL = URL(string: "https://woladen.de/imprint.html")!
+    private let studiosURL = URL(string: "https://studios.moonshots.gmbh/")!
+
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
 
@@ -31,14 +35,19 @@ struct InfoTabView: View {
                     Text("Entwickelt von Prof. Dr. Raphael Volz")
                     Text("Hochschule Pforzheim")
                     Link(
-                        "raphael.volz@hs-pforzheim.de",
-                        destination: URL(string: "mailto:raphael.volz@hs-pforzheim.de")!
-                    )
-                    Link(
                         "GitHub Projekt",
                         destination: URL(string: "https://github.com/volzinnovation/woladen.de")!
                     )
+                    Text("Vertrieben von: Moonshots Studios GmbH")
+                    Link("Moonshots Studios GmbH", destination: studiosURL)
+                    Link("Impressum", destination: imprintURL)
                 }
+            }
+
+            Section("Datenschutz") {
+                Text("Standortzugriff ist optional. Wenn du ihn freigibst, wird er verwendet, um die Karte auf deine Umgebung zu fokussieren und nahe Schnelllader zu sortieren.")
+                Text("Favoriten und importierte Datenbundles bleiben auf deinem Gerät.")
+                Link("Datenschutzerklärung", destination: privacyPolicyURL)
             }
 
             Section("Datenquellen & Lizenzen") {
