@@ -101,6 +101,144 @@ body {
   font-weight: 600;
 }
 
+/* APP INSTALL PROMO */
+.app-install-promo {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(135deg, rgba(254, 243, 199, 0.98), rgba(253, 230, 138, 0.94)),
+    var(--color-surface);
+  border: 1px solid rgba(217, 119, 6, 0.22);
+  box-shadow: 0 18px 40px rgba(191, 138, 0, 0.16);
+  display: grid;
+  gap: 12px;
+}
+
+#view-list > .app-install-promo {
+  margin: 16px 16px 0;
+}
+
+.legal-shell > .app-install-promo {
+  margin: 0 0 18px;
+}
+
+.app-install-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "copy dismiss"
+    "links links";
+  gap: 12px;
+  align-items: start;
+}
+
+.app-install-copy {
+  min-width: 0;
+  grid-area: copy;
+}
+
+.app-install-kicker {
+  margin: 0 0 2px;
+  color: #9a6700;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.app-install-copy h2 {
+  margin: 0 0 2px;
+  font-size: clamp(1rem, 2vw, 1.28rem);
+  line-height: 1.1;
+}
+
+.app-install-copy p {
+  margin: 0;
+  max-width: 30rem;
+  font-size: 0.95rem;
+  color: #755b1c;
+  line-height: 1.25;
+}
+
+.app-install-copy-link {
+  color: inherit;
+  font-weight: 700;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.12em;
+}
+
+.app-install-copy-link:hover {
+  text-decoration-color: currentColor;
+}
+
+.app-install-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
+  align-items: center;
+  grid-area: links;
+  padding-top: 4px;
+}
+
+.app-install-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 121px;
+  height: 40px;
+  flex: 0 0 121px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: #000000;
+  overflow: hidden;
+  text-decoration: none;
+  box-shadow: 0 6px 14px rgba(17, 17, 17, 0.14);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.app-install-link:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+}
+
+.app-install-store-badge {
+  display: block;
+  width: auto;
+  max-width: none;
+  height: 40px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  clip-path: inset(1px round 7px);
+}
+
+.app-install-store-badge--google {
+  clip-path: inset(4px round 7px);
+}
+
+.app-install-dismiss {
+  width: 34px;
+  height: 34px;
+  grid-area: dismiss;
+  border: 1px solid rgba(217, 119, 6, 0.18);
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.55);
+  color: #8a5b00;
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-install-dismiss:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--shadow-sm);
+}
+
 /* BOTTOM NAVIGATION */
 .bottom-nav {
   height: var(--nav-height);
@@ -932,6 +1070,10 @@ input[type="range"] {
 }
 
 @media (max-width: 640px) {
+  .app-install-promo {
+    padding: 12px;
+  }
+
   .station-actions {
     flex-direction: column;
   }
