@@ -10,7 +10,36 @@
       name="google-site-verification"
       content="5jX9YToxzUiqUj_m9lwnElzfAJg-G3jdOwdTprl83Wc"
     />
-    <title>Deutsche Schnellladesäulen ohne Ladeweile</title>
+    <title>Schnellladesäulen in Deutschland mit Annehmlichkeiten | woladen.de</title>
+    <meta
+      name="description"
+      content="Finde Schnellladesäulen in Deutschland mit der besten Aufenthaltsqualität. Woladen zeigt Stationen in Liste und Karte mit Annehmlichkeiten. Ohne Ladeweile."
+    />
+    <meta
+      name="robots"
+      content="max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+    />
+    <link rel="canonical" href="https://woladen.de/" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="Schnellladesäulen in Deutschland mit Annehmlichkeiten | woladen.de"
+    />
+    <meta
+      property="og:description"
+      content="Finde Schnellladesäulen in Deutschland mit der besten Aufenthaltsqualität. Woladen zeigt Stationen in Liste und Karte mit Annehmlichkeiten. Ohne Ladeweile."
+    />
+    <meta property="og:url" content="https://woladen.de/" />
+    <meta property="og:site_name" content="woladen.de" />
+    <meta name="twitter:card" content="summary" />
+    <meta
+      name="twitter:title"
+      content="Schnellladesäulen in Deutschland mit Annehmlichkeiten | woladen.de"
+    />
+    <meta
+      name="twitter:description"
+      content="Finde Schnellladesäulen in Deutschland mit der besten Aufenthaltsqualität. Woladen zeigt Stationen in Liste und Karte mit Annehmlichkeiten. Ohne Ladeweile."
+    />
     <link rel="icon" href="/favicon.ico?v=20260221" sizes="any" />
     <link
       rel="icon"
@@ -42,7 +71,7 @@
           <div id="map"></div>
 
           <!-- Floating Controls for Map -->
-          <div class="map-controls-overlay">
+          <div class="map-controls-overlay" data-nosnippet>
             <div class="search-bar">
               <button
                 id="btn-locate"
@@ -82,44 +111,47 @@
 
         <!-- LIST VIEW -->
         <div id="view-list" class="view active">
-          <header class="view-header">
+          <div class="view-header" data-nosnippet>
             <h2>Schnellladesäulen in der Nähe</h2>
             <div class="header-actions">
               <button id="btn-list-filter" class="text-btn">Filter</button>
             </div>
-          </header>
+          </div>
           <div id="charger-list" class="list-container">
             <!-- Cards injected here -->
-            <div class="loading-state">Lade Ladesäulen...</div>
+            <div class="loading-state" data-nosnippet>Lade Ladesäulen...</div>
           </div>
         </div>
 
         <!-- FAVORITES VIEW -->
         <div id="view-favorites" class="view hidden">
-          <header class="view-header">
+          <div class="view-header" data-nosnippet>
             <h2>Favoriten</h2>
-          </header>
+          </div>
           <div id="favorites-list" class="list-container">
-            <div class="empty-state">Noch keine Favoriten gespeichert.</div>
+            <div class="empty-state" data-nosnippet>Noch keine Favoriten gespeichert.</div>
           </div>
         </div>
 
         <!-- INFO VIEW -->
         <div id="view-info" class="view hidden">
-          <header class="view-header">
+          <div class="view-header" data-nosnippet>
             <h2>Info & Hilfe</h2>
-          </header>
+          </div>
           <div class="content-container">
             <div class="info-card">
-              <h3>Über woladen.de</h3>
+              <h3><span data-nosnippet>Über woladen.de</span></h3>
               <p>
-                Finde Schnellladesäulen mit der besten Aufenthaltsqualität. Wir
-                zeigen dir, wo es sich lohnt zu laden. Ohne Ladeweile.
+                Finde Schnellladesäulen mit der besten Aufenthaltsqualität.
+                Woladen zeigt dir die nächstgelegenen Stationen in Deutschland
+                übersichtlich in Liste und Karte und kennt Annehmlichkeiten wie
+                Supermarkt, Bäckerei oder Restaurant in der direkten Umgebung.
+                Ohne Ladeweile.
               </p>
-              <div id="app-meta" class="meta-block"></div>
+              <div id="app-meta" class="meta-block" data-nosnippet></div>
             </div>
 
-            <div class="info-card">
+            <div class="info-card" data-nosnippet>
               <h3>Legende</h3>
               <ul class="legend-list">
                 <li>
@@ -135,7 +167,7 @@
               </ul>
             </div>
 
-            <div class="info-card">
+            <div class="info-card" data-nosnippet>
               <h3>Kontakt & Code</h3>
               <p>
                 Entwickelt von Prof. Dr. Raphael Volz<br />
@@ -161,7 +193,7 @@
               >
             </div>
 
-            <div class="info-card">
+            <div class="info-card" data-nosnippet>
               <h3>Datenschutz</h3>
               <p>
                 Standortzugriff ist optional. Wenn du ihn aktiv nutzt, wird er
@@ -173,7 +205,7 @@
               <a href="./imprint.html" class="link-btn">Impressum</a>
             </div>
 
-            <div class="info-card">
+            <div class="info-card" data-nosnippet>
               <h3>Datenquellen & Lizenzen</h3>
               <p class="data-source-note">
                 <a
@@ -213,7 +245,7 @@
       </main>
 
       <!-- NAVIGATION BAR -->
-      <nav class="bottom-nav">
+      <div class="bottom-nav" data-nosnippet role="navigation" aria-label="Hauptnavigation">
         <button class="nav-item active" data-target="view-list">
           <svg
             class="nav-icon"
@@ -283,7 +315,7 @@
           </svg>
           <span>Info</span>
         </button>
-      </nav>
+      </div>
 
       <!-- FILTER MODAL (Overlay) -->
       <div id="modal-filter" class="modal-overlay hidden">
