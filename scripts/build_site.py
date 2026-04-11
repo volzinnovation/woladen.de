@@ -15,6 +15,13 @@ SITE_DIR = ROOT / "site"
 SITE_DATA_DIR = SITE_DIR / "data"
 STATION_DIR = SITE_DIR / "station"
 SITE_ORIGIN = "https://woladen.de"
+SOCIAL_IMAGE_VERSION = "20260411"
+SOCIAL_IMAGE_PATH = f"img/social-card-home.png?v={SOCIAL_IMAGE_VERSION}"
+SOCIAL_IMAGE_WIDTH = "1200"
+SOCIAL_IMAGE_HEIGHT = "630"
+SOCIAL_IMAGE_ALT = (
+    "Vorschau der woladen.de Web-App mit Schnellladesäulen und Annehmlichkeiten in der Nähe."
+)
 
 REQUIRED_DATA = [
     "chargers_fast.geojson",
@@ -176,6 +183,8 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
     amenities_total = to_int(properties.get("amenities_total"))
     description = build_station_description(properties)
     amenity_text = ", ".join(amenity_summary(properties)[:4])
+    social_title = f"{operator} in {title_city} | {max_power} kW Schnelllader | woladen.de"
+    social_image_url = absolute_url(SOCIAL_IMAGE_PATH)
 
     page_path = station_page_path(station_id)
     canonical_url = absolute_url(page_path)
@@ -197,13 +206,24 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
     <meta name="description" content="{format_text(description)}" />
     <link rel="canonical" href="{canonical_url}" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="{format_text(operator)} in {format_text(title_city)} | woladen.de" />
+    <meta property="og:title" content="{format_text(social_title)}" />
     <meta property="og:description" content="{format_text(description)}" />
     <meta property="og:url" content="{canonical_url}" />
-    <link rel="icon" href="/favicon.ico?v=20260221" sizes="any" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260221" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260221" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/img/touch-icon.png?v=20260221" />
+    <meta property="og:site_name" content="woladen.de" />
+    <meta property="og:locale" content="de_DE" />
+    <meta property="og:image" content="{social_image_url}" />
+    <meta property="og:image:width" content="{SOCIAL_IMAGE_WIDTH}" />
+    <meta property="og:image:height" content="{SOCIAL_IMAGE_HEIGHT}" />
+    <meta property="og:image:alt" content="{SOCIAL_IMAGE_ALT}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{format_text(social_title)}" />
+    <meta name="twitter:description" content="{format_text(description)}" />
+    <meta name="twitter:image" content="{social_image_url}" />
+    <meta name="twitter:image:alt" content="{SOCIAL_IMAGE_ALT}" />
+    <link rel="icon" href="/favicon.ico?v=20260411" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260411" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260411" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/touch-icon.png?v=20260411" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body class="station-page">
