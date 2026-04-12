@@ -1,3 +1,5 @@
+import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs";
+
 /**
  * woladen.de - Modern Frontend Logic
  */
@@ -56,6 +58,12 @@ function getAmenityIconPath(key) {
   return null;
 }
 
+function formatAmenityCount(count) {
+  const numeric = Number(count || 0);
+  const rounded = Number.isFinite(numeric) ? Math.round(numeric) : 0;
+  return `${rounded} ${rounded === 1 ? "Angebot vor Ort" : "Angebote vor Ort"}`;
+}
+
 /* --- STATE --- */
 const state = {
   features: [], // All charger features
@@ -66,6 +74,7 @@ const state = {
     operator: "",
     minPower: 50,
     amenities: new Set(),
+    amenityNameQuery: "",
   },
   views: {
     map: null, // Leaflet map instance
@@ -100,6 +109,7 @@ const els = {
     trigger: document.getElementById("filter-trigger"),
     label: document.getElementById("filter-label"),
     operator: document.getElementById("filter-operator"),
+    amenityName: document.getElementById("filter-amenity-name"),
     power: document.getElementById("filter-power"),
     powerVal: document.getElementById("filter-power-val"),
     amenities: document.getElementById("filter-amenities"),
@@ -354,6 +364,12 @@ function initFilters() {
     updateFilters();
   });
 
+  // Amenity name
+  els.filter.amenityName.addEventListener("input", (e) => {
+    state.filters.amenityNameQuery = e.target.value;
+    updateFilters();
+  });
+
   // Power
   els.filter.power.addEventListener("input", (e) => {
     state.filters.minPower = Number(e.target.value);
@@ -414,37 +430,16 @@ function renderAmenityFilters() {
 function updateFilters() {
   applyFilters();
 
-  const total = state.filtered.length;
-  // Update UI hint if needed
-  const filterCount =
-    (state.filters.operator ? 1 : 0) +
-    (state.filters.minPower > 50 ? 1 : 0) +
-    state.filters.amenities.size;
+  const filterCount = countActiveFilters(state.filters);
 
   els.filter.label.textContent =
     filterCount > 0 ? `Filter (${filterCount})` : "Alle Filter";
 }
 
 function applyFilters() {
-  state.filtered = state.features.filter((f) => {
-    const p = f.properties;
-
-    // Operator
-    if (state.filters.operator && p.operator !== state.filters.operator)
-      return false;
-
-    // Power
-    if (getDisplayedMaxPowerKw(p) < state.filters.minPower) return false;
-
-    // Amenities
-    if (state.filters.amenities.size > 0) {
-      for (const key of state.filters.amenities) {
-        if (!p[key] || p[key] <= 0) return false;
-      }
-    }
-
-    return true;
-  });
+  state.filtered = state.features.filter((feature) =>
+    matchesFeatureFilters(feature, state.filters, { getDisplayedMaxPowerKw }),
+  );
 
   // Re-sort if we have location
   if (state.userPos) {
@@ -542,7 +537,7 @@ function createStationCard(feature) {
     </div>
     <div class="card-meta">
       ${escapeHtml(p.city || "")}<br>
-      ${Math.round(getDisplayedMaxPowerKw(p))} kW max • ${getChargingPointCount(p)} Ladepunkte • ${p.amenities_total} Annehmlichkeit(en)
+      ${Math.round(getDisplayedMaxPowerKw(p))} kW max • ${getChargingPointCount(p)} Ladepunkte • ${formatAmenityCount(p.amenities_total)}
     </div>
     <div class="card-badges">
       ${badges}
@@ -580,7 +575,7 @@ function openDetail(feature, options = {}) {
   els.detail.title.textContent = p.operator || "Unbekannt";
   els.detail.address.textContent = `${p.address || ""}, ${p.postcode || ""} ${p.city || ""}`;
   els.detail.power.textContent = `${Math.round(getDisplayedMaxPowerKw(p))} kW max / ${getChargingPointCount(p)} Ladepunkte`;
-  els.detail.amenityCount.textContent = `${p.amenities_total || 0} Amenities`;
+  els.detail.amenityCount.textContent = formatAmenityCount(p.amenities_total);
 
   // Favorite Button State
   updateFavBtnState();
@@ -666,7 +661,7 @@ function renderDetailAmenityMarkers(examples) {
     }
 
     const amenityKey = `amenity_${item.category || ""}`;
-    const amenityLabel = AMENITY_MAPPING[amenityKey]?.label || item.category || "Amenity";
+    const amenityLabel = AMENITY_MAPPING[amenityKey]?.label || item.category || "Angebot vor Ort";
     const amenityName = item.name ? `${item.name}` : amenityLabel;
     const iconPath = getAmenityIconPath(amenityKey);
     const markerIcon = iconPath
@@ -705,7 +700,7 @@ function renderDetailAmenities(props) {
   examples.slice(0, 15).forEach((item) => {
     // item: { category, name, opening_hours, distance_m, lat, lon }
     const catConfig = AMENITY_MAPPING[`amenity_${item.category}`] || {
-      label: item.category,
+      label: item.category || "Angebot vor Ort",
     };
     const iconPath = getAmenityIconPath(`amenity_${item.category}`);
 

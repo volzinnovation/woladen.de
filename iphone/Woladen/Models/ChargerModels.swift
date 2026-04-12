@@ -77,6 +77,36 @@ struct ChargerProperties: Decodable {
         case amenityExamples = "amenity_examples"
     }
 
+    init(
+        stationID: String,
+        operatorName: String,
+        status: String,
+        maxPowerKW: Double,
+        chargingPointsCount: Int,
+        maxIndividualPowerKW: Double,
+        postcode: String,
+        city: String,
+        address: String,
+        amenitiesTotal: Int,
+        amenitiesSource: String,
+        amenityExamples: [AmenityExample],
+        amenityCounts: [String: Int]
+    ) {
+        self.stationID = stationID
+        self.operatorName = operatorName
+        self.status = status
+        self.maxPowerKW = maxPowerKW
+        self.chargingPointsCount = chargingPointsCount
+        self.maxIndividualPowerKW = maxIndividualPowerKW
+        self.postcode = postcode
+        self.city = city
+        self.address = address
+        self.amenitiesTotal = amenitiesTotal
+        self.amenitiesSource = amenitiesSource
+        self.amenityExamples = amenityExamples
+        self.amenityCounts = amenityCounts
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 

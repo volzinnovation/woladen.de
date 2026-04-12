@@ -520,7 +520,8 @@ body {
   font-size: 0.95rem;
 }
 
-select {
+select,
+input[type="search"] {
   width: 100%;
   padding: 0.75rem;
   border: 1px solid var(--color-border);

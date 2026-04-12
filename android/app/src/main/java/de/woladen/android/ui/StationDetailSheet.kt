@@ -132,7 +132,7 @@ fun StationDetailSheet(
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.Info, contentDescription = null)
-                        Text("${feature.properties.amenitiesTotal} Annehmlichkeiten")
+                        Text("${feature.properties.amenitiesTotal} ${formatAmenityCountLabel(feature.properties.amenitiesTotal)}")
                     }
                 }
 
@@ -164,6 +164,9 @@ fun StationDetailSheet(
         }
     }
 }
+
+private fun formatAmenityCountLabel(count: Int): String =
+    if (count == 1) "Angebot vor Ort" else "Angebote vor Ort"
 
 @Composable
 private fun AmenityRow(item: AmenityExample) {

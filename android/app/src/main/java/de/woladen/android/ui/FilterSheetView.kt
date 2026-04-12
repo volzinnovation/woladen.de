@@ -18,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,6 +49,7 @@ fun FilterSheetView(
     var draftOperator by remember(filter) { mutableStateOf(filter.operatorName) }
     var draftMinPower by remember(filter) { mutableStateOf(filter.minPowerKw) }
     var draftAmenities by remember(filter) { mutableStateOf(filter.selectedAmenities.toMutableSet()) }
+    var draftAmenityNameQuery by remember(filter) { mutableStateOf(filter.amenityNameQuery) }
     var operatorMenuExpanded by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -69,7 +71,8 @@ fun FilterSheetView(
                             FilterState(
                                 operatorName = draftOperator,
                                 minPowerKw = draftMinPower,
-                                selectedAmenities = draftAmenities
+                                selectedAmenities = draftAmenities,
+                                amenityNameQuery = draftAmenityNameQuery
                             )
                         )
                     },
@@ -108,6 +111,19 @@ fun FilterSheetView(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Name des Angebots vor Ort", style = MaterialTheme.typography.titleSmall)
+                OutlinedTextField(
+                    value = draftAmenityNameQuery,
+                    onValueChange = { draftAmenityNameQuery = it },
+                    placeholder = { Text("z. B. McDonald's") },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("filter-amenity-name-input")
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Min. Leistung", style = MaterialTheme.typography.titleSmall)
                 Text("${draftMinPower.toInt()} kW")
                 Slider(
@@ -120,7 +136,7 @@ fun FilterSheetView(
                 )
             }
 
-            Text("Annehmlichkeiten", style = MaterialTheme.typography.titleSmall)
+            Text("Angebote vor Ort", style = MaterialTheme.typography.titleSmall)
             LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
                 items(availableAmenityKeys) { key ->
                     val selected = draftAmenities.contains(key)

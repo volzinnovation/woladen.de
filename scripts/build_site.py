@@ -20,7 +20,7 @@ SOCIAL_IMAGE_PATH = f"img/social-card-home.png?v={SOCIAL_IMAGE_VERSION}"
 SOCIAL_IMAGE_WIDTH = "1200"
 SOCIAL_IMAGE_HEIGHT = "630"
 SOCIAL_IMAGE_ALT = (
-    "Vorschau der woladen.de Web-App mit Schnellladesäulen und Annehmlichkeiten in der Nähe."
+    "Vorschau der woladen.de Web-App mit Schnellladesäulen und Angeboten vor Ort."
 )
 
 REQUIRED_DATA = [
@@ -74,6 +74,11 @@ def to_int(value: object, default: int = 0) -> int:
         return default
 
 
+def format_amenity_count(count: int) -> str:
+    label = "Angebot vor Ort" if count == 1 else "Angebote vor Ort"
+    return f"{count} {label}"
+
+
 def station_page_path(station_id: str) -> str:
     return f"station/{station_id}.html"
 
@@ -108,7 +113,7 @@ def render_amenity_items(properties: dict[str, object]) -> str:
             if not isinstance(example, dict):
                 continue
             category = str(example.get("category") or "").strip()
-            label = AMENITY_LABELS.get(category, category.replace("_", " ").title() or "Annehmlichkeit")
+            label = AMENITY_LABELS.get(category, category.replace("_", " ").title() or "Angebot vor Ort")
             name = str(example.get("name") or "").strip() or label
             meta_parts = [label]
             distance = example.get("distance_m")
@@ -150,11 +155,17 @@ def build_station_description(properties: dict[str, object]) -> str:
     power = format_power_kw(properties.get("max_power_kw"))
     amenities_total = to_int(properties.get("amenities_total"))
     summary = amenity_summary(properties)
-    amenity_text = ", ".join(summary[:3]) if summary else "Annehmlichkeiten"
+    amenity_count = format_amenity_count(amenities_total)
     place = city or address or "Deutschland"
+    if summary:
+        amenity_text = ", ".join(summary[:3])
+        return (
+            f"Schnellladesäule von {operator} in {place}. "
+            f"Bis zu {power} kW, {amenity_count}, darunter {amenity_text}."
+        )
     return (
         f"Schnellladesäule von {operator} in {place}. "
-        f"Bis zu {power} kW, {amenities_total} Annehmlichkeiten in der Nähe, darunter {amenity_text}."
+        f"Bis zu {power} kW und {amenity_count}."
     )
 
 
@@ -192,7 +203,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
     google_maps_url = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
     amenity_items = render_amenity_items(properties)
     amenity_paragraph = (
-        f"In der Nähe findest du unter anderem {html.escape(amenity_text)}."
+        f"Vor Ort findest du unter anderem {html.escape(amenity_text)}."
         if amenity_text
         else "Diese Station ist als Direktlink in der woladen.de Web-App hinterlegt."
     )
@@ -236,7 +247,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
         <div class="station-chip-row">
           <span class="station-chip">⚡ {format_text(max_power)} kW max</span>
           <span class="station-chip">🔌 {charging_points} Ladepunkte</span>
-          <span class="station-chip">🏪 {amenities_total} Annehmlichkeiten</span>
+          <span class="station-chip">🏪 {format_amenity_count(amenities_total)}</span>
         </div>
         <p class="station-summary">{amenity_paragraph}</p>
         <div class="station-actions">
@@ -252,7 +263,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
         </p>
         <h3>Adresse</h3>
         <p>{format_text(address)}<br />{format_text(postcode)} {format_text(city)}</p>
-        <h3>Annehmlichkeiten in der Nähe</h3>
+        <h3>Angebote vor Ort</h3>
         <ul class="station-list">
           {amenity_items}
         </ul>

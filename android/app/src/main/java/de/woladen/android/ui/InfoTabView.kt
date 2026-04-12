@@ -103,10 +103,10 @@ fun InfoTabView(
             }
 
             InfoSection(title = "Legende") {
-                LegendRow(Color(0xFFFFD700), ">10 Annehmlichkeiten (Gold)")
-                LegendRow(Color.Gray, ">5 Annehmlichkeiten (Silber)")
-                LegendRow(Color(0xFF964B00), ">1 Annehmlichkeiten (Bronze)")
-                LegendRow(infoMuted, "Keine Annehmlichkeiten")
+                LegendRow(Color(0xFFFFD700), ">10 Angebote vor Ort (Gold)")
+                LegendRow(Color.Gray, ">5 Angebote vor Ort (Silber)")
+                LegendRow(Color(0xFF964B00), ">1 Angebote vor Ort (Bronze)")
+                LegendRow(infoMuted, "Keine Angebote vor Ort")
             }
 
             InfoSection(title = "Kontakt & Code") {

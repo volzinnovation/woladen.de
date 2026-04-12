@@ -66,21 +66,7 @@ final class AppViewModel: ObservableObject {
 
     func applyFilters(userLocation: CLLocation?) {
         filterPool = allFeatures.filter { feature in
-            let p = feature.properties
-            if !filterState.operatorName.isEmpty && p.operatorName != filterState.operatorName {
-                return false
-            }
-            if p.maxPowerKW < filterState.minPowerKW {
-                return false
-            }
-            if !filterState.selectedAmenities.isEmpty {
-                for key in filterState.selectedAmenities {
-                    if (p.amenityCounts[key] ?? 0) <= 0 {
-                        return false
-                    }
-                }
-            }
-            return true
+            feature.properties.matches(filterState)
         }
         resetDiscoveredList()
         didSeedFromUserLocation = false

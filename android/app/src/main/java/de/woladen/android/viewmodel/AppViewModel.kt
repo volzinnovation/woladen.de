@@ -12,6 +12,7 @@ import de.woladen.android.model.ActiveDataBundleInfo
 import de.woladen.android.model.FilterState
 import de.woladen.android.model.GeoJsonFeature
 import de.woladen.android.model.OperatorEntry
+import de.woladen.android.model.matches
 import de.woladen.android.repository.ChargerRepository
 import de.woladen.android.repository.DataBundleManager
 import kotlinx.coroutines.Dispatchers
@@ -132,23 +133,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun applyFilters(userLocation: Location?) {
-        filterPool = allFeatures.filter { feature ->
-            val p = feature.properties
-            if (filterState.operatorName.isNotEmpty() && p.operatorName != filterState.operatorName) {
-                return@filter false
-            }
-            if (p.maxPowerKw < filterState.minPowerKw) {
-                return@filter false
-            }
-            if (filterState.selectedAmenities.isNotEmpty()) {
-                for (key in filterState.selectedAmenities) {
-                    if ((p.amenityCounts[key] ?: 0) <= 0) {
-                        return@filter false
-                    }
-                }
-            }
-            true
-        }
+        filterPool = allFeatures.filter { feature -> feature.properties.matches(filterState) }
         resetDiscoveredList()
         didSeedFromUserLocation = false
         if (userLocation != null) {

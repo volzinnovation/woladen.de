@@ -34,10 +34,27 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: de.woladen.ios
         PRODUCT_NAME: Woladen
         TARGETED_DEVICE_FAMILY: "1"
+  WoladenTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: WoladenTests
+    dependencies:
+      - target: Woladen
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: de.woladen.iosTests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Woladen.app/Woladen"
+        BUNDLE_LOADER: "$(TEST_HOST)"
 schemes:
   Woladen:
     build:
       targets:
         Woladen: all
+    test:
+      config: Debug
+      targets:
+        - name: WoladenTests
     run:
       config: Debug

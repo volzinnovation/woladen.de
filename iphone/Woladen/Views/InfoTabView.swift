@@ -25,10 +25,10 @@ struct InfoTabView: View {
             }
 
             Section("Legende") {
-                legendRow(color: Color.yellow, text: ">10 Annehmlichkeiten (Gold)")
-                legendRow(color: Color.gray, text: ">5 Annehmlichkeiten (Silber)")
-                legendRow(color: Color.brown, text: ">1 Annehmlichkeiten (Bronze)")
-                legendRow(color: Color.secondary, text: "Keine Annehmlichkeiten")
+                legendRow(color: Color.yellow, text: ">10 Angebote vor Ort (Gold)")
+                legendRow(color: Color.gray, text: ">5 Angebote vor Ort (Silber)")
+                legendRow(color: Color.brown, text: ">1 Angebote vor Ort (Bronze)")
+                legendRow(color: Color.secondary, text: "Keine Angebote vor Ort")
             }
 
             Section("Kontakt & Code") {

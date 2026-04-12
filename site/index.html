@@ -6,25 +6,78 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
+    <meta name="apple-itunes-app" content="app-id=6759499459" />
     <meta
       name="google-site-verification"
       content="5jX9YToxzUiqUj_m9lwnElzfAJg-G3jdOwdTprl83Wc"
     />
-    <title>Deutsche Schnellladesäulen ohne Ladeweile</title>
-    <link rel="icon" href="/favicon.ico?v=20260221" sizes="any" />
+    <title>Schnellladesäulen in Deutschland ohne Ladeweile | woladen.de</title>
+    <meta
+      name="description"
+      content="Finde Schnellladesäulen in Deutschland mit der besten Aufenthaltsqualität. Woladen zeigt Stationen in Liste und Karte mit Angeboten vor Ort. Ohne Ladeweile."
+    />
+    <meta
+      name="robots"
+      content="max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+    />
+    <link rel="canonical" href="https://woladen.de/" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="Schnellladesäulen ohne Ladeweile | woladen.de"
+    />
+    <meta
+      property="og:description"
+      content="Finde Schnellladesäulen in Deutschland mit Café, Bäckerei, Park und weiteren Angeboten vor Ort."
+    />
+    <meta property="og:url" content="https://woladen.de/" />
+    <meta property="og:site_name" content="woladen.de" />
+    <meta property="og:locale" content="de_DE" />
+    <meta
+      property="og:image"
+      content="https://woladen.de/img/social-card-home.png?v=20260411"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Vorschau der woladen.de Web-App mit Schnellladesäulen und Angeboten vor Ort."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Schnellladesäulen ohne Ladeweile | woladen.de"
+    />
+    <meta
+      name="twitter:description"
+      content="Finde Schnellladesäulen in Deutschland mit Café, Bäckerei, Park und weiteren Angeboten vor Ort."
+    />
+    <meta
+      name="twitter:image"
+      content="https://woladen.de/img/social-card-home.png?v=20260411"
+    />
+    <meta
+      name="twitter:image:alt"
+      content="Vorschau der woladen.de Web-App mit Schnellladesäulen und Angeboten vor Ort."
+    />
+    <link rel="icon" href="/favicon.ico?v=20260411" sizes="any" />
     <link
       rel="icon"
       type="image/png"
       sizes="32x32"
-      href="/favicon-32x32.png?v=20260221"
+      href="/favicon-32x32.png?v=20260411"
     />
     <link
       rel="icon"
       type="image/png"
       sizes="16x16"
-      href="/favicon-16x16.png?v=20260221"
+      href="/favicon-16x16.png?v=20260411"
     />
-    <link rel="apple-touch-icon" sizes="180x180" href="/img/touch-icon.png?v=20260221" />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="/img/touch-icon.png?v=20260411"
+    />
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -42,7 +95,7 @@
           <div id="map"></div>
 
           <!-- Floating Controls for Map -->
-          <div class="map-controls-overlay">
+          <div class="map-controls-overlay" data-nosnippet>
             <div class="search-bar">
               <button
                 id="btn-locate"
@@ -82,60 +135,65 @@
 
         <!-- LIST VIEW -->
         <div id="view-list" class="view active">
-          <header class="view-header">
+          <div class="view-header" data-nosnippet>
             <h2>Schnellladesäulen in der Nähe</h2>
             <div class="header-actions">
               <button id="btn-list-filter" class="text-btn">Filter</button>
             </div>
-          </header>
+          </div>
           <div id="charger-list" class="list-container">
             <!-- Cards injected here -->
-            <div class="loading-state">Lade Ladesäulen...</div>
+            <div class="loading-state" data-nosnippet>Lade Ladesäulen...</div>
           </div>
         </div>
 
         <!-- FAVORITES VIEW -->
         <div id="view-favorites" class="view hidden">
-          <header class="view-header">
+          <div class="view-header" data-nosnippet>
             <h2>Favoriten</h2>
-          </header>
+          </div>
           <div id="favorites-list" class="list-container">
-            <div class="empty-state">Noch keine Favoriten gespeichert.</div>
+            <div class="empty-state" data-nosnippet>
+              Noch keine Favoriten gespeichert.
+            </div>
           </div>
         </div>
 
         <!-- INFO VIEW -->
         <div id="view-info" class="view hidden">
-          <header class="view-header">
+          <div class="view-header" data-nosnippet>
             <h2>Info & Hilfe</h2>
-          </header>
+          </div>
           <div class="content-container">
             <div class="info-card">
-              <h3>Über woladen.de</h3>
+              <h3><span data-nosnippet>Über woladen.de</span></h3>
               <p>
-                Finde Schnellladesäulen mit der besten Aufenthaltsqualität. Wir
-                zeigen dir, wo es sich lohnt zu laden. Ohne Ladeweile.
+                Finde Schnellladesäulen mit der besten Aufenthaltsqualität.
+                Woladen zeigt dir die nächstgelegenen Stationen in Deutschland
+                übersichtlich in Liste und Karte und kennt Angebote vor Ort wie
+                Supermarkt, Bäckerei oder Restaurant in der direkten Umgebung.
+                Ohne Ladeweile.
               </p>
-              <div id="app-meta" class="meta-block"></div>
+              <div id="app-meta" class="meta-block" data-nosnippet></div>
             </div>
 
-            <div class="info-card">
+            <div class="info-card" data-nosnippet>
               <h3>Legende</h3>
               <ul class="legend-list">
                 <li>
-                  <span class="dot gold"></span> >10 Annehmlichkeiten (Gold)
+                  <span class="dot gold"></span> >10 Angebote vor Ort (Gold)
                 </li>
                 <li>
-                  <span class="dot silver"></span> >5 Annehmlichkeiten (Silber)
+                  <span class="dot silver"></span> >5 Angebote vor Ort (Silber)
                 </li>
                 <li>
-                  <span class="dot bronze"></span> >1 Annehmlichkeiten (Bronze)
+                  <span class="dot bronze"></span> >1 Angebote vor Ort (Bronze)
                 </li>
-                <li><span class="dot grey"></span> Keine Annehmlichkeiten</li>
+                <li><span class="dot grey"></span> Keine Angebote vor Ort</li>
               </ul>
             </div>
 
-            <div class="info-card">
+            <div class="info-card" data-nosnippet>
               <h3>Kontakt & Code</h3>
               <p>
                 Entwickelt von Prof. Dr. Raphael Volz<br />
@@ -150,7 +208,12 @@
               >
               <p style="margin-top: 1rem">
                 Vertrieben von:
-                <a href="https://studios.moonshots.gmbh/" target="_blank" rel="noopener noreferrer">Moonshots Studios GmbH</a>
+                <a
+                  href="https://studios.moonshots.gmbh/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Moonshots Studios GmbH</a
+                >
               </p>
               <a
                 href="https://studios.moonshots.gmbh/"
@@ -161,7 +224,7 @@
               >
             </div>
 
-            <div class="info-card">
+            <div class="info-card" data-nosnippet>
               <h3>Datenschutz</h3>
               <p>
                 Standortzugriff ist optional. Wenn du ihn aktiv nutzt, wird er
@@ -169,11 +232,16 @@
                 nahe Schnelllader zu sortieren. Favoriten bleiben lokal auf
                 deinem Gerät.
               </p>
-              <a href="./privacy.html" class="link-btn" style="margin-right: 0.5rem">Datenschutzerklärung</a>
+              <a
+                href="./privacy.html"
+                class="link-btn"
+                style="margin-right: 0.5rem"
+                >Datenschutzerklärung</a
+              >
               <a href="./imprint.html" class="link-btn">Impressum</a>
             </div>
 
-            <div class="info-card">
+            <div class="info-card" data-nosnippet>
               <h3>Datenquellen & Lizenzen</h3>
               <p class="data-source-note">
                 <a
@@ -213,7 +281,12 @@
       </main>
 
       <!-- NAVIGATION BAR -->
-      <nav class="bottom-nav">
+      <div
+        class="bottom-nav"
+        data-nosnippet
+        role="navigation"
+        aria-label="Hauptnavigation"
+      >
         <button class="nav-item active" data-target="view-list">
           <svg
             class="nav-icon"
@@ -283,7 +356,7 @@
           </svg>
           <span>Info</span>
         </button>
-      </nav>
+      </div>
 
       <!-- FILTER MODAL (Overlay) -->
       <div id="modal-filter" class="modal-overlay hidden">
@@ -298,6 +371,16 @@
               <select id="filter-operator">
                 <option value="">Alle Betreiber</option>
               </select>
+            </label>
+
+            <label class="filter-group">
+              <span class="label-text">Name des Angebots vor Ort</span>
+              <input
+                type="search"
+                id="filter-amenity-name"
+                placeholder="z. B. McDonald's"
+                spellcheck="false"
+              />
             </label>
 
             <label class="filter-group">
@@ -318,7 +401,7 @@
             </label>
 
             <div class="filter-group">
-              <span class="label-text">Annehmlichkeiten</span>
+              <span class="label-text">Angebote vor Ort</span>
               <div id="filter-amenities" class="amenity-grid">
                 <!-- Icons injected by JS -->
               </div>
@@ -385,7 +468,7 @@
               </div>
               <div class="stat-pill">
                 <span class="icon">🏪</span>
-                <span id="detail-amenity-count">5 Annehmlichkeiten</span>
+                <span id="detail-amenity-count">5 Angebote vor Ort</span>
               </div>
             </div>
 
@@ -433,6 +516,7 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
+    <script src="./app-install-promo.js"></script>
     <script src="./app.js" type="module"></script>
   </body>
 </html>

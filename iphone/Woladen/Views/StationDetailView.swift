@@ -37,6 +37,10 @@ struct StationDetailView: View {
         .onAppear(perform: updateRegionToFit)
     }
 
+    private var amenityCountLabel: String {
+        feature.properties.amenitiesTotal == 1 ? "Angebot vor Ort" : "Angebote vor Ort"
+    }
+
     private var mapSection: some View {
         Map(position: $cameraPosition) {
             ForEach(mapItems) { item in
@@ -93,7 +97,7 @@ struct StationDetailView: View {
             HStack {
                 Label("\(Int(feature.properties.displayedMaxPowerKW.rounded())) kW max / \(feature.properties.chargingPointsCount) Ladepunkte", systemImage: "bolt.fill")
                 Spacer()
-                Label("\(feature.properties.amenitiesTotal) Annehmlichkeiten", systemImage: "storefront")
+                Label("\(feature.properties.amenitiesTotal) \(amenityCountLabel)", systemImage: "storefront")
             }
             .font(.footnote)
             .foregroundStyle(.secondary)

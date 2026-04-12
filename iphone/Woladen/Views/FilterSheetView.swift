@@ -19,6 +19,7 @@ struct FilterSheetView: View {
         NavigationStack {
             Form {
                 operatorSection
+                amenityNameSection
                 powerSection
                 amenitiesSection
             }
@@ -57,8 +58,16 @@ struct FilterSheetView: View {
         }
     }
 
+    private var amenityNameSection: some View {
+        Section("Name des Angebots vor Ort") {
+            TextField("z. B. McDonald's", text: $draftFilter.amenityNameQuery)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+        }
+    }
+
     private var amenitiesSection: some View {
-        Section("Annehmlichkeiten") {
+        Section("Angebote vor Ort") {
             ForEach(availableAmenityKeys, id: \.self) { key in
                 amenityRow(for: key)
             }

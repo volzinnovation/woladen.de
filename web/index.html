@@ -14,7 +14,7 @@
     <title>Schnellladesäulen in Deutschland ohne Ladeweile | woladen.de</title>
     <meta
       name="description"
-      content="Finde Schnellladesäulen in Deutschland mit der besten Aufenthaltsqualität. Woladen zeigt Stationen in Liste und Karte mit Annehmlichkeiten. Ohne Ladeweile."
+      content="Finde Schnellladesäulen in Deutschland mit der besten Aufenthaltsqualität. Woladen zeigt Stationen in Liste und Karte mit Angeboten vor Ort. Ohne Ladeweile."
     />
     <meta
       name="robots"
@@ -28,7 +28,7 @@
     />
     <meta
       property="og:description"
-      content="Finde Schnellladesäulen in Deutschland mit Café, Bäckerei, Park und weiteren Annehmlichkeiten in der Nähe."
+      content="Finde Schnellladesäulen in Deutschland mit Café, Bäckerei, Park und weiteren Angeboten vor Ort."
     />
     <meta property="og:url" content="https://woladen.de/" />
     <meta property="og:site_name" content="woladen.de" />
@@ -41,7 +41,7 @@
     <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="Vorschau der woladen.de Web-App mit Schnellladesäulen und Annehmlichkeiten in der Nähe."
+      content="Vorschau der woladen.de Web-App mit Schnellladesäulen und Angeboten vor Ort."
     />
     <meta name="twitter:card" content="summary_large_image" />
     <meta
@@ -50,7 +50,7 @@
     />
     <meta
       name="twitter:description"
-      content="Finde Schnellladesäulen in Deutschland mit Café, Bäckerei, Park und weiteren Annehmlichkeiten in der Nähe."
+      content="Finde Schnellladesäulen in Deutschland mit Café, Bäckerei, Park und weiteren Angeboten vor Ort."
     />
     <meta
       name="twitter:image"
@@ -58,7 +58,7 @@
     />
     <meta
       name="twitter:image:alt"
-      content="Vorschau der woladen.de Web-App mit Schnellladesäulen und Annehmlichkeiten in der Nähe."
+      content="Vorschau der woladen.de Web-App mit Schnellladesäulen und Angeboten vor Ort."
     />
     <link rel="icon" href="/favicon.ico?v=20260411" sizes="any" />
     <link
@@ -170,7 +170,7 @@
               <p>
                 Finde Schnellladesäulen mit der besten Aufenthaltsqualität.
                 Woladen zeigt dir die nächstgelegenen Stationen in Deutschland
-                übersichtlich in Liste und Karte und kennt Annehmlichkeiten wie
+                übersichtlich in Liste und Karte und kennt Angebote vor Ort wie
                 Supermarkt, Bäckerei oder Restaurant in der direkten Umgebung.
                 Ohne Ladeweile.
               </p>
@@ -181,15 +181,15 @@
               <h3>Legende</h3>
               <ul class="legend-list">
                 <li>
-                  <span class="dot gold"></span> >10 Annehmlichkeiten (Gold)
+                  <span class="dot gold"></span> >10 Angebote vor Ort (Gold)
                 </li>
                 <li>
-                  <span class="dot silver"></span> >5 Annehmlichkeiten (Silber)
+                  <span class="dot silver"></span> >5 Angebote vor Ort (Silber)
                 </li>
                 <li>
-                  <span class="dot bronze"></span> >1 Annehmlichkeiten (Bronze)
+                  <span class="dot bronze"></span> >1 Angebote vor Ort (Bronze)
                 </li>
-                <li><span class="dot grey"></span> Keine Annehmlichkeiten</li>
+                <li><span class="dot grey"></span> Keine Angebote vor Ort</li>
               </ul>
             </div>
 
@@ -374,6 +374,16 @@
             </label>
 
             <label class="filter-group">
+              <span class="label-text">Name des Angebots vor Ort</span>
+              <input
+                type="search"
+                id="filter-amenity-name"
+                placeholder="z. B. McDonald's"
+                spellcheck="false"
+              />
+            </label>
+
+            <label class="filter-group">
               <span class="label-text"
                 >Min. Leistung: <span id="filter-power-val">50</span> kW</span
               >
@@ -391,7 +401,7 @@
             </label>
 
             <div class="filter-group">
-              <span class="label-text">Annehmlichkeiten</span>
+              <span class="label-text">Angebote vor Ort</span>
               <div id="filter-amenities" class="amenity-grid">
                 <!-- Icons injected by JS -->
               </div>
@@ -458,7 +468,7 @@
               </div>
               <div class="stat-pill">
                 <span class="icon">🏪</span>
-                <span id="detail-amenity-count">5 Annehmlichkeiten</span>
+                <span id="detail-amenity-count">5 Angebote vor Ort</span>
               </div>
             </div>
 
