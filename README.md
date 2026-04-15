@@ -2,7 +2,7 @@
 
 # woladen.de
 
-Fast chargers in Germany with nearby amenities from OpenStreetMap.
+Fast chargers in Germany with nearby amenities from OpenStreetMap, now with AFIR-based live data, where available.
 
 ## What This Repo Does
 
