@@ -6,7 +6,7 @@ Dieses Dokument fasst die dynamischen Inhalte für Woladen in Markdown zusammen 
 
 Woladen stützt sich auf Ladeinfrastrukturdaten im Rahmen von [EU-Verordnung 2023/1804 (AFIR), Artikel 20](https://eur-lex.europa.eu/legal-content/DE/TXT/HTML/?uri=CELEX:32023R1804#art_20). Seit dem 14. April 2025 müssen Betreiber öffentlich zugänglicher Ladepunkte die statischen und dynamischen Daten kostenfrei über nationale Zugangspunkte bereitstellen.
 
-### Deutschland: Mobilithek
+### Deutschland: Mobilithek, Stand 14.4.2026
 
 Der nationale Zugangspunkt für Deutschland ist die [Mobilithek](https://mobilithek.info/).
 
@@ -19,8 +19,8 @@ Woladen.de nutzt für Deutschland auf diese Mobilithek-Angebote:
 - [Qwello Deutschland GmbH: AFIR-recharging-stat-Qwello-Deutschland-GmbH](https://mobilithek.info/offers/972963216296222720) (CC0)
 - [Wirelane GmbH: AFIR-recharging-stat-Wirelane](https://mobilithek.info/offers/869246425829892096) (CC0)
 - [Monta ApS](https://mobilithek.info/offers/859435593654755328)
-- [Stadtwerke Ulm](https://mobilithek.info/offers/854410608351543296) (CC0). Da der Datensatz keine Ad-hoc-Preise enthält, ergänzt Hocsy diese mit den auf der [SWU-Seite](https://www.swu.de/privatkunden/produkte-leistungen/elektromobilitaet/oeffentliche-strom-ladestellen) veröffentlichten Preisen von 0,64 EUR/kWh AC und 0,74 EUR/kWh DC/HPC.
-- [ladenetz.de Ladestationsdaten - statisch](https://mobilithek.info/offers/902547569133924352) (CC0). Der zugehörige [ladenetz.de-Datensatz - dynamisch](https://mobilithek.info/offers/903240716507836416) enthält laut Hocsy aktuell keine Ad-hoc-Preise.
+- [Stadtwerke Ulm](https://mobilithek.info/offers/854410608351543296) (CC0). 
+- [ladenetz.de Ladestationsdaten - statisch](https://mobilithek.info/offers/902547569133924352) (CC0). Der zugehörige [ladenetz.de-Datensatz - dynamisch](https://mobilithek.info/offers/903240716507836416) 
 
 Ergänzung für Woladen auf Basis des eingeloggten Mobilithek-Kontos vom 14. April 2026:
 
@@ -44,25 +44,40 @@ Aktive, für Woladen nutzbare Mobilithek-Angebote:
 - eliso GmbH: `eliso AFIR Dynamic Data (Station & Point)`, `eliso AFIR Static Data (Station & Point)`
 - vaylens GmbH: `AFIR-recharging-dyn-vaylens GmbH`, `AFIR-recharging-stat-vaylens GmbH`
 
+
+### Schweiz
+
+TODO, nicht angebunden. Sieht gut aus: https://opendata.swiss/de/dataset/ladestationen
+
+
+## EU
+
+See [List of National Access Points (NAP)](https://transport.ec.europa.eu/document/download/963c997d-efd9-40ae-a38b-5d4b935bdfcf_en?filename=its-national-access-points.pdf) 
+
 ### Österreich: E-Control
 
-Für Österreich verweist Hocsy auf das zentrale Ladestellenverzeichnis der [E-Control](https://www.e-control.at/). Die Standorte und Detailinformationen werden dort von den Betreibern selbst gepflegt; E-Control weist darauf hin, dass für Richtigkeit, Vollständigkeit und Aktualität keine Haftung übernommen wird.
+TODO, nicht angebunden. Für Österreich gibt es das zentrale Ladestellenverzeichnis der [E-Control](https://www.e-control.at/). Die Standorte und Detailinformationen werden dort von den Betreibern selbst gepflegt; E-Control weist darauf hin, dass für Richtigkeit, Vollständigkeit und Aktualität keine Haftung übernommen wird. 
+
+### Belgien
+
+TODO, nicht angebunden. [NAP](https://transportdata.be/en/)
+
 
 ### Niederlande: NDW
 
-In den Niederlanden ist der Zugangspunkt [NDW / opendata.ndw.nu](https://opendata.ndw.nu).
+TODO, nicht angebunden. In den Niederlanden ist der Zugangspunkt [NDW / opendata.ndw.nu](https://opendata.ndw.nu).
 
 ### Finnland: Digitraffic
 
-Für Finnland verweist Hocsy auf [Digitraffic](https://www.digitraffic.fi/en/road-traffic/afir/).
+TODO, nicht angebunden. Für Finnland gibt es [Digitraffic](https://www.digitraffic.fi/en/road-traffic/afir/).
 
 ### Slowenien: NAP.si
 
-Der nationale Zugangspunkt für Slowenien ist [NAP.si](https://nap.si/en). Laut Hocsy melden CPOs ihre Daten dort per OCPI oder REST-API.
+TODO, nicht angebunden. Der nationale Zugangspunkt für Slowenien ist [NAP.si](https://nap.si/en). Laut Hocsy melden CPOs ihre Daten dort per OCPI oder REST-API.
 
 ### Griechenland: gov.gr
 
-Für Griechenland verweist Hocsy auf das vom [Ministerium für Infrastruktur und Verkehr](https://electrokinisi.yme.gov.gr) bereitgestellte Portal.
+TODO, nicht angebunden. Für Griechenland gibt es vom [Ministerium für Infrastruktur und Verkehr](https://electrokinisi.yme.gov.gr) bereitgestellte Portal.
 
 ## Kartenmaterial
 
