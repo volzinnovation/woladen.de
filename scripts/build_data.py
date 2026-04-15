@@ -21,7 +21,10 @@ import json
 import math
 import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 import unicodedata
 from collections import defaultdict
@@ -60,6 +63,9 @@ MOBILITHEK_PUBLICATION_FILE_URL = (
 MOBILITHEK_PUBLICATION_PUBLIC_FILE_URL = (
     "https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/{publication_id}/file/noauth"
 )
+DATEX_V3_SUBSCRIPTION_URL = (
+    "https://mobilithek.info:8443/mobilithek/api/v1.0/subscription/datexv3?subscriptionID={subscription_id}"
+)
 MOBILITHEK_PUBLICATION_FILE_ACCESS_URL = (
     "https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/{publication_id}/file/access"
 )
@@ -71,8 +77,13 @@ MOBILITHEK_AFIR_SEARCH_TERM = "AFIR"
 CHARGING_DATA_CATEGORY = "https://w3id.org/mdp/schema/data_categories#FILLING_AND_CHARGING_STATIONS"
 DATEX_V3_DATA_MODEL = "https://w3id.org/mdp/schema/data_model#DATEX_2_V3"
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = Path("data")
 README_PATH = Path("README.md")
+MOBILITHEK_AFIR_PROVIDER_CONFIG_PATH = REPO_ROOT / "data" / "mobilithek_afir_provider_configs.json"
+MOBILITHEK_SUBSCRIPTION_REGISTRY_PATH = REPO_ROOT / "secret" / "mobilithek_subscriptions.json"
+MOBILITHEK_MACHINE_CERT_P12 = REPO_ROOT / "secret" / "certificate.p12"
+MOBILITHEK_MACHINE_CERT_PASSWORD_FILE = REPO_ROOT / "secret" / "pwd.txt"
 
 RAW_CACHE_PATH = DATA_DIR / "bnetza_cache.csv"
 RAW_META_PATH = DATA_DIR / "bnetza_source.json"
@@ -134,6 +145,18 @@ STATIC_DETAIL_FIELDS = (
     "green_energy",
     "service_types_display",
     "details_json",
+)
+TRIMMED_GEOJSON_TOP_LEVEL_KEYS = frozenset({"source"})
+TRIMMED_GEOJSON_PROPERTY_KEYS = frozenset(
+    {
+        "status",
+        "detail_source_uid",
+        "datex_site_id",
+        "datex_station_ids",
+        "datex_charge_point_ids",
+        "details_json",
+        "amenities_source",
+    }
 )
 GENERIC_OPERATOR_WORDS = {
     "afir",
@@ -290,6 +313,17 @@ class AfirStaticPublication:
     publisher: str
     access_mode: str
     data_model: str
+
+
+@dataclass(frozen=True)
+class DirectDatexSource:
+    provider_uid: str
+    display_name: str
+    publisher: str
+    dynamic_url: str
+    static_url: str
+    dynamic_title: str
+    static_title: str
 
 
 @dataclass(frozen=True)
@@ -540,6 +574,78 @@ def decode_json_bytes(content: bytes) -> dict[str, Any]:
     return json.loads(raw.decode("utf-8"))
 
 
+def load_json_object(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return payload if isinstance(payload, dict) else {}
+
+
+def parse_http_status_code(header_text: str) -> int:
+    for line in header_text.splitlines():
+        if line.startswith("HTTP/"):
+            parts = line.split()
+            if len(parts) >= 2 and parts[1].isdigit():
+                return int(parts[1])
+    return 0
+
+
+def load_static_subscription_ids(path: Path = MOBILITHEK_SUBSCRIPTION_REGISTRY_PATH) -> dict[str, str]:
+    registry = load_json_object(path)
+    static_subscription_ids: dict[str, str] = {}
+    for provider_uid, entry in registry.items():
+        if not isinstance(entry, dict):
+            continue
+        subscription_id = str(entry.get("static_subscription_id") or "").strip()
+        if subscription_id:
+            static_subscription_ids[str(provider_uid).strip()] = subscription_id
+    return static_subscription_ids
+
+
+def load_direct_datex_sources(path: Path = MOBILITHEK_SUBSCRIPTION_REGISTRY_PATH) -> list[DirectDatexSource]:
+    registry = load_json_object(path)
+    sources: list[DirectDatexSource] = []
+    for provider_uid, entry in registry.items():
+        if not isinstance(entry, dict):
+            continue
+        fetch_kind = str(entry.get("fetch_kind") or "").strip()
+        dynamic_url = str(entry.get("fetch_url") or "").strip()
+        static_url = str(entry.get("static_fetch_url") or "").strip()
+        if fetch_kind != "direct_url" or not dynamic_url or not static_url:
+            continue
+        display_name = str(entry.get("display_name") or provider_uid or "").strip() or str(provider_uid).strip()
+        publisher = str(entry.get("publisher") or display_name or provider_uid or "").strip()
+        dynamic_title = str(entry.get("offer_title") or display_name or provider_uid or "").strip()
+        static_title = str(entry.get("static_offer_title") or display_name or provider_uid or "").strip()
+        sources.append(
+            DirectDatexSource(
+                provider_uid=str(provider_uid).strip(),
+                display_name=display_name,
+                publisher=publisher,
+                dynamic_url=dynamic_url,
+                static_url=static_url,
+                dynamic_title=dynamic_title,
+                static_title=static_title,
+            )
+        )
+    return sorted(sources, key=lambda item: item.provider_uid)
+
+
+def load_provider_uid_by_static_publication(
+    path: Path = MOBILITHEK_AFIR_PROVIDER_CONFIG_PATH,
+) -> dict[str, str]:
+    payload = load_json_object(path)
+    provider_uid_by_publication: dict[str, str] = {}
+    for provider in payload.get("providers") or []:
+        if not isinstance(provider, dict):
+            continue
+        provider_uid = str(provider.get("uid") or "").strip()
+        static_publication_id = str((((provider.get("feeds") or {}).get("static")) or {}).get("publication_id") or "").strip()
+        if provider_uid and static_publication_id:
+            provider_uid_by_publication[static_publication_id] = provider_uid
+    return provider_uid_by_publication
+
+
 def extract_first_lang_value(payload: Any) -> str:
     if isinstance(payload, dict):
         values = payload.get("values")
@@ -658,6 +764,78 @@ def fetch_mobilithek_access_token(session: requests.Session) -> str | None:
     return token or None
 
 
+def fetch_mobilithek_subscription_payload_with_mtls(
+    *,
+    subscription_id: str,
+) -> dict[str, Any] | list[Any]:
+    subscription_id = str(subscription_id or "").strip()
+    if not subscription_id:
+        raise RuntimeError("missing_subscription_id")
+    if not MOBILITHEK_MACHINE_CERT_P12.exists():
+        raise RuntimeError("missing_machine_certificate")
+    if not MOBILITHEK_MACHINE_CERT_PASSWORD_FILE.exists():
+        raise RuntimeError("missing_machine_certificate_password")
+
+    password = MOBILITHEK_MACHINE_CERT_PASSWORD_FILE.read_text(encoding="utf-8").strip()
+    if not password:
+        raise RuntimeError("missing_machine_certificate_password")
+
+    curl_path = shutil.which("curl") or "/usr/bin/curl"
+    if not Path(curl_path).exists():
+        raise RuntimeError("curl_not_found")
+
+    url = DATEX_V3_SUBSCRIPTION_URL.format(subscription_id=subscription_id)
+    with tempfile.TemporaryDirectory(prefix="mobilithek-static-subscription-") as temp_dir:
+        header_path = Path(temp_dir) / "headers.txt"
+        body_path = Path(temp_dir) / "body.bin"
+        command = [
+            curl_path,
+            "-sS",
+            "-L",
+            "--max-time",
+            str(DATEX_REQUEST_TIMEOUT_SECONDS),
+            "-D",
+            str(header_path),
+            "-o",
+            str(body_path),
+            "-H",
+            "Accept: application/json, application/octet-stream",
+            "-H",
+            "Accept-Encoding: gzip",
+            "--cert-type",
+            "P12",
+            "--cert",
+            f"{MOBILITHEK_MACHINE_CERT_P12}:{password}",
+            url,
+        ]
+
+        try:
+            result = subprocess.run(
+                command,
+                check=False,
+                capture_output=True,
+                timeout=DATEX_REQUEST_TIMEOUT_SECONDS + 2,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise TimeoutError(f"{subscription_id}: timeout") from exc
+
+        if result.returncode != 0:
+            stderr = result.stderr.decode("utf-8", errors="replace").strip()
+            if "Operation timed out" in stderr or result.returncode == 28:
+                raise TimeoutError(f"{subscription_id}: timeout")
+            raise RuntimeError(stderr or f"curl_exit_{result.returncode}")
+
+        header_text = header_path.read_text(encoding="utf-8", errors="replace") if header_path.exists() else ""
+        status_code = parse_http_status_code(header_text)
+        body = body_path.read_bytes() if body_path.exists() else b""
+        if status_code >= 400:
+            body_excerpt = body[:200].decode("utf-8", errors="replace").strip()
+            raise RuntimeError(f"http_{status_code}: {body_excerpt or 'request_failed'}")
+
+        raw = gzip.decompress(body) if body[:2] == b"\x1f\x8b" else body
+        return json.loads(raw.decode("utf-8"))
+
+
 def fetch_mobilithek_publication_payload(
     session: requests.Session,
     *,
@@ -669,13 +847,25 @@ def fetch_mobilithek_publication_payload(
         MOBILITHEK_PUBLICATION_FILE_URL if requires_auth else MOBILITHEK_PUBLICATION_PUBLIC_FILE_URL
     )
     url = endpoint_template.format(publication_id=publication_id)
-    headers: dict[str, str] = {}
-    if requires_auth:
-        if not access_token:
-            raise RuntimeError("missing_mobilithek_access_token")
-        headers["Authorization"] = f"Bearer {access_token}"
-    headers["Accept"] = "application/octet-stream"
+    payload = fetch_json_payload_from_url(
+        session,
+        url=url,
+        access_token=access_token if requires_auth else None,
+    )
+    if not isinstance(payload, dict):
+        raise ValueError("expected_json_object_payload")
+    return payload
 
+
+def fetch_json_payload_from_url(
+    session: requests.Session,
+    *,
+    url: str,
+    access_token: str | None = None,
+) -> dict[str, Any] | list[Any]:
+    headers = {"Accept": "application/json, application/octet-stream"}
+    if access_token:
+        headers["Authorization"] = f"Bearer {access_token}"
     response = request_with_retries(
         "GET",
         url,
@@ -684,7 +874,9 @@ def fetch_mobilithek_publication_payload(
         verify=DATEX_TLS_VERIFY,
         headers=headers,
     )
-    return decode_json_bytes(response.content)
+    content = response.content
+    raw = gzip.decompress(content) if content[:2] == b"\x1f\x8b" else content
+    return json.loads(raw.decode("utf-8"))
 
 
 def parse_datex_static_sites(payload: dict[str, Any]) -> list[DatexStaticSite]:
@@ -1930,9 +2122,29 @@ def enrich_with_mobilithek_datex(
     *,
     session: requests.Session,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
+    datex_publications = list(MOBILITHEK_DATEX_PUBLICATIONS)
+    try:
+        direct_datex_sources = load_direct_datex_sources()
+    except (OSError, ValueError, TypeError) as exc:
+        direct_datex_sources = []
+        direct_source_error = f"direct_datex_registry_failed: {exc}"
+    else:
+        direct_source_error = ""
+    for source in direct_datex_sources:
+        datex_publications.append(
+            {
+                "uid": source.provider_uid,
+                "name": source.display_name or source.publisher or source.provider_uid,
+                "operator_patterns": (),
+                "dynamic_url": source.dynamic_url,
+                "static_url": source.static_url,
+                "requires_auth": False,
+            }
+        )
+
     enriched = df.copy()
     stats: dict[str, Any] = {
-        "sources_discovered": len(MOBILITHEK_DATEX_PUBLICATIONS),
+        "sources_discovered": len(datex_publications),
         "sources_used": 0,
         "locations_scanned": 0,
         "matched_locations": 0,
@@ -1941,9 +2153,11 @@ def enrich_with_mobilithek_datex(
         "errors": [],
         "sources": [],
     }
+    if direct_source_error:
+        stats["errors"].append(direct_source_error)
 
     access_token: str | None = None
-    if any(publication.get("requires_auth") for publication in MOBILITHEK_DATEX_PUBLICATIONS):
+    if any(publication.get("requires_auth") for publication in datex_publications):
         try:
             access_token = fetch_mobilithek_access_token(session)
         except (requests.RequestException, ValueError, RuntimeError) as exc:
@@ -1952,28 +2166,34 @@ def enrich_with_mobilithek_datex(
     updated_station_ids: set[str] = set()
     updated_evse_ids: set[str] = set()
 
-    for publication in MOBILITHEK_DATEX_PUBLICATIONS:
+    for publication in datex_publications:
         publication_uid = str(publication["uid"])
         publication_name = str(publication["name"])
         requires_auth = bool(publication.get("requires_auth"))
+        static_url = str(publication.get("static_url") or "").strip()
+        dynamic_url = str(publication.get("dynamic_url") or "").strip()
 
         if requires_auth and not access_token:
             stats["errors"].append(f"{publication_uid}: missing_mobilithek_access_token")
             continue
 
         try:
-            static_payload = fetch_mobilithek_publication_payload(
-                session,
-                publication_id=str(publication["static_publication_id"]),
-                requires_auth=requires_auth,
-                access_token=access_token,
-            )
-            dynamic_payload = fetch_mobilithek_publication_payload(
-                session,
-                publication_id=str(publication["dynamic_publication_id"]),
-                requires_auth=requires_auth,
-                access_token=access_token,
-            )
+            if static_url and dynamic_url:
+                static_payload = fetch_json_payload_from_url(session, url=static_url)
+                dynamic_payload = fetch_json_payload_from_url(session, url=dynamic_url)
+            else:
+                static_payload = fetch_mobilithek_publication_payload(
+                    session,
+                    publication_id=str(publication["static_publication_id"]),
+                    requires_auth=requires_auth,
+                    access_token=access_token,
+                )
+                dynamic_payload = fetch_mobilithek_publication_payload(
+                    session,
+                    publication_id=str(publication["dynamic_publication_id"]),
+                    requires_auth=requires_auth,
+                    access_token=access_token,
+                )
         except (requests.RequestException, ValueError, RuntimeError) as exc:
             stats["errors"].append(f"{publication_uid}: {exc}")
             continue
@@ -2491,6 +2711,7 @@ def fetch_mobilithek_static_payload_with_probe(
     publication_id: str,
     preferred_access_mode: str,
     access_token: str | None,
+    subscription_id: str = "",
 ) -> tuple[dict[str, Any] | list[Any] | None, str, str | None]:
     attempts: list[tuple[str, bool]] = []
     if preferred_access_mode == "auth":
@@ -2503,31 +2724,29 @@ def fetch_mobilithek_static_payload_with_probe(
     last_error: str | None = None
     for mode_name, requires_auth in attempts:
         try:
-            headers = {"Accept": "application/octet-stream"}
-            if requires_auth:
-                if not access_token:
-                    raise RuntimeError("missing_mobilithek_access_token")
-                headers["Authorization"] = f"Bearer {access_token}"
-
+            if requires_auth and not access_token:
+                raise RuntimeError("missing_mobilithek_access_token")
             url = (
                 MOBILITHEK_PUBLICATION_FILE_URL.format(publication_id=publication_id)
                 if requires_auth
                 else MOBILITHEK_PUBLICATION_PUBLIC_FILE_URL.format(publication_id=publication_id)
             )
-            response = request_with_retries(
-                "GET",
-                url,
+            payload = fetch_json_payload_from_url(
                 session,
-                timeout=DATEX_REQUEST_TIMEOUT_SECONDS,
-                verify=DATEX_TLS_VERIFY,
-                headers=headers,
+                url=url,
+                access_token=access_token if requires_auth else None,
             )
-            content = response.content
-            raw = gzip.decompress(content) if content[:2] == b"\x1f\x8b" else content
-            payload = json.loads(raw.decode("utf-8"))
             return payload, mode_name, None
         except Exception as exc:
             last_error = f"{mode_name}: {exc}"
+
+    if subscription_id:
+        try:
+            payload = fetch_mobilithek_subscription_payload_with_mtls(subscription_id=subscription_id)
+            return payload, "mtls_subscription", None
+        except Exception as exc:
+            last_error = f"mtls_subscription: {exc}"
+            return None, "mtls_subscription", last_error
 
     return None, preferred_access_mode, last_error
 
@@ -3280,6 +3499,147 @@ def build_bnetza_fallback_details(row: pd.Series) -> dict[str, Any]:
     }
 
 
+def apply_static_publication_payload(
+    enriched: pd.DataFrame,
+    *,
+    publication: AfirStaticPublication,
+    payload: dict[str, Any] | list[Any],
+    access_mode_used: str,
+    row_lookup: dict[str, int],
+    detail_scores: dict[str, int],
+    station_grid: dict[tuple[int, int], list[dict[str, Any]]],
+    station_by_id: dict[str, dict[str, Any]],
+    evse_to_station_ids: dict[str, set[str]],
+    stats: dict[str, Any],
+) -> None:
+    site_records: list[DatexStaticSite | ElisoStaticSite] = []
+    site_payload_index: dict[str, Any] = {}
+    payload_kind = "unsupported"
+
+    if isinstance(payload, dict):
+        publication_root = (payload.get("payload") or {}).get("aegiEnergyInfrastructureTablePublication")
+        if isinstance(publication_root, dict):
+            payload_kind = "datex"
+            site_records = parse_datex_static_sites(payload)
+            for table in publication_root.get("energyInfrastructureTable") or []:
+                for site in (table or {}).get("energyInfrastructureSite") or []:
+                    if not isinstance(site, dict):
+                        continue
+                    site_id = normalize_optional_text(site.get("idG"))
+                    if site_id:
+                        site_payload_index[site_id] = site
+    elif isinstance(payload, list) and payload and isinstance(payload[0], dict):
+        if "coordinates" in payload[0] and "evses" in payload[0]:
+            payload_kind = "eliso"
+            site_records = parse_eliso_static_sites(payload)
+            for site in payload:
+                site_id = normalize_optional_text(
+                    site.get("operator")
+                    or site.get("operator_name")
+                    or site.get("address")
+                )
+                if not site_id:
+                    coords = site.get("coordinates") or {}
+                    lat = coords.get("latitude")
+                    lon = coords.get("longitude")
+                    if lat is not None and lon is not None:
+                        site_id = f"{float(lat):.6f},{float(lon):.6f}"
+                if site_id:
+                    site_payload_index[site_id] = site
+
+    if not site_records:
+        stats["sources"].append(
+            {
+                "uid": publication.uid,
+                "publication_id": publication.publication_id,
+                "title": publication.title,
+                "publisher": publication.publisher,
+                "access_mode": access_mode_used,
+                "status": "unsupported_payload",
+                "payload_kind": payload_kind,
+                "matched_sites": 0,
+                "matched_stations": 0,
+            }
+        )
+        return
+
+    matches, match_meta = match_static_sites_to_bnetza(
+        site_records,
+        publisher=publication.publisher,
+        station_grid=station_grid,
+        station_by_id=station_by_id,
+        evse_to_station_ids=evse_to_station_ids,
+    )
+
+    matched_station_ids: set[str] = set()
+    matched_sites = 0
+    for site_record in site_records:
+        station_id = matches.get(site_record.site_id)
+        if not station_id:
+            continue
+        row_index = row_lookup.get(station_id)
+        site_payload = site_payload_index.get(site_record.site_id)
+        if row_index is None or not isinstance(site_payload, dict):
+            continue
+
+        if payload_kind == "datex":
+            candidate = extract_datex_static_details(
+                site_record,
+                site_payload,
+                publication=publication,
+                match_meta=match_meta.get(site_record.site_id, {}),
+            )
+        else:
+            candidate = extract_eliso_static_details(
+                site_record,
+                site_payload,
+                publication=publication,
+                match_meta=match_meta.get(site_record.site_id, {}),
+            )
+
+        current_score = detail_scores.get(station_id, 0)
+        candidate_score = detail_nonempty_score(candidate)
+        if candidate_score <= 0:
+            continue
+
+        for field, value in candidate.items():
+            if field == "detail_source_uid" or field == "detail_source_name":
+                continue
+            if not has_detail_value(value):
+                continue
+            enriched.at[row_index, field] = value
+
+        if candidate_score >= current_score or not normalize_optional_text(
+            enriched.at[row_index, "detail_source_uid"]
+        ):
+            enriched.at[row_index, "detail_source_uid"] = candidate["detail_source_uid"]
+            enriched.at[row_index, "detail_source_name"] = candidate["detail_source_name"]
+            if has_detail_value(candidate.get("detail_last_updated")):
+                enriched.at[row_index, "detail_last_updated"] = candidate["detail_last_updated"]
+            detail_scores[station_id] = max(current_score, candidate_score)
+
+        matched_sites += 1
+        matched_station_ids.add(station_id)
+
+    if matched_station_ids:
+        stats["sources_used"] += 1
+    stats["matched_sites"] += matched_sites
+    stats["sources"].append(
+        {
+            "uid": publication.uid,
+            "publication_id": publication.publication_id,
+            "title": publication.title,
+            "publisher": publication.publisher,
+            "access_mode": access_mode_used,
+            "status": "ok",
+            "payload_kind": payload_kind,
+            "sites_scanned": len(site_records),
+            "matched_sites": matched_sites,
+            "matched_stations": len(matched_station_ids),
+        }
+    )
+
+
 def enrich_with_static_details(
     df: pd.DataFrame,
     *,
@@ -3322,6 +3682,67 @@ def enrich_with_static_details(
     except (requests.RequestException, ValueError, RuntimeError) as exc:
         access_token = None
         stats["errors"].append(f"mobilithek_auth_failed: {exc}")
+
+    try:
+        static_subscription_ids = load_static_subscription_ids()
+    except (OSError, ValueError, TypeError) as exc:
+        static_subscription_ids = {}
+        stats["errors"].append(f"static_subscription_registry_failed: {exc}")
+
+    try:
+        provider_uid_by_static_publication = load_provider_uid_by_static_publication()
+    except (OSError, ValueError, TypeError) as exc:
+        provider_uid_by_static_publication = {}
+        stats["errors"].append(f"provider_config_load_failed: {exc}")
+
+    try:
+        direct_datex_sources = load_direct_datex_sources()
+    except (OSError, ValueError, TypeError) as exc:
+        direct_datex_sources = []
+        stats["errors"].append(f"direct_datex_registry_failed: {exc}")
+
+    for source in direct_datex_sources:
+        publication = AfirStaticPublication(
+            uid=f"mobilithek_{source.provider_uid}_static",
+            publication_id=source.static_url,
+            title=source.static_title,
+            publisher=source.publisher or source.display_name or source.provider_uid,
+            access_mode="noauth",
+            data_model=DATEX_V3_DATA_MODEL,
+        )
+        stats["offers_discovered"] += 1
+        stats["static_offers_considered"] += 1
+        try:
+            payload = fetch_json_payload_from_url(session, url=source.static_url)
+        except (requests.RequestException, ValueError, RuntimeError) as exc:
+            stats["errors"].append(f"{source.static_url}: {exc}")
+            stats["sources"].append(
+                {
+                    "uid": publication.uid,
+                    "publication_id": publication.publication_id,
+                    "title": publication.title,
+                    "publisher": publication.publisher,
+                    "access_mode": "direct_url",
+                    "status": "fetch_failed",
+                    "error": str(exc),
+                    "matched_sites": 0,
+                    "matched_stations": 0,
+                }
+            )
+            continue
+
+        apply_static_publication_payload(
+            enriched,
+            publication=publication,
+            payload=payload,
+            access_mode_used="direct_url",
+            row_lookup=row_lookup,
+            detail_scores=detail_scores,
+            station_grid=station_grid,
+            station_by_id=station_by_id,
+            evse_to_station_ids=evse_to_station_ids,
+            stats=stats,
+        )
 
     seen_publication_ids: set[str] = set()
     page = 0
@@ -3372,8 +3793,10 @@ def enrich_with_static_details(
 
             publisher = normalize_optional_text(metadata.get("publisher"))
             title = normalize_optional_text(metadata.get("title"))
+            provider_uid = provider_uid_by_static_publication.get(publication_id) or derive_provider_stem(title, publisher)
+            static_subscription_id = static_subscription_ids.get(provider_uid, "")
             publication = AfirStaticPublication(
-                uid=f"mobilithek_{derive_provider_stem(title, publisher)}_static",
+                uid=f"mobilithek_{provider_uid}_static",
                 publication_id=publication_id,
                 title=title,
                 publisher=publisher,
@@ -3381,7 +3804,7 @@ def enrich_with_static_details(
                 data_model=normalize_optional_text(content_data_entry(metadata).get("dataModel")),
             )
 
-            if access_probe.get("is_accessible") is not True:
+            if access_probe.get("is_accessible") is not True and not static_subscription_id:
                 stats["sources"].append(
                     {
                         "uid": publication.uid,
@@ -3401,6 +3824,7 @@ def enrich_with_static_details(
                 publication_id=publication_id,
                 preferred_access_mode=publication.access_mode,
                 access_token=access_token,
+                subscription_id=static_subscription_id,
             )
             if payload is None:
                 stats["errors"].append(f"{publication_id}: {fetch_error}")
@@ -3419,131 +3843,17 @@ def enrich_with_static_details(
                 )
                 continue
 
-            site_records: list[DatexStaticSite | ElisoStaticSite] = []
-            site_payload_index: dict[str, Any] = {}
-            payload_kind = "unsupported"
-
-            if isinstance(payload, dict):
-                publication_root = (payload.get("payload") or {}).get("aegiEnergyInfrastructureTablePublication")
-                if isinstance(publication_root, dict):
-                    payload_kind = "datex"
-                    site_records = parse_datex_static_sites(payload)
-                    for table in publication_root.get("energyInfrastructureTable") or []:
-                        for site in (table or {}).get("energyInfrastructureSite") or []:
-                            if not isinstance(site, dict):
-                                continue
-                            site_id = normalize_optional_text(site.get("idG"))
-                            if site_id:
-                                site_payload_index[site_id] = site
-            elif isinstance(payload, list) and payload and isinstance(payload[0], dict):
-                if "coordinates" in payload[0] and "evses" in payload[0]:
-                    payload_kind = "eliso"
-                    site_records = parse_eliso_static_sites(payload)
-                    for site in payload:
-                        site_id = normalize_optional_text(
-                            site.get("operator")
-                            or site.get("operator_name")
-                            or site.get("address")
-                        )
-                        if not site_id:
-                            coords = site.get("coordinates") or {}
-                            lat = coords.get("latitude")
-                            lon = coords.get("longitude")
-                            if lat is not None and lon is not None:
-                                site_id = f"{float(lat):.6f},{float(lon):.6f}"
-                        if site_id:
-                            site_payload_index[site_id] = site
-
-            if not site_records:
-                stats["sources"].append(
-                    {
-                        "uid": publication.uid,
-                        "publication_id": publication.publication_id,
-                        "title": publication.title,
-                        "publisher": publication.publisher,
-                        "access_mode": access_mode_used,
-                        "status": "unsupported_payload",
-                        "payload_kind": payload_kind,
-                        "matched_sites": 0,
-                        "matched_stations": 0,
-                    }
-                )
-                continue
-
-            matches, match_meta = match_static_sites_to_bnetza(
-                site_records,
-                publisher=publisher,
+            apply_static_publication_payload(
+                enriched,
+                publication=publication,
+                payload=payload,
+                access_mode_used=access_mode_used,
+                row_lookup=row_lookup,
+                detail_scores=detail_scores,
                 station_grid=station_grid,
                 station_by_id=station_by_id,
                 evse_to_station_ids=evse_to_station_ids,
-            )
-
-            matched_station_ids: set[str] = set()
-            matched_sites = 0
-            for site_record in site_records:
-                station_id = matches.get(site_record.site_id)
-                if not station_id:
-                    continue
-                row_index = row_lookup.get(station_id)
-                site_payload = site_payload_index.get(site_record.site_id)
-                if row_index is None or not isinstance(site_payload, dict):
-                    continue
-
-                if payload_kind == "datex":
-                    candidate = extract_datex_static_details(
-                        site_record,
-                        site_payload,
-                        publication=publication,
-                        match_meta=match_meta.get(site_record.site_id, {}),
-                    )
-                else:
-                    candidate = extract_eliso_static_details(
-                        site_record,
-                        site_payload,
-                        publication=publication,
-                        match_meta=match_meta.get(site_record.site_id, {}),
-                    )
-
-                current_score = detail_scores.get(station_id, 0)
-                candidate_score = detail_nonempty_score(candidate)
-                if candidate_score <= 0:
-                    continue
-
-                for field, value in candidate.items():
-                    if field == "detail_source_uid" or field == "detail_source_name":
-                        continue
-                    if not has_detail_value(value):
-                        continue
-                    enriched.at[row_index, field] = value
-
-                if candidate_score >= current_score or not normalize_optional_text(
-                    enriched.at[row_index, "detail_source_uid"]
-                ):
-                    enriched.at[row_index, "detail_source_uid"] = candidate["detail_source_uid"]
-                    enriched.at[row_index, "detail_source_name"] = candidate["detail_source_name"]
-                    if has_detail_value(candidate.get("detail_last_updated")):
-                        enriched.at[row_index, "detail_last_updated"] = candidate["detail_last_updated"]
-                    detail_scores[station_id] = max(current_score, candidate_score)
-
-                matched_sites += 1
-                matched_station_ids.add(station_id)
-
-            if matched_station_ids:
-                stats["sources_used"] += 1
-            stats["matched_sites"] += matched_sites
-            stats["sources"].append(
-                {
-                    "uid": publication.uid,
-                    "publication_id": publication.publication_id,
-                    "title": publication.title,
-                    "publisher": publication.publisher,
-                    "access_mode": access_mode_used,
-                    "status": "ok",
-                    "payload_kind": payload_kind,
-                    "sites_scanned": len(site_records),
-                    "matched_sites": matched_sites,
-                    "matched_stations": len(matched_station_ids),
-                }
+                stats=stats,
             )
 
         page += 1
@@ -4295,6 +4605,30 @@ def build_operator_list(df: pd.DataFrame, min_stations: int) -> dict[str, Any]:
     }
 
 
+def finalize_bundle_geojson(feature_collection: dict[str, Any]) -> dict[str, Any]:
+    trimmed = {
+        key: value
+        for key, value in feature_collection.items()
+        if key not in TRIMMED_GEOJSON_TOP_LEVEL_KEYS
+    }
+    trimmed["features"] = [
+        {
+            **feature,
+            "properties": {
+                key: value
+                for key, value in feature.get("properties", {}).items()
+                if key not in TRIMMED_GEOJSON_PROPERTY_KEYS
+            },
+        }
+        for feature in feature_collection.get("features", [])
+    ]
+    return trimmed
+
+
+def dumps_minified_json(payload: Any) -> str:
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
+
 def write_run_history(path: Path, summary: dict[str, Any]) -> None:
     fieldnames = [
         "timestamp",
@@ -4539,9 +4873,9 @@ def main() -> None:
     log_info("Stage 7/8: Writing data artifacts")
     FAST_CSV_PATH.write_text(export_df.to_csv(index=False), encoding="utf-8")
 
-    geojson = dataframe_to_geojson(export_df, source_meta)
+    geojson = finalize_bundle_geojson(dataframe_to_geojson(export_df, source_meta))
     FAST_GEOJSON_PATH.write_text(
-        json.dumps(geojson, ensure_ascii=False, indent=2),
+        dumps_minified_json(geojson),
         encoding="utf-8",
     )
 
@@ -4550,7 +4884,7 @@ def main() -> None:
         min_stations=args.operator_min_stations,
     )
     OPERATORS_JSON_PATH.write_text(
-        json.dumps(operators_payload, ensure_ascii=False, indent=2),
+        dumps_minified_json(operators_payload),
         encoding="utf-8",
     )
 

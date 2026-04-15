@@ -3,7 +3,7 @@ name: Daily Data Generation
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 1 * *"
+    - cron: "0 1 * * *"
 
 permissions:
   contents: write
@@ -11,6 +11,9 @@ permissions:
 jobs:
   generate-data:
     runs-on: ubuntu-latest
+    env:
+      MOBILITHEK_USERNAME: ${{ secrets.MOBILITHEK_USERNAME }}
+      MOBILITHEK_PASSWORD: ${{ secrets.MOBILITHEK_PASSWORD }}
 
     steps:
       - name: Checkout
@@ -26,13 +29,35 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Prepare Mobilithek secrets
+        shell: bash
+        env:
+          MOBILITHEK_MACHINE_CERT_P12_BASE64: ${{ secrets.MOBILITHEK_MACHINE_CERT_P12_BASE64 }}
+          MOBILITHEK_MACHINE_CERT_PASSWORD: ${{ secrets.MOBILITHEK_MACHINE_CERT_PASSWORD }}
+        run: |
+          if [ -z "$MOBILITHEK_USERNAME" ] || [ -z "$MOBILITHEK_PASSWORD" ]; then
+            echo "Missing Mobilithek account secrets" >&2
+            exit 1
+          fi
+          if [ -z "$MOBILITHEK_MACHINE_CERT_P12_BASE64" ] || [ -z "$MOBILITHEK_MACHINE_CERT_PASSWORD" ]; then
+            echo "Missing Mobilithek machine certificate secrets" >&2
+            exit 1
+          fi
+          mkdir -p secret
+          printf '%s' "$MOBILITHEK_MACHINE_CERT_P12_BASE64" | base64 --decode > secret/certificate.p12
+          printf '%s' "$MOBILITHEK_MACHINE_CERT_PASSWORD" > secret/pwd.txt
+          chmod 600 secret/certificate.p12 secret/pwd.txt
+
+      - name: Sync Mobilithek subscriptions
+        run: python scripts/sync_mobilithek_subscriptions.py
+
       - name: Build data artifacts
         run: |
           python scripts/build_data.py \
             --min-power-kw 50 \
             --radius-m 250 \
             --amenity-backend osm-pbf \
-            --query-budget 500 \
+            --query-budget 0 \
             --refresh-days 30 \
             --download-osm-pbf 
 
