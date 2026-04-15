@@ -10,7 +10,7 @@ Woladen stützt sich auf Ladeinfrastrukturdaten im Rahmen von [EU-Verordnung 202
 
 Der nationale Zugangspunkt für Deutschland ist die [Mobilithek](https://mobilithek.info/).
 
-Hocsy verweist für Deutschland auf diese Mobilithek-Angebote:
+Woladen.de nutzt für Deutschland auf diese Mobilithek-Angebote:
 
 - [chargecloud GmbH: AFIR-recharging-stat-chargecloud-json](https://mobilithek.info/offers/978597062404620288) (CC0)
 - [Eco-Movement: AFIR-recharging-stat-Eco-Movement-v3 (JSON)](https://mobilithek.info/offers/954064102947180544) und [AFIR-recharging-dyn-Eco-Movement-v2 (JSON)](https://mobilithek.info/offers/955166494396665856) (CC BY 4.0)
