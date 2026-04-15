@@ -6,6 +6,8 @@ struct InfoTabView: View {
     private let privacyPolicyURL = URL(string: "https://woladen.de/privacy.html")!
     private let imprintURL = URL(string: "https://woladen.de/imprint.html")!
     private let studiosURL = URL(string: "https://studios.moonshots.gmbh/")!
+    private let mobilithekURL = URL(string: "https://mobilithek.info/")!
+    private let mobilithekSourcesText = "Aktive Datenangebote von 800 Volt Technologies GmbH, ELU Mobility, EnBW mobility+ AG & Co. KG, Monta ApS, Qwello Deutschland GmbH, SMATRICS GmbH & Co KG, Smartlab Innovationsgesellschaft mbH, Tesla Germany GmbH, Wirelane GmbH, chargecloud GmbH, eRound, eliso GmbH und vaylens GmbH."
 
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
@@ -57,6 +59,8 @@ struct InfoTabView: View {
                     "BNetzA: Ladesäulenregister (Downloads und Formulare)",
                     destination: URL(string: "https://www.bundesnetzagentur.de/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/start.html")!
                 )
+                Link("Mobilithek", destination: mobilithekURL)
+                Text(mobilithekSourcesText)
                 Link(
                     "OpenStreetMap",
                     destination: URL(string: "https://www.openstreetmap.org/")!

@@ -6,6 +6,42 @@ import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs";
 
 /* --- CONFIGURATION & CONSTANTS --- */
 const MAX_DISPLAY_POWER_KW = 400;
+const LIVE_SUMMARY_REFRESH_MS = 15000;
+const LIVE_API_TIMEOUT_MS = 3500;
+const LIVE_DETAIL_TIMEOUT_MS = 4000;
+const LIVE_LOCAL_HOSTS = new Set(["127.0.0.1", "localhost"]);
+const LIVE_REMOTE_HOSTS = new Map([
+  ["woladen.de", "https://live.woladen.de"],
+  ["www.woladen.de", "https://live.woladen.de"],
+  ["live.woladen.de", "https://live.woladen.de"],
+]);
+const LIVE_STATION_FIELDS = [
+  "availability_status",
+  "available_evses",
+  "occupied_evses",
+  "out_of_order_evses",
+  "unknown_evses",
+  "total_evses",
+  "price_display",
+  "price_currency",
+  "price_energy_eur_kwh_min",
+  "price_energy_eur_kwh_max",
+  "price_time_eur_min_min",
+  "price_time_eur_min_max",
+  "price_complex",
+  "source_observed_at",
+  "fetched_at",
+  "ingested_at",
+];
+const LIVE_DYNAMIC_KEY_LABELS = {
+  expectedAvailableFromTime: "Ab",
+  expectedAvailableToTime: "Bis",
+  expectedAvailableUntilTime: "Bis",
+  startTime: "Ab",
+  endTime: "Bis",
+  lastUpdated: "Stand",
+  value: "",
+};
 const AMENITY_MAPPING = {
   amenity_restaurant: { label: "Restaurant", icon: "amenity_restaurant.png" },
   amenity_cafe: { label: "Café", icon: "amenity_cafe.png" },
@@ -64,46 +100,176 @@ function formatAmenityCount(count) {
   return `${rounded} ${rounded === 1 ? "Angebot vor Ort" : "Angebote vor Ort"}`;
 }
 
+function resolveLiveApiBaseUrl() {
+  const configured = typeof window.WOLADEN_LIVE_API_BASE_URL === "string"
+    ? window.WOLADEN_LIVE_API_BASE_URL.trim()
+    : "";
+  if (configured) {
+    return configured.replace(/\/+$/, "");
+  }
+  const hostname = String(window.location.hostname || "").trim();
+  if (LIVE_LOCAL_HOSTS.has(hostname)) {
+    return "https://live.woladen.de";
+  }
+  if (LIVE_REMOTE_HOSTS.has(hostname)) {
+    return LIVE_REMOTE_HOSTS.get(hostname) || "";
+  }
+  return "";
+}
+
+const LIVE_API_BASE_URL = resolveLiveApiBaseUrl();
+
+function normalizeAvailabilityStatus(value) {
+  const raw = String(value || "").trim();
+  if (raw === "free" || raw === "occupied" || raw === "out_of_order") {
+    return raw;
+  }
+  return "unknown";
+}
+
+function hasLiveStationSummary(props) {
+  const total = Number(props.live_total_evses || 0);
+  const fetchedAt = String(
+    props.live_source_observed_at || props.live_fetched_at || props.live_ingested_at || "",
+  ).trim();
+  return Boolean(fetchedAt) || (Number.isFinite(total) && total > 0);
+}
+
+function getAvailabilityCounts(props) {
+  if (hasLiveStationSummary(props)) {
+    return {
+      total: Number(props.live_total_evses || 0),
+      available: Number(props.live_available_evses || 0),
+      occupied: Number(props.live_occupied_evses || 0),
+      outOfOrder: Number(props.live_out_of_order_evses || 0),
+      unknown: Number(props.live_unknown_evses || 0),
+    };
+  }
+  return {
+    total: Number(props.occupancy_total_evses || 0),
+    available: Number(props.occupancy_available_evses || 0),
+    occupied: Number(props.occupancy_occupied_evses || 0),
+    outOfOrder: Number(props.occupancy_out_of_order_evses || 0),
+    unknown: Number(props.occupancy_unknown_evses || 0),
+  };
+}
+
+function getAvailabilityStatus(props) {
+  const counts = getAvailabilityCounts(props);
+  if (hasLiveStationSummary(props)) {
+    return normalizeAvailabilityStatus(props.live_availability_status);
+  }
+  if (counts.available > 0) {
+    return "free";
+  }
+  if (counts.occupied > 0) {
+    return "occupied";
+  }
+  if (counts.total > 0 && counts.outOfOrder >= counts.total) {
+    return "out_of_order";
+  }
+  return "unknown";
+}
+
+function formatAvailabilityLabel(status) {
+  if (status === "free") {
+    return "Frei";
+  }
+  if (status === "occupied") {
+    return "Belegt";
+  }
+  if (status === "out_of_order") {
+    return "Defekt";
+  }
+  return "Unbekannt";
+}
+
+function getAvailabilityToneClass(status) {
+  return `status-tone-${normalizeAvailabilityStatus(status)}`;
+}
+
+function setAvailabilityTone(element, status) {
+  if (!element) return;
+  element.classList.remove(
+    "status-tone-free",
+    "status-tone-occupied",
+    "status-tone-out_of_order",
+    "status-tone-unknown",
+  );
+  element.classList.add(getAvailabilityToneClass(status));
+}
+
 function formatOccupancySummary(props) {
-  const total = Number(props.occupancy_total_evses || 0);
-  const available = Number(props.occupancy_available_evses || 0);
-  const occupied = Number(props.occupancy_occupied_evses || 0);
-  const outOfOrder = Number(props.occupancy_out_of_order_evses || 0);
-  const unknown = Number(props.occupancy_unknown_evses || 0);
-  const known = Math.max(0, total - unknown);
+  const counts = getAvailabilityCounts(props);
+  const total = counts.total;
+  const available = counts.available;
+  const occupied = counts.occupied;
+  const outOfOrder = counts.outOfOrder;
+  const unknown = counts.unknown;
 
   if (!Number.isFinite(total) || total <= 0) {
     return "";
   }
-  if (known > 0 && unknown > 0) {
-    const parts = [];
-    if (available > 0) {
-      parts.push(`${Math.round(available)} frei`);
-    }
-    if (occupied > 0) {
-      parts.push(`${Math.round(occupied)} belegt`);
-    }
-    if (outOfOrder > 0) {
-      parts.push(`${Math.round(outOfOrder)} defekt`);
-    }
-    parts.push(`${Math.round(unknown)} unbekannt`);
-    return parts.join(", ");
-  }
+  const parts = [];
   if (available > 0) {
-    return `${Math.round(available)}/${Math.round(total)} frei`;
+    parts.push(`${Math.round(available)} frei`);
   }
   if (occupied > 0) {
-    return `${Math.round(occupied)}/${Math.round(total)} belegt`;
+    parts.push(`${Math.round(occupied)} belegt`);
   }
-  if (unknown <= 0 && outOfOrder >= total) {
-    return "Außer Betrieb";
+  if (outOfOrder > 0) {
+    parts.push(`${Math.round(outOfOrder)} defekt`);
   }
-  return "Belegung unbekannt";
+  if (unknown > 0) {
+    parts.push(`${Math.round(unknown)} unbekannt`);
+  }
+  return parts.length ? parts.join(", ") : "Belegung unbekannt";
+}
+
+function formatProviderLabel(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  return raw
+    .replace(/^mobilithek_/, "")
+    .replace(/_static$/, "")
+    .replace(/-json$/i, "")
+    .replaceAll("_", " ");
+}
+
+function getLiveSourceLabel(props) {
+  const sourceName = String(props.detail_source_name || "").trim();
+  if (sourceName) {
+    return formatProviderLabel(sourceName);
+  }
+  const sourceUid = String(props.detail_source_uid || "").trim();
+  if (sourceUid) {
+    return formatProviderLabel(sourceUid);
+  }
+  return "";
 }
 
 function formatOccupancySource(props) {
-  const total = Number(props.occupancy_total_evses || 0);
-  if (!Number.isFinite(total) || total <= 0) {
+  if (hasLiveStationSummary(props)) {
+    const provider = getLiveSourceLabel(props);
+    const timestamp = formatDetailTimestamp(
+      props.live_source_observed_at || props.live_fetched_at || props.live_ingested_at,
+    );
+    if (provider && timestamp) {
+      return `Live via ${provider} • Stand ${timestamp}`;
+    }
+    if (provider) {
+      return `Live via ${provider}`;
+    }
+    if (timestamp) {
+      return `Live-Stand ${timestamp}`;
+    }
+    return "Live via lokaler API";
+  }
+
+  const counts = getAvailabilityCounts(props);
+  if (!Number.isFinite(counts.total) || counts.total <= 0) {
     return "";
   }
   const sourceUid = String(props.occupancy_source_uid || "").trim();
@@ -189,6 +355,196 @@ function buildStaticDetailRows(props) {
   return rows;
 }
 
+function getLiveDetailPrice(liveDetail = null) {
+  const stationPrice = String(liveDetail?.station?.price_display || "").trim();
+  if (stationPrice) {
+    return stationPrice;
+  }
+
+  const evses = Array.isArray(liveDetail?.evses) ? liveDetail.evses : [];
+  const uniquePrices = Array.from(new Set(
+    evses
+      .map((evse) => String(evse?.price_display || "").trim())
+      .filter(Boolean),
+  ));
+  if (uniquePrices.length > 0) {
+    return uniquePrices[0];
+  }
+  return "";
+}
+
+function getDisplayPrice(props, liveDetail = null) {
+  const livePrice = String(props.live_price_display || "").trim();
+  if (livePrice) {
+    return livePrice;
+  }
+  const liveDetailPrice = getLiveDetailPrice(liveDetail);
+  if (liveDetailPrice) {
+    return liveDetailPrice;
+  }
+  return String(props.price_display || "").trim();
+}
+
+function getStationIdFromProps(props) {
+  return String(props?.station_id || "").trim();
+}
+
+function applyLiveStationSummaryToProps(props, summary) {
+  if (!props || !summary) return;
+  LIVE_STATION_FIELDS.forEach((key) => {
+    props[`live_${key}`] = summary[key];
+  });
+}
+
+function clearLiveStationSummaryFromProps(props) {
+  if (!props) return;
+  LIVE_STATION_FIELDS.forEach((key) => {
+    delete props[`live_${key}`];
+  });
+}
+
+function formatEvseCode(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  if (raw.length <= 20) {
+    return raw;
+  }
+  return `${raw.slice(0, 10)}…${raw.slice(-6)}`;
+}
+
+function parseLiveJsonCollection(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (value && typeof value === "object") {
+    return [value];
+  }
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    if (parsed && typeof parsed === "object") {
+      return [parsed];
+    }
+    return parsed === null || parsed === "" ? [] : [parsed];
+  } catch {
+    return [raw];
+  }
+}
+
+function humanizeLiveCodeText(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  const spaced = raw
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replaceAll("_", " ")
+    .replaceAll("-", " ")
+    .trim();
+  if (!spaced) {
+    return "";
+  }
+  return `${spaced.charAt(0).toUpperCase()}${spaced.slice(1)}`;
+}
+
+function formatLiveDetailScalar(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  if (typeof value === "boolean") {
+    return value ? "Ja" : "Nein";
+  }
+  if (typeof value === "number") {
+    return String(value);
+  }
+  const raw = String(value).trim();
+  if (!raw) {
+    return "";
+  }
+  const timestamp = formatDetailTimestamp(raw);
+  if (timestamp && timestamp !== raw) {
+    return timestamp;
+  }
+  return humanizeLiveCodeText(raw);
+}
+
+function formatLiveDetailCollection(value) {
+  const items = parseLiveJsonCollection(value);
+  return items
+    .map((item) => {
+      if (Array.isArray(item)) {
+        return formatLiveDetailCollection(item);
+      }
+      if (item && typeof item === "object") {
+        return formatLiveDetailObject(item);
+      }
+      return formatLiveDetailScalar(item);
+    })
+    .filter(Boolean)
+    .join(" • ");
+}
+
+function formatLiveDetailObject(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return formatLiveDetailScalar(value);
+  }
+  const entries = Object.entries(value).filter(([, entryValue]) => {
+    if (entryValue === null || entryValue === undefined) {
+      return false;
+    }
+    if (typeof entryValue === "string") {
+      return Boolean(entryValue.trim());
+    }
+    if (Array.isArray(entryValue)) {
+      return entryValue.length > 0;
+    }
+    if (typeof entryValue === "object") {
+      return Object.keys(entryValue).length > 0;
+    }
+    return true;
+  });
+  if (entries.length === 0) {
+    return "";
+  }
+  if (entries.length === 1 && entries[0][0] === "value") {
+    return formatLiveDetailScalar(entries[0][1]);
+  }
+  return entries
+    .map(([key, entryValue]) => {
+      const formatted = Array.isArray(entryValue) || (entryValue && typeof entryValue === "object")
+        ? formatLiveDetailCollection(entryValue)
+        : formatLiveDetailScalar(entryValue);
+      if (!formatted) {
+        return "";
+      }
+      const label = LIVE_DYNAMIC_KEY_LABELS[key] ?? humanizeLiveCodeText(key);
+      return label ? `${label}: ${formatted}` : formatted;
+    })
+    .filter(Boolean)
+    .join(", ");
+}
+
+function buildLiveDynamicNotes(evse) {
+  const notes = [];
+  const nextSlotText = formatLiveDetailCollection(evse.next_available_charging_slots);
+  if (nextSlotText) {
+    notes.push({ label: "Nächster Slot", value: nextSlotText });
+  }
+  const supplementalText = formatLiveDetailCollection(evse.supplemental_facility_status);
+  if (supplementalText) {
+    notes.push({ label: "Zusatzstatus", value: supplementalText });
+  }
+  return notes;
+}
+
 /* --- STATE --- */
 const state = {
   features: [], // All charger features
@@ -201,6 +557,14 @@ const state = {
     minPower: 50,
     amenities: new Set(),
     amenityNameQuery: "",
+  },
+  live: {
+    baseUrl: LIVE_API_BASE_URL,
+    summaryByStationId: new Map(),
+    summaryFetchedAtByStationId: new Map(),
+    pendingSummaryStationIds: new Set(),
+    detailByStationId: new Map(),
+    reachable: false,
   },
   views: {
     map: null, // Leaflet map instance
@@ -245,6 +609,7 @@ const els = {
   detail: {
     title: document.getElementById("detail-title"),
     address: document.getElementById("detail-address"),
+    powerChip: document.getElementById("detail-power-chip"),
     power: document.getElementById("detail-power"),
     occupancy: document.getElementById("detail-occupancy"),
     occupancyPill: document.getElementById("detail-occupancy-pill"),
@@ -254,11 +619,15 @@ const els = {
     price: document.getElementById("detail-price"),
     hoursChip: document.getElementById("detail-hours-chip"),
     hours: document.getElementById("detail-hours"),
-    amenityCount: document.getElementById("detail-amenity-count"),
+    amenityTitle: document.getElementById("detail-amenities-title"),
     amenityList: document.getElementById("detail-amenities-list"),
     detailsSection: document.getElementById("detail-details-section"),
     detailsList: document.getElementById("detail-details-list"),
     detailsSource: document.getElementById("detail-details-source"),
+    liveSection: document.getElementById("detail-live-section"),
+    liveUpdated: document.getElementById("detail-live-updated"),
+    liveSource: document.getElementById("detail-live-source"),
+    liveList: document.getElementById("detail-live-list"),
     favBtn: document.getElementById("btn-toggle-fav"),
     googleBtn: document.getElementById("btn-nav-google"),
     appleBtn: document.getElementById("btn-nav-apple"),
@@ -337,6 +706,173 @@ async function loadData() {
   } catch (err) {
     console.error("Failed to load data", err);
     els.lists.chargers.innerHTML = `<div class="empty-state">Fehler beim Laden der Daten.<br>${err.message}</div>`;
+  }
+}
+
+function buildLiveApiUrl(path, params = {}) {
+  const url = new URL(path, state.live.baseUrl);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") {
+      return;
+    }
+    url.searchParams.set(key, String(value));
+  });
+  return url.toString();
+}
+
+async function fetchJsonWithTimeout(url, options = {}, timeoutMs = LIVE_API_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const requestHeaders = {
+      Accept: "application/json",
+      ...(options.headers || {}),
+    };
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: requestHeaders,
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return await response.json();
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+function upsertLiveStationSummaries(stations, missingStationIds = []) {
+  stations.forEach((summary) => {
+    const stationId = getStationIdFromProps(summary);
+    if (!stationId) {
+      return;
+    }
+    state.live.summaryByStationId.set(stationId, summary);
+    state.live.summaryFetchedAtByStationId.set(stationId, Date.now());
+    const feature = findFeatureByStationId(stationId);
+    if (feature) {
+      applyLiveStationSummaryToProps(feature.properties, summary);
+    }
+  });
+
+  missingStationIds.forEach((stationId) => {
+    const id = String(stationId || "").trim();
+    if (!id) {
+      return;
+    }
+    state.live.summaryByStationId.delete(id);
+    state.live.summaryFetchedAtByStationId.set(id, Date.now());
+    const feature = findFeatureByStationId(id);
+    if (feature) {
+      clearLiveStationSummaryFromProps(feature.properties);
+    }
+  });
+}
+
+function requestLiveSummariesForFeatures(features) {
+  if (!state.live.baseUrl) {
+    return;
+  }
+
+  const stationIds = Array.from(new Set(
+    features.map((feature) => getStationIdFromProps(feature.properties)).filter(Boolean),
+  ));
+  if (stationIds.length === 0) {
+    return;
+  }
+
+  const now = Date.now();
+  const pendingIds = stationIds.filter((stationId) => {
+    if (state.live.pendingSummaryStationIds.has(stationId)) {
+      return false;
+    }
+    const fetchedAt = state.live.summaryFetchedAtByStationId.get(stationId) || 0;
+    return !fetchedAt || now - fetchedAt >= LIVE_SUMMARY_REFRESH_MS;
+  });
+
+  if (pendingIds.length === 0) {
+    return;
+  }
+
+  pendingIds.forEach((stationId) => {
+    state.live.pendingSummaryStationIds.add(stationId);
+  });
+
+  void (async () => {
+    try {
+      const payload = await fetchJsonWithTimeout(
+        buildLiveApiUrl("/v1/stations/lookup"),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ station_ids: pendingIds }),
+        },
+        LIVE_API_TIMEOUT_MS,
+      );
+      if (!payload || typeof payload !== "object" || !Array.isArray(payload.stations)) {
+        throw new Error("Unexpected live station lookup payload");
+      }
+      state.live.reachable = true;
+      upsertLiveStationSummaries(payload.stations, payload.missing_station_ids || []);
+      refreshRenderedViews();
+    } catch (err) {
+      console.error("Failed to load live station summaries", err);
+    } finally {
+      pendingIds.forEach((stationId) => {
+        state.live.pendingSummaryStationIds.delete(stationId);
+      });
+    }
+  })();
+}
+
+function refreshRenderedViews() {
+  if (els.views.list.classList.contains("active")) {
+    renderList();
+  }
+  if (els.views.favorites.classList.contains("active")) {
+    renderFavorites();
+  }
+  if (currentDetailFeature && !els.modals.detail.classList.contains("hidden")) {
+    const stationId = getStationIdFromProps(currentDetailFeature.properties);
+    populateDetailContent(currentDetailFeature, state.live.detailByStationId.get(stationId) || null);
+  }
+}
+
+async function loadLiveStationDetail(stationId) {
+  if (!state.live.baseUrl || !stationId) {
+    return null;
+  }
+  if (state.live.detailByStationId.has(stationId)) {
+    return state.live.detailByStationId.get(stationId);
+  }
+
+  try {
+    const payload = await fetchJsonWithTimeout(
+      buildLiveApiUrl(`/v1/stations/${encodeURIComponent(stationId)}`, {
+        history_limit: 20,
+      }),
+      {},
+      LIVE_DETAIL_TIMEOUT_MS,
+    );
+    if (!payload || typeof payload !== "object") {
+      throw new Error("Unexpected station detail payload");
+    }
+    state.live.reachable = true;
+    state.live.detailByStationId.set(stationId, payload);
+    const feature = findFeatureByStationId(stationId);
+    if (feature && payload.station) {
+      applyLiveStationSummaryToProps(feature.properties, payload.station);
+      state.live.summaryByStationId.set(stationId, payload.station);
+      state.live.summaryFetchedAtByStationId.set(stationId, Date.now());
+    }
+    refreshRenderedViews();
+    return payload;
+  } catch (err) {
+    console.error(`Failed to load live detail for station ${stationId}`, err);
+    return null;
   }
 }
 
@@ -613,6 +1149,7 @@ function renderList() {
     const card = createStationCard(feature);
     container.appendChild(card);
   });
+  requestLiveSummariesForFeatures(displayItems);
 
   if (state.filtered.length > 50) {
     const more = document.createElement("div");
@@ -649,6 +1186,7 @@ function renderFavorites() {
     const card = createStationCard(feature);
     container.appendChild(card);
   });
+  requestLiveSummariesForFeatures(favFeatures);
 }
 
 function createStationCard(feature) {
@@ -658,7 +1196,8 @@ function createStationCard(feature) {
 
   const distance = getDistanceFormatted(feature);
   const occupancySummary = formatOccupancySummary(p);
-  const priceDisplay = String(p.price_display || "").trim();
+  const priceDisplay = getDisplayPrice(p);
+  const availabilityStatus = getAvailabilityStatus(p);
 
   // Top Amenities (max 3 badges)
   const badges = Object.keys(AMENITY_MAPPING)
@@ -668,7 +1207,7 @@ function createStationCard(feature) {
     .map((k) => `<span class="badge">${AMENITY_MAPPING[k].label}</span>`)
     .join("");
   const liveBadge = occupancySummary
-    ? `<span class="badge badge-live">${escapeHtml(occupancySummary)}</span>`
+    ? `<span class="badge badge-live ${escapeHtml(getAvailabilityToneClass(availabilityStatus))}">${escapeHtml(occupancySummary)}</span>`
     : "";
   const priceBadge = priceDisplay
     ? `<span class="badge badge-price">${escapeHtml(priceDisplay)}</span>`
@@ -716,19 +1255,112 @@ function getChargingPointCount(props) {
 /* --- DETAIL MODAL --- */
 let currentDetailFeature = null;
 
-function openDetail(feature, options = {}) {
-  const syncUrl = options.syncUrl !== false;
-  currentDetailFeature = feature;
+function renderDetailLiveState(feature, liveDetail = null) {
+  const props = feature.properties;
+  const evses = Array.isArray(liveDetail?.evses) ? liveDetail.evses : [];
+  const hasLiveData = hasLiveStationSummary(props) || evses.length > 0;
+  if (!hasLiveData) {
+    els.detail.liveSection.hidden = true;
+    els.detail.liveUpdated.hidden = true;
+    els.detail.liveUpdated.textContent = "";
+    els.detail.liveSource.hidden = true;
+    els.detail.liveSource.textContent = "";
+    els.detail.liveList.innerHTML = "";
+    return;
+  }
+
+  const updatedText = formatDetailTimestamp(
+    props.live_source_observed_at || props.live_fetched_at || props.live_ingested_at,
+  );
+  els.detail.liveUpdated.textContent = updatedText ? `Stand ${updatedText}` : "";
+  els.detail.liveUpdated.hidden = !updatedText;
+
+  const sourceText = formatOccupancySource(props);
+  els.detail.liveSource.textContent = sourceText;
+  els.detail.liveSource.hidden = !sourceText;
+  els.detail.liveList.innerHTML = "";
+
+  if (evses.length === 0) {
+    const summaryRow = document.createElement("div");
+    summaryRow.className = "live-evse-row live-evse-row-summary";
+    const priceDisplay = getDisplayPrice(props, liveDetail);
+    summaryRow.innerHTML = `
+      <div class="live-evse-row-head">
+        <strong class="live-evse-title">Stationsstatus</strong>
+        <span class="live-status-pill ${escapeHtml(getAvailabilityToneClass(getAvailabilityStatus(props)))}">${escapeHtml(formatAvailabilityLabel(getAvailabilityStatus(props)))}</span>
+      </div>
+      <div class="live-evse-row-meta">
+        <span>${escapeHtml(formatOccupancySummary(props) || "Live-Daten verfügbar")}</span>
+        ${priceDisplay ? `<span class="live-evse-price">${escapeHtml(priceDisplay)}</span>` : ""}
+      </div>
+    `;
+    els.detail.liveList.appendChild(summaryRow);
+    els.detail.liveSection.hidden = false;
+    return;
+  }
+
+  evses.forEach((evse, index) => {
+    const row = document.createElement("div");
+    const status = normalizeAvailabilityStatus(evse.availability_status);
+    const observedText = formatDetailTimestamp(
+      evse.source_observed_at || evse.fetched_at || evse.ingested_at,
+    );
+    const metaParts = [];
+    const evseCode = formatEvseCode(evse.provider_evse_id);
+    if (evseCode) {
+      metaParts.push(evseCode);
+    }
+    if (observedText) {
+      metaParts.push(`Stand ${observedText}`);
+    }
+    const priceDisplay = String(evse.price_display || "").trim();
+    const dynamicNotes = buildLiveDynamicNotes(evse);
+    const notesMarkup = dynamicNotes.length
+      ? `
+      <div class="live-evse-row-details">
+        ${dynamicNotes.map((note) => `
+          <div class="live-evse-row-detail">
+            <strong>${escapeHtml(note.label)}</strong>
+            <span>${escapeHtml(note.value)}</span>
+          </div>
+        `).join("")}
+      </div>
+    `
+      : "";
+    row.className = "live-evse-row";
+    row.innerHTML = `
+      <div class="live-evse-row-head">
+        <strong class="live-evse-title">Ladepunkt ${index + 1}</strong>
+        <span class="live-status-pill ${escapeHtml(getAvailabilityToneClass(status))}">${escapeHtml(formatAvailabilityLabel(status))}</span>
+      </div>
+      <div class="live-evse-row-meta">
+        <span>${escapeHtml(metaParts.join(" • ") || "Live-Daten verfügbar")}</span>
+        ${priceDisplay ? `<span class="live-evse-price">${escapeHtml(priceDisplay)}</span>` : ""}
+      </div>
+      ${notesMarkup}
+    `;
+    els.detail.liveList.appendChild(row);
+  });
+
+  els.detail.liveSection.hidden = false;
+}
+
+function populateDetailContent(feature, liveDetail = null) {
   const p = feature.properties;
+  const powerDisplay = `${Math.round(getDisplayedMaxPowerKw(p))} kW max / ${getChargingPointCount(p)} Ladepunkte`;
 
   els.detail.title.textContent = p.operator || "Unbekannt";
   els.detail.address.textContent = `${p.address || ""}, ${p.postcode || ""} ${p.city || ""}`;
-  els.detail.power.textContent = `${Math.round(getDisplayedMaxPowerKw(p))} kW max / ${getChargingPointCount(p)} Ladepunkte`;
+  els.detail.power.textContent = powerDisplay;
+  els.detail.powerChip.hidden = !powerDisplay;
+
   const occupancySummary = formatOccupancySummary(p);
   const occupancySource = formatOccupancySource(p);
+  const availabilityStatus = getAvailabilityStatus(p);
   if (occupancySummary) {
     els.detail.occupancy.textContent = occupancySummary;
     els.detail.occupancyPill.hidden = false;
+    setAvailabilityTone(els.detail.occupancyPill, availabilityStatus);
   } else {
     els.detail.occupancy.textContent = "";
     els.detail.occupancyPill.hidden = true;
@@ -740,16 +1372,31 @@ function openDetail(feature, options = {}) {
     els.detail.occupancySource.textContent = "";
     els.detail.occupancySource.hidden = true;
   }
-  const priceDisplay = String(p.price_display || "").trim();
+
+  const priceDisplay = getDisplayPrice(p, liveDetail);
   const openingHoursDisplay = String(p.opening_hours_display || "").trim();
+  const showPower = Boolean(powerDisplay);
+  const showOccupancy = Boolean(occupancySummary);
   const showPrice = Boolean(priceDisplay);
   const showHours = Boolean(openingHoursDisplay);
-  els.detail.highlights.hidden = !showPrice && !showHours;
+  els.detail.highlights.hidden = !showPower && !showOccupancy && !showPrice && !showHours;
   els.detail.priceChip.hidden = !showPrice;
   els.detail.hoursChip.hidden = !showHours;
   els.detail.price.textContent = priceDisplay;
   els.detail.hours.textContent = openingHoursDisplay;
-  els.detail.amenityCount.textContent = formatAmenityCount(p.amenities_total);
+  els.detail.amenityTitle.textContent = `In der Nähe: ${formatAmenityCount(p.amenities_total)}`;
+
+  renderDetailAmenities(p);
+  renderDetailStaticInfo(p);
+  renderDetailLiveState(feature, liveDetail);
+}
+
+function openDetail(feature, options = {}) {
+  const syncUrl = options.syncUrl !== false;
+  currentDetailFeature = feature;
+  const p = feature.properties;
+
+  populateDetailContent(feature, state.live.detailByStationId.get(getStationIdFromProps(p)) || null);
 
   // Favorite Button State
   updateFavBtnState();
@@ -788,10 +1435,6 @@ function openDetail(feature, options = {}) {
 
   const amenityBounds = renderDetailAmenityMarkers(p.amenity_examples || []);
 
-  // Amenity List
-  renderDetailAmenities(p);
-  renderDetailStaticInfo(p);
-
   openModal("detail");
 
   if (!state.views.detailMap) {
@@ -827,6 +1470,11 @@ function openDetail(feature, options = {}) {
 
   if (syncUrl) {
     updateRequestedStationId(p.station_id || "");
+  }
+
+  const stationId = getStationIdFromProps(p);
+  if (stationId) {
+    void loadLiveStationDetail(stationId);
   }
 }
 

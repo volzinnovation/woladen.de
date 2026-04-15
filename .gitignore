@@ -28,3 +28,14 @@ site/data/chargers_fast.geojson
 site/data/operators.json
 site/data/summary.json
 site/app.js
+data/live_state.sqlite3
+data/live_state.sqlite3-shm
+data/live_state.sqlite3-wal
+data/live_raw/
+.npm/
+.playwright-cli/
+Library/
+output/playwright/
+tmp/
+iphone/dist/
+ingestion.log

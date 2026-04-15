@@ -62,6 +62,7 @@ private struct StationRowView: View {
     var body: some View {
         let topAmenities = feature.properties.topAmenities()
         let occupancy = feature.properties.occupancySummaryLabel
+        let priceDisplay = feature.properties.priceDisplay.trimmingCharacters(in: .whitespacesAndNewlines)
 
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
@@ -85,7 +86,7 @@ private struct StationRowView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            if occupancy != nil || !topAmenities.isEmpty {
+            if occupancy != nil || !priceDisplay.isEmpty || !topAmenities.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         if let occupancy {
@@ -96,6 +97,17 @@ private struct StationRowView: View {
                                 .padding(.vertical, 3)
                                 .background(Color.teal.opacity(0.14))
                                 .foregroundStyle(Color.teal)
+                                .clipShape(Capsule())
+                        }
+
+                        if !priceDisplay.isEmpty {
+                            Label(priceDisplay, systemImage: "eurosign")
+                                .font(.caption2)
+                                .lineLimit(1)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color.green.opacity(0.12))
+                                .foregroundStyle(Color.green)
                                 .clipShape(Capsule())
                         }
 

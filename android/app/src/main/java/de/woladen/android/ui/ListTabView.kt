@@ -2,6 +2,7 @@ package de.woladen.android.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -141,11 +143,32 @@ private fun StationRow(
             )
 
             val amenities = feature.properties.topAmenities()
-            if (amenities.isNotEmpty()) {
+            val occupancy = feature.properties.occupancySummaryLabel
+            val priceDisplay = feature.properties.priceDisplay.trim()
+            if (occupancy != null || priceDisplay.isNotBlank() || amenities.isNotEmpty()) {
                 Row(
-                    modifier = Modifier.padding(top = 6.dp),
+                    modifier = Modifier
+                        .padding(top = 6.dp)
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    occupancy?.let {
+                        ListChip(
+                            text = it,
+                            containerColor = Color(0x1F0F766E),
+                            contentColor = Color(0xFF0F766E)
+                        )
+                    }
+
+                    if (priceDisplay.isNotBlank()) {
+                        ListChip(
+                            text = priceDisplay,
+                            prefix = "€",
+                            containerColor = Color(0x1F15803D),
+                            contentColor = Color(0xFF15803D)
+                        )
+                    }
+
                     for (item in amenities) {
                         Row(
                             modifier = Modifier
@@ -168,6 +191,35 @@ private fun StationRow(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ListChip(
+    text: String,
+    prefix: String? = null,
+    containerColor: Color,
+    contentColor: Color
+) {
+    Row(
+        modifier = Modifier
+            .background(containerColor, RoundedCornerShape(12.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (!prefix.isNullOrBlank()) {
+            Text(
+                text = prefix,
+                style = MaterialTheme.typography.labelSmall,
+                color = contentColor
+            )
+        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor
+        )
     }
 }
 

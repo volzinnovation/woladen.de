@@ -8,13 +8,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.NearMe
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.filled.Star
@@ -37,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.woladen.android.model.AmenityExample
 import de.woladen.android.model.DetailRow
@@ -95,7 +98,7 @@ fun StationDetailSheet(
                         .align(Alignment.TopStart)
                         .padding(12.dp)
                 ) {
-                    Icon(Icons.Outlined.ArrowBack, contentDescription = "Zurück")
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Zurück")
                 }
             }
 
@@ -103,10 +106,12 @@ fun StationDetailSheet(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         text = feature.properties.operatorName,
                         style = MaterialTheme.typography.titleLarge,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
                     IconButton(
@@ -117,44 +122,6 @@ fun StationDetailSheet(
                             imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
                             contentDescription = "Favorit"
                         )
-                    }
-                }
-
-                Text(
-                    "${feature.properties.address}, ${feature.properties.postcode} ${feature.properties.city}",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Info, contentDescription = null)
-                        Text("${feature.properties.displayedMaxPowerKw.toInt()} kW max / ${feature.properties.chargingPointsCount} Ladepunkte")
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Info, contentDescription = null)
-                        Text("${feature.properties.amenitiesTotal} ${formatAmenityCountLabel(feature.properties.amenitiesTotal)}")
-                    }
-                }
-
-                feature.properties.occupancySummaryLabel?.let { occupancy ->
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Outlined.Info, contentDescription = null)
-                            Text(occupancy)
-                        }
-                        feature.properties.occupancySourceLabel?.let { source ->
-                            Text(
-                                source,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
 
@@ -175,31 +142,71 @@ fun StationDetailSheet(
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "${feature.properties.address}, ${feature.properties.postcode} ${feature.properties.city}",
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    SummaryStatCard(
+                        text = "${feature.properties.displayedMaxPowerKw.toInt()} kW max / ${feature.properties.chargingPointsCount} Ladepunkte",
+                        modifier = Modifier.weight(1f)
+                    )
+                    feature.properties.occupancySummaryLabel?.let { occupancy ->
+                        SummaryStatCard(
+                            text = occupancy,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Button(onClick = {
                         openUri(
                             context,
                             "https://www.google.com/maps/dir/?api=1&destination=${feature.latitude},${feature.longitude}"
                         )
-                    }, modifier = Modifier.testTag("detail-google-nav-button")) {
-                        Text("Google Navi")
+                    }, modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 52.dp)
+                        .testTag("detail-google-nav-button")) {
+                        Icon(Icons.Outlined.NearMe, contentDescription = null)
+                        Text("Google", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     OutlinedButton(onClick = {
-                        openUri(context, "geo:${feature.latitude},${feature.longitude}?q=${feature.latitude},${feature.longitude}")
-                    }, modifier = Modifier.testTag("detail-system-nav-button")) {
-                        Text("System Navi")
+                        openUri(context, "http://maps.apple.com/?daddr=${feature.latitude},${feature.longitude}")
+                    }, modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 52.dp)
+                        .testTag("detail-system-nav-button")) {
+                        Icon(Icons.Outlined.NearMe, contentDescription = null)
+                        Text("Apple", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     if (feature.properties.helpdeskPhone.isNotBlank()) {
                         OutlinedButton(onClick = {
                             val phoneNumber = feature.properties.helpdeskPhone.filter { it.isDigit() || it == '+' }
                             openUri(context, "tel:$phoneNumber")
-                        }) {
-                            Icon(Icons.Outlined.Phone, contentDescription = "Hotline")
+                        }, modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 52.dp)) {
+                            Icon(Icons.Outlined.Phone, contentDescription = "Hilfe")
+                            Text("Hilfe", maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
 
-                Text("In der Nähe", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "In der Nähe: ${feature.properties.amenitiesTotal} ${formatAmenityCountLabel(feature.properties.amenitiesTotal)}",
+                    style = MaterialTheme.typography.titleMedium
+                )
                 if (feature.properties.amenityExamples.isEmpty()) {
                     Text("Keine Details verfügbar.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
@@ -221,6 +228,14 @@ fun StationDetailSheet(
                         )
                     }
                 }
+
+                feature.properties.occupancySourceLabel?.takeIf { it.isNotBlank() }?.let { source ->
+                    Text(
+                        source,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -228,6 +243,27 @@ fun StationDetailSheet(
 
 private fun formatAmenityCountLabel(count: Int): String =
     if (count == 1) "Angebot vor Ort" else "Angebote vor Ort"
+
+@Composable
+private fun SummaryStatCard(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    OutlinedCard(modifier = modifier) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Outlined.Info, contentDescription = null)
+                Text(text, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+}
 
 @Composable
 private fun DetailChip(text: String, symbol: String) {

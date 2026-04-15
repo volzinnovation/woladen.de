@@ -10,6 +10,7 @@ Fast chargers in Germany with nearby amenities from OpenStreetMap.
   Source discovery starts from the BNetzA E-Mobilitaet start page (`Downloads und Formulare`) and selects the newest CSV/XLSX link.
 - Filters to active chargers with at least `50 kW` nominal power.
 - Augments matched stations with live occupancy from the MobiData BW OCPI feeds.
+- Exposes a live backend API for AFIR push/poll ingestion and station status at `https://live.woladen.de`.
 - Enriches each charger with nearby amenities (`100m` radius) from OSM
   using either local `germany-latest.osm.pbf` or Overpass fallback.
 - Publishes a mobile-ready static web map with filters (operator + amenities).
@@ -19,6 +20,8 @@ Fast chargers in Germany with nearby amenities from OpenStreetMap.
 
 - `scripts/build_data.py`: End-to-end data pipeline.
 - `scripts/build_site.py`: Creates deployable `site/` bundle.
+- `backend/`: Live backend for DATEX ingestion, SQLite persistence, and FastAPI endpoints.
+- `deploy/ionos/`: Packaging and install scripts for the IONOS VPS that serves `live.woladen.de`.
 - `web/`: Frontend app (Leaflet + vanilla JS/CSS/HTML).
 - `iphone/`: Native iPhone app (SwiftUI + MapKit).
 - `android/`: Native Android app (Jetpack Compose + OSMDroid).
@@ -31,6 +34,23 @@ Fast chargers in Germany with nearby amenities from OpenStreetMap.
 1. In repository settings, set GitHub Pages source to `GitHub Actions`.
 2. Ensure the default branch allows `github-actions[bot]` pushes (for generated artifacts).
 3. Keep DNS for `woladen.de` pointed to GitHub Pages.
+
+## Backend Deployment
+
+The static frontend and the live backend are deployed separately:
+
+- `https://woladen.de`: static frontend
+- `https://live.woladen.de`: FastAPI backend on an IONOS VPS
+
+Backend docs:
+
+- [backend/README.md](/Users/raphaelvolz/Github/woladen.de/backend/README.md)
+- [deploy/ionos/README.md](/Users/raphaelvolz/Github/woladen.de/deploy/ionos/README.md)
+
+Useful public backend endpoints:
+
+- `GET https://live.woladen.de/healthz`
+- `GET https://live.woladen.de/v1/status`
 
 ## Local Usage
 
@@ -78,14 +98,14 @@ python scripts/build_site.py
 <!-- DATA_STATUS_START -->
 ## Data Build Status
 
-- Last build (UTC): `2026-04-14T22:00:33+00:00`
+- Last build (UTC): `2026-04-15T18:12:28+00:00`
 - Source: `https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-03-25.csv`
 - Fast chargers (>= 50.0 kW): `16347`
-- Fast chargers with live occupancy: `282`
-- Fast chargers with static AFIR details: `5136` (price: `3162`, opening hours: `9323`)
+- Fast chargers with live occupancy: `281`
+- Fast chargers with static AFIR details: `9040` (price: `3998`, opening hours: `11232`)
 - Chargers with >=1 nearby amenity: `14966`
 - Occupancy sources scanned: `10` (matched EVSEs: `1390`)
-- Static AFIR sources used: `8` (helpdesk phones: `4735`)
+- Static AFIR sources used: `11` (helpdesk phones: `4900`)
 - Amenity backend: `osm-pbf`
 - Live amenity lookups this run: `0` (cache hits: `0`, deferred: `0`)
 

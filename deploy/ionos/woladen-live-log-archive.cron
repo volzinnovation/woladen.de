@@ -1,0 +1,5 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+CRON_TZ=Europe/Berlin
+
+17 0 * * * __APP_USER__ cd __APP_DIR__ && . __ENV_FILE__ && __VENV_DIR__/bin/python scripts/live_archive_logs.py >> __STATE_DIR__/live-log-archive.log 2>&1

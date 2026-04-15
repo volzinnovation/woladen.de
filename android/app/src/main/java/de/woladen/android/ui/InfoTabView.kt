@@ -39,6 +39,9 @@ private const val PRIVACY_POLICY_URL = "https://woladen.de/privacy.html"
 private const val IMPRINT_URL = "https://woladen.de/imprint.html"
 private const val WEBSITE_URL = "https://woladen.de/"
 private const val STUDIOS_URL = "https://studios.moonshots.gmbh/"
+private const val MOBILITHEK_URL = "https://mobilithek.info/"
+private const val MOBILITHEK_SOURCES_TEXT =
+    "Aktive Datenangebote von 800 Volt Technologies GmbH, ELU Mobility, EnBW mobility+ AG & Co. KG, Monta ApS, Qwello Deutschland GmbH, SMATRICS GmbH & Co KG, Smartlab Innovationsgesellschaft mbH, Tesla Germany GmbH, Wirelane GmbH, chargecloud GmbH, eRound, eliso GmbH und vaylens GmbH."
 
 @Composable
 fun InfoTabView(
@@ -128,6 +131,8 @@ fun InfoTabView(
 
             InfoSection(title = "Datenquellen & Lizenzen") {
                 LinkButton("BNetzA: Ladesäulenregister", "https://www.bundesnetzagentur.de/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/start.html")
+                LinkButton("Mobilithek", MOBILITHEK_URL)
+                Text(MOBILITHEK_SOURCES_TEXT)
                 Text("Kartendaten und POI-Daten © OpenStreetMap-Mitwirkende, verfügbar unter ODbL v1.0.")
                 LinkButton("OpenStreetMap: Copyright", "https://www.openstreetmap.org/copyright")
                 LinkButton("ODbL v1.0", "https://opendatacommons.org/licenses/odbl/1.0/")

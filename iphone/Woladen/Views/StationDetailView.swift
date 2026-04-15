@@ -26,9 +26,9 @@ struct StationDetailView: View {
                 mapSection
                 VStack(alignment: .leading, spacing: 14) {
                     headerSection
-                    detailHighlightSection
                     amenitySection
                     staticDetailsSection
+                    sourceFooterSection
                 }
                 .padding(.horizontal)
                 .padding(.top, 12)
@@ -79,76 +79,87 @@ struct StationDetailView: View {
     }
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        let occupancy = feature.properties.occupancySummaryLabel
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 Text(feature.properties.operatorName)
                     .font(.title3.bold())
-                Spacer()
+                    .lineLimit(2)
+                    .layoutPriority(1)
+                Spacer(minLength: 0)
                 Button {
                     favoritesStore.toggle(feature.properties.stationID)
                 } label: {
                     Image(systemName: favoritesStore.isFavorite(feature.properties.stationID) ? "star.fill" : "star")
                         .font(.title3)
+                        .frame(width: 42, height: 42)
+                        .background(Color(.secondarySystemBackground), in: Circle())
+                }
+            }
+
+            if feature.properties.hasPrimaryDetailHighlights {
+                HStack(spacing: 8) {
+                    if !feature.properties.priceDisplay.isEmpty {
+                        detailChip(text: feature.properties.priceDisplay, systemImage: "eurosign")
+                    }
+                    if !feature.properties.openingHoursDisplay.isEmpty {
+                        detailChip(text: feature.properties.openingHoursDisplay, systemImage: "clock")
+                    }
                 }
             }
 
             Text("\(feature.properties.address), \(feature.properties.postcode) \(feature.properties.city)")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
 
-            HStack {
-                Label("\(Int(feature.properties.displayedMaxPowerKW.rounded())) kW max / \(feature.properties.chargingPointsCount) Ladepunkte", systemImage: "bolt.fill")
-                Spacer()
-                Label("\(feature.properties.amenitiesTotal) \(amenityCountLabel)", systemImage: "storefront")
-            }
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-
-            if let occupancy = feature.properties.occupancySummaryLabel {
-                Label(occupancy, systemImage: "dot.radiowaves.left.and.right")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                if let source = feature.properties.occupancySourceLabel {
-                    Text(source)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            HStack(alignment: .top, spacing: 10) {
+                detailStatCard(
+                    text: "\(Int(feature.properties.displayedMaxPowerKW.rounded())) kW max / \(feature.properties.chargingPointsCount) Ladepunkte",
+                    systemImage: "bolt.fill"
+                )
+                if let occupancy {
+                    detailStatCard(
+                        text: occupancy,
+                        systemImage: "dot.radiowaves.left.and.right"
+                    )
                 }
             }
 
-            HStack(spacing: 10) {
-                Button("Google Navi") { openNavigationLink(google: true) }
-                    .buttonStyle(.borderedProminent)
-                Button("Apple Navi") { openNavigationLink(google: false) }
-                    .buttonStyle(.bordered)
+            HStack(spacing: 6) {
+                Button {
+                    openNavigationLink(google: true)
+                } label: {
+                    actionButtonLabel("Google", systemImage: "location.north.line.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .frame(maxWidth: .infinity, minHeight: 50)
+                Button {
+                    openNavigationLink(google: false)
+                } label: {
+                    actionButtonLabel("Apple", systemImage: "location.north.line.fill")
+                }
+                .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity, minHeight: 50)
                 if !feature.properties.helpdeskPhone.isEmpty {
                     Button {
                         openHelpdeskPhone()
                     } label: {
-                        Image(systemName: "phone.fill")
+                        actionButtonLabel("Hilfe", systemImage: "phone.fill")
                     }
                     .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity, minHeight: 50)
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private var detailHighlightSection: some View {
-        if feature.properties.hasPrimaryDetailHighlights {
-            HStack(spacing: 8) {
-                if !feature.properties.priceDisplay.isEmpty {
-                    detailChip(text: feature.properties.priceDisplay, systemImage: "eurosign")
-                }
-                if !feature.properties.openingHoursDisplay.isEmpty {
-                    detailChip(text: feature.properties.openingHoursDisplay, systemImage: "clock")
-                }
-            }
+            .font(.subheadline.weight(.semibold))
         }
     }
 
     private var amenitySection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("In der Nähe")
+            Text("In der Nähe: \(feature.properties.amenitiesTotal) \(amenityCountLabel)")
                 .font(.headline)
 
             if feature.properties.amenityExamples.isEmpty {
@@ -291,6 +302,34 @@ struct StationDetailView: View {
             .padding(.vertical, 8)
             .background(Color.teal.opacity(0.12), in: Capsule())
             .foregroundStyle(Color.teal)
+    }
+
+    @ViewBuilder
+    private var sourceFooterSection: some View {
+        if let occupancySource = feature.properties.occupancySourceLabel, !occupancySource.isEmpty {
+            Text(occupancySource)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func detailStatCard(text: String, systemImage: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(text, systemImage: systemImage)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.primary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func actionButtonLabel(_ text: String, systemImage: String) -> some View {
+        Label(text, systemImage: systemImage)
+            .font(.subheadline.weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
     }
 }
 
