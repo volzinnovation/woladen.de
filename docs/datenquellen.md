@@ -1,6 +1,6 @@
 # Datenquellen
 
-Dieses Dokument fasst die Inhalte von [Hocsy: Datenquellen](https://hocsy.eu/de/datenquellen.html) für Woladen in Markdown zusammen und ergänzt die Mobilithek-Sektion um den am 14. April 2026 verifizierten Stand unseres Mobilithek-Kontos.
+Dieses Dokument fasst die dynamischen Inhalte für Woladen in Markdown zusammen und ergänzt die Mobilithek-Sektion um den am 14. April 2026 verifizierten Stand unseres Mobilithek-Kontos.
 
 ## Ladeinfrastrukturdaten
 
