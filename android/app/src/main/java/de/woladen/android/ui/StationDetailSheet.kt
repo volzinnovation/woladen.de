@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
@@ -23,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import de.woladen.android.model.AmenityExample
+import de.woladen.android.model.DetailRow
 import de.woladen.android.model.GeoJsonFeature
 import de.woladen.android.ui.components.AmenityIcon
 import de.woladen.android.ui.components.DetailMapPoint
@@ -155,6 +158,23 @@ fun StationDetailSheet(
                     }
                 }
 
+                if (feature.properties.hasPrimaryDetailHighlights) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (feature.properties.priceDisplay.isNotBlank()) {
+                            DetailChip(
+                                text = feature.properties.priceDisplay,
+                                symbol = "€"
+                            )
+                        }
+                        if (feature.properties.openingHoursDisplay.isNotBlank()) {
+                            DetailChip(
+                                text = feature.properties.openingHoursDisplay,
+                                symbol = "🕒"
+                            )
+                        }
+                    }
+                }
+
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(onClick = {
                         openUri(
@@ -169,6 +189,14 @@ fun StationDetailSheet(
                     }, modifier = Modifier.testTag("detail-system-nav-button")) {
                         Text("System Navi")
                     }
+                    if (feature.properties.helpdeskPhone.isNotBlank()) {
+                        OutlinedButton(onClick = {
+                            val phoneNumber = feature.properties.helpdeskPhone.filter { it.isDigit() || it == '+' }
+                            openUri(context, "tel:$phoneNumber")
+                        }) {
+                            Icon(Icons.Outlined.Phone, contentDescription = "Hotline")
+                        }
+                    }
                 }
 
                 Text("In der Nähe", style = MaterialTheme.typography.titleMedium)
@@ -179,6 +207,20 @@ fun StationDetailSheet(
                         AmenityRow(item)
                     }
                 }
+
+                if (feature.properties.staticDetailRows.isNotEmpty() || feature.properties.detailSourceLabel != null) {
+                    Text("Details", style = MaterialTheme.typography.titleMedium)
+                    for (row in feature.properties.staticDetailRows) {
+                        DetailInfoRow(row)
+                    }
+                    feature.properties.detailSourceLabel?.let { source ->
+                        Text(
+                            source,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
@@ -186,6 +228,20 @@ fun StationDetailSheet(
 
 private fun formatAmenityCountLabel(count: Int): String =
     if (count == 1) "Angebot vor Ort" else "Angebote vor Ort"
+
+@Composable
+private fun DetailChip(text: String, symbol: String) {
+    OutlinedCard {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(symbol)
+            Text(text, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
 
 @Composable
 private fun AmenityRow(item: AmenityExample) {
@@ -219,6 +275,31 @@ private fun metaForAmenity(item: AmenityExample): String {
         parts += item.openingHours
     }
     return parts.joinToString(" • ")
+}
+
+@Composable
+private fun DetailInfoRow(row: DetailRow) {
+    OutlinedCard {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Text(
+                row.label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(0.32f)
+            )
+            Text(
+                row.value,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(0.68f)
+            )
+        }
+    }
 }
 
 private fun buildDetailMapPoints(feature: GeoJsonFeature): List<DetailMapPoint> {

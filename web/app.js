@@ -69,9 +69,25 @@ function formatOccupancySummary(props) {
   const available = Number(props.occupancy_available_evses || 0);
   const occupied = Number(props.occupancy_occupied_evses || 0);
   const outOfOrder = Number(props.occupancy_out_of_order_evses || 0);
+  const unknown = Number(props.occupancy_unknown_evses || 0);
+  const known = Math.max(0, total - unknown);
 
   if (!Number.isFinite(total) || total <= 0) {
     return "";
+  }
+  if (known > 0 && unknown > 0) {
+    const parts = [];
+    if (available > 0) {
+      parts.push(`${Math.round(available)} frei`);
+    }
+    if (occupied > 0) {
+      parts.push(`${Math.round(occupied)} belegt`);
+    }
+    if (outOfOrder > 0) {
+      parts.push(`${Math.round(outOfOrder)} defekt`);
+    }
+    parts.push(`${Math.round(unknown)} unbekannt`);
+    return parts.join(", ");
   }
   if (available > 0) {
     return `${Math.round(available)}/${Math.round(total)} frei`;
@@ -79,7 +95,7 @@ function formatOccupancySummary(props) {
   if (occupied > 0) {
     return `${Math.round(occupied)}/${Math.round(total)} belegt`;
   }
-  if (outOfOrder >= total) {
+  if (unknown <= 0 && outOfOrder >= total) {
     return "Außer Betrieb";
   }
   return "Belegung unbekannt";
@@ -90,11 +106,87 @@ function formatOccupancySource(props) {
   if (!Number.isFinite(total) || total <= 0) {
     return "";
   }
+  const sourceUid = String(props.occupancy_source_uid || "").trim();
   const sourceName = String(props.occupancy_source_name || "").trim();
+  if (sourceName.startsWith("Mobilithek")) {
+    return `Live via ${sourceName}`;
+  }
+  if (sourceUid.startsWith("mobilithek_")) {
+    return sourceName ? `Live via Mobilithek (${sourceName})` : "Live via Mobilithek";
+  }
   if (sourceName) {
     return `Live via MobiData BW (${sourceName})`;
   }
   return "Live via MobiData BW";
+}
+
+function formatDetailTimestamp(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) {
+    return raw;
+  }
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatStaticDetailSource(props) {
+  const sourceName = String(props.detail_source_name || "").trim();
+  const timestamp = formatDetailTimestamp(props.detail_last_updated);
+  if (!sourceName && !timestamp) {
+    return "";
+  }
+  if (sourceName && timestamp) {
+    return `Details via ${sourceName} • Stand ${timestamp}`;
+  }
+  if (sourceName) {
+    return `Details via ${sourceName}`;
+  }
+  return `Stand ${timestamp}`;
+}
+
+function formatTelephoneHref(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  const normalized = raw.replace(/[^+\d]/g, "");
+  return normalized ? `tel:${normalized}` : "";
+}
+
+function buildStaticDetailRows(props) {
+  const rows = [];
+  const pushRow = (label, value) => {
+    const text = String(value || "").trim();
+    if (!text) return;
+    rows.push({ label, value: text });
+  };
+
+  pushRow("Bezahlen", props.payment_methods_display);
+  pushRow("Zugang", props.auth_methods_display);
+  pushRow("Stecker", props.connector_types_display);
+  pushRow("Stromart", props.current_types_display);
+  const connectorCount = Number(props.connector_count || 0);
+  if (Number.isFinite(connectorCount) && connectorCount > 0) {
+    pushRow("Anschlüsse", `${Math.round(connectorCount)} Steckplätze`);
+  }
+  pushRow("Service", props.service_types_display);
+
+  if (props.green_energy === true) {
+    pushRow("Strom", "100 % erneuerbar");
+  } else if (props.green_energy === false) {
+    pushRow("Strom", "Nicht als erneuerbar markiert");
+  }
+
+  return rows;
 }
 
 /* --- STATE --- */
@@ -103,6 +195,7 @@ const state = {
   filtered: [], // Currently filtered features
   favorites: new Set(), // Set of station_ids
   userPos: null, // { lat, lon }
+  startupLocationRequested: false,
   filters: {
     operator: "",
     minPower: 50,
@@ -156,12 +249,20 @@ const els = {
     occupancy: document.getElementById("detail-occupancy"),
     occupancyPill: document.getElementById("detail-occupancy-pill"),
     occupancySource: document.getElementById("detail-occupancy-source"),
+    highlights: document.getElementById("detail-highlights"),
+    priceChip: document.getElementById("detail-price-chip"),
+    price: document.getElementById("detail-price"),
+    hoursChip: document.getElementById("detail-hours-chip"),
+    hours: document.getElementById("detail-hours"),
     amenityCount: document.getElementById("detail-amenity-count"),
     amenityList: document.getElementById("detail-amenities-list"),
+    detailsSection: document.getElementById("detail-details-section"),
+    detailsList: document.getElementById("detail-details-list"),
+    detailsSource: document.getElementById("detail-details-source"),
     favBtn: document.getElementById("btn-toggle-fav"),
     googleBtn: document.getElementById("btn-nav-google"),
     appleBtn: document.getElementById("btn-nav-apple"),
-    stationLink: document.getElementById("btn-station-link"),
+    helpdeskPhoneBtn: document.getElementById("btn-helpdesk-phone"),
     mapContainer: document.getElementById("detail-map"),
   },
   buttons: {
@@ -230,9 +331,9 @@ async function loadData() {
     applyFilters(); // Initial render
     syncDetailModalWithUrl();
 
-    // Restore the last-known behavior on localhost and production:
-    // request location once after data is ready so map/list can sort around the user.
-    requestUserLocation(true);
+    // Request location once after data is ready, but only when the page is visible.
+    // This is more reliable on restores/background loads than a single immediate call.
+    queueStartupLocationRequest();
   } catch (err) {
     console.error("Failed to load data", err);
     els.lists.chargers.innerHTML = `<div class="empty-state">Fehler beim Laden der Daten.<br>${err.message}</div>`;
@@ -557,6 +658,7 @@ function createStationCard(feature) {
 
   const distance = getDistanceFormatted(feature);
   const occupancySummary = formatOccupancySummary(p);
+  const priceDisplay = String(p.price_display || "").trim();
 
   // Top Amenities (max 3 badges)
   const badges = Object.keys(AMENITY_MAPPING)
@@ -567,6 +669,9 @@ function createStationCard(feature) {
     .join("");
   const liveBadge = occupancySummary
     ? `<span class="badge badge-live">${escapeHtml(occupancySummary)}</span>`
+    : "";
+  const priceBadge = priceDisplay
+    ? `<span class="badge badge-price">${escapeHtml(priceDisplay)}</span>`
     : "";
 
   const markerColor = getMarkerColor(p);
@@ -584,7 +689,7 @@ function createStationCard(feature) {
       ${Math.round(getDisplayedMaxPowerKw(p))} kW max • ${getChargingPointCount(p)} Ladepunkte • ${formatAmenityCount(p.amenities_total)}
     </div>
     <div class="card-badges">
-      ${liveBadge}${badges}
+      ${liveBadge}${priceBadge}${badges}
     </div>
   `;
 
@@ -635,6 +740,15 @@ function openDetail(feature, options = {}) {
     els.detail.occupancySource.textContent = "";
     els.detail.occupancySource.hidden = true;
   }
+  const priceDisplay = String(p.price_display || "").trim();
+  const openingHoursDisplay = String(p.opening_hours_display || "").trim();
+  const showPrice = Boolean(priceDisplay);
+  const showHours = Boolean(openingHoursDisplay);
+  els.detail.highlights.hidden = !showPrice && !showHours;
+  els.detail.priceChip.hidden = !showPrice;
+  els.detail.hoursChip.hidden = !showHours;
+  els.detail.price.textContent = priceDisplay;
+  els.detail.hours.textContent = openingHoursDisplay;
   els.detail.amenityCount.textContent = formatAmenityCount(p.amenities_total);
 
   // Favorite Button State
@@ -644,8 +758,16 @@ function openDetail(feature, options = {}) {
   const [lon, lat] = feature.geometry.coordinates;
   els.detail.googleBtn.href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
   els.detail.appleBtn.href = `http://maps.apple.com/?daddr=${lat},${lon}`;
-  if (els.detail.stationLink) {
-    els.detail.stationLink.href = getStationPagePath(p);
+  if (els.detail.helpdeskPhoneBtn) {
+    const phoneHref = formatTelephoneHref(p.helpdesk_phone);
+    els.detail.helpdeskPhoneBtn.hidden = !phoneHref;
+    if (phoneHref) {
+      els.detail.helpdeskPhoneBtn.href = phoneHref;
+      els.detail.helpdeskPhoneBtn.title = `Hilfe ${p.helpdesk_phone}`;
+    } else {
+      els.detail.helpdeskPhoneBtn.removeAttribute("href");
+      els.detail.helpdeskPhoneBtn.removeAttribute("title");
+    }
   }
 
   // Mini Map
@@ -668,6 +790,7 @@ function openDetail(feature, options = {}) {
 
   // Amenity List
   renderDetailAmenities(p);
+  renderDetailStaticInfo(p);
 
   openModal("detail");
 
@@ -789,6 +912,38 @@ function renderDetailAmenities(props) {
     `;
     els.detail.amenityList.appendChild(div);
   });
+}
+
+function renderDetailStaticInfo(props) {
+  els.detail.detailsList.innerHTML = "";
+  const rows = buildStaticDetailRows(props);
+  const sourceText = formatStaticDetailSource(props);
+
+  if (rows.length === 0 && !sourceText) {
+    els.detail.detailsSection.hidden = true;
+    els.detail.detailsSource.hidden = true;
+    els.detail.detailsSource.textContent = "";
+    return;
+  }
+
+  rows.forEach((item) => {
+    const div = document.createElement("div");
+    div.className = "detail-info-row";
+    div.innerHTML = `
+      <span class="detail-info-label">${escapeHtml(item.label)}</span>
+      <span class="detail-info-value">${escapeHtml(item.value)}</span>
+    `;
+    els.detail.detailsList.appendChild(div);
+  });
+
+  if (sourceText) {
+    els.detail.detailsSource.textContent = sourceText;
+    els.detail.detailsSource.hidden = false;
+  } else {
+    els.detail.detailsSource.textContent = "";
+    els.detail.detailsSource.hidden = true;
+  }
+  els.detail.detailsSection.hidden = false;
 }
 
 function toggleDetailFavorite() {
@@ -920,6 +1075,44 @@ function getDistanceFormatted(feature) {
   if (d === Infinity) return "";
   if (d > 1000) return (d / 1000).toFixed(1) + " km";
   return Math.round(d) + " m";
+}
+
+function queueStartupLocationRequest() {
+  if (state.startupLocationRequested || state.userPos || !navigator.geolocation) {
+    return;
+  }
+
+  const detach = () => {
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    window.removeEventListener("focus", attemptWhenVisible);
+    window.removeEventListener("pageshow", attemptWhenVisible);
+  };
+
+  const attemptWhenVisible = () => {
+    if (state.startupLocationRequested || state.userPos) {
+      detach();
+      return;
+    }
+    if (document.visibilityState === "hidden") {
+      return;
+    }
+    state.startupLocationRequested = true;
+    detach();
+    window.requestAnimationFrame(() => {
+      window.setTimeout(() => requestUserLocation(true), 0);
+    });
+  };
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      attemptWhenVisible();
+    }
+  };
+
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  window.addEventListener("focus", attemptWhenVisible);
+  window.addEventListener("pageshow", attemptWhenVisible);
+  attemptWhenVisible();
 }
 
 function requestUserLocation(silent = false) {

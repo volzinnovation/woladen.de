@@ -28,3 +28,9 @@ timestamp,amenity_backend,source_url,stations_total,stations_with_amenities,quer
 2026-03-28T11:54:40+00:00,osm-pbf,https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-03-25.csv,17055,15529,500,0,0,0,0
 2026-04-01T00:15:28+00:00,osm-pbf,https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-03-25.csv,16347,14956,500,0,0,0,0
 2026-04-13T09:42:29+00:00,osm-pbf,https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-03-25.csv,16347,11904,500,0,0,0,0
+2026-04-13T13:05:13+00:00,overpass,https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-03-25.csv,16347,0,0,0,0,16347,16347
+2026-04-13T13:09:11+00:00,overpass,https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-03-25.csv,16347,0,0,0,0,16347,16347
+2026-04-14T21:50:24+00:00,overpass,https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-03-25.csv,200,2,0,0,2,198,198
+2026-04-14T21:51:28+00:00,overpass,https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-03-25.csv,200,2,0,0,2,198,198
+2026-04-14T21:53:40+00:00,overpass,https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-03-25.csv,200,2,0,0,2,198,198
+2026-04-14T22:00:33+00:00,osm-pbf,https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-03-25.csv,16347,14966,500,0,0,0,0

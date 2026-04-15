@@ -139,6 +139,28 @@ class ChargerRepository(private val dataBundleManager: DataBundleManager) {
         var occupancyChargingEvses = 0
         var occupancyOutOfOrderEvses = 0
         var occupancyUnknownEvses = 0
+        var detailSourceUid = ""
+        var detailSourceName = ""
+        var detailLastUpdated = ""
+        var datexSiteId = ""
+        var datexStationIds = ""
+        var datexChargePointIds = ""
+        var priceDisplay = ""
+        var priceEnergyEurKwhMin: Double? = null
+        var priceEnergyEurKwhMax: Double? = null
+        var priceCurrency = ""
+        var priceQuality = ""
+        var openingHoursDisplay = ""
+        var openingHoursIs24_7 = false
+        var helpdeskPhone = ""
+        var paymentMethodsDisplay = ""
+        var authMethodsDisplay = ""
+        var connectorTypesDisplay = ""
+        var currentTypesDisplay = ""
+        var connectorCount = 0
+        var greenEnergy: Boolean? = null
+        var serviceTypesDisplay = ""
+        var detailsJson = ""
         var amenitiesTotal = 0
         var amenitiesSource = ""
         val amenityExamples = mutableListOf<AmenityExample>()
@@ -169,6 +191,59 @@ class ChargerRepository(private val dataBundleManager: DataBundleManager) {
                 name == "occupancy_charging_evses" -> occupancyChargingEvses = nextLossyInt(reader, 0)
                 name == "occupancy_out_of_order_evses" -> occupancyOutOfOrderEvses = nextLossyInt(reader, 0)
                 name == "occupancy_unknown_evses" -> occupancyUnknownEvses = nextLossyInt(reader, 0)
+                name == "detail_source_uid" -> detailSourceUid = nextStringOrNull(reader).orEmpty()
+                name == "detail_source_name" -> detailSourceName = nextStringOrNull(reader).orEmpty()
+                name == "detail_last_updated" -> detailLastUpdated = nextStringOrNull(reader).orEmpty()
+                name == "datex_site_id" -> datexSiteId = nextStringOrNull(reader).orEmpty()
+                name == "datex_station_ids" -> datexStationIds = nextStringOrNull(reader).orEmpty()
+                name == "datex_charge_point_ids" -> datexChargePointIds = nextStringOrNull(reader).orEmpty()
+                name == "price_display" -> priceDisplay = nextStringOrNull(reader).orEmpty()
+                name == "price_energy_eur_kwh_min" -> priceEnergyEurKwhMin = nextLossyDoubleOrNull(reader)
+                name == "price_energy_eur_kwh_max" -> priceEnergyEurKwhMax = nextLossyDoubleOrNull(reader)
+                name == "price_currency" -> priceCurrency = nextStringOrNull(reader).orEmpty()
+                name == "price_quality" -> priceQuality = nextStringOrNull(reader).orEmpty()
+                name == "opening_hours_display" -> openingHoursDisplay = nextStringOrNull(reader).orEmpty()
+                name == "opening_hours_is_24_7" -> {
+                    openingHoursIs24_7 = when (reader.peek()) {
+                        JsonToken.BOOLEAN -> reader.nextBoolean()
+                        JsonToken.NUMBER -> nextLossyInt(reader, 0) > 0
+                        JsonToken.STRING -> nextStringOrNull(reader).orEmpty().lowercase() in listOf("1", "true", "yes", "ja")
+                        JsonToken.NULL -> {
+                            reader.nextNull()
+                            false
+                        }
+                        else -> {
+                            reader.skipValue()
+                            false
+                        }
+                    }
+                }
+                name == "helpdesk_phone" -> helpdeskPhone = nextStringOrNull(reader).orEmpty()
+                name == "payment_methods_display" -> paymentMethodsDisplay = nextStringOrNull(reader).orEmpty()
+                name == "auth_methods_display" -> authMethodsDisplay = nextStringOrNull(reader).orEmpty()
+                name == "connector_types_display" -> connectorTypesDisplay = nextStringOrNull(reader).orEmpty()
+                name == "current_types_display" -> currentTypesDisplay = nextStringOrNull(reader).orEmpty()
+                name == "connector_count" -> connectorCount = nextLossyInt(reader, 0)
+                name == "green_energy" -> {
+                    greenEnergy = when (reader.peek()) {
+                        JsonToken.BOOLEAN -> reader.nextBoolean()
+                        JsonToken.STRING -> when (nextStringOrNull(reader).orEmpty().lowercase()) {
+                            "true", "yes", "ja", "1" -> true
+                            "false", "no", "nein", "0" -> false
+                            else -> null
+                        }
+                        JsonToken.NULL -> {
+                            reader.nextNull()
+                            null
+                        }
+                        else -> {
+                            reader.skipValue()
+                            null
+                        }
+                    }
+                }
+                name == "service_types_display" -> serviceTypesDisplay = nextStringOrNull(reader).orEmpty()
+                name == "details_json" -> detailsJson = nextStringOrNull(reader).orEmpty()
                 name == "amenities_total" -> amenitiesTotal = nextLossyInt(reader, 0)
                 name == "amenities_source" -> amenitiesSource = nextStringOrNull(reader).orEmpty()
                 name == "amenity_examples" -> parseAmenityExamples(reader, amenityExamples)
@@ -198,6 +273,28 @@ class ChargerRepository(private val dataBundleManager: DataBundleManager) {
             occupancyChargingEvses = occupancyChargingEvses,
             occupancyOutOfOrderEvses = occupancyOutOfOrderEvses,
             occupancyUnknownEvses = occupancyUnknownEvses,
+            detailSourceUid = detailSourceUid,
+            detailSourceName = detailSourceName,
+            detailLastUpdated = detailLastUpdated,
+            datexSiteId = datexSiteId,
+            datexStationIds = datexStationIds,
+            datexChargePointIds = datexChargePointIds,
+            priceDisplay = priceDisplay,
+            priceEnergyEurKwhMin = priceEnergyEurKwhMin,
+            priceEnergyEurKwhMax = priceEnergyEurKwhMax,
+            priceCurrency = priceCurrency,
+            priceQuality = priceQuality,
+            openingHoursDisplay = openingHoursDisplay,
+            openingHoursIs24_7 = openingHoursIs24_7,
+            helpdeskPhone = helpdeskPhone,
+            paymentMethodsDisplay = paymentMethodsDisplay,
+            authMethodsDisplay = authMethodsDisplay,
+            connectorTypesDisplay = connectorTypesDisplay,
+            currentTypesDisplay = currentTypesDisplay,
+            connectorCount = connectorCount,
+            greenEnergy = greenEnergy,
+            serviceTypesDisplay = serviceTypesDisplay,
+            detailsJson = detailsJson,
             amenitiesTotal = amenitiesTotal,
             amenitiesSource = amenitiesSource,
             amenityExamples = amenityExamples,

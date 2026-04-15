@@ -148,6 +148,30 @@ def render_amenity_items(properties: dict[str, object]) -> str:
     )
 
 
+def build_static_detail_rows(properties: dict[str, object]) -> list[tuple[str, str]]:
+    rows: list[tuple[str, str]] = []
+
+    def add_row(label: str, key: str) -> None:
+        value = str(properties.get(key) or "").strip()
+        if value:
+            rows.append((label, value))
+
+    add_row("Bezahlen", "payment_methods_display")
+    add_row("Zugang", "auth_methods_display")
+    add_row("Stecker", "connector_types_display")
+    add_row("Stromart", "current_types_display")
+    connector_count = to_int(properties.get("connector_count"), default=0)
+    if connector_count > 0:
+        rows.append(("Anschlüsse", f"{connector_count} Steckplätze"))
+    add_row("Service", "service_types_display")
+
+    green_energy = properties.get("green_energy")
+    if isinstance(green_energy, bool):
+        rows.append(("Strom", "100 % erneuerbar" if green_energy else "Nicht als erneuerbar markiert"))
+
+    return rows
+
+
 def build_station_description(properties: dict[str, object]) -> str:
     operator = str(properties.get("operator") or "Unbekannt").strip()
     address = str(properties.get("address") or "").strip()
@@ -202,11 +226,30 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
     app_url = f"/?station={station_id}"
     google_maps_url = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
     amenity_items = render_amenity_items(properties)
+    static_detail_rows = build_static_detail_rows(properties)
+    static_detail_items = "".join(
+        "<li>"
+        f"<strong>{html.escape(label)}</strong>"
+        f"{html.escape(value)}"
+        "</li>"
+        for label, value in static_detail_rows
+    )
+    detail_source_name = str(properties.get("detail_source_name") or "").strip()
+    detail_last_updated = str(properties.get("detail_last_updated") or "").strip()
+    detail_source_text = ""
+    if detail_source_name and detail_last_updated:
+        detail_source_text = f"Details via {html.escape(detail_source_name)} • Stand {html.escape(detail_last_updated)}"
+    elif detail_source_name:
+        detail_source_text = f"Details via {html.escape(detail_source_name)}"
+    elif detail_last_updated:
+        detail_source_text = f"Stand {html.escape(detail_last_updated)}"
     amenity_paragraph = (
         f"Vor Ort findest du unter anderem {html.escape(amenity_text)}."
         if amenity_text
         else "Diese Station ist als Direktlink in der woladen.de Web-App hinterlegt."
     )
+    price_chip = str(properties.get("price_display") or "").strip()
+    opening_hours_chip = str(properties.get("opening_hours_display") or "").strip()
 
     page_html = f"""<!doctype html>
 <html lang="de">
@@ -248,6 +291,8 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
           <span class="station-chip">⚡ {format_text(max_power)} kW max</span>
           <span class="station-chip">🔌 {charging_points} Ladepunkte</span>
           <span class="station-chip">🏪 {format_amenity_count(amenities_total)}</span>
+          {f'<span class="station-chip">€ {format_text(price_chip)}</span>' if price_chip else ''}
+          {f'<span class="station-chip">🕒 {format_text(opening_hours_chip)}</span>' if opening_hours_chip else ''}
         </div>
         <p class="station-summary">{amenity_paragraph}</p>
         <div class="station-actions">
@@ -267,6 +312,8 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
         <ul class="station-list">
           {amenity_items}
         </ul>
+        {f'<h3>Details</h3><ul class="station-list">{static_detail_items}</ul>' if static_detail_items else ''}
+        {f'<p class="station-note">{detail_source_text}</p>' if detail_source_text else ''}
         <p class="station-note">
           Datenquelle: Bundesnetzagentur Ladesäulenregister und OpenStreetMap. Karten- und POI-Daten © OpenStreetMap-Mitwirkende.
         </p>

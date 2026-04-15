@@ -486,6 +486,17 @@
               Live via MobiData BW
             </p>
 
+            <div id="detail-highlights" class="detail-highlights" hidden>
+              <div id="detail-price-chip" class="detail-highlight-chip" hidden>
+                <span class="icon">€</span>
+                <span id="detail-price">0,59 €/kWh</span>
+              </div>
+              <div id="detail-hours-chip" class="detail-highlight-chip" hidden>
+                <span class="icon">🕒</span>
+                <span id="detail-hours">24/7</span>
+              </div>
+            </div>
+
             <div class="detail-actions">
               <a
                 id="btn-nav-google"
@@ -504,13 +515,23 @@
                 Apple Navi
               </a>
               <a
-                id="btn-station-link"
+                id="btn-helpdesk-phone"
                 href="#"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="action-btn secondary"
+                class="icon-action-btn"
+                aria-label="Hilfe"
+                hidden
               >
-                Stationsseite
+                <svg
+                  class="icon-action-glyph"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M22 16.92v2.08a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.12 3.3 2 2 0 0 1 4.11 1.1H6.2a2 2 0 0 1 2 1.72l.38 2.66a2 2 0 0 1-.57 1.7L6.1 9.08a16 16 0 0 0 8.82 8.82l1.9-1.9a2 2 0 0 1 1.7-.57l2.66.38A2 2 0 0 1 22 16.92Z"
+                  />
+                </svg>
+                <span>Hilfe</span>
               </a>
             </div>
 
@@ -519,6 +540,14 @@
               <div id="detail-amenities-list" class="amenity-list">
                 <!-- List items -->
               </div>
+            </div>
+
+            <div id="detail-details-section" class="details-list-section" hidden>
+              <h3>Details</h3>
+              <div id="detail-details-list" class="details-list"></div>
+              <p id="detail-details-source" class="detail-subnote compact" hidden>
+                Details via Mobilithek
+              </p>
             </div>
           </div>
         </div>

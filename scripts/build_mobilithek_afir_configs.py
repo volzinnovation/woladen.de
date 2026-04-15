@@ -1,0 +1,1076 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import argparse
+import csv
+import gzip
+import json
+import math
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import unicodedata
+from collections import Counter
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+import requests
+import urllib3
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.build_data import (
+    decode_json_bytes,
+    extract_datex_operator_name,
+    extract_datex_site_address,
+    extract_datex_site_coordinates,
+    fetch_mobilithek_access_token,
+    haversine_distance_m,
+    normalize_text,
+    parse_datex_dynamic_states,
+)
+
+DATA_DIR = REPO_ROOT / "data"
+CHARGING_DATA_CATEGORY = "https://w3id.org/mdp/schema/data_categories#FILLING_AND_CHARGING_STATIONS"
+METADATA_SEARCH_URL = "https://mobilithek.info/mdp-api/mdp-msa-metadata/v2/offers/search"
+METADATA_OFFER_URL = "https://mobilithek.info/mdp-api/mdp-msa-metadata/v2/offers/{publication_id}"
+CONTRACT_CREATE_URL = "https://mobilithek.info/mdp-api/mdp-msa-contracts/v1/contracts"
+PUBLICATION_FILE_URL = "https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/{publication_id}/file"
+PUBLICATION_PUBLIC_FILE_URL = "https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/{publication_id}/file/noauth"
+PUBLICATION_FILE_ACCESS_URL = (
+    "https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/{publication_id}/file/access"
+)
+DATEX_V3_SUBSCRIPTION_URL = (
+    "https://mobilithek.info:8443/mobilithek/api/v1.0/subscription/datexv3?subscriptionID={subscription_id}"
+)
+MAX_MATCH_DISTANCE_M = 200.0
+SEARCH_PAGE_SIZE = 200
+PUBLICATION_TIMEOUT_SECONDS = 15
+GRID_CELL_DEGREES = 0.01
+DATEX_V3_DATA_MODEL = "https://w3id.org/mdp/schema/data_model#DATEX_2_V3"
+
+GENERIC_STEM_WORDS = {
+    "afir",
+    "recharging",
+    "charging",
+    "infrastructure",
+    "realtime",
+    "realtime",
+    "dynamic",
+    "static",
+    "dynamisch",
+    "statisch",
+    "dyn",
+    "stat",
+    "json",
+    "data",
+    "station",
+    "stations",
+    "point",
+    "points",
+    "deutschland",
+    "gmbh",
+    "mbh",
+    "ag",
+    "kg",
+    "co",
+    "inc",
+    "ltd",
+    "aps",
+    "v2",
+    "v3",
+}
+
+GENERIC_OPERATOR_WORDS = GENERIC_STEM_WORDS | {
+    "group",
+    "mobility",
+    "mobilitat",
+    "mobiliy",
+    "plus",
+    "und",
+    "amp",
+    "public",
+    "gesellschaft",
+    "innovationsgesellschaft",
+    "de",
+}
+
+
+@dataclass(frozen=True)
+class StaticSiteRecord:
+    site_id: str
+    station_ids: tuple[str, ...]
+    lat: float
+    lon: float
+    postcode: str
+    city: str
+    address: str
+    total_evses: int
+    operator_name: str
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Build Mobilithek AFIR provider configs and static coverage from chargers_fast.csv"
+    )
+    parser.add_argument("--search-term", default="AFIR")
+    parser.add_argument(
+        "--chargers-csv",
+        type=Path,
+        default=DATA_DIR / "chargers_fast.csv",
+    )
+    parser.add_argument(
+        "--output-config",
+        type=Path,
+        default=DATA_DIR / "mobilithek_afir_provider_configs.json",
+    )
+    parser.add_argument(
+        "--output-coverage",
+        type=Path,
+        default=DATA_DIR / "mobilithek_afir_static_coverage.json",
+    )
+    parser.add_argument(
+        "--output-matches",
+        type=Path,
+        default=DATA_DIR / "mobilithek_afir_static_matches.csv",
+    )
+    parser.add_argument(
+        "--machine-cert-p12",
+        type=Path,
+        default=None,
+        help="Optional Mobilithek machine certificate (PKCS#12) for mTLS probing",
+    )
+    parser.add_argument(
+        "--machine-cert-password-file",
+        type=Path,
+        default=None,
+        help="Optional text file containing the PKCS#12 password",
+    )
+    return parser.parse_args()
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def slugify(value: str) -> str:
+    folded = unicodedata.normalize("NFKD", value)
+    ascii_only = "".join(ch for ch in folded if not unicodedata.combining(ch))
+    return re.sub(r"[^a-z0-9]+", "_", ascii_only.lower()).strip("_")
+
+
+def stem_words(value: str) -> list[str]:
+    words = re.findall(r"[A-Za-z0-9]+", value)
+    return [word.lower() for word in words if word]
+
+
+def derive_provider_stem(title: str, publisher: str) -> str:
+    words = stem_words(title)
+    filtered = [word for word in words if word not in GENERIC_STEM_WORDS]
+    if filtered:
+        return "_".join(filtered)
+
+    publisher_words = [word for word in stem_words(publisher) if word not in GENERIC_STEM_WORDS]
+    if publisher_words:
+        return "_".join(publisher_words)
+
+    return slugify(title or publisher or "mobilithek_offer")
+
+
+def operator_tokens(*values: str) -> set[str]:
+    tokens: set[str] = set()
+    for value in values:
+        for word in stem_words(value):
+            if len(word) < 4 or word in GENERIC_OPERATOR_WORDS:
+                continue
+            tokens.add(word)
+            compact = normalize_text(word)
+            if compact:
+                tokens.add(compact)
+        compact_value = normalize_text(value)
+        if compact_value and len(compact_value) >= 4 and compact_value not in GENERIC_OPERATOR_WORDS:
+            tokens.add(compact_value)
+    return tokens
+
+
+def address_similarity(site_address: str, candidate_address: str) -> bool:
+    left = normalize_text(site_address)
+    right = normalize_text(candidate_address)
+    if not left or not right:
+        return False
+    return left in right or right in left
+
+
+def operator_similarity(*, site_operator: str, publisher: str, candidate_operator: str) -> float:
+    if not candidate_operator:
+        return 0.0
+
+    candidate_norm = normalize_text(candidate_operator)
+    if not candidate_norm:
+        return 0.0
+
+    comparisons = [site_operator, publisher]
+    for value in comparisons:
+        source_norm = normalize_text(value)
+        if not source_norm:
+            continue
+        if source_norm in candidate_norm or candidate_norm in source_norm:
+            return 1.0
+
+    source_tokens = operator_tokens(site_operator, publisher)
+    candidate_tokens = operator_tokens(candidate_operator)
+    if not source_tokens or not candidate_tokens:
+        return 0.0
+
+    overlap = source_tokens & candidate_tokens
+    if not overlap:
+        return 0.0
+
+    return len(overlap) / max(1, min(len(source_tokens), len(candidate_tokens)))
+
+
+def classify_feed_kind(metadata: dict[str, Any], *, fallback_title: str = "") -> str:
+    content_data = ((metadata.get("contentData") or [{}])[0]) if metadata.get("contentData") else {}
+    schema_profile = str(content_data.get("schemaProfileName") or "")
+    title = str(metadata.get("title") or fallback_title or "")
+    title_lower = title.lower()
+    schema_lower = schema_profile.lower()
+    media_type = str(content_data.get("mediaType") or "").lower()
+    access_url = str(content_data.get("accessUrl") or "").strip()
+    delta_delivery = content_data.get("deltaDelivery")
+
+    if "dynamic" in schema_lower or "realtime" in title_lower or "dynam" in title_lower or "dyn" in title_lower:
+        return "dynamic"
+    if "static" in schema_lower or "statisch" in title_lower or "stat" in title_lower:
+        return "static"
+    if delta_delivery is True:
+        return "dynamic"
+    if access_url or "csv" in media_type or "json" in media_type:
+        return "static"
+    return "unknown"
+
+
+def content_data_entry(metadata: dict[str, Any]) -> dict[str, Any]:
+    values = metadata.get("contentData") or []
+    return values[0] if values else {}
+
+
+def offer_access_mode(metadata: dict[str, Any]) -> str:
+    contract = metadata.get("contractOffer") or {}
+    anonymous = contract.get("providerApprovalAnonymousAccessRequired")
+    return "noauth" if anonymous else "auth"
+
+
+def search_mobilithek_offers(
+    session: requests.Session, *, search_term: str, page: int, size: int
+) -> dict[str, Any]:
+    response = session.post(
+        METADATA_SEARCH_URL,
+        params={"page": page, "size": size, "sort": "latest,desc"},
+        json={"searchString": search_term},
+        timeout=60,
+        verify=False,
+    )
+    response.raise_for_status()
+    return response.json()["dataOffers"]
+
+
+def fetch_offer_metadata(session: requests.Session, publication_id: str) -> dict[str, Any]:
+    response = session.get(
+        METADATA_OFFER_URL.format(publication_id=publication_id),
+        timeout=60,
+        verify=False,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def create_subscription(
+    session: requests.Session, *, access_token: str | None, publication_id: str
+) -> dict[str, Any]:
+    if not access_token:
+        return {"attempted": False, "status": "missing_credentials"}
+
+    response = session.post(
+        CONTRACT_CREATE_URL,
+        headers={"Authorization": f"Bearer {access_token}"},
+        json={"dataOfferId": publication_id, "relevantToMDVPBefG": False},
+        timeout=20,
+        verify=False,
+    )
+
+    body = response.text[:500]
+    result: dict[str, Any] = {
+        "attempted": True,
+        "status_code": response.status_code,
+        "response_excerpt": body,
+    }
+    if response.status_code in (200, 201):
+        result["status"] = "created"
+    elif response.status_code == 409:
+        result["status"] = "already_exists"
+    elif response.status_code == 403:
+        result["status"] = "forbidden"
+    else:
+        result["status"] = "error"
+    return result
+
+
+def parse_static_sites_with_operator(payload: dict[str, Any]) -> list[StaticSiteRecord]:
+    publication = (payload.get("payload") or {}).get("aegiEnergyInfrastructureTablePublication") or {}
+    sites: list[StaticSiteRecord] = []
+
+    for table in publication.get("energyInfrastructureTable") or []:
+        for site in table.get("energyInfrastructureSite") or []:
+            site_id = str(site.get("idG") or "").strip()
+            if not site_id:
+                continue
+
+            lat, lon = extract_datex_site_coordinates(site)
+            if lat is None or lon is None:
+                continue
+
+            postcode, city, address = extract_datex_site_address(site)
+            operator_name = extract_datex_operator_name(site)
+            station_ids: list[str] = []
+            total_evses = 0
+
+            for station in site.get("energyInfrastructureStation") or []:
+                station_id = str(station.get("idG") or "").strip()
+                if station_id:
+                    station_ids.append(station_id)
+                station_count = int(station.get("numberOfRefillPoints") or 0)
+                if station_count <= 0:
+                    station_count = len(station.get("refillPoint") or [])
+                total_evses += max(0, station_count)
+
+            sites.append(
+                StaticSiteRecord(
+                    site_id=site_id,
+                    station_ids=tuple(dict.fromkeys(item for item in station_ids if item)),
+                    lat=float(lat),
+                    lon=float(lon),
+                    postcode=postcode,
+                    city=city,
+                    address=address,
+                    total_evses=max(0, total_evses),
+                    operator_name=operator_name,
+                )
+            )
+    return sites
+
+
+def load_chargers(chargers_csv: Path) -> pd.DataFrame:
+    df = pd.read_csv(chargers_csv)
+    required = [
+        "station_id",
+        "operator",
+        "charging_points_count",
+        "lat",
+        "lon",
+        "postcode",
+        "city",
+        "address",
+    ]
+    for column in required:
+        if column not in df.columns:
+            raise RuntimeError(f"missing required column: {column}")
+
+    return df[required].copy()
+
+
+def grid_key(lat: float, lon: float) -> tuple[int, int]:
+    return (math.floor(lat / GRID_CELL_DEGREES), math.floor(lon / GRID_CELL_DEGREES))
+
+
+def build_station_spatial_index(df: pd.DataFrame) -> dict[tuple[int, int], list[dict[str, Any]]]:
+    index: dict[tuple[int, int], list[dict[str, Any]]] = {}
+    for row in df.to_dict("records"):
+        key = grid_key(float(row["lat"]), float(row["lon"]))
+        index.setdefault(key, []).append(row)
+    return index
+
+
+def score_site_to_station(
+    site: StaticSiteRecord,
+    station_row: pd.Series,
+    *,
+    publisher: str,
+) -> tuple[bool, float, float, dict[str, Any]]:
+    distance_m = haversine_distance_m(site.lat, site.lon, float(station_row["lat"]), float(station_row["lon"]))
+    if distance_m > MAX_MATCH_DISTANCE_M:
+        return False, distance_m, distance_m, {}
+
+    postcode_match = bool(site.postcode and str(station_row.get("postcode") or "").strip() == site.postcode)
+    city_match = bool(
+        site.city and normalize_text(str(station_row.get("city") or "")) == normalize_text(site.city)
+    )
+    address_match = address_similarity(site.address, str(station_row.get("address") or ""))
+    op_similarity = operator_similarity(
+        site_operator=site.operator_name,
+        publisher=publisher,
+        candidate_operator=str(station_row.get("operator") or ""),
+    )
+
+    score = distance_m
+    if postcode_match:
+        score -= 45.0
+    if city_match:
+        score -= 10.0
+    if address_match:
+        score -= 15.0
+    if op_similarity >= 1.0:
+        score -= 30.0
+    elif op_similarity > 0.0:
+        score -= 12.0 * op_similarity
+
+    site_evses = int(site.total_evses or 0)
+    station_points = int(station_row.get("charging_points_count", 0) or 0)
+    if site_evses > 0 and station_points > 0:
+        score += abs(site_evses - station_points) * 2.5
+
+    accepted = False
+    if distance_m <= 30.0:
+        accepted = True
+    elif postcode_match and (address_match or op_similarity > 0.0 or distance_m <= 80.0):
+        accepted = True
+    elif address_match and distance_m <= 120.0:
+        accepted = True
+    elif op_similarity >= 1.0 and distance_m <= 120.0:
+        accepted = True
+
+    details = {
+        "distance_m": round(distance_m, 1),
+        "postcode_match": postcode_match,
+        "city_match": city_match,
+        "address_match": address_match,
+        "operator_similarity": round(op_similarity, 3),
+    }
+    return accepted, score, distance_m, details
+
+
+def match_static_sites(
+    df: pd.DataFrame,
+    station_index: dict[tuple[int, int], list[dict[str, Any]]],
+    *,
+    sites: list[StaticSiteRecord],
+    publisher: str,
+    provider_uid: str,
+    static_publication_id: str,
+) -> tuple[dict[str, str], list[dict[str, Any]]]:
+    scored_pairs: list[tuple[float, float, str, str, dict[str, Any]]] = []
+
+    for site in sites:
+        site_key = grid_key(site.lat, site.lon)
+        candidate_rows: list[dict[str, Any]] = []
+        for lat_offset in (-1, 0, 1):
+            for lon_offset in (-1, 0, 1):
+                candidate_rows.extend(
+                    station_index.get((site_key[0] + lat_offset, site_key[1] + lon_offset), [])
+                )
+
+        for station_row_dict in candidate_rows:
+            station_row = pd.Series(station_row_dict)
+            accepted, score, distance_m, details = score_site_to_station(site, station_row, publisher=publisher)
+            if not accepted:
+                continue
+            scored_pairs.append(
+                (
+                    score,
+                    distance_m,
+                    site.site_id,
+                    str(station_row["station_id"]),
+                    {
+                        **details,
+                        "provider_uid": provider_uid,
+                        "static_publication_id": static_publication_id,
+                        "site_id": site.site_id,
+                        "site_operator": site.operator_name,
+                        "site_address": site.address,
+                        "site_postcode": site.postcode,
+                        "site_city": site.city,
+                        "site_total_evses": site.total_evses,
+                        "station_id": str(station_row["station_id"]),
+                        "station_operator": str(station_row.get("operator") or ""),
+                        "station_address": str(station_row.get("address") or ""),
+                        "station_postcode": str(station_row.get("postcode") or ""),
+                        "station_city": str(station_row.get("city") or ""),
+                        "station_charging_points_count": int(
+                            station_row.get("charging_points_count", 0) or 0
+                        ),
+                        "score": round(score, 2),
+                    },
+                )
+            )
+
+    scored_pairs.sort(key=lambda item: (item[0], item[1], item[2], item[3]))
+    matches: dict[str, str] = {}
+    used_stations: set[str] = set()
+    rows: list[dict[str, Any]] = []
+
+    for _, _, site_id, station_id, row in scored_pairs:
+        if site_id in matches or station_id in used_stations:
+            continue
+        matches[site_id] = station_id
+        used_stations.add(station_id)
+        rows.append(row)
+
+    return matches, rows
+
+
+def summarize_static_coverage(
+    df: pd.DataFrame,
+    *,
+    matches: dict[str, str],
+    total_sites: int,
+    fetch_status: str,
+    access_mode: str,
+    site_operator_samples: list[str],
+) -> dict[str, Any]:
+    matched_station_ids = sorted(set(matches.values()))
+    matched_station_count = len(matched_station_ids)
+    total_station_count = int(len(df))
+    matched_points = int(
+        df[df["station_id"].isin(matched_station_ids)]["charging_points_count"].fillna(0).astype(int).sum()
+    )
+    total_points = int(df["charging_points_count"].fillna(0).astype(int).sum())
+
+    return {
+        "fetch_status": fetch_status,
+        "access_mode": access_mode,
+        "locations_scanned": int(total_sites),
+        "matched_locations": int(len(matches)),
+        "matched_stations": matched_station_count,
+        "matched_charging_points": matched_points,
+        "station_coverage_ratio": round(matched_station_count / total_station_count, 6)
+        if total_station_count
+        else 0.0,
+        "charging_point_coverage_ratio": round(matched_points / total_points, 6) if total_points else 0.0,
+        "site_operator_samples": site_operator_samples[:10],
+    }
+
+
+def fetch_static_payload_with_probe(
+    session: requests.Session,
+    *,
+    publication_id: str,
+    preferred_access_mode: str,
+    access_token: str | None,
+) -> tuple[dict[str, Any] | None, str, str | None]:
+    attempts: list[tuple[str, bool]] = []
+    if preferred_access_mode == "auth":
+        attempts.append(("auth", True))
+        attempts.append(("noauth", False))
+    else:
+        attempts.append(("noauth", False))
+        attempts.append(("auth", True))
+
+    last_error: str | None = None
+    for mode_name, requires_auth in attempts:
+        try:
+            url = (
+                PUBLICATION_FILE_URL.format(publication_id=publication_id)
+                if requires_auth
+                else PUBLICATION_PUBLIC_FILE_URL.format(publication_id=publication_id)
+            )
+            headers = {"Accept": "application/octet-stream"}
+            if requires_auth:
+                if not access_token:
+                    raise RuntimeError("missing_mobilithek_access_token")
+                headers["Authorization"] = f"Bearer {access_token}"
+
+            response = session.get(
+                url,
+                headers=headers,
+                timeout=PUBLICATION_TIMEOUT_SECONDS,
+                verify=False,
+            )
+            response.raise_for_status()
+            payload = decode_json_bytes(response.content)
+            return payload, mode_name, None
+        except Exception as exc:  # requests/HTTP/runtime parsing failures are all reportable here
+            last_error = f"{mode_name}: {exc}"
+
+    return None, preferred_access_mode, last_error
+
+
+def read_optional_text(path: Path | None) -> str | None:
+    if path is None or not path.exists():
+        return None
+    value = path.read_text(encoding="utf-8").strip()
+    return value or None
+
+
+def probe_publication_file_access(
+    session: requests.Session,
+    *,
+    access_token: str | None,
+    publication_id: str,
+) -> dict[str, Any]:
+    if not access_token:
+        return {"status": "missing_credentials", "is_accessible": None}
+
+    response = session.get(
+        PUBLICATION_FILE_ACCESS_URL.format(publication_id=publication_id),
+        headers={"Authorization": f"Bearer {access_token}"},
+        timeout=20,
+        verify=False,
+    )
+    payload: dict[str, Any] = {}
+    try:
+        payload = response.json()
+    except Exception:
+        payload = {}
+    return {
+        "status": "ok" if response.ok else "error",
+        "status_code": response.status_code,
+        "is_accessible": payload.get("isAccessible"),
+        "response_excerpt": response.text[:200],
+    }
+
+
+def probe_machine_certificate(
+    *,
+    cert_p12: Path | None,
+    password: str | None,
+) -> dict[str, Any]:
+    if cert_p12 is None or not cert_p12.exists():
+        return {"configured": False, "status": "missing_certificate"}
+    if not password:
+        return {"configured": True, "status": "missing_password", "certificate_path": str(cert_p12)}
+
+    curl_path = shutil.which("curl") or "/usr/bin/curl"
+    if not Path(curl_path).exists():
+        return {
+            "configured": True,
+            "status": "missing_curl",
+            "certificate_path": str(cert_p12),
+        }
+
+    probe_url = DATEX_V3_SUBSCRIPTION_URL.format(subscription_id="0")
+    with tempfile.TemporaryDirectory(prefix="mobilithek-mtls-") as temp_dir:
+        header_path = Path(temp_dir) / "headers.txt"
+        body_path = Path(temp_dir) / "body.bin"
+        command = [
+            curl_path,
+            "-sS",
+            "-D",
+            str(header_path),
+            "--cert-type",
+            "P12",
+            "--cert",
+            f"{cert_p12}:{password}",
+            "-H",
+            "Accept-Encoding: gzip",
+            probe_url,
+            "-o",
+            str(body_path),
+        ]
+
+        try:
+            result = subprocess.run(
+                command,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+        except subprocess.TimeoutExpired:
+            return {
+                "configured": True,
+                "status": "timeout",
+                "certificate_path": str(cert_p12),
+                "probe_url": probe_url,
+            }
+        except Exception as exc:
+            return {
+                "configured": True,
+                "status": "error",
+                "certificate_path": str(cert_p12),
+                "probe_url": probe_url,
+                "error": str(exc),
+            }
+
+        header_text = header_path.read_text(encoding="utf-8", errors="replace") if header_path.exists() else ""
+        body_text = body_path.read_text(encoding="utf-8", errors="replace") if body_path.exists() else ""
+        status_code = None
+        for line in header_text.splitlines():
+            if line.startswith("HTTP/"):
+                parts = line.split()
+                if len(parts) >= 2 and parts[1].isdigit():
+                    status_code = int(parts[1])
+                break
+
+        probe_status = "ok"
+        if result.returncode != 0:
+            probe_status = "error"
+        elif status_code == 404:
+            probe_status = "mtls_ok_no_subscription"
+        elif status_code == 403:
+            probe_status = "mtls_ok_forbidden"
+        elif status_code == 400 and "SSL certificate" in body_text:
+            probe_status = "certificate_rejected"
+
+        return {
+            "configured": True,
+            "status": probe_status,
+            "certificate_path": str(cert_p12),
+            "probe_url": probe_url,
+            "http_status": status_code,
+            "stderr_excerpt": result.stderr[:200],
+            "body_excerpt": body_text[:200],
+        }
+
+
+def summarize_dynamic_probe(
+    *,
+    payload: dict[str, Any] | None,
+    fetch_status: str,
+    access_mode: str,
+    delta_delivery: bool,
+) -> dict[str, Any]:
+    if payload is None:
+        return {
+            "fetch_status": fetch_status,
+            "access_mode": access_mode,
+            "delta_delivery": bool(delta_delivery),
+            "site_status_count": 0,
+            "station_status_count": 0,
+            "evse_status_count": 0,
+            "available_evses": 0,
+            "occupied_evses": 0,
+            "out_of_order_evses": 0,
+            "unknown_evses": 0,
+            "latest_last_updated": None,
+        }
+
+    site_states = parse_datex_dynamic_states(payload)
+    station_refs: set[str] = set()
+    status_counter: Counter[str] = Counter()
+    last_updated_values: list[str] = []
+
+    for state in site_states.values():
+        station_refs.update(item for item in state.get("station_refs", set()) if item)
+        for evse_state in (state.get("evses") or {}).values():
+            status = str(evse_state.get("status") or "UNKNOWN")
+            status_counter[status] += 1
+            last_updated = str(evse_state.get("last_updated") or "").strip()
+            if last_updated:
+                last_updated_values.append(last_updated)
+        for value in state.get("last_updated_values") or []:
+            value_text = str(value).strip()
+            if value_text:
+                last_updated_values.append(value_text)
+
+    return {
+        "fetch_status": fetch_status,
+        "access_mode": access_mode,
+        "delta_delivery": bool(delta_delivery),
+        "site_status_count": len(site_states),
+        "station_status_count": len(station_refs),
+        "evse_status_count": int(sum(status_counter.values())),
+        "available_evses": int(status_counter.get("AVAILABLE", 0)),
+        "occupied_evses": int(status_counter.get("OCCUPIED", 0)),
+        "out_of_order_evses": int(status_counter.get("OUTOFORDER", 0)),
+        "unknown_evses": int(status_counter.get("UNKNOWN", 0)),
+        "latest_last_updated": max(last_updated_values) if last_updated_values else None,
+    }
+
+
+def write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def write_matches_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not rows:
+        path.write_text("", encoding="utf-8")
+        return
+
+    fieldnames = list(rows[0].keys())
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def main() -> None:
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    args = parse_args()
+
+    session = requests.Session()
+    chargers_df = load_chargers(args.chargers_csv)
+    station_index = build_station_spatial_index(chargers_df)
+    machine_cert_password = read_optional_text(args.machine_cert_password_file)
+    machine_cert_probe = probe_machine_certificate(
+        cert_p12=args.machine_cert_p12,
+        password=machine_cert_password,
+    )
+
+    offers_page = search_mobilithek_offers(
+        session,
+        search_term=args.search_term,
+        page=0,
+        size=SEARCH_PAGE_SIZE,
+    )
+    all_offers = offers_page.get("content") or []
+    charging_offers = [
+        offer for offer in all_offers if str(offer.get("dataCategory") or "") == CHARGING_DATA_CATEGORY
+    ]
+
+    access_token: str | None = None
+    try:
+        access_token = fetch_mobilithek_access_token(session)
+    except Exception:
+        access_token = None
+
+    detailed_offers: list[dict[str, Any]] = []
+    for offer in charging_offers:
+        publication_id = str(offer.get("publicationId") or "").strip()
+        if not publication_id:
+            continue
+
+        metadata = fetch_offer_metadata(session, publication_id)
+        content = content_data_entry(metadata)
+        detailed_offers.append(
+            {
+                "publication_id": publication_id,
+                "title": str(metadata.get("title") or offer.get("title") or ""),
+                "publisher": str((((metadata.get("agents") or {}).get("publisher") or {}).get("name")) or ""),
+                "metadata": metadata,
+                "mdp_brokering": bool(metadata.get("mdpBrokering")),
+                "feed_kind": classify_feed_kind(
+                    metadata,
+                    fallback_title=str(offer.get("title") or ""),
+                ),
+                "provider_stem": derive_provider_stem(
+                    str(metadata.get("title") or offer.get("title") or ""),
+                    str((((metadata.get("agents") or {}).get("publisher") or {}).get("name")) or ""),
+                ),
+                "access_mode": offer_access_mode(metadata),
+                "schema_profile_name": str(content.get("schemaProfileName") or ""),
+                "data_model": str(content.get("dataModel") or ""),
+                "delta_delivery": bool(content.get("deltaDelivery")),
+            }
+        )
+
+    provider_map: dict[str, dict[str, Any]] = {}
+    for offer in detailed_offers:
+        provider_uid = slugify(offer["provider_stem"]) or slugify(offer["publisher"]) or offer["publication_id"]
+        entry = provider_map.setdefault(
+            provider_uid,
+            {
+                "uid": provider_uid,
+                "display_name": offer["provider_stem"].replace("_", " ").strip() or offer["title"],
+                "publisher": offer["publisher"],
+                "feeds": {"static": None, "dynamic": None, "other": []},
+                "subscription": {"static": None, "dynamic": None, "other": []},
+                "coverage": None,
+            },
+        )
+
+        feed_payload = {
+            "publication_id": offer["publication_id"],
+            "title": offer["title"],
+            "publisher": offer["publisher"],
+            "access_mode": offer["access_mode"],
+            "mdp_brokering": offer["mdp_brokering"],
+            "schema_profile_name": offer["schema_profile_name"],
+            "data_model": offer["data_model"],
+            "delta_delivery": offer["delta_delivery"],
+            "contract_offer": offer["metadata"].get("contractOffer") or {},
+            "content_data": content_data_entry(offer["metadata"]),
+            "file_access_probe": probe_publication_file_access(
+                session,
+                access_token=access_token,
+                publication_id=offer["publication_id"],
+            ),
+            "subscription_status": create_subscription(
+                session, access_token=access_token, publication_id=offer["publication_id"]
+            ),
+        }
+
+        kind = offer["feed_kind"]
+        if kind in ("static", "dynamic") and entry["feeds"][kind] is None:
+            entry["feeds"][kind] = feed_payload
+            entry["subscription"][kind] = feed_payload["subscription_status"]
+        else:
+            entry["feeds"]["other"].append(feed_payload)
+            entry["subscription"]["other"].append(feed_payload["subscription_status"])
+
+    detailed_match_rows: list[dict[str, Any]] = []
+    coverage_rows: list[dict[str, Any]] = []
+
+    for provider_uid, provider in sorted(provider_map.items()):
+        static_feed = provider["feeds"]["static"]
+        dynamic_feed = provider["feeds"]["dynamic"]
+        print(f"[static] {provider_uid}", flush=True)
+        if not static_feed:
+            static_coverage = {
+                "fetch_status": "no_static_feed",
+                "access_mode": "",
+                "locations_scanned": 0,
+                "matched_locations": 0,
+                "matched_stations": 0,
+                "matched_charging_points": 0,
+                "station_coverage_ratio": 0.0,
+                "charging_point_coverage_ratio": 0.0,
+                "site_operator_samples": [],
+            }
+        elif static_feed.get("data_model") != DATEX_V3_DATA_MODEL:
+            media_type = str((static_feed.get("content_data") or {}).get("mediaType") or "")
+            static_coverage = {
+                "fetch_status": f"unsupported_static_format: {media_type or 'unknown'}",
+                "access_mode": str(static_feed.get("access_mode") or ""),
+                "locations_scanned": 0,
+                "matched_locations": 0,
+                "matched_stations": 0,
+                "matched_charging_points": 0,
+                "station_coverage_ratio": 0.0,
+                "charging_point_coverage_ratio": 0.0,
+                "site_operator_samples": [],
+            }
+        else:
+            payload, resolved_access_mode, fetch_error = fetch_static_payload_with_probe(
+                session,
+                publication_id=str(static_feed["publication_id"]),
+                preferred_access_mode=str(static_feed["access_mode"]),
+                access_token=access_token,
+            )
+
+            if payload is None:
+                static_coverage = {
+                    "fetch_status": fetch_error or "fetch_failed",
+                    "access_mode": resolved_access_mode,
+                    "locations_scanned": 0,
+                    "matched_locations": 0,
+                    "matched_stations": 0,
+                    "matched_charging_points": 0,
+                    "station_coverage_ratio": 0.0,
+                    "charging_point_coverage_ratio": 0.0,
+                    "site_operator_samples": [],
+                }
+            else:
+                sites = parse_static_sites_with_operator(payload)
+                site_operator_samples = list(
+                    dict.fromkeys(site.operator_name for site in sites if site.operator_name)
+                )
+                matches, match_rows = match_static_sites(
+                    chargers_df,
+                    station_index,
+                    sites=sites,
+                    publisher=str(provider["publisher"]),
+                    provider_uid=provider_uid,
+                    static_publication_id=str(static_feed["publication_id"]),
+                )
+                detailed_match_rows.extend(match_rows)
+                static_coverage = summarize_static_coverage(
+                    chargers_df,
+                    matches=matches,
+                    total_sites=len(sites),
+                    fetch_status="ok",
+                    access_mode=resolved_access_mode,
+                    site_operator_samples=site_operator_samples,
+                )
+
+        print(f"[dynamic] {provider_uid}", flush=True)
+        if not dynamic_feed:
+            dynamic_coverage = summarize_dynamic_probe(
+                payload=None,
+                fetch_status="no_dynamic_feed",
+                access_mode="",
+                delta_delivery=False,
+            )
+        elif dynamic_feed.get("data_model") != DATEX_V3_DATA_MODEL:
+            media_type = str((dynamic_feed.get("content_data") or {}).get("mediaType") or "")
+            dynamic_coverage = summarize_dynamic_probe(
+                payload=None,
+                fetch_status=f"unsupported_dynamic_format: {media_type or 'unknown'}",
+                access_mode=str(dynamic_feed.get("access_mode") or ""),
+                delta_delivery=bool(dynamic_feed.get("delta_delivery")),
+            )
+        else:
+            payload, resolved_access_mode, fetch_error = fetch_static_payload_with_probe(
+                session,
+                publication_id=str(dynamic_feed["publication_id"]),
+                preferred_access_mode=str(dynamic_feed["access_mode"]),
+                access_token=access_token,
+            )
+            dynamic_coverage = summarize_dynamic_probe(
+                payload=payload,
+                fetch_status="ok" if payload is not None else (fetch_error or "fetch_failed"),
+                access_mode=resolved_access_mode,
+                delta_delivery=bool(dynamic_feed.get("delta_delivery")),
+            )
+
+        provider["coverage"] = {
+            "static": static_coverage,
+            "dynamic": dynamic_coverage,
+        }
+        coverage_rows.append(
+            {
+                "provider_uid": provider_uid,
+                "display_name": provider["display_name"],
+                "publisher": provider["publisher"],
+                "static": static_coverage,
+                "dynamic": dynamic_coverage,
+            }
+        )
+
+    total_station_count = int(len(chargers_df))
+    total_charging_points = int(chargers_df["charging_points_count"].fillna(0).astype(int).sum())
+
+    config_payload = {
+        "generated_at": utc_now_iso(),
+        "search_term": args.search_term,
+        "search_total_elements": int(offers_page.get("totalElements") or len(all_offers)),
+        "charging_offer_count": len(detailed_offers),
+        "provider_config_count": len(provider_map),
+        "source_chargers_csv": str(args.chargers_csv),
+        "machine_certificate_probe": machine_cert_probe,
+        "totals": {
+            "stations": total_station_count,
+            "charging_points": total_charging_points,
+        },
+        "providers": [provider_map[key] for key in sorted(provider_map.keys())],
+    }
+    coverage_payload = {
+        "generated_at": config_payload["generated_at"],
+        "source_chargers_csv": str(args.chargers_csv),
+        "machine_certificate_probe": machine_cert_probe,
+        "totals": config_payload["totals"],
+        "providers": coverage_rows,
+    }
+
+    write_json(args.output_config, config_payload)
+    write_json(args.output_coverage, coverage_payload)
+    write_matches_csv(args.output_matches, detailed_match_rows)
+
+    print(json.dumps(
+        {
+            "generated_at": config_payload["generated_at"],
+            "search_total_elements": config_payload["search_total_elements"],
+            "charging_offer_count": config_payload["charging_offer_count"],
+            "provider_config_count": config_payload["provider_config_count"],
+            "matches_written": len(detailed_match_rows),
+            "config_path": str(args.output_config),
+            "coverage_path": str(args.output_coverage),
+            "matches_path": str(args.output_matches),
+        },
+        ensure_ascii=False,
+        indent=2,
+    ))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,42 @@
+{
+  "fetch_status": "ok",
+  "access_mode": "auth",
+  "locations_scanned": 2495,
+  "matched_locations": 1662,
+  "matched_stations": 1662,
+  "matched_charging_points": 8113,
+  "station_coverage_ratio": 0.10167,
+  "charging_point_coverage_ratio": 0.154997,
+  "site_operator_samples": [
+    "ENBW"
+  ],
+  "publication_id": "907574882292453376",
+  "provider_station_count_in_csv": 1984,
+  "provider_charging_points_in_csv": 9314,
+  "matched_provider_stations": 1647,
+  "matched_provider_charging_points": 8018,
+  "provider_station_overlap_ratio": 0.830141,
+  "provider_charging_point_overlap_ratio": 0.860855,
+  "matched_station_ids_sample": [
+    "0016ff87eea6fa09",
+    "002f7eb08eca9fa0",
+    "00a7fe57a13c7594",
+    "00dfc6895544b8ba",
+    "012b1fb9a51088cc",
+    "0158f610ea0dc9b3",
+    "016dcd1c54606a84",
+    "017904c6308ab402",
+    "01c56a357b683001",
+    "01c8ae4acfbf9634",
+    "01df01efaaec4edc",
+    "01f135e903638aff",
+    "020ab17662532a34",
+    "020ede6ece4fd71d",
+    "021a5789c2a9f75e",
+    "02458c2f620bc4a2",
+    "0272d7407c5e4f52",
+    "0283ef92a36597b3",
+    "0287551162a583f0",
+    "0288604091ca4195"
+  ]
+}

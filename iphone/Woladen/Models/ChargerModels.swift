@@ -67,6 +67,28 @@ struct ChargerProperties: Decodable {
     let occupancyChargingEVSEs: Int
     let occupancyOutOfOrderEVSEs: Int
     let occupancyUnknownEVSEs: Int
+    let detailSourceUID: String
+    let detailSourceName: String
+    let detailLastUpdated: String
+    let datexSiteID: String
+    let datexStationIDs: String
+    let datexChargePointIDs: String
+    let priceDisplay: String
+    let priceEnergyEURKwhMin: Double?
+    let priceEnergyEURKwhMax: Double?
+    let priceCurrency: String
+    let priceQuality: String
+    let openingHoursDisplay: String
+    let openingHoursIs24_7: Bool
+    let helpdeskPhone: String
+    let paymentMethodsDisplay: String
+    let authMethodsDisplay: String
+    let connectorTypesDisplay: String
+    let currentTypesDisplay: String
+    let connectorCount: Int
+    let greenEnergy: Bool?
+    let serviceTypesDisplay: String
+    let detailsJSON: String
     let amenitiesTotal: Int
     let amenitiesSource: String
     let amenityExamples: [AmenityExample]
@@ -92,6 +114,28 @@ struct ChargerProperties: Decodable {
         case occupancyChargingEVSEs = "occupancy_charging_evses"
         case occupancyOutOfOrderEVSEs = "occupancy_out_of_order_evses"
         case occupancyUnknownEVSEs = "occupancy_unknown_evses"
+        case detailSourceUID = "detail_source_uid"
+        case detailSourceName = "detail_source_name"
+        case detailLastUpdated = "detail_last_updated"
+        case datexSiteID = "datex_site_id"
+        case datexStationIDs = "datex_station_ids"
+        case datexChargePointIDs = "datex_charge_point_ids"
+        case priceDisplay = "price_display"
+        case priceEnergyEURKwhMin = "price_energy_eur_kwh_min"
+        case priceEnergyEURKwhMax = "price_energy_eur_kwh_max"
+        case priceCurrency = "price_currency"
+        case priceQuality = "price_quality"
+        case openingHoursDisplay = "opening_hours_display"
+        case openingHoursIs24_7 = "opening_hours_is_24_7"
+        case helpdeskPhone = "helpdesk_phone"
+        case paymentMethodsDisplay = "payment_methods_display"
+        case authMethodsDisplay = "auth_methods_display"
+        case connectorTypesDisplay = "connector_types_display"
+        case currentTypesDisplay = "current_types_display"
+        case connectorCount = "connector_count"
+        case greenEnergy = "green_energy"
+        case serviceTypesDisplay = "service_types_display"
+        case detailsJSON = "details_json"
         case amenitiesTotal = "amenities_total"
         case amenitiesSource = "amenities_source"
         case amenityExamples = "amenity_examples"
@@ -117,6 +161,28 @@ struct ChargerProperties: Decodable {
         occupancyChargingEVSEs: Int,
         occupancyOutOfOrderEVSEs: Int,
         occupancyUnknownEVSEs: Int,
+        detailSourceUID: String,
+        detailSourceName: String,
+        detailLastUpdated: String,
+        datexSiteID: String,
+        datexStationIDs: String,
+        datexChargePointIDs: String,
+        priceDisplay: String,
+        priceEnergyEURKwhMin: Double?,
+        priceEnergyEURKwhMax: Double?,
+        priceCurrency: String,
+        priceQuality: String,
+        openingHoursDisplay: String,
+        openingHoursIs24_7: Bool,
+        helpdeskPhone: String,
+        paymentMethodsDisplay: String,
+        authMethodsDisplay: String,
+        connectorTypesDisplay: String,
+        currentTypesDisplay: String,
+        connectorCount: Int,
+        greenEnergy: Bool?,
+        serviceTypesDisplay: String,
+        detailsJSON: String,
         amenitiesTotal: Int,
         amenitiesSource: String,
         amenityExamples: [AmenityExample],
@@ -141,6 +207,28 @@ struct ChargerProperties: Decodable {
         self.occupancyChargingEVSEs = occupancyChargingEVSEs
         self.occupancyOutOfOrderEVSEs = occupancyOutOfOrderEVSEs
         self.occupancyUnknownEVSEs = occupancyUnknownEVSEs
+        self.detailSourceUID = detailSourceUID
+        self.detailSourceName = detailSourceName
+        self.detailLastUpdated = detailLastUpdated
+        self.datexSiteID = datexSiteID
+        self.datexStationIDs = datexStationIDs
+        self.datexChargePointIDs = datexChargePointIDs
+        self.priceDisplay = priceDisplay
+        self.priceEnergyEURKwhMin = priceEnergyEURKwhMin
+        self.priceEnergyEURKwhMax = priceEnergyEURKwhMax
+        self.priceCurrency = priceCurrency
+        self.priceQuality = priceQuality
+        self.openingHoursDisplay = openingHoursDisplay
+        self.openingHoursIs24_7 = openingHoursIs24_7
+        self.helpdeskPhone = helpdeskPhone
+        self.paymentMethodsDisplay = paymentMethodsDisplay
+        self.authMethodsDisplay = authMethodsDisplay
+        self.connectorTypesDisplay = connectorTypesDisplay
+        self.currentTypesDisplay = currentTypesDisplay
+        self.connectorCount = connectorCount
+        self.greenEnergy = greenEnergy
+        self.serviceTypesDisplay = serviceTypesDisplay
+        self.detailsJSON = detailsJSON
         self.amenitiesTotal = amenitiesTotal
         self.amenitiesSource = amenitiesSource
         self.amenityExamples = amenityExamples
@@ -169,6 +257,44 @@ struct ChargerProperties: Decodable {
         occupancyChargingEVSEs = Int(container.decodeLossyDouble(forKey: .occupancyChargingEVSEs) ?? 0)
         occupancyOutOfOrderEVSEs = Int(container.decodeLossyDouble(forKey: .occupancyOutOfOrderEVSEs) ?? 0)
         occupancyUnknownEVSEs = Int(container.decodeLossyDouble(forKey: .occupancyUnknownEVSEs) ?? 0)
+        detailSourceUID = (try? container.decode(String.self, forKey: .detailSourceUID)) ?? ""
+        detailSourceName = (try? container.decode(String.self, forKey: .detailSourceName)) ?? ""
+        detailLastUpdated = (try? container.decode(String.self, forKey: .detailLastUpdated)) ?? ""
+        datexSiteID = (try? container.decode(String.self, forKey: .datexSiteID)) ?? ""
+        datexStationIDs = (try? container.decode(String.self, forKey: .datexStationIDs)) ?? ""
+        datexChargePointIDs = (try? container.decode(String.self, forKey: .datexChargePointIDs)) ?? ""
+        priceDisplay = (try? container.decode(String.self, forKey: .priceDisplay)) ?? ""
+        priceEnergyEURKwhMin = container.decodeLossyDouble(forKey: .priceEnergyEURKwhMin)
+        priceEnergyEURKwhMax = container.decodeLossyDouble(forKey: .priceEnergyEURKwhMax)
+        priceCurrency = (try? container.decode(String.self, forKey: .priceCurrency)) ?? ""
+        priceQuality = (try? container.decode(String.self, forKey: .priceQuality)) ?? ""
+        openingHoursDisplay = (try? container.decode(String.self, forKey: .openingHoursDisplay)) ?? ""
+        openingHoursIs24_7 = (try? container.decode(Bool.self, forKey: .openingHoursIs24_7))
+            ?? ((container.decodeLossyDouble(forKey: .openingHoursIs24_7) ?? 0) > 0)
+        helpdeskPhone = (try? container.decode(String.self, forKey: .helpdeskPhone)) ?? ""
+        paymentMethodsDisplay = (try? container.decode(String.self, forKey: .paymentMethodsDisplay)) ?? ""
+        authMethodsDisplay = (try? container.decode(String.self, forKey: .authMethodsDisplay)) ?? ""
+        connectorTypesDisplay = (try? container.decode(String.self, forKey: .connectorTypesDisplay)) ?? ""
+        currentTypesDisplay = (try? container.decode(String.self, forKey: .currentTypesDisplay)) ?? ""
+        connectorCount = Int(container.decodeLossyDouble(forKey: .connectorCount) ?? 0)
+        if let boolValue = try? container.decode(Bool.self, forKey: .greenEnergy) {
+            greenEnergy = boolValue
+        } else if let stringValue = try? container.decode(String.self, forKey: .greenEnergy) {
+            let normalized = stringValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if normalized.isEmpty {
+                greenEnergy = nil
+            } else if ["true", "yes", "ja", "1"].contains(normalized) {
+                greenEnergy = true
+            } else if ["false", "no", "nein", "0"].contains(normalized) {
+                greenEnergy = false
+            } else {
+                greenEnergy = nil
+            }
+        } else {
+            greenEnergy = nil
+        }
+        serviceTypesDisplay = (try? container.decode(String.self, forKey: .serviceTypesDisplay)) ?? ""
+        detailsJSON = (try? container.decode(String.self, forKey: .detailsJSON)) ?? ""
         amenitiesTotal = Int(container.decodeLossyDouble(forKey: .amenitiesTotal) ?? 0)
         amenitiesSource = (try? container.decode(String.self, forKey: .amenitiesSource)) ?? ""
         amenityExamples = (try? container.decode([AmenityExample].self, forKey: .amenityExamples)) ?? []
@@ -239,13 +365,28 @@ extension ChargerProperties {
 
     var occupancySummaryLabel: String? {
         guard occupancyTotalEVSEs > 0 else { return nil }
+        let knownEVSEs = max(0, occupancyTotalEVSEs - occupancyUnknownEVSEs)
+        if knownEVSEs > 0, occupancyUnknownEVSEs > 0 {
+            var parts: [String] = []
+            if occupancyAvailableEVSEs > 0 {
+                parts.append("\(occupancyAvailableEVSEs) frei")
+            }
+            if occupancyOccupiedEVSEs > 0 {
+                parts.append("\(occupancyOccupiedEVSEs) belegt")
+            }
+            if occupancyOutOfOrderEVSEs > 0 {
+                parts.append("\(occupancyOutOfOrderEVSEs) defekt")
+            }
+            parts.append("\(occupancyUnknownEVSEs) unbekannt")
+            return parts.joined(separator: ", ")
+        }
         if occupancyAvailableEVSEs > 0 {
             return "\(occupancyAvailableEVSEs)/\(occupancyTotalEVSEs) frei"
         }
         if occupancyOccupiedEVSEs > 0 {
             return "\(occupancyOccupiedEVSEs)/\(occupancyTotalEVSEs) belegt"
         }
-        if occupancyOutOfOrderEVSEs >= occupancyTotalEVSEs {
+        if occupancyUnknownEVSEs <= 0, occupancyOutOfOrderEVSEs >= occupancyTotalEVSEs {
             return "Außer Betrieb"
         }
         return "Belegung unbekannt"
@@ -253,10 +394,64 @@ extension ChargerProperties {
 
     var occupancySourceLabel: String? {
         guard occupancyTotalEVSEs > 0 else { return nil }
+        if occupancySourceName.hasPrefix("Mobilithek") {
+            return "Live via \(occupancySourceName)"
+        }
+        if occupancySourceUID.hasPrefix("mobilithek_") {
+            if occupancySourceName.isEmpty {
+                return "Live via Mobilithek"
+            }
+            return "Live via Mobilithek (\(occupancySourceName))"
+        }
         if occupancySourceName.isEmpty {
             return "Live via MobiData BW"
         }
         return "Live via MobiData BW (\(occupancySourceName))"
+    }
+
+    var hasPrimaryDetailHighlights: Bool {
+        !priceDisplay.isEmpty || !openingHoursDisplay.isEmpty
+    }
+
+    var staticDetailRows: [DetailRow] {
+        var rows: [DetailRow] = []
+        if !paymentMethodsDisplay.isEmpty {
+            rows.append(.init(label: "Bezahlen", value: paymentMethodsDisplay))
+        }
+        if !authMethodsDisplay.isEmpty {
+            rows.append(.init(label: "Zugang", value: authMethodsDisplay))
+        }
+        if !connectorTypesDisplay.isEmpty {
+            rows.append(.init(label: "Stecker", value: connectorTypesDisplay))
+        }
+        if !currentTypesDisplay.isEmpty {
+            rows.append(.init(label: "Stromart", value: currentTypesDisplay))
+        }
+        if connectorCount > 0 {
+            rows.append(.init(label: "Anschlüsse", value: "\(connectorCount) Steckplätze"))
+        }
+        if !serviceTypesDisplay.isEmpty {
+            rows.append(.init(label: "Service", value: serviceTypesDisplay))
+        }
+        if let greenEnergy {
+            rows.append(.init(label: "Strom", value: greenEnergy ? "100 % erneuerbar" : "Nicht als erneuerbar markiert"))
+        }
+        return rows
+    }
+
+    var detailSourceLabel: String? {
+        let sourceName = detailSourceName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let timestamp = formattedDetailTimestamp(detailLastUpdated)
+        if sourceName.isEmpty && timestamp == nil {
+            return nil
+        }
+        if let timestamp {
+            if sourceName.isEmpty {
+                return "Stand \(timestamp)"
+            }
+            return "Details via \(sourceName) • Stand \(timestamp)"
+        }
+        return "Details via \(sourceName)"
     }
 }
 
@@ -265,10 +460,33 @@ private func sanitizedDisplayPower(_ value: Double) -> Double {
     return min(value, maxReasonableDisplayPowerKW)
 }
 
+private func formattedDetailTimestamp(_ value: String) -> String? {
+    guard !value.isEmpty else { return nil }
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let fallbackFormatter = ISO8601DateFormatter()
+    fallbackFormatter.formatOptions = [.withInternetDateTime]
+
+    let date = formatter.date(from: value) ?? fallbackFormatter.date(from: value)
+    guard let date else { return value }
+
+    let output = DateFormatter()
+    output.locale = Locale(identifier: "de_DE")
+    output.dateStyle = .short
+    output.timeStyle = .short
+    return output.string(from: date)
+}
+
 struct AmenityCount: Identifiable {
     var id: String { key }
     let key: String
     let count: Int
+}
+
+struct DetailRow: Identifiable {
+    var id: String { label }
+    let label: String
+    let value: String
 }
 
 struct AnyCodingKey: CodingKey {

@@ -26,7 +26,9 @@ struct StationDetailView: View {
                 mapSection
                 VStack(alignment: .leading, spacing: 14) {
                     headerSection
+                    detailHighlightSection
                     amenitySection
+                    staticDetailsSection
                 }
                 .padding(.horizontal)
                 .padding(.top, 12)
@@ -118,6 +120,28 @@ struct StationDetailView: View {
                     .buttonStyle(.borderedProminent)
                 Button("Apple Navi") { openNavigationLink(google: false) }
                     .buttonStyle(.bordered)
+                if !feature.properties.helpdeskPhone.isEmpty {
+                    Button {
+                        openHelpdeskPhone()
+                    } label: {
+                        Image(systemName: "phone.fill")
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var detailHighlightSection: some View {
+        if feature.properties.hasPrimaryDetailHighlights {
+            HStack(spacing: 8) {
+                if !feature.properties.priceDisplay.isEmpty {
+                    detailChip(text: feature.properties.priceDisplay, systemImage: "eurosign")
+                }
+                if !feature.properties.openingHoursDisplay.isEmpty {
+                    detailChip(text: feature.properties.openingHoursDisplay, systemImage: "clock")
+                }
             }
         }
     }
@@ -133,6 +157,39 @@ struct StationDetailView: View {
             } else {
                 ForEach(feature.properties.amenityExamples) { item in
                     amenityRow(for: item)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var staticDetailsSection: some View {
+        let rows = feature.properties.staticDetailRows
+        let source = feature.properties.detailSourceLabel
+        if !rows.isEmpty || source != nil {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Details")
+                    .font(.headline)
+
+                ForEach(rows) { row in
+                    HStack(alignment: .top, spacing: 10) {
+                        Text(row.label)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 88, alignment: .leading)
+                        Text(row.value)
+                            .font(.subheadline)
+                        Spacer()
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+                }
+
+                if let source {
+                    Text(source)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -219,6 +276,21 @@ struct StationDetailView: View {
             : "http://maps.apple.com/?daddr=\(lat),\(lon)"
         guard let url = URL(string: urlString) else { return }
         openURL(url)
+    }
+
+    private func openHelpdeskPhone() {
+        let digits = feature.properties.helpdeskPhone.filter { "+0123456789".contains($0) }
+        guard let url = URL(string: "tel:\(digits)") else { return }
+        openURL(url)
+    }
+
+    private func detailChip(text: String, systemImage: String) -> some View {
+        Label(text, systemImage: systemImage)
+            .font(.footnote.weight(.semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(Color.teal.opacity(0.12), in: Capsule())
+            .foregroundStyle(Color.teal)
     }
 }
 

@@ -13,11 +13,13 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gzip
 import hashlib
 import html
 import importlib.util
 import json
 import math
+import os
 import re
 import sys
 import time
@@ -25,12 +27,14 @@ import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
 import pandas as pd
 import requests
+import urllib3
 
 BNETZA_START_URL = (
     "https://www.bundesnetzagentur.de/DE/Fachthemen/ElektrizitaetundGas/"
@@ -49,6 +53,23 @@ OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 OSM_GERMANY_PBF_URL = "https://download.geofabrik.de/europe/germany-latest.osm.pbf"
 MOBIDATA_SOURCES_URL = "https://api.mobidata-bw.de/ocpdb/api/public/v1/sources"
 MOBIDATA_OCPI_LOCATIONS_URL = "https://api.mobidata-bw.de/ocpdb/api/ocpi/3.0/locations"
+MOBILITHEK_TOKEN_URL = "https://mobilithek.info/auth/realms/MDP/protocol/openid-connect/token"
+MOBILITHEK_PUBLICATION_FILE_URL = (
+    "https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/{publication_id}/file"
+)
+MOBILITHEK_PUBLICATION_PUBLIC_FILE_URL = (
+    "https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/{publication_id}/file/noauth"
+)
+MOBILITHEK_PUBLICATION_FILE_ACCESS_URL = (
+    "https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/{publication_id}/file/access"
+)
+MOBILITHEK_METADATA_SEARCH_URL = "https://mobilithek.info/mdp-api/mdp-msa-metadata/v2/offers/search"
+MOBILITHEK_METADATA_OFFER_URL = "https://mobilithek.info/mdp-api/mdp-msa-metadata/v2/offers/{publication_id}"
+MOBILITHEK_USERNAME_ENV = "MOBILITHEK_USERNAME"
+MOBILITHEK_PASSWORD_ENV = "MOBILITHEK_PASSWORD"
+MOBILITHEK_AFIR_SEARCH_TERM = "AFIR"
+CHARGING_DATA_CATEGORY = "https://w3id.org/mdp/schema/data_categories#FILLING_AND_CHARGING_STATIONS"
+DATEX_V3_DATA_MODEL = "https://w3id.org/mdp/schema/data_model#DATEX_2_V3"
 
 DATA_DIR = Path("data")
 README_PATH = Path("README.md")
@@ -75,9 +96,145 @@ MOBIDATA_PAGE_LIMIT = 500
 MOBIDATA_TIMEOUT_SECONDS = 60
 MOBIDATA_IGNORED_SOURCE_UIDS = {"opendata_swiss"}
 OCCUPANCY_AVAILABLE_STATUSES = {"AVAILABLE"}
-OCCUPANCY_OCCUPIED_STATUSES = {"CHARGING", "BLOCKED", "RESERVED"}
-OCCUPANCY_OUT_OF_ORDER_STATUSES = {"OUTOFORDER", "INOPERATIVE"}
+OCCUPANCY_OCCUPIED_STATUSES = {"OCCUPIED", "CHARGING", "BLOCKED", "RESERVED", "INUSE"}
+OCCUPANCY_OUT_OF_ORDER_STATUSES = {
+    "OUTOFORDER",
+    "OUTOFSERVICE",
+    "INOPERATIVE",
+    "FAULTED",
+    "CLOSED",
+    "OFFLINE",
+}
 OCCUPANCY_UNKNOWN_STATUSES = {"UNKNOWN", "STATIC", "PLANNED", "REMOVED"}
+DATEX_MAX_MATCH_DISTANCE_M = 200.0
+DATEX_TLS_VERIFY = False
+DATEX_REQUEST_TIMEOUT_SECONDS = 60
+MOBILITHEK_SEARCH_PAGE_SIZE = 200
+DETAIL_MATCH_MAX_DISTANCE_M = 200.0
+STATIC_DETAIL_FIELDS = (
+    "detail_source_uid",
+    "detail_source_name",
+    "detail_last_updated",
+    "datex_site_id",
+    "datex_station_ids",
+    "datex_charge_point_ids",
+    "price_display",
+    "price_energy_eur_kwh_min",
+    "price_energy_eur_kwh_max",
+    "price_currency",
+    "price_quality",
+    "opening_hours_display",
+    "opening_hours_is_24_7",
+    "helpdesk_phone",
+    "payment_methods_display",
+    "auth_methods_display",
+    "connector_types_display",
+    "current_types_display",
+    "connector_count",
+    "green_energy",
+    "service_types_display",
+    "details_json",
+)
+GENERIC_OPERATOR_WORDS = {
+    "afir",
+    "recharging",
+    "charging",
+    "infrastructure",
+    "realtime",
+    "dynamic",
+    "static",
+    "dynamisch",
+    "statisch",
+    "dyn",
+    "stat",
+    "json",
+    "data",
+    "station",
+    "stations",
+    "point",
+    "points",
+    "deutschland",
+    "gmbh",
+    "mbh",
+    "ag",
+    "kg",
+    "co",
+    "inc",
+    "ltd",
+    "aps",
+    "mobility",
+    "plus",
+    "group",
+    "und",
+    "public",
+    "gesellschaft",
+}
+CONNECTOR_TYPE_LABELS = {
+    "iec62196t2combo": "CCS",
+    "combo2ccsdc": "CCS",
+    "iec62196t1combo": "CCS Typ 1",
+    "iec62196t2": "Typ 2",
+    "type2ac": "Typ 2",
+    "type2": "Typ 2",
+    "chademo": "CHAdeMO",
+    "domesticf": "Schuko",
+    "other": "Sonstiger Stecker",
+}
+CURRENT_TYPE_LABELS = {
+    "ac": "AC",
+    "dc": "DC",
+}
+AUTH_METHOD_LABELS = {
+    "creditcard": "Kreditkarte",
+    "debitcard": "Debitkarte",
+    "apps": "App",
+    "rfid": "RFID",
+    "activerfidchip": "RFID",
+    "mifareclassic": "RFID",
+    "mifaredesfire": "RFID",
+    "nfc": "NFC",
+    "website": "Web",
+    "overtheair": "Automatische Freischaltung",
+    "plugncharge": "Plug & Charge",
+    "paymentcardreader": "Kartenterminal",
+    "paymentcardcontactless": "Kontaktlos",
+}
+PAYMENT_METHOD_LABELS = {
+    "creditcard": "Kreditkarte",
+    "debitcard": "Debitkarte",
+    "nfc": "NFC",
+    "website": "Web",
+    "paymentcardreader": "Kartenterminal",
+    "paymentcardcontactless": "Kontaktlos",
+    "otheradhocpaymentoption": "Ad-hoc-Zahlung",
+    "contractbasedpaymentoption": "Vertragsbasiert",
+}
+SERVICE_TYPE_LABELS = {
+    "unattended": "Selbstbedient",
+    "physicalattendance": "Mit Personal",
+}
+BOOLEAN_YES_VALUES = {"1", "true", "yes", "ja", "y"}
+MOBILITHEK_DATEX_PUBLICATIONS: tuple[dict[str, Any], ...] = (
+    {
+        "uid": "mobilithek_tesla_datex",
+        "name": "Tesla DATEX II",
+        "operator_patterns": ("tesla",),
+        "static_publication_id": "953828817873125376",
+        "dynamic_publication_id": "953843379766972416",
+        "requires_auth": False,
+    },
+    {
+        "uid": "mobilithek_enbw_datex",
+        "name": "EnBW DATEX II",
+        "operator_patterns": ("enbw",),
+        "static_publication_id": "907574882292453376",
+        "dynamic_publication_id": "907575401287241728",
+        "requires_auth": True,
+    },
+)
+
+if not DATEX_TLS_VERIFY:
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 AMENITY_BACKEND_OVERPASS = "overpass"
 AMENITY_BACKEND_OSM_PBF = "osm-pbf"
@@ -111,6 +268,44 @@ class AmenityPoint:
     opening_hours: str
 
 
+@dataclass(frozen=True)
+class DatexStaticSite:
+    site_id: str
+    station_ids: tuple[str, ...]
+    lat: float
+    lon: float
+    postcode: str
+    city: str
+    address: str
+    operator_name: str
+    total_evses: int
+    evse_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class AfirStaticPublication:
+    uid: str
+    publication_id: str
+    title: str
+    publisher: str
+    access_mode: str
+    data_model: str
+
+
+@dataclass(frozen=True)
+class ElisoStaticSite:
+    site_id: str
+    station_ids: tuple[str, ...]
+    lat: float
+    lon: float
+    postcode: str
+    city: str
+    address: str
+    operator_name: str
+    total_evses: int
+    evse_ids: tuple[str, ...]
+
+
 AMENITY_RULES: tuple[AmenityRule, ...] = (
     AmenityRule("restaurant", (("amenity", "restaurant"),)),
     AmenityRule("cafe", (("amenity", "cafe"),)),
@@ -132,7 +327,7 @@ AMENITY_EXAMPLES_PER_STATION = 12
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build woladen.de data artifacts")
     parser.add_argument("--min-power-kw", type=float, default=50.0)
-    parser.add_argument("--radius-m", type=int, default=100)
+    parser.add_argument("--radius-m", type=int, default=250)
     parser.add_argument(
         "--amenity-backend",
         type=str,
@@ -177,7 +372,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--download-osm-pbf",
         action="store_true",
-        help="Download osm-pbf file if missing and osm-pbf backend is selected",
+        help="Download or refresh the Germany osm-pbf file when osm-pbf backend is selected",
     )
     parser.add_argument(
         "--pbf-progress-every",
@@ -314,7 +509,10 @@ def parse_iso_datetime(value: str | None) -> datetime | None:
         normalized = value
         if normalized.endswith("Z"):
             normalized = normalized[:-1] + "+00:00"
-        return datetime.fromisoformat(normalized)
+        parsed = datetime.fromisoformat(normalized)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed
     except ValueError:
         return None
 
@@ -329,6 +527,452 @@ def choose_latest_timestamp(values: list[str]) -> str:
         parsed.sort(key=lambda item: item[0])
         return parsed[-1][1]
     return values[-1] if values else ""
+
+
+def get_env_text(name: str) -> str:
+    return str(os.environ.get(name, "")).strip()
+
+
+def decode_json_bytes(content: bytes) -> dict[str, Any]:
+    raw = content
+    if raw[:2] == b"\x1f\x8b":
+        raw = gzip.decompress(raw)
+    return json.loads(raw.decode("utf-8"))
+
+
+def extract_first_lang_value(payload: Any) -> str:
+    if isinstance(payload, dict):
+        values = payload.get("values")
+        if isinstance(values, list):
+            for item in values:
+                if not isinstance(item, dict):
+                    continue
+                value = str(item.get("value", "")).strip()
+                if value:
+                    return value
+    if isinstance(payload, list):
+        for item in payload:
+            value = extract_first_lang_value(item)
+            if value:
+                return value
+    return str(payload or "").strip() if isinstance(payload, str) else ""
+
+
+def extract_datex_site_coordinates(site: dict[str, Any]) -> tuple[float | None, float | None]:
+    candidate_locations = [site.get("locationReference") or {}]
+    for station in site.get("energyInfrastructureStation") or []:
+        if isinstance(station, dict):
+            candidate_locations.append(station.get("locationReference") or {})
+
+    for location_reference in candidate_locations:
+        point = location_reference.get("locPointLocation") or {}
+        area = location_reference.get("locAreaLocation") or {}
+
+        for candidate in (
+            point.get("coordinatesForDisplay"),
+            ((point.get("pointByCoordinates") or {}).get("pointCoordinates") or {}),
+            area.get("coordinatesForDisplay"),
+        ):
+            if not isinstance(candidate, dict):
+                continue
+            lat = candidate.get("latitude")
+            lon = candidate.get("longitude")
+            if lat is None or lon is None:
+                continue
+            try:
+                return float(lat), float(lon)
+            except (TypeError, ValueError):
+                continue
+
+    return None, None
+
+
+def extract_datex_site_address(site: dict[str, Any]) -> tuple[str, str, str]:
+    candidate_locations = [site.get("locationReference") or {}]
+    for station in site.get("energyInfrastructureStation") or []:
+        if isinstance(station, dict):
+            candidate_locations.append(station.get("locationReference") or {})
+
+    for location_reference in candidate_locations:
+        point = location_reference.get("locPointLocation") or {}
+        extension = point.get("locLocationExtensionG") or {}
+        facility = extension.get("facilityLocation") or extension.get("FacilityLocation") or {}
+        address = facility.get("address") or {}
+        if not isinstance(address, dict):
+            continue
+
+        postcode = str(address.get("postcode") or "").strip()
+        city = extract_first_lang_value(address.get("city"))
+
+        address_line_parts: list[str] = []
+        for line in address.get("addressLine") or []:
+            text = extract_first_lang_value((line or {}).get("text"))
+            if text:
+                address_line_parts.append(text)
+        full_address = " ".join(address_line_parts).strip()
+        if postcode or city or full_address:
+            return postcode, city, full_address
+
+    return "", "", ""
+
+
+def extract_datex_operator_name(site: dict[str, Any]) -> str:
+    candidate_nodes: list[dict[str, Any]] = [site]
+    for station in site.get("energyInfrastructureStation") or []:
+        if isinstance(station, dict):
+            candidate_nodes.append(station)
+
+    for candidate in candidate_nodes:
+        for key in ("operator", "owner"):
+            node = candidate.get(key) or {}
+            organisation = node.get("afacAnOrganisation") or {}
+            name = extract_first_lang_value(organisation.get("name"))
+            if not name:
+                name = extract_first_lang_value(organisation.get("legalName"))
+            if name:
+                return name
+    return ""
+
+
+def fetch_mobilithek_access_token(session: requests.Session) -> str | None:
+    username = get_env_text(MOBILITHEK_USERNAME_ENV)
+    password = get_env_text(MOBILITHEK_PASSWORD_ENV)
+    if not username or not password:
+        return None
+
+    response = request_with_retries(
+        "POST",
+        MOBILITHEK_TOKEN_URL,
+        session,
+        timeout=DATEX_REQUEST_TIMEOUT_SECONDS,
+        verify=DATEX_TLS_VERIFY,
+        data={
+            "grant_type": "password",
+            "client_id": "Platform",
+            "username": username,
+            "password": password,
+        },
+    )
+    payload = response.json()
+    token = str(payload.get("access_token") or "").strip()
+    return token or None
+
+
+def fetch_mobilithek_publication_payload(
+    session: requests.Session,
+    *,
+    publication_id: str,
+    requires_auth: bool,
+    access_token: str | None,
+) -> dict[str, Any]:
+    endpoint_template = (
+        MOBILITHEK_PUBLICATION_FILE_URL if requires_auth else MOBILITHEK_PUBLICATION_PUBLIC_FILE_URL
+    )
+    url = endpoint_template.format(publication_id=publication_id)
+    headers: dict[str, str] = {}
+    if requires_auth:
+        if not access_token:
+            raise RuntimeError("missing_mobilithek_access_token")
+        headers["Authorization"] = f"Bearer {access_token}"
+    headers["Accept"] = "application/octet-stream"
+
+    response = request_with_retries(
+        "GET",
+        url,
+        session,
+        timeout=DATEX_REQUEST_TIMEOUT_SECONDS,
+        verify=DATEX_TLS_VERIFY,
+        headers=headers,
+    )
+    return decode_json_bytes(response.content)
+
+
+def parse_datex_static_sites(payload: dict[str, Any]) -> list[DatexStaticSite]:
+    publication = (payload.get("payload") or {}).get("aegiEnergyInfrastructureTablePublication") or {}
+    sites: list[DatexStaticSite] = []
+
+    for table in publication.get("energyInfrastructureTable") or []:
+        for site in table.get("energyInfrastructureSite") or []:
+            site_id = str(site.get("idG") or "").strip()
+            if not site_id:
+                continue
+
+            lat, lon = extract_datex_site_coordinates(site)
+            if lat is None or lon is None:
+                continue
+
+            postcode, city, address = extract_datex_site_address(site)
+            operator_name = extract_datex_operator_name(site)
+            evse_ids: list[str] = []
+            station_ids: list[str] = []
+            total_evses = 0
+
+            for station in site.get("energyInfrastructureStation") or []:
+                station_id = str(station.get("idG") or "").strip()
+                if station_id:
+                    station_ids.append(station_id)
+
+                refill_points = station.get("refillPoint") or []
+                station_count = int(station.get("numberOfRefillPoints") or 0)
+                if station_count <= 0:
+                    station_count = len(refill_points)
+                total_evses += max(0, station_count)
+
+                for refill_point in refill_points:
+                    charging_point = refill_point.get("aegiElectricChargingPoint") or {}
+                    evse_id = normalize_evse_id(charging_point.get("idG"))
+                    if evse_id:
+                        evse_ids.append(evse_id)
+
+            unique_station_ids = tuple(dict.fromkeys(item for item in station_ids if item))
+            unique_evse_ids = tuple(dict.fromkeys(item for item in evse_ids if item))
+            if total_evses <= 0:
+                total_evses = len(unique_evse_ids)
+
+            sites.append(
+                DatexStaticSite(
+                    site_id=site_id,
+                    station_ids=unique_station_ids,
+                    lat=lat,
+                    lon=lon,
+                    postcode=postcode,
+                    city=city,
+                    address=address,
+                    operator_name=operator_name,
+                    total_evses=max(0, total_evses),
+                    evse_ids=unique_evse_ids,
+                )
+            )
+
+    return sites
+
+
+def normalize_datex_occupancy_status(
+    status_value: Any,
+    *,
+    opening_status: Any = None,
+    operation_status: Any = None,
+    status_description: Any = None,
+) -> str:
+    candidates = [
+        normalize_occupancy_status(status_value),
+        normalize_occupancy_status(opening_status),
+        normalize_occupancy_status(operation_status),
+        normalize_occupancy_status(extract_first_lang_value(status_description)),
+    ]
+
+    available = {"AVAILABLE", "FREE", "OPEN"}
+    occupied = {"OCCUPIED", "CHARGING", "BLOCKED", "RESERVED", "INUSE"}
+    out_of_order = {
+        "OUTOFORDER",
+        "OUTOFSERVICE",
+        "INOPERATIVE",
+        "FAULTED",
+        "CLOSED",
+        "OFFLINE",
+    }
+
+    for candidate in candidates:
+        if not candidate:
+            continue
+        if candidate in available:
+            return "AVAILABLE"
+        if candidate in occupied:
+            return "OCCUPIED"
+        if candidate in out_of_order:
+            return "OUTOFORDER"
+        if "AVAILABLE" in candidate:
+            return "AVAILABLE"
+        if "OCCUP" in candidate or "CHARG" in candidate:
+            return "OCCUPIED"
+        if "OUTOF" in candidate or "FAULT" in candidate or "CLOSED" in candidate:
+            return "OUTOFORDER"
+
+    return "UNKNOWN"
+
+
+def parse_datex_dynamic_states(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    root_payload = (payload.get("messageContainer") or {}).get("payload") or []
+    site_states: dict[str, dict[str, Any]] = {}
+
+    for container in root_payload:
+        publication = container.get("aegiEnergyInfrastructureStatusPublication") or {}
+        for site_status in publication.get("energyInfrastructureSiteStatus") or []:
+            site_reference = str(((site_status.get("reference") or {}).get("idG")) or "").strip()
+            if not site_reference:
+                continue
+
+            state = site_states.setdefault(
+                site_reference,
+                {
+                    "station_refs": set(),
+                    "evses": {},
+                    "last_updated_values": [],
+                },
+            )
+
+            site_last_updated = str(site_status.get("lastUpdated") or "").strip()
+            if site_last_updated:
+                state["last_updated_values"].append(site_last_updated)
+
+            for station_status in site_status.get("energyInfrastructureStationStatus") or []:
+                station_reference = str(
+                    ((station_status.get("reference") or {}).get("idG")) or ""
+                ).strip()
+                if station_reference:
+                    state["station_refs"].add(station_reference)
+
+                station_last_updated = str(station_status.get("lastUpdated") or "").strip()
+                if station_last_updated:
+                    state["last_updated_values"].append(station_last_updated)
+
+                for refill_point_status in station_status.get("refillPointStatus") or []:
+                    charging_point_status = refill_point_status.get("aegiElectricChargingPointStatus") or {}
+                    evse_reference = normalize_evse_id(
+                        ((charging_point_status.get("reference") or {}).get("idG")) or ""
+                    )
+                    if not evse_reference:
+                        continue
+
+                    status = normalize_datex_occupancy_status(
+                        ((charging_point_status.get("status") or {}).get("value")),
+                        opening_status=((charging_point_status.get("openingStatus") or {}).get("value")),
+                        operation_status=((charging_point_status.get("operationStatus") or {}).get("value")),
+                        status_description=charging_point_status.get("statusDescription"),
+                    )
+                    last_updated = str(charging_point_status.get("lastUpdated") or "").strip()
+                    if last_updated:
+                        state["last_updated_values"].append(last_updated)
+
+                    state["evses"][evse_reference] = {
+                        "status": status,
+                        "last_updated": last_updated or station_last_updated or site_last_updated,
+                    }
+
+    return site_states
+
+
+def build_datex_match_candidates(
+    df: pd.DataFrame,
+    *,
+    operator_patterns: tuple[str, ...],
+) -> list[dict[str, Any]]:
+    candidates: list[dict[str, Any]] = []
+    normalized_patterns = tuple(pattern.lower() for pattern in operator_patterns if pattern)
+
+    for _, row in df.iterrows():
+        operator_name = str(row.get("operator", ""))
+        operator_normalized = normalize_text(operator_name)
+        if normalized_patterns and not any(pattern in operator_normalized for pattern in normalized_patterns):
+            continue
+        candidates.append(
+            {
+                "station_id": str(row["station_id"]),
+                "lat": float(row["lat"]),
+                "lon": float(row["lon"]),
+                "postcode": str(row.get("postcode", "")).strip(),
+                "city": str(row.get("city", "")).strip(),
+                "address": str(row.get("address", "")).strip(),
+                "charging_points_count": int(row.get("charging_points_count", 0) or 0),
+            }
+        )
+
+    return candidates
+
+
+def match_datex_sites_to_stations(
+    df: pd.DataFrame,
+    sites: list[DatexStaticSite],
+    *,
+    operator_patterns: tuple[str, ...],
+    max_distance_m: float = DATEX_MAX_MATCH_DISTANCE_M,
+) -> dict[str, str]:
+    station_candidates = build_datex_match_candidates(df, operator_patterns=operator_patterns)
+    scored_pairs: list[tuple[float, float, str, str]] = []
+
+    for site in sites:
+        for candidate in station_candidates:
+            distance_m = haversine_distance_m(site.lat, site.lon, candidate["lat"], candidate["lon"])
+            if distance_m > max_distance_m:
+                continue
+
+            score = distance_m
+            if site.postcode and site.postcode == candidate["postcode"]:
+                score -= 50.0
+            if site.city and normalize_text(site.city) == normalize_text(candidate["city"]):
+                score -= 15.0
+            if site.address and candidate["address"]:
+                site_address_norm = normalize_text(site.address)
+                candidate_address_norm = normalize_text(candidate["address"])
+                if site_address_norm and candidate_address_norm and (
+                    site_address_norm in candidate_address_norm
+                    or candidate_address_norm in site_address_norm
+                ):
+                    score -= 10.0
+            if site.total_evses > 0 and candidate["charging_points_count"] > 0:
+                score += abs(site.total_evses - candidate["charging_points_count"]) * 3.0
+
+            scored_pairs.append((score, distance_m, site.site_id, candidate["station_id"]))
+
+    scored_pairs.sort(key=lambda item: (item[0], item[1], item[2], item[3]))
+    matches: dict[str, str] = {}
+    used_station_ids: set[str] = set()
+
+    for _, _, site_id, station_id in scored_pairs:
+        if site_id in matches or station_id in used_station_ids:
+            continue
+        matches[site_id] = station_id
+        used_station_ids.add(station_id)
+
+    return matches
+
+
+def known_occupancy_evses(summary: dict[str, Any]) -> int:
+    total = int(summary.get("occupancy_total_evses", 0) or 0)
+    unknown = int(summary.get("occupancy_unknown_evses", 0) or 0)
+    return max(0, total - unknown)
+
+
+def should_replace_occupancy(existing: dict[str, Any], candidate: dict[str, Any]) -> bool:
+    existing_total = int(existing.get("occupancy_total_evses", 0) or 0)
+    candidate_total = int(candidate.get("occupancy_total_evses", 0) or 0)
+    if candidate_total <= 0:
+        return False
+    if existing_total <= 0:
+        return True
+
+    existing_known = known_occupancy_evses(existing)
+    candidate_known = known_occupancy_evses(candidate)
+    if candidate_known != existing_known:
+        return candidate_known > existing_known
+    if candidate_total != existing_total:
+        return candidate_total > existing_total
+    return False
+
+
+def combine_occupancy_stats(*stats_objects: dict[str, Any]) -> dict[str, Any]:
+    combined: dict[str, Any] = {
+        "sources_discovered": 0,
+        "sources_used": 0,
+        "locations_scanned": 0,
+        "matched_locations": 0,
+        "matched_stations": 0,
+        "matched_evses": 0,
+        "errors": [],
+        "sources": [],
+    }
+
+    for stats in stats_objects:
+        combined["sources_discovered"] += int(stats.get("sources_discovered", 0) or 0)
+        combined["sources_used"] += int(stats.get("sources_used", 0) or 0)
+        combined["locations_scanned"] += int(stats.get("locations_scanned", 0) or 0)
+        combined["matched_locations"] += int(stats.get("matched_locations", 0) or 0)
+        combined["matched_stations"] += int(stats.get("matched_stations", 0) or 0)
+        combined["matched_evses"] += int(stats.get("matched_evses", 0) or 0)
+        combined["errors"].extend(stats.get("errors", []))
+        combined["sources"].extend(stats.get("sources", []))
+
+    return combined
 
 
 def merge_unique_text_lists(series: pd.Series) -> list[str]:
@@ -352,6 +996,104 @@ def merge_unique_text_lists(series: pd.Series) -> list[str]:
             merged.append(text)
 
     return merged
+
+
+def join_unique_display_values(values: list[str], *, separator: str = " | ") -> str:
+    merged = merge_unique_text_lists(pd.Series(values, dtype="object"))
+    return separator.join(merged)
+
+
+def split_structured_text(value: Any) -> list[str]:
+    text = normalize_optional_text(value)
+    if not text:
+        return []
+    parts = [part.strip() for part in re.split(r"[;|,]", text) if part.strip()]
+    return list(dict.fromkeys(parts))
+
+
+def normalize_bnetza_opening_hours(
+    opening_hours: Any,
+    opening_days: Any,
+    opening_times: Any,
+) -> str:
+    opening_text = normalize_optional_text(opening_hours)
+    normalized_opening = normalize_text(opening_text)
+    if normalized_opening in {"247", "24h", "24std", "24stunden", "24hours", "24x7"}:
+        return "24/7"
+    if opening_text and normalized_opening not in {"keineangabe", "nan", "nichtbekannt"}:
+        return opening_text
+
+    days_text = normalize_optional_text(opening_days)
+    times_text = normalize_optional_text(opening_times)
+    if days_text and times_text:
+        return f"{days_text}: {times_text}"
+    if times_text:
+        return times_text
+    if days_text:
+        return days_text
+    return ""
+
+
+def slugify(value: str) -> str:
+    folded = unicodedata.normalize("NFKD", value)
+    ascii_only = "".join(ch for ch in folded if not unicodedata.combining(ch))
+    return re.sub(r"[^a-z0-9]+", "_", ascii_only.lower()).strip("_")
+
+
+def stem_words(value: str) -> list[str]:
+    words = re.findall(r"[A-Za-z0-9]+", value)
+    return [word.lower() for word in words if word]
+
+
+def operator_tokens(*values: str) -> set[str]:
+    tokens: set[str] = set()
+    for value in values:
+        for word in stem_words(value):
+            if len(word) < 4 or word in GENERIC_OPERATOR_WORDS:
+                continue
+            tokens.add(word)
+            compact = normalize_text(word)
+            if compact:
+                tokens.add(compact)
+        compact_value = normalize_text(value)
+        if compact_value and len(compact_value) >= 4 and compact_value not in GENERIC_OPERATOR_WORDS:
+            tokens.add(compact_value)
+    return tokens
+
+
+def address_similarity(site_address: str, candidate_address: str) -> bool:
+    left = normalize_text(site_address)
+    right = normalize_text(candidate_address)
+    if not left or not right:
+        return False
+    return left in right or right in left
+
+
+def operator_similarity(*, site_operator: str, publisher: str, candidate_operator: str) -> float:
+    if not candidate_operator:
+        return 0.0
+
+    candidate_norm = normalize_text(candidate_operator)
+    if not candidate_norm:
+        return 0.0
+
+    for source in (site_operator, publisher):
+        source_norm = normalize_text(source)
+        if not source_norm:
+            continue
+        if source_norm in candidate_norm or candidate_norm in source_norm:
+            return 1.0
+
+    source_tokens = operator_tokens(site_operator, publisher)
+    candidate_tokens = operator_tokens(candidate_operator)
+    if not source_tokens or not candidate_tokens:
+        return 0.0
+
+    overlap = source_tokens & candidate_tokens
+    if not overlap:
+        return 0.0
+
+    return len(overlap) / max(1, min(len(source_tokens), len(candidate_tokens)))
 
 
 def normalize_occupancy_status(value: Any) -> str:
@@ -619,6 +1361,7 @@ def build_fast_charger_frame(raw_df: pd.DataFrame, min_power_kw: float) -> pd.Da
     connector_power_cols = [
         col for col in df.columns if normalize_text(col).startswith("nennleistungstecker")
     ]
+    connector_type_cols = [col for col in df.columns if normalize_text(col).startswith("steckertypen")]
     evse_id_cols = [col for col in df.columns if normalize_text(col).startswith("evseid")]
     if connector_power_cols:
         connector_power_frame = pd.DataFrame(
@@ -657,6 +1400,19 @@ def build_fast_charger_frame(raw_df: pd.DataFrame, min_power_kw: float) -> pd.Da
     else:
         df["evse_ids_row"] = [[] for _ in range(len(df))]
 
+    if connector_type_cols:
+        df["connector_types_row"] = df[connector_type_cols].apply(
+            lambda row: merge_unique_text_lists(
+                pd.Series(
+                    [item for value in row for item in split_structured_text(value)],
+                    dtype="object",
+                )
+            ),
+            axis=1,
+        )
+    else:
+        df["connector_types_row"] = [[] for _ in range(len(df))]
+
     df["lat"] = to_float(df[lat_col])
     df["lon"] = to_float(df[lon_col])
 
@@ -681,6 +1437,15 @@ def build_fast_charger_frame(raw_df: pd.DataFrame, min_power_kw: float) -> pd.Da
         col = find_column(df, [hint], contains=True)
         if col and col not in address_parts:
             address_parts.append(col)
+
+    display_name_col = find_column(df, ["anzeigename", "kartenname"], contains=True)
+    location_name_col = find_column(df, ["standortbezeichnung"], contains=True)
+    parking_info_col = find_column(df, ["parkraum"], contains=True)
+    payment_systems_col = find_column(df, ["bezahlsysteme"], contains=True)
+    opening_hours_col = find_column(df, ["oeffnungszeiten"], contains=False)
+    opening_days_col = find_column(df, ["oeffnungszeitenwochentage"], contains=True)
+    opening_times_col = find_column(df, ["oeffnungszeitentageszeiten"], contains=True)
+    commissioned_col = find_column(df, ["inbetriebnahmedatum"], contains=True)
 
     if operator_col:
         df["operator"] = df[operator_col].fillna("").str.strip()
@@ -718,6 +1483,55 @@ def build_fast_charger_frame(raw_df: pd.DataFrame, min_power_kw: float) -> pd.Da
     else:
         df["status"] = ""
 
+    df["bnetza_display_name"] = (
+        df[display_name_col].fillna("").astype(str).str.strip()
+        if display_name_col
+        else ""
+    )
+    df["bnetza_location_name"] = (
+        df[location_name_col].fillna("").astype(str).str.strip()
+        if location_name_col
+        else ""
+    )
+    df["bnetza_parking_info"] = (
+        df[parking_info_col].fillna("").astype(str).str.strip()
+        if parking_info_col
+        else ""
+    )
+    df["bnetza_payment_systems"] = (
+        df[payment_systems_col].fillna("").astype(str).str.strip()
+        if payment_systems_col
+        else ""
+    )
+    df["bnetza_opening_hours_raw"] = (
+        df[opening_hours_col].fillna("").astype(str).str.strip()
+        if opening_hours_col
+        else ""
+    )
+    df["bnetza_opening_days"] = (
+        df[opening_days_col].fillna("").astype(str).str.strip()
+        if opening_days_col
+        else ""
+    )
+    df["bnetza_opening_times"] = (
+        df[opening_times_col].fillna("").astype(str).str.strip()
+        if opening_times_col
+        else ""
+    )
+    df["bnetza_opening_hours"] = df.apply(
+        lambda row: normalize_bnetza_opening_hours(
+            row.get("bnetza_opening_hours_raw", ""),
+            row.get("bnetza_opening_days", ""),
+            row.get("bnetza_opening_times", ""),
+        ),
+        axis=1,
+    )
+    df["bnetza_commissioned_at"] = (
+        df[commissioned_col].fillna("").astype(str).str.strip()
+        if commissioned_col
+        else ""
+    )
+
     def first_nonempty(series: pd.Series) -> str:
         for value in series:
             text = str(value).strip()
@@ -736,6 +1550,15 @@ def build_fast_charger_frame(raw_df: pd.DataFrame, min_power_kw: float) -> pd.Da
             city=("city", first_nonempty),
             address=("address", first_nonempty),
             evse_ids=("evse_ids_row", merge_unique_text_lists),
+            connector_types=("connector_types_row", merge_unique_text_lists),
+            bnetza_display_name=("bnetza_display_name", first_nonempty),
+            bnetza_location_name=("bnetza_location_name", first_nonempty),
+            bnetza_parking_info=("bnetza_parking_info", first_nonempty),
+            bnetza_payment_systems=("bnetza_payment_systems", first_nonempty),
+            bnetza_opening_hours=("bnetza_opening_hours", first_nonempty),
+            bnetza_opening_days=("bnetza_opening_days", first_nonempty),
+            bnetza_opening_times=("bnetza_opening_times", first_nonempty),
+            bnetza_commissioned_at=("bnetza_commissioned_at", first_nonempty),
         )
         .reset_index(drop=True)
     )
@@ -786,6 +1609,15 @@ def build_fast_charger_frame(raw_df: pd.DataFrame, min_power_kw: float) -> pd.Da
         "postcode",
         "city",
         "address",
+        "connector_types",
+        "bnetza_display_name",
+        "bnetza_location_name",
+        "bnetza_parking_info",
+        "bnetza_payment_systems",
+        "bnetza_opening_hours",
+        "bnetza_opening_days",
+        "bnetza_opening_times",
+        "bnetza_commissioned_at",
         "evse_ids",
     ]
 
@@ -876,7 +1708,11 @@ def merge_location_occupancy(
     return matched_station_ids, matched_evse_ids
 
 
-def summarize_station_occupancy(station_state: dict[str, Any]) -> dict[str, Any]:
+def summarize_station_occupancy(
+    station_state: dict[str, Any],
+    *,
+    total_evses: int | None = None,
+) -> dict[str, Any]:
     status_counts: defaultdict[str, int] = defaultdict(int)
     timestamps: list[str] = []
 
@@ -887,12 +1723,14 @@ def summarize_station_occupancy(station_state: dict[str, Any]) -> dict[str, Any]
         if last_updated:
             timestamps.append(last_updated)
 
-    total = int(sum(status_counts.values()))
+    derived_total = int(sum(status_counts.values()))
     available = int(sum(status_counts[status] for status in OCCUPANCY_AVAILABLE_STATUSES))
     occupied = int(sum(status_counts[status] for status in OCCUPANCY_OCCUPIED_STATUSES))
     charging = int(status_counts["CHARGING"])
     out_of_order = int(sum(status_counts[status] for status in OCCUPANCY_OUT_OF_ORDER_STATUSES))
-    unknown = int(max(0, total - available - occupied - out_of_order))
+    reported_unknown = int(sum(status_counts[status] for status in OCCUPANCY_UNKNOWN_STATUSES))
+    total = int(max(derived_total, total_evses or 0))
+    unknown = int(max(reported_unknown, total - available - occupied - out_of_order))
 
     summary_status = ""
     if total > 0:
@@ -900,7 +1738,7 @@ def summarize_station_occupancy(station_state: dict[str, Any]) -> dict[str, Any]
             summary_status = "AVAILABLE"
         elif occupied > 0:
             summary_status = "OCCUPIED"
-        elif out_of_order > 0 and out_of_order == total:
+        elif out_of_order > 0 and unknown == 0 and out_of_order == total:
             summary_status = "OUT_OF_ORDER"
         else:
             summary_status = "UNKNOWN"
@@ -1072,6 +1910,156 @@ def enrich_with_live_occupancy(
     return enriched, stats
 
 
+def extract_occupancy_summary_from_row(row: pd.Series) -> dict[str, Any]:
+    return {
+        "occupancy_source_uid": row.get("occupancy_source_uid", ""),
+        "occupancy_source_name": row.get("occupancy_source_name", ""),
+        "occupancy_status": row.get("occupancy_status", ""),
+        "occupancy_last_updated": row.get("occupancy_last_updated", ""),
+        "occupancy_total_evses": int(row.get("occupancy_total_evses", 0) or 0),
+        "occupancy_available_evses": int(row.get("occupancy_available_evses", 0) or 0),
+        "occupancy_occupied_evses": int(row.get("occupancy_occupied_evses", 0) or 0),
+        "occupancy_charging_evses": int(row.get("occupancy_charging_evses", 0) or 0),
+        "occupancy_out_of_order_evses": int(row.get("occupancy_out_of_order_evses", 0) or 0),
+        "occupancy_unknown_evses": int(row.get("occupancy_unknown_evses", 0) or 0),
+    }
+
+
+def enrich_with_mobilithek_datex(
+    df: pd.DataFrame,
+    *,
+    session: requests.Session,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    enriched = df.copy()
+    stats: dict[str, Any] = {
+        "sources_discovered": len(MOBILITHEK_DATEX_PUBLICATIONS),
+        "sources_used": 0,
+        "locations_scanned": 0,
+        "matched_locations": 0,
+        "matched_stations": 0,
+        "matched_evses": 0,
+        "errors": [],
+        "sources": [],
+    }
+
+    access_token: str | None = None
+    if any(publication.get("requires_auth") for publication in MOBILITHEK_DATEX_PUBLICATIONS):
+        try:
+            access_token = fetch_mobilithek_access_token(session)
+        except (requests.RequestException, ValueError, RuntimeError) as exc:
+            stats["errors"].append(f"mobilithek_auth_failed: {exc}")
+
+    updated_station_ids: set[str] = set()
+    updated_evse_ids: set[str] = set()
+
+    for publication in MOBILITHEK_DATEX_PUBLICATIONS:
+        publication_uid = str(publication["uid"])
+        publication_name = str(publication["name"])
+        requires_auth = bool(publication.get("requires_auth"))
+
+        if requires_auth and not access_token:
+            stats["errors"].append(f"{publication_uid}: missing_mobilithek_access_token")
+            continue
+
+        try:
+            static_payload = fetch_mobilithek_publication_payload(
+                session,
+                publication_id=str(publication["static_publication_id"]),
+                requires_auth=requires_auth,
+                access_token=access_token,
+            )
+            dynamic_payload = fetch_mobilithek_publication_payload(
+                session,
+                publication_id=str(publication["dynamic_publication_id"]),
+                requires_auth=requires_auth,
+                access_token=access_token,
+            )
+        except (requests.RequestException, ValueError, RuntimeError) as exc:
+            stats["errors"].append(f"{publication_uid}: {exc}")
+            continue
+
+        static_sites = parse_datex_static_sites(static_payload)
+        dynamic_states = parse_datex_dynamic_states(dynamic_payload)
+        site_to_station = match_datex_sites_to_stations(
+            enriched,
+            static_sites,
+            operator_patterns=tuple(publication.get("operator_patterns") or ()),
+        )
+
+        site_index: dict[str, DatexStaticSite] = {site.site_id: site for site in static_sites}
+        station_reference_to_site_id: dict[str, str] = {}
+        for site in static_sites:
+            station_reference_to_site_id[site.site_id] = site.site_id
+            for station_id in site.station_ids:
+                if station_id:
+                    station_reference_to_site_id[station_id] = site.site_id
+
+        publication_matched_locations = 0
+        publication_matched_stations: set[str] = set()
+        publication_matched_evses: set[str] = set()
+
+        stats["locations_scanned"] += len(static_sites)
+
+        for site_reference, state in dynamic_states.items():
+            site_id = station_reference_to_site_id.get(site_reference)
+            if not site_id:
+                for station_reference in state.get("station_refs", set()):
+                    site_id = station_reference_to_site_id.get(station_reference)
+                    if site_id:
+                        break
+            if not site_id:
+                continue
+
+            db_station_id = site_to_station.get(site_id)
+            if not db_station_id:
+                continue
+
+            publication_matched_locations += 1
+            publication_matched_stations.add(db_station_id)
+            publication_matched_evses.update(state.get("evses", {}).keys())
+
+            site = site_index.get(site_id)
+            source_state = {
+                "source_uids": {publication_uid},
+                "source_names": {publication_name},
+                "evses": state.get("evses", {}),
+            }
+            summary = summarize_station_occupancy(
+                source_state,
+                total_evses=site.total_evses if site else None,
+            )
+
+            row_index = enriched.index[enriched["station_id"] == db_station_id]
+            if len(row_index) != 1:
+                continue
+            target_index = row_index[0]
+            existing_summary = extract_occupancy_summary_from_row(enriched.loc[target_index])
+            if not should_replace_occupancy(existing_summary, summary):
+                continue
+
+            for column, value in summary.items():
+                enriched.at[target_index, column] = value
+            updated_station_ids.add(db_station_id)
+            updated_evse_ids.update(state.get("evses", {}).keys())
+
+        stats["sources"].append(
+            {
+                "uid": publication_uid,
+                "name": publication_name,
+                "locations_scanned": int(len(static_sites)),
+                "matched_locations": int(publication_matched_locations),
+                "matched_stations": int(len(publication_matched_stations)),
+                "matched_evses": int(len(publication_matched_evses)),
+            }
+        )
+
+    stats["sources_used"] = len(stats["sources"])
+    stats["matched_locations"] = int(sum(item["matched_locations"] for item in stats["sources"]))
+    stats["matched_stations"] = int(len(updated_station_ids))
+    stats["matched_evses"] = int(len(updated_evse_ids))
+    return enriched, stats
+
+
 def load_amenity_cache(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {
@@ -1218,14 +2206,46 @@ def ensure_osm_pbf_file(
     osm_pbf_url: str,
     download_if_missing: bool,
 ) -> dict[str, Any]:
-    if osm_pbf_path.exists() and osm_pbf_path.stat().st_size > 0:
-        return {
-            "downloaded": False,
-            "path": str(osm_pbf_path),
-            "bytes": int(osm_pbf_path.stat().st_size),
-        }
+    local_exists = osm_pbf_path.exists() and osm_pbf_path.stat().st_size > 0
+    remote_size = 0
+    remote_last_modified: datetime | None = None
+    should_download = not local_exists
 
-    if not download_if_missing:
+    if download_if_missing:
+        try:
+            head_response = request_with_retries(
+                "HEAD",
+                osm_pbf_url,
+                session,
+                timeout=DATEX_REQUEST_TIMEOUT_SECONDS,
+                verify=True,
+                allow_redirects=True,
+            )
+            remote_size = int(head_response.headers.get("content-length", "0") or 0)
+            last_modified_text = str(head_response.headers.get("last-modified") or "").strip()
+            if last_modified_text:
+                remote_last_modified = parsedate_to_datetime(last_modified_text)
+                if remote_last_modified.tzinfo is None:
+                    remote_last_modified = remote_last_modified.replace(tzinfo=timezone.utc)
+        except Exception as exc:
+            log_info(f"OSM PBF HEAD check failed, using local file metadata only: {exc}")
+
+    if local_exists and not should_download:
+        local_stat = osm_pbf_path.stat()
+        if download_if_missing:
+            local_mtime = datetime.fromtimestamp(local_stat.st_mtime, tz=timezone.utc)
+            size_differs = remote_size > 0 and int(local_stat.st_size) != remote_size
+            newer_remote = remote_last_modified is not None and remote_last_modified > local_mtime + timedelta(minutes=5)
+            should_download = size_differs or newer_remote
+        if not should_download:
+            return {
+                "downloaded": False,
+                "path": str(osm_pbf_path),
+                "bytes": int(local_stat.st_size),
+                "remote_last_modified": remote_last_modified.isoformat() if remote_last_modified else "",
+            }
+
+    if not local_exists and not download_if_missing:
         raise RuntimeError(
             "Local OSM PBF backend selected but file is missing. "
             f"Expected: {osm_pbf_path}. "
@@ -1277,6 +2297,9 @@ def ensure_osm_pbf_file(
                 last_log = now_mono
 
     temp_path.replace(osm_pbf_path)
+    if remote_last_modified is not None:
+        timestamp = remote_last_modified.timestamp()
+        os.utime(osm_pbf_path, (timestamp, timestamp))
     file_size = int(osm_pbf_path.stat().st_size)
     log_info(f"OSM PBF ready: {osm_pbf_path} ({file_size / 1_048_576:.1f} MiB)")
     return {
@@ -1284,6 +2307,7 @@ def ensure_osm_pbf_file(
         "path": str(osm_pbf_path),
         "bytes": file_size,
         "source_url": osm_pbf_url,
+        "remote_last_modified": remote_last_modified.isoformat() if remote_last_modified else "",
     }
 
 
@@ -1311,6 +2335,1232 @@ def haversine_distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> 
         + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2.0) ** 2
     )
     return 2.0 * EARTH_RADIUS_M * math.atan2(math.sqrt(a), math.sqrt(max(0.0, 1.0 - a)))
+
+
+def derive_provider_stem(title: str, publisher: str) -> str:
+    words = [word for word in stem_words(title) if word not in GENERIC_OPERATOR_WORDS]
+    if words:
+        return "_".join(words[:4])
+
+    publisher_words = [word for word in stem_words(publisher) if word not in GENERIC_OPERATOR_WORDS]
+    if publisher_words:
+        return "_".join(publisher_words[:4])
+
+    return slugify(title or publisher or "mobilithek_offer")
+
+
+def content_data_entry(metadata: dict[str, Any]) -> dict[str, Any]:
+    values = metadata.get("contentData") or []
+    return values[0] if values else {}
+
+
+def classify_mobilithek_feed_kind(metadata: dict[str, Any], *, fallback_title: str = "") -> str:
+    content_data = content_data_entry(metadata)
+    schema_profile = str(content_data.get("schemaProfileName") or "")
+    title = str(metadata.get("title") or fallback_title or "")
+    title_lower = title.lower()
+    schema_lower = schema_profile.lower()
+    media_type = str(content_data.get("mediaType") or "").lower()
+    access_url = str(content_data.get("accessUrl") or "").strip()
+    delta_delivery = content_data.get("deltaDelivery")
+
+    if (
+        "dynamic" in schema_lower
+        or "realtime" in title_lower
+        or "dynam" in title_lower
+        or "dyn" in title_lower
+    ):
+        return "dynamic"
+    if "static" in schema_lower or "statisch" in title_lower or "stat" in title_lower:
+        return "static"
+    if delta_delivery is True:
+        return "dynamic"
+    if access_url or "csv" in media_type or "json" in media_type:
+        return "static"
+    return "unknown"
+
+
+def mobilithek_offer_access_mode(metadata: dict[str, Any]) -> str:
+    contract = metadata.get("contractOffer") or {}
+    anonymous = contract.get("providerApprovalAnonymousAccessRequired")
+    return "noauth" if anonymous else "auth"
+
+
+def is_charging_related_offer(metadata: dict[str, Any]) -> bool:
+    categories = metadata.get("dataCategories") or []
+    if CHARGING_DATA_CATEGORY in categories:
+        return True
+
+    content_data = content_data_entry(metadata)
+    haystack = " ".join(
+        [
+            normalize_optional_text(metadata.get("title")),
+            normalize_optional_text(metadata.get("publisher")),
+            normalize_optional_text(content_data.get("description")),
+            normalize_optional_text(content_data.get("schemaProfileName")),
+            normalize_optional_text(content_data.get("accessUrl")),
+        ]
+    ).lower()
+
+    return any(
+        token in haystack
+        for token in (
+            "recharging",
+            "charging",
+            "energy-infrastructure",
+            "ladesäule",
+            "ladestation",
+            "ladepunkt",
+            "chargecloud",
+            "tesla",
+            "enbw",
+            "qwello",
+            "pump",
+            "wirelane",
+        )
+    )
+
+
+def search_mobilithek_offers(
+    session: requests.Session,
+    *,
+    search_term: str,
+    page: int,
+    size: int,
+) -> dict[str, Any]:
+    response = request_with_retries(
+        "POST",
+        MOBILITHEK_METADATA_SEARCH_URL,
+        session,
+        timeout=DATEX_REQUEST_TIMEOUT_SECONDS,
+        verify=DATEX_TLS_VERIFY,
+        params={"page": page, "size": size, "sort": "latest,desc"},
+        json={"searchString": search_term},
+    )
+    return response.json().get("dataOffers", {})
+
+
+def fetch_mobilithek_offer_metadata(
+    session: requests.Session,
+    *,
+    publication_id: str,
+) -> dict[str, Any]:
+    response = request_with_retries(
+        "GET",
+        MOBILITHEK_METADATA_OFFER_URL.format(publication_id=publication_id),
+        session,
+        timeout=DATEX_REQUEST_TIMEOUT_SECONDS,
+        verify=DATEX_TLS_VERIFY,
+    )
+    return response.json()
+
+
+def probe_mobilithek_file_access(
+    session: requests.Session,
+    *,
+    access_token: str | None,
+    publication_id: str,
+) -> dict[str, Any]:
+    if not access_token:
+        return {"status": "missing_credentials", "is_accessible": None}
+
+    response = request_with_retries(
+        "GET",
+        MOBILITHEK_PUBLICATION_FILE_ACCESS_URL.format(publication_id=publication_id),
+        session,
+        timeout=DATEX_REQUEST_TIMEOUT_SECONDS,
+        verify=DATEX_TLS_VERIFY,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    payload: dict[str, Any]
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {}
+    return {
+        "status": "ok",
+        "status_code": response.status_code,
+        "is_accessible": payload.get("isAccessible"),
+        "response_excerpt": response.text[:200],
+    }
+
+
+def fetch_mobilithek_static_payload_with_probe(
+    session: requests.Session,
+    *,
+    publication_id: str,
+    preferred_access_mode: str,
+    access_token: str | None,
+) -> tuple[dict[str, Any] | list[Any] | None, str, str | None]:
+    attempts: list[tuple[str, bool]] = []
+    if preferred_access_mode == "auth":
+        attempts.append(("auth", True))
+        attempts.append(("noauth", False))
+    else:
+        attempts.append(("noauth", False))
+        attempts.append(("auth", True))
+
+    last_error: str | None = None
+    for mode_name, requires_auth in attempts:
+        try:
+            headers = {"Accept": "application/octet-stream"}
+            if requires_auth:
+                if not access_token:
+                    raise RuntimeError("missing_mobilithek_access_token")
+                headers["Authorization"] = f"Bearer {access_token}"
+
+            url = (
+                MOBILITHEK_PUBLICATION_FILE_URL.format(publication_id=publication_id)
+                if requires_auth
+                else MOBILITHEK_PUBLICATION_PUBLIC_FILE_URL.format(publication_id=publication_id)
+            )
+            response = request_with_retries(
+                "GET",
+                url,
+                session,
+                timeout=DATEX_REQUEST_TIMEOUT_SECONDS,
+                verify=DATEX_TLS_VERIFY,
+                headers=headers,
+            )
+            content = response.content
+            raw = gzip.decompress(content) if content[:2] == b"\x1f\x8b" else content
+            payload = json.loads(raw.decode("utf-8"))
+            return payload, mode_name, None
+        except Exception as exc:
+            last_error = f"{mode_name}: {exc}"
+
+    return None, preferred_access_mode, last_error
+
+
+def parse_eliso_static_sites(payload: list[dict[str, Any]]) -> list[ElisoStaticSite]:
+    sites: list[ElisoStaticSite] = []
+    for site in payload:
+        if not isinstance(site, dict):
+            continue
+        coordinates = site.get("coordinates") or {}
+        try:
+            lat = float(coordinates.get("latitude"))
+            lon = float(coordinates.get("longitude"))
+        except (TypeError, ValueError):
+            continue
+
+        evse_ids: list[str] = []
+        station_ids: list[str] = []
+        total_evses = int(site.get("chargepoints_count") or 0)
+        for evse in site.get("evses") or []:
+            if not isinstance(evse, dict):
+                continue
+            evse_id = normalize_evse_id(evse.get("evseId"))
+            if evse_id:
+                evse_ids.append(evse_id)
+                station_ids.append(evse_id)
+        if total_evses <= 0:
+            total_evses = len(evse_ids)
+
+        site_id = normalize_optional_text(
+            site.get("operator")
+            or site.get("operator_name")
+            or site.get("address")
+            or f"{lat:.6f},{lon:.6f}"
+        )
+        if not site_id:
+            site_id = f"{lat:.6f},{lon:.6f}"
+
+        sites.append(
+            ElisoStaticSite(
+                site_id=site_id,
+                station_ids=tuple(dict.fromkeys(item for item in station_ids if item)),
+                lat=lat,
+                lon=lon,
+                postcode=normalize_optional_text(site.get("postalCode")),
+                city=normalize_optional_text(site.get("city")),
+                address=normalize_optional_text(site.get("address")),
+                operator_name=normalize_optional_text(site.get("operator_name")),
+                total_evses=max(0, total_evses),
+                evse_ids=tuple(dict.fromkeys(item for item in evse_ids if item)),
+            )
+        )
+    return sites
+
+
+def static_grid_key(lat: float, lon: float) -> tuple[int, int]:
+    return (math.floor(lat / 0.01), math.floor(lon / 0.01))
+
+
+def build_static_station_indexes(
+    df: pd.DataFrame,
+) -> tuple[dict[tuple[int, int], list[dict[str, Any]]], dict[str, dict[str, Any]], dict[str, set[str]]]:
+    grid: dict[tuple[int, int], list[dict[str, Any]]] = defaultdict(list)
+    station_by_id: dict[str, dict[str, Any]] = {}
+    evse_to_station_ids: dict[str, set[str]] = defaultdict(set)
+
+    for record in df.to_dict("records"):
+        station_id = str(record.get("station_id") or "")
+        if not station_id:
+            continue
+        station_by_id[station_id] = record
+        grid[static_grid_key(float(record["lat"]), float(record["lon"]))].append(record)
+        for evse_id in record.get("evse_ids") or []:
+            normalized = normalize_evse_id(evse_id)
+            if normalized:
+                evse_to_station_ids[normalized].add(station_id)
+
+    return grid, station_by_id, evse_to_station_ids
+
+
+def score_static_site_to_station(
+    site: DatexStaticSite | ElisoStaticSite,
+    station_row: dict[str, Any],
+    *,
+    publisher: str,
+    max_distance_m: float,
+) -> tuple[bool, float, float, dict[str, Any]]:
+    distance_m = haversine_distance_m(
+        float(site.lat),
+        float(site.lon),
+        float(station_row["lat"]),
+        float(station_row["lon"]),
+    )
+    candidate_evse_ids = {
+        normalize_evse_id(item) for item in (station_row.get("evse_ids") or []) if normalize_evse_id(item)
+    }
+    evse_overlap = len(set(site.evse_ids) & candidate_evse_ids)
+    if distance_m > max_distance_m and evse_overlap <= 0:
+        return False, distance_m, distance_m, {}
+
+    postcode_match = bool(site.postcode and str(station_row.get("postcode") or "").strip() == site.postcode)
+    city_match = bool(
+        site.city and normalize_text(str(station_row.get("city") or "")) == normalize_text(site.city)
+    )
+    address_match = address_similarity(site.address, str(station_row.get("address") or ""))
+    op_similarity = operator_similarity(
+        site_operator=site.operator_name,
+        publisher=publisher,
+        candidate_operator=str(station_row.get("operator") or ""),
+    )
+
+    score = distance_m
+    if postcode_match:
+        score -= 45.0
+    if city_match:
+        score -= 10.0
+    if address_match:
+        score -= 15.0
+    if op_similarity >= 1.0:
+        score -= 30.0
+    elif op_similarity > 0.0:
+        score -= 12.0 * op_similarity
+    if evse_overlap > 0:
+        score -= 120.0 + (evse_overlap * 20.0)
+
+    site_evses = int(site.total_evses or 0)
+    station_points = int(station_row.get("charging_points_count", 0) or 0)
+    if site_evses > 0 and station_points > 0:
+        score += abs(site_evses - station_points) * 2.5
+
+    accepted = False
+    if evse_overlap > 0:
+        accepted = True
+    elif distance_m <= 30.0:
+        accepted = True
+    elif postcode_match and (address_match or op_similarity > 0.0 or distance_m <= 80.0):
+        accepted = True
+    elif address_match and distance_m <= 120.0:
+        accepted = True
+    elif op_similarity >= 1.0 and distance_m <= 120.0:
+        accepted = True
+
+    details = {
+        "distance_m": round(distance_m, 1),
+        "postcode_match": postcode_match,
+        "city_match": city_match,
+        "address_match": address_match,
+        "operator_similarity": round(op_similarity, 3),
+        "evse_overlap": int(evse_overlap),
+    }
+    return accepted, score, distance_m, details
+
+
+def match_static_sites_to_bnetza(
+    sites: list[DatexStaticSite | ElisoStaticSite],
+    *,
+    publisher: str,
+    station_grid: dict[tuple[int, int], list[dict[str, Any]]],
+    station_by_id: dict[str, dict[str, Any]],
+    evse_to_station_ids: dict[str, set[str]],
+    max_distance_m: float = DETAIL_MATCH_MAX_DISTANCE_M,
+) -> tuple[dict[str, str], dict[str, dict[str, Any]]]:
+    scored_pairs: list[tuple[float, float, str, str, dict[str, Any]]] = []
+
+    for site in sites:
+        candidate_station_ids: set[str] = set()
+        for evse_id in site.evse_ids:
+            candidate_station_ids.update(evse_to_station_ids.get(evse_id, set()))
+
+        if candidate_station_ids:
+            candidate_rows = [
+                station_by_id[station_id]
+                for station_id in candidate_station_ids
+                if station_id in station_by_id
+            ]
+        else:
+            site_key = static_grid_key(float(site.lat), float(site.lon))
+            candidate_rows: list[dict[str, Any]] = []
+            for lat_offset in (-1, 0, 1):
+                for lon_offset in (-1, 0, 1):
+                    candidate_rows.extend(
+                        station_grid.get((site_key[0] + lat_offset, site_key[1] + lon_offset), [])
+                    )
+
+        for station_row in candidate_rows:
+            accepted, score, distance_m, details = score_static_site_to_station(
+                site,
+                station_row,
+                publisher=publisher,
+                max_distance_m=max_distance_m,
+            )
+            if not accepted:
+                continue
+            station_id = str(station_row.get("station_id") or "")
+            if not station_id:
+                continue
+            scored_pairs.append(
+                (
+                    score,
+                    distance_m,
+                    site.site_id,
+                    station_id,
+                    {
+                        **details,
+                        "site_id": site.site_id,
+                        "station_id": station_id,
+                    },
+                )
+            )
+
+    scored_pairs.sort(key=lambda item: (item[0], item[1], item[2], item[3]))
+    matches: dict[str, str] = {}
+    match_meta: dict[str, dict[str, Any]] = {}
+    used_station_ids: set[str] = set()
+
+    for _, _, site_id, station_id, details in scored_pairs:
+        if site_id in matches or station_id in used_station_ids:
+            continue
+        matches[site_id] = station_id
+        used_station_ids.add(station_id)
+        match_meta[site_id] = details
+
+    return matches, match_meta
+
+
+def iter_walk_nodes(value: Any) -> Any:
+    if isinstance(value, dict):
+        yield value
+        for item in value.values():
+            yield from iter_walk_nodes(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from iter_walk_nodes(item)
+
+
+def normalize_code_value(value: Any) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
+
+
+def humanize_code(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", text)
+    spaced = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", spaced)
+    spaced = spaced.replace("_", " ").replace("-", " ").replace("/", " / ")
+    spaced = re.sub(r"\s+", " ", spaced).strip()
+    return spaced[:1].upper() + spaced[1:] if spaced else ""
+
+
+def map_display_value(value: Any, mapping: dict[str, str]) -> str:
+    code = normalize_code_value(value)
+    if not code:
+        return ""
+    return mapping.get(code, humanize_code(value))
+
+
+def join_display_list(values: list[str]) -> str:
+    items = merge_unique_text_lists(pd.Series([item for item in values if item], dtype="object"))
+    return " | ".join(items)
+
+
+def parse_boolish(value: Any) -> bool | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    normalized = normalize_code_value(value)
+    if not normalized:
+        return None
+    if normalized in BOOLEAN_YES_VALUES:
+        return True
+    if normalized in {"0", "false", "no", "nein", "n"}:
+        return False
+    return None
+
+
+def extract_phone_numbers(value: Any) -> list[str]:
+    values: list[str] = []
+    for node in iter_walk_nodes(value):
+        if not isinstance(node, dict):
+            continue
+        for key in ("telephoneNumber", "phoneNumber", "hotline_number"):
+            phone = normalize_optional_text(node.get(key))
+            if phone:
+                values.append(phone)
+    return merge_unique_text_lists(pd.Series(values, dtype="object"))
+
+
+def summarize_operating_hours(value: Any) -> str:
+    if isinstance(value, str):
+        text = normalize_optional_text(value)
+        if not text:
+            return ""
+        if normalize_text(text) in {"247", "24h", "24std", "24stunden", "24hours", "24x7"}:
+            return "24/7"
+        return text
+
+    if isinstance(value, dict):
+        normalized_keys = {normalize_code_value(key) for key in value.keys()}
+        if "afacopenallhours" in normalized_keys or "openallhours" in normalized_keys:
+            return "24/7"
+
+    texts: list[str] = []
+    for node in iter_walk_nodes(value):
+        if not isinstance(node, dict):
+            continue
+        if any(normalize_code_value(key) in {"afacopenallhours", "openallhours"} for key in node.keys()):
+            return "24/7"
+        for key, candidate in node.items():
+            key_norm = normalize_code_value(key)
+            if key_norm not in {"openingtime", "openingtimes", "openingtimevalue", "periodname", "text"}:
+                continue
+            text = extract_first_lang_value(candidate) if not isinstance(candidate, str) else normalize_optional_text(candidate)
+            if text:
+                texts.append(text)
+    return join_display_list(texts[:6])
+
+
+def extract_latest_detail_timestamp(value: Any) -> str:
+    candidates: list[str] = []
+    for node in iter_walk_nodes(value):
+        if not isinstance(node, dict):
+            continue
+        for key in ("lastUpdated", "mobilithek_last_updated_dts", "versionG"):
+            candidate = normalize_optional_text(node.get(key))
+            if candidate and parse_iso_datetime(candidate) is not None:
+                candidates.append(candidate)
+    return choose_latest_timestamp(candidates)
+
+
+def collect_datex_price_components(value: Any) -> dict[str, Any]:
+    kwh_values: list[float] = []
+    minute_values: list[float] = []
+    currencies: list[str] = []
+    payment_methods: list[str] = []
+    complex_tariff = False
+
+    for node in iter_walk_nodes(value):
+        if not isinstance(node, dict):
+            continue
+        energy_rates = node.get("energyRate") or []
+        if not isinstance(energy_rates, list):
+            continue
+        for rate in energy_rates:
+            if not isinstance(rate, dict):
+                continue
+            currencies.extend(
+                [
+                    normalize_optional_text(item)
+                    for item in (rate.get("applicableCurrency") or [])
+                    if normalize_optional_text(item)
+                ]
+            )
+            payment = (rate.get("payment") or {}).get("paymentMeans") or []
+            for method in payment:
+                method_value = map_display_value((method or {}).get("value"), PAYMENT_METHOD_LABELS)
+                if method_value:
+                    payment_methods.append(method_value)
+            for price in rate.get("energyPrice") or []:
+                if not isinstance(price, dict):
+                    continue
+                try:
+                    numeric_value = float(price.get("value"))
+                except (TypeError, ValueError):
+                    continue
+                price_type = normalize_code_value(((price.get("priceType") or {}).get("value")) or "")
+                if price_type == "priceperkwh":
+                    kwh_values.append(numeric_value)
+                elif price_type == "priceperminute":
+                    minute_values.append(numeric_value)
+                else:
+                    complex_tariff = True
+                if price.get("timeBasedApplicability"):
+                    complex_tariff = True
+
+    return {
+        "kwh_values": kwh_values,
+        "minute_values": minute_values,
+        "currencies": merge_unique_text_lists(pd.Series(currencies, dtype="object")),
+        "payment_methods": merge_unique_text_lists(pd.Series(payment_methods, dtype="object")),
+        "complex_tariff": complex_tariff,
+    }
+
+
+def format_euro_amount(value: float) -> str:
+    rounded = round(float(value) + 1e-9, 2)
+    return f"{rounded:.2f}".replace(".", ",")
+
+
+def summarize_price_display(price_components: dict[str, Any]) -> dict[str, Any]:
+    kwh_values = [float(item) for item in price_components.get("kwh_values", [])]
+    minute_values = [float(item) for item in price_components.get("minute_values", [])]
+    currency_values = [item for item in price_components.get("currencies", []) if item]
+    currency = currency_values[0] if currency_values else ("EUR" if kwh_values or minute_values else "")
+    complex_tariff = bool(price_components.get("complex_tariff"))
+
+    if not kwh_values and not minute_values:
+        return {
+            "price_display": "",
+            "price_energy_eur_kwh_min": "",
+            "price_energy_eur_kwh_max": "",
+            "price_currency": currency,
+            "price_quality": "",
+        }
+
+    display = ""
+    quality = ""
+    kwh_min = min(kwh_values) if kwh_values else None
+    kwh_max = max(kwh_values) if kwh_values else None
+
+    if kwh_values and currency == "EUR":
+        if complex_tariff or minute_values:
+            display = f"ab {format_euro_amount(kwh_min)} €/kWh"
+            quality = "from"
+        elif abs(kwh_min - kwh_max) < 0.0001:
+            display = f"{format_euro_amount(kwh_min)} €/kWh"
+            quality = "exact"
+        else:
+            display = f"{format_euro_amount(kwh_min)}–{format_euro_amount(kwh_max)} €/kWh"
+            quality = "range"
+    elif minute_values and currency == "EUR":
+        minute_min = min(minute_values)
+        minute_max = max(minute_values)
+        if complex_tariff or abs(minute_min - minute_max) >= 0.0001:
+            display = f"ab {format_euro_amount(minute_min)} €/min"
+            quality = "from"
+        else:
+            display = f"{format_euro_amount(minute_min)} €/min"
+            quality = "exact"
+
+    return {
+        "price_display": display,
+        "price_energy_eur_kwh_min": round(kwh_min, 6) if kwh_min is not None and currency == "EUR" else "",
+        "price_energy_eur_kwh_max": round(kwh_max, 6) if kwh_max is not None and currency == "EUR" else "",
+        "price_currency": currency,
+        "price_quality": quality,
+    }
+
+
+def compact_details_json(payload: dict[str, Any]) -> str:
+    filtered = {key: value for key, value in payload.items() if value not in ("", [], {}, None)}
+    if not filtered:
+        return ""
+    return json.dumps(filtered, ensure_ascii=False, separators=(",", ":"))
+
+
+def static_source_display_name(publication: AfirStaticPublication) -> str:
+    title = normalize_optional_text(publication.title)
+    lowered = title.lower()
+    for prefix in ("afir-recharging-stat-", "afir recharging stat "):
+        if lowered.startswith(prefix):
+            return title[len(prefix):].strip() or publication.publisher or title
+    return publication.publisher or title or publication.uid
+
+
+def extract_datex_static_details(
+    site_record: DatexStaticSite,
+    site_payload: dict[str, Any],
+    *,
+    publication: AfirStaticPublication,
+    match_meta: dict[str, Any],
+) -> dict[str, Any]:
+    connector_types: list[str] = []
+    current_types: list[str] = []
+    auth_methods: list[str] = []
+    service_types: list[str] = []
+    green_values: list[bool] = []
+    connector_count = 0
+    opening_hours = summarize_operating_hours(site_payload.get("operatingHours"))
+
+    for station in site_payload.get("energyInfrastructureStation") or []:
+        if not isinstance(station, dict):
+            continue
+        if not opening_hours:
+            opening_hours = summarize_operating_hours(station.get("operatingHours"))
+
+        for method in station.get("authenticationAndIdentificationMethods") or []:
+            value = map_display_value((method or {}).get("value"), AUTH_METHOD_LABELS)
+            if value:
+                auth_methods.append(value)
+
+        for service in station.get("serviceType") or []:
+            service_value = (
+                (service or {}).get("serviceType", {}).get("value")
+                or (service or {}).get("value")
+            )
+            value = map_display_value(service_value, SERVICE_TYPE_LABELS)
+            if value:
+                service_types.append(value)
+
+        for refill_point in station.get("refillPoint") or []:
+            charging_point = (refill_point or {}).get("aegiElectricChargingPoint") or {}
+            connector_count += int(
+                charging_point.get("numberOfConnectors")
+                or len(charging_point.get("connector") or [])
+                or 0
+            )
+
+            current_value = map_display_value(
+                (charging_point.get("currentType") or {}).get("value"),
+                CURRENT_TYPE_LABELS,
+            )
+            if current_value:
+                current_types.append(current_value)
+
+            for connector in charging_point.get("connector") or []:
+                connector_value = map_display_value(
+                    ((connector or {}).get("connectorType") or {}).get("value"),
+                    CONNECTOR_TYPE_LABELS,
+                )
+                if connector_value:
+                    connector_types.append(connector_value)
+
+            for electric_energy in charging_point.get("electricEnergy") or []:
+                if not isinstance(electric_energy, dict):
+                    continue
+                green = parse_boolish(electric_energy.get("isGreenEnergy"))
+                if green is not None:
+                    green_values.append(green)
+
+    price_components = collect_datex_price_components(site_payload)
+    price_summary = summarize_price_display(price_components)
+    payment_methods = price_components.get("payment_methods", [])
+    helpdesk_numbers = extract_phone_numbers(site_payload.get("helpdesk") or site_payload)
+    detail_last_updated = extract_latest_detail_timestamp(site_payload)
+
+    green_energy: str | bool = ""
+    if green_values:
+        green_energy = all(green_values)
+
+    details_json = compact_details_json(
+        {
+            "source_name": static_source_display_name(publication),
+            "publication_id": publication.publication_id,
+            "site_id": site_record.site_id,
+            "station_ids": list(site_record.station_ids),
+            "charge_point_ids": list(site_record.evse_ids),
+            "distance_m": match_meta.get("distance_m"),
+            "evse_overlap": match_meta.get("evse_overlap"),
+            "operator_similarity": match_meta.get("operator_similarity"),
+            "price_display": price_summary["price_display"],
+            "opening_hours": opening_hours,
+            "helpdesk_phone": helpdesk_numbers[:1],
+            "payment_methods": payment_methods,
+            "auth_methods": merge_unique_text_lists(pd.Series(auth_methods, dtype="object")),
+            "connector_types": merge_unique_text_lists(pd.Series(connector_types, dtype="object")),
+            "current_types": merge_unique_text_lists(pd.Series(current_types, dtype="object")),
+            "service_types": merge_unique_text_lists(pd.Series(service_types, dtype="object")),
+            "green_energy": green_energy,
+            "last_updated": detail_last_updated,
+        }
+    )
+
+    return {
+        "detail_source_uid": publication.uid,
+        "detail_source_name": static_source_display_name(publication),
+        "detail_last_updated": detail_last_updated,
+        "datex_site_id": site_record.site_id,
+        "datex_station_ids": "|".join(site_record.station_ids),
+        "datex_charge_point_ids": "|".join(site_record.evse_ids),
+        **price_summary,
+        "opening_hours_display": opening_hours,
+        "opening_hours_is_24_7": opening_hours == "24/7",
+        "helpdesk_phone": helpdesk_numbers[0] if helpdesk_numbers else "",
+        "payment_methods_display": join_display_list(payment_methods),
+        "auth_methods_display": join_display_list(auth_methods),
+        "connector_types_display": join_display_list(connector_types),
+        "current_types_display": join_display_list(current_types),
+        "connector_count": connector_count or "",
+        "green_energy": green_energy,
+        "service_types_display": join_display_list(service_types),
+        "details_json": details_json,
+    }
+
+
+def extract_eliso_static_details(
+    site_record: ElisoStaticSite,
+    site_payload: dict[str, Any],
+    *,
+    publication: AfirStaticPublication,
+    match_meta: dict[str, Any],
+) -> dict[str, Any]:
+    connector_types: list[str] = []
+    current_types: list[str] = []
+    auth_methods: list[str] = []
+    payment_methods: list[str] = []
+    connector_count = 0
+
+    if parse_boolish(site_payload.get("contract_based_payment_option")):
+        payment_methods.append("Vertragsbasiert")
+    if parse_boolish(site_payload.get("other_adhoc_payment_option")):
+        payment_methods.append("Ad-hoc-Zahlung")
+
+    for evse in site_payload.get("evses") or []:
+        if not isinstance(evse, dict):
+            continue
+        connector_count += int(evse.get("connector_count") or len(evse.get("connectors") or []) or 0)
+        current_value = map_display_value(
+            evse.get("charge_points_type") or ((evse.get("connectors") or [{}])[0].get("powerType")),
+            CURRENT_TYPE_LABELS,
+        )
+        if current_value:
+            current_types.append(current_value)
+
+        for connector in evse.get("connectors") or []:
+            if not isinstance(connector, dict):
+                continue
+            connector_value = map_display_value(
+                connector.get("type_of_connector"),
+                CONNECTOR_TYPE_LABELS,
+            )
+            if connector_value:
+                connector_types.append(connector_value)
+
+        if parse_boolish(evse.get("plug_n_charge")):
+            auth_methods.append("Plug & Charge")
+        if parse_boolish(evse.get("payment_card_reader")):
+            payment_methods.append("Kartenterminal")
+        if parse_boolish(evse.get("payment_card_contactless")):
+            payment_methods.append("Kontaktlos")
+
+    opening_hours = summarize_operating_hours(site_payload.get("opening_time"))
+    helpdesk_numbers = extract_phone_numbers(site_payload)
+    detail_last_updated = extract_latest_detail_timestamp(site_payload)
+    service_types = [
+        map_display_value(site_payload.get("physical_support"), SERVICE_TYPE_LABELS)
+    ]
+    green_energy = parse_boolish(site_payload.get("electricity_supplied_is_100_percent_renewable"))
+
+    details_json = compact_details_json(
+        {
+            "source_name": static_source_display_name(publication),
+            "publication_id": publication.publication_id,
+            "site_id": site_record.site_id,
+            "station_ids": list(site_record.station_ids),
+            "charge_point_ids": list(site_record.evse_ids),
+            "distance_m": match_meta.get("distance_m"),
+            "evse_overlap": match_meta.get("evse_overlap"),
+            "operator_similarity": match_meta.get("operator_similarity"),
+            "opening_hours": opening_hours,
+            "helpdesk_phone": helpdesk_numbers[:1],
+            "payment_methods": merge_unique_text_lists(pd.Series(payment_methods, dtype="object")),
+            "auth_methods": merge_unique_text_lists(pd.Series(auth_methods, dtype="object")),
+            "connector_types": merge_unique_text_lists(pd.Series(connector_types, dtype="object")),
+            "current_types": merge_unique_text_lists(pd.Series(current_types, dtype="object")),
+            "service_types": merge_unique_text_lists(pd.Series(service_types, dtype="object")),
+            "green_energy": green_energy,
+            "last_updated": detail_last_updated,
+        }
+    )
+
+    return {
+        "detail_source_uid": publication.uid,
+        "detail_source_name": static_source_display_name(publication),
+        "detail_last_updated": detail_last_updated,
+        "datex_site_id": site_record.site_id,
+        "datex_station_ids": "|".join(site_record.station_ids),
+        "datex_charge_point_ids": "|".join(site_record.evse_ids),
+        "price_display": "",
+        "price_energy_eur_kwh_min": "",
+        "price_energy_eur_kwh_max": "",
+        "price_currency": "",
+        "price_quality": "",
+        "opening_hours_display": opening_hours,
+        "opening_hours_is_24_7": opening_hours == "24/7",
+        "helpdesk_phone": helpdesk_numbers[0] if helpdesk_numbers else "",
+        "payment_methods_display": join_display_list(payment_methods),
+        "auth_methods_display": join_display_list(auth_methods),
+        "connector_types_display": join_display_list(connector_types),
+        "current_types_display": join_display_list(current_types),
+        "connector_count": connector_count or "",
+        "green_energy": green_energy if green_energy is not None else "",
+        "service_types_display": join_display_list(service_types),
+        "details_json": details_json,
+    }
+
+
+def has_detail_value(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return True
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, tuple, set, dict)):
+        return bool(value)
+    return True
+
+
+def detail_nonempty_score(details: dict[str, Any]) -> int:
+    score = 0
+    if has_detail_value(details.get("price_display")):
+        score += 8
+    if has_detail_value(details.get("opening_hours_display")):
+        score += 5
+    if has_detail_value(details.get("helpdesk_phone")):
+        score += 4
+    for field in (
+        "payment_methods_display",
+        "auth_methods_display",
+        "connector_types_display",
+        "current_types_display",
+        "service_types_display",
+    ):
+        if has_detail_value(details.get(field)):
+            score += 2
+    if has_detail_value(details.get("connector_count")):
+        score += 1
+    if isinstance(details.get("green_energy"), bool):
+        score += 1
+    if has_detail_value(details.get("detail_last_updated")):
+        score += 1
+    return score
+
+
+def build_bnetza_fallback_details(row: pd.Series) -> dict[str, Any]:
+    connector_values = row.get("connector_types", [])
+    connector_display = ""
+    if isinstance(connector_values, list):
+        connector_display = join_display_list(
+            [map_display_value(item, CONNECTOR_TYPE_LABELS) for item in connector_values]
+        )
+
+    return {
+        "detail_source_uid": "",
+        "detail_source_name": "",
+        "detail_last_updated": "",
+        "datex_site_id": "",
+        "datex_station_ids": "",
+        "datex_charge_point_ids": "",
+        "price_display": "",
+        "price_energy_eur_kwh_min": "",
+        "price_energy_eur_kwh_max": "",
+        "price_currency": "",
+        "price_quality": "",
+        "opening_hours_display": normalize_optional_text(row.get("bnetza_opening_hours")),
+        "opening_hours_is_24_7": normalize_optional_text(row.get("bnetza_opening_hours")) == "24/7",
+        "helpdesk_phone": "",
+        "payment_methods_display": normalize_optional_text(row.get("bnetza_payment_systems")),
+        "auth_methods_display": "",
+        "connector_types_display": connector_display,
+        "current_types_display": "",
+        "connector_count": "",
+        "green_energy": "",
+        "service_types_display": "",
+        "details_json": "",
+    }
+
+
+def enrich_with_static_details(
+    df: pd.DataFrame,
+    *,
+    session: requests.Session,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    enriched = df.copy()
+    for field in STATIC_DETAIL_FIELDS:
+        if field in {"opening_hours_is_24_7"}:
+            enriched[field] = False
+        else:
+            enriched[field] = ""
+
+    row_lookup: dict[str, int] = {}
+    detail_scores: dict[str, int] = {}
+    station_grid, station_by_id, evse_to_station_ids = build_static_station_indexes(enriched)
+
+    for row_index, row in enriched.reset_index(drop=True).iterrows():
+        station_id = str(row.get("station_id") or "")
+        row_lookup[station_id] = row_index
+        fallback = build_bnetza_fallback_details(row)
+        for field, value in fallback.items():
+            enriched.at[row_index, field] = value
+        detail_scores[station_id] = detail_nonempty_score(fallback)
+
+    stats: dict[str, Any] = {
+        "offers_discovered": 0,
+        "static_offers_considered": 0,
+        "sources_used": 0,
+        "matched_sites": 0,
+        "matched_stations": 0,
+        "stations_with_price": 0,
+        "stations_with_opening_hours": 0,
+        "stations_with_helpdesk": 0,
+        "errors": [],
+        "sources": [],
+    }
+
+    try:
+        access_token = fetch_mobilithek_access_token(session)
+    except (requests.RequestException, ValueError, RuntimeError) as exc:
+        access_token = None
+        stats["errors"].append(f"mobilithek_auth_failed: {exc}")
+
+    seen_publication_ids: set[str] = set()
+    page = 0
+    total_pages = 1
+
+    while page < total_pages:
+        try:
+            search_payload = search_mobilithek_offers(
+                session,
+                search_term=MOBILITHEK_AFIR_SEARCH_TERM,
+                page=page,
+                size=MOBILITHEK_SEARCH_PAGE_SIZE,
+            )
+        except (requests.RequestException, ValueError, RuntimeError) as exc:
+            stats["errors"].append(f"offer_search_page_{page}: {exc}")
+            break
+
+        total_pages = int(search_payload.get("totalPages") or 1)
+        for item in search_payload.get("content", []) or []:
+            publication_id = str(item.get("id") or item.get("publicationId") or "").strip()
+            if not publication_id or publication_id in seen_publication_ids:
+                continue
+            seen_publication_ids.add(publication_id)
+            stats["offers_discovered"] += 1
+
+            try:
+                metadata = fetch_mobilithek_offer_metadata(session, publication_id=publication_id)
+            except (requests.RequestException, ValueError, RuntimeError) as exc:
+                stats["errors"].append(f"{publication_id}: metadata_failed: {exc}")
+                continue
+
+            if not is_charging_related_offer(metadata):
+                continue
+
+            if classify_mobilithek_feed_kind(metadata) != "static":
+                continue
+            stats["static_offers_considered"] += 1
+
+            access_probe: dict[str, Any]
+            try:
+                access_probe = probe_mobilithek_file_access(
+                    session,
+                    access_token=access_token,
+                    publication_id=publication_id,
+                )
+            except (requests.RequestException, ValueError, RuntimeError) as exc:
+                access_probe = {"status": "error", "response_excerpt": str(exc), "is_accessible": None}
+
+            publisher = normalize_optional_text(metadata.get("publisher"))
+            title = normalize_optional_text(metadata.get("title"))
+            publication = AfirStaticPublication(
+                uid=f"mobilithek_{derive_provider_stem(title, publisher)}_static",
+                publication_id=publication_id,
+                title=title,
+                publisher=publisher,
+                access_mode=mobilithek_offer_access_mode(metadata),
+                data_model=normalize_optional_text(content_data_entry(metadata).get("dataModel")),
+            )
+
+            if access_probe.get("is_accessible") is not True:
+                stats["sources"].append(
+                    {
+                        "uid": publication.uid,
+                        "publication_id": publication.publication_id,
+                        "title": publication.title,
+                        "publisher": publication.publisher,
+                        "access_mode": publication.access_mode,
+                        "status": "not_accessible",
+                        "matched_sites": 0,
+                        "matched_stations": 0,
+                    }
+                )
+                continue
+
+            payload, access_mode_used, fetch_error = fetch_mobilithek_static_payload_with_probe(
+                session,
+                publication_id=publication_id,
+                preferred_access_mode=publication.access_mode,
+                access_token=access_token,
+            )
+            if payload is None:
+                stats["errors"].append(f"{publication_id}: {fetch_error}")
+                stats["sources"].append(
+                    {
+                        "uid": publication.uid,
+                        "publication_id": publication.publication_id,
+                        "title": publication.title,
+                        "publisher": publication.publisher,
+                        "access_mode": access_mode_used,
+                        "status": "fetch_failed",
+                        "error": fetch_error,
+                        "matched_sites": 0,
+                        "matched_stations": 0,
+                    }
+                )
+                continue
+
+            site_records: list[DatexStaticSite | ElisoStaticSite] = []
+            site_payload_index: dict[str, Any] = {}
+            payload_kind = "unsupported"
+
+            if isinstance(payload, dict):
+                publication_root = (payload.get("payload") or {}).get("aegiEnergyInfrastructureTablePublication")
+                if isinstance(publication_root, dict):
+                    payload_kind = "datex"
+                    site_records = parse_datex_static_sites(payload)
+                    for table in publication_root.get("energyInfrastructureTable") or []:
+                        for site in (table or {}).get("energyInfrastructureSite") or []:
+                            if not isinstance(site, dict):
+                                continue
+                            site_id = normalize_optional_text(site.get("idG"))
+                            if site_id:
+                                site_payload_index[site_id] = site
+            elif isinstance(payload, list) and payload and isinstance(payload[0], dict):
+                if "coordinates" in payload[0] and "evses" in payload[0]:
+                    payload_kind = "eliso"
+                    site_records = parse_eliso_static_sites(payload)
+                    for site in payload:
+                        site_id = normalize_optional_text(
+                            site.get("operator")
+                            or site.get("operator_name")
+                            or site.get("address")
+                        )
+                        if not site_id:
+                            coords = site.get("coordinates") or {}
+                            lat = coords.get("latitude")
+                            lon = coords.get("longitude")
+                            if lat is not None and lon is not None:
+                                site_id = f"{float(lat):.6f},{float(lon):.6f}"
+                        if site_id:
+                            site_payload_index[site_id] = site
+
+            if not site_records:
+                stats["sources"].append(
+                    {
+                        "uid": publication.uid,
+                        "publication_id": publication.publication_id,
+                        "title": publication.title,
+                        "publisher": publication.publisher,
+                        "access_mode": access_mode_used,
+                        "status": "unsupported_payload",
+                        "payload_kind": payload_kind,
+                        "matched_sites": 0,
+                        "matched_stations": 0,
+                    }
+                )
+                continue
+
+            matches, match_meta = match_static_sites_to_bnetza(
+                site_records,
+                publisher=publisher,
+                station_grid=station_grid,
+                station_by_id=station_by_id,
+                evse_to_station_ids=evse_to_station_ids,
+            )
+
+            matched_station_ids: set[str] = set()
+            matched_sites = 0
+            for site_record in site_records:
+                station_id = matches.get(site_record.site_id)
+                if not station_id:
+                    continue
+                row_index = row_lookup.get(station_id)
+                site_payload = site_payload_index.get(site_record.site_id)
+                if row_index is None or not isinstance(site_payload, dict):
+                    continue
+
+                if payload_kind == "datex":
+                    candidate = extract_datex_static_details(
+                        site_record,
+                        site_payload,
+                        publication=publication,
+                        match_meta=match_meta.get(site_record.site_id, {}),
+                    )
+                else:
+                    candidate = extract_eliso_static_details(
+                        site_record,
+                        site_payload,
+                        publication=publication,
+                        match_meta=match_meta.get(site_record.site_id, {}),
+                    )
+
+                current_score = detail_scores.get(station_id, 0)
+                candidate_score = detail_nonempty_score(candidate)
+                if candidate_score <= 0:
+                    continue
+
+                for field, value in candidate.items():
+                    if field == "detail_source_uid" or field == "detail_source_name":
+                        continue
+                    if not has_detail_value(value):
+                        continue
+                    enriched.at[row_index, field] = value
+
+                if candidate_score >= current_score or not normalize_optional_text(
+                    enriched.at[row_index, "detail_source_uid"]
+                ):
+                    enriched.at[row_index, "detail_source_uid"] = candidate["detail_source_uid"]
+                    enriched.at[row_index, "detail_source_name"] = candidate["detail_source_name"]
+                    if has_detail_value(candidate.get("detail_last_updated")):
+                        enriched.at[row_index, "detail_last_updated"] = candidate["detail_last_updated"]
+                    detail_scores[station_id] = max(current_score, candidate_score)
+
+                matched_sites += 1
+                matched_station_ids.add(station_id)
+
+            if matched_station_ids:
+                stats["sources_used"] += 1
+            stats["matched_sites"] += matched_sites
+            stats["sources"].append(
+                {
+                    "uid": publication.uid,
+                    "publication_id": publication.publication_id,
+                    "title": publication.title,
+                    "publisher": publication.publisher,
+                    "access_mode": access_mode_used,
+                    "status": "ok",
+                    "payload_kind": payload_kind,
+                    "sites_scanned": len(site_records),
+                    "matched_sites": matched_sites,
+                    "matched_stations": len(matched_station_ids),
+                }
+            )
+
+        page += 1
+
+    stats["matched_stations"] = int(
+        enriched["detail_source_uid"].fillna("").astype(str).str.strip().ne("").sum()
+    )
+    stats["stations_with_price"] = int(
+        enriched["price_display"].fillna("").astype(str).str.strip().ne("").sum()
+    )
+    stats["stations_with_opening_hours"] = int(
+        enriched["opening_hours_display"].fillna("").astype(str).str.strip().ne("").sum()
+    )
+    stats["stations_with_helpdesk"] = int(
+        enriched["helpdesk_phone"].fillna("").astype(str).str.strip().ne("").sum()
+    )
+    return enriched, stats
 
 
 def build_coarse_station_cells(
@@ -1950,6 +4200,7 @@ def dataframe_to_geojson(df: pd.DataFrame, source_meta: dict[str, Any]) -> dict[
     features: list[dict[str, Any]] = []
 
     for _, row in df.iterrows():
+        green_energy = row.get("green_energy", "")
         properties: dict[str, Any] = {
             "station_id": row["station_id"],
             "operator": row["operator"],
@@ -1970,6 +4221,28 @@ def dataframe_to_geojson(df: pd.DataFrame, source_meta: dict[str, Any]) -> dict[
             "occupancy_charging_evses": int(row.get("occupancy_charging_evses", 0)),
             "occupancy_out_of_order_evses": int(row.get("occupancy_out_of_order_evses", 0)),
             "occupancy_unknown_evses": int(row.get("occupancy_unknown_evses", 0)),
+            "detail_source_uid": row.get("detail_source_uid", ""),
+            "detail_source_name": row.get("detail_source_name", ""),
+            "detail_last_updated": row.get("detail_last_updated", ""),
+            "datex_site_id": row.get("datex_site_id", ""),
+            "datex_station_ids": row.get("datex_station_ids", ""),
+            "datex_charge_point_ids": row.get("datex_charge_point_ids", ""),
+            "price_display": row.get("price_display", ""),
+            "price_energy_eur_kwh_min": row.get("price_energy_eur_kwh_min", ""),
+            "price_energy_eur_kwh_max": row.get("price_energy_eur_kwh_max", ""),
+            "price_currency": row.get("price_currency", ""),
+            "price_quality": row.get("price_quality", ""),
+            "opening_hours_display": row.get("opening_hours_display", ""),
+            "opening_hours_is_24_7": bool(row.get("opening_hours_is_24_7", False)),
+            "helpdesk_phone": row.get("helpdesk_phone", ""),
+            "payment_methods_display": row.get("payment_methods_display", ""),
+            "auth_methods_display": row.get("auth_methods_display", ""),
+            "connector_types_display": row.get("connector_types_display", ""),
+            "current_types_display": row.get("current_types_display", ""),
+            "connector_count": int(row.get("connector_count", 0) or 0),
+            "green_energy": green_energy if isinstance(green_energy, bool) else row.get("green_energy", ""),
+            "service_types_display": row.get("service_types_display", ""),
+            "details_json": row.get("details_json", ""),
             "amenities_total": int(row["amenities_total"]),
             "amenities_source": row["amenities_source"],
             "amenity_examples": decode_amenity_examples(row.get("amenity_examples", "[]")),
@@ -2101,6 +4374,7 @@ def update_readme_status(readme_path: Path, summary: dict[str, Any]) -> None:
     records = summary["records"]
     lookup = summary["amenity_lookup"]
     occupancy = summary.get("occupancy_lookup", {})
+    static_details = summary.get("static_detail_lookup", {})
 
     block = "\n".join(
         [
@@ -2111,10 +4385,19 @@ def update_readme_status(readme_path: Path, summary: dict[str, Any]) -> None:
             f"- Source: `{source.get('source_url', 'unknown')}`",
             f"- Fast chargers (>= {summary['params']['min_power_kw']} kW): `{records['fast_chargers_total']}`",
             f"- Fast chargers with live occupancy: `{records.get('stations_with_live_occupancy', 0)}`",
+            (
+                f"- Fast chargers with static AFIR details: `{records.get('stations_with_static_details', 0)}` "
+                f"(price: `{records.get('stations_with_price', 0)}`, "
+                f"opening hours: `{records.get('stations_with_opening_hours', 0)}`)"
+            ),
             f"- Chargers with >=1 nearby amenity: `{records['stations_with_amenities']}`",
             (
                 f"- Occupancy sources scanned: `{occupancy.get('sources_used', 0)}` "
                 f"(matched EVSEs: `{occupancy.get('matched_evses', 0)}`)"
+            ),
+            (
+                f"- Static AFIR sources used: `{static_details.get('sources_used', 0)}` "
+                f"(helpdesk phones: `{records.get('stations_with_helpdesk', 0)}`)"
             ),
             f"- Amenity backend: `{lookup.get('backend', 'overpass')}`",
             (
@@ -2171,15 +4454,15 @@ def main() -> None:
         }
     )
 
-    log_info("Stage 1/7: Fetching BNetzA source")
+    log_info("Stage 1/8: Fetching BNetzA source")
     source_meta = fetch_bnetza_csv(session, RAW_CACHE_PATH, RAW_META_PATH)
     log_info(f"Source ready: {source_meta.get('source_url', 'unknown')}")
 
-    log_info("Stage 2/7: Loading and normalizing raw source")
+    log_info("Stage 2/8: Loading and normalizing raw source")
     raw_df = load_raw_dataframe(RAW_CACHE_PATH)
     log_info(f"Raw rows loaded: {len(raw_df)}")
 
-    log_info("Stage 3/7: Building filtered fast charger frame")
+    log_info("Stage 3/8: Building filtered fast charger frame")
     fast_df = build_fast_charger_frame(raw_df, min_power_kw=args.min_power_kw)
     log_info(f"Fast chargers after filter: {len(fast_df)}")
 
@@ -2187,12 +4470,18 @@ def main() -> None:
         fast_df = fast_df.head(args.max_stations).reset_index(drop=True)
         log_info(f"Applied max_stations cap: {len(fast_df)} rows")
 
-    log_info("Stage 4/7: Matching live occupancy from MobiData BW")
-    occupied_df, occupancy_stats = enrich_with_live_occupancy(
+    log_info("Stage 4/8: Matching live occupancy from MobiData BW and Mobilithek DATEX II")
+    occupied_df, ocpi_occupancy_stats = enrich_with_live_occupancy(
         fast_df,
         session=session,
         progress_every=args.progress_every,
     )
+    occupied_df, datex_occupancy_stats = enrich_with_mobilithek_datex(
+        occupied_df,
+        session=session,
+    )
+    occupancy_stats = combine_occupancy_stats(ocpi_occupancy_stats, datex_occupancy_stats)
+    occupancy_stats["matched_stations"] = int((occupied_df["occupancy_total_evses"] > 0).sum())
     log_info(
         "Live occupancy enrichment done: "
         f"sources={occupancy_stats['sources_used']}, "
@@ -2201,9 +4490,24 @@ def main() -> None:
         f"errors={len(occupancy_stats['errors'])}"
     )
 
-    log_info("Stage 5/7: Enriching chargers with nearby amenities")
-    enriched_df, amenity_stats = enrich_with_amenities(
+    log_info("Stage 5/8: Enriching chargers with static AFIR details")
+    detailed_df, static_detail_stats = enrich_with_static_details(
         occupied_df,
+        session=session,
+    )
+    log_info(
+        "Static detail enrichment done: "
+        f"sources={static_detail_stats['sources_used']}, "
+        f"matched_stations={static_detail_stats['matched_stations']}, "
+        f"price={static_detail_stats['stations_with_price']}, "
+        f"opening_hours={static_detail_stats['stations_with_opening_hours']}, "
+        f"helpdesk={static_detail_stats['stations_with_helpdesk']}, "
+        f"errors={len(static_detail_stats['errors'])}"
+    )
+
+    log_info("Stage 6/8: Enriching chargers with nearby amenities")
+    enriched_df, amenity_stats = enrich_with_amenities(
+        detailed_df,
         session=session,
         radius_m=args.radius_m,
         query_budget=args.query_budget,
@@ -2232,7 +4536,7 @@ def main() -> None:
 
     export_df = enriched_df.drop(columns=["evse_ids"], errors="ignore").copy()
 
-    log_info("Stage 6/7: Writing data artifacts")
+    log_info("Stage 7/8: Writing data artifacts")
     FAST_CSV_PATH.write_text(export_df.to_csv(index=False), encoding="utf-8")
 
     geojson = dataframe_to_geojson(export_df, source_meta)
@@ -2252,6 +4556,9 @@ def main() -> None:
 
     stations_with_amenities = int((export_df["amenities_total"] > 0).sum())
     stations_with_live_occupancy = int((export_df["occupancy_total_evses"] > 0).sum())
+    stations_with_static_details = int(
+        export_df["detail_source_uid"].fillna("").astype(str).str.strip().ne("").sum()
+    )
 
     summary = {
         "run": {
@@ -2272,9 +4579,20 @@ def main() -> None:
             "raw_rows": int(len(raw_df)),
             "fast_chargers_total": int(len(export_df)),
             "stations_with_live_occupancy": stations_with_live_occupancy,
+            "stations_with_static_details": stations_with_static_details,
+            "stations_with_price": int(
+                export_df["price_display"].fillna("").astype(str).str.strip().ne("").sum()
+            ),
+            "stations_with_opening_hours": int(
+                export_df["opening_hours_display"].fillna("").astype(str).str.strip().ne("").sum()
+            ),
+            "stations_with_helpdesk": int(
+                export_df["helpdesk_phone"].fillna("").astype(str).str.strip().ne("").sum()
+            ),
             "stations_with_amenities": stations_with_amenities,
         },
         "occupancy_lookup": occupancy_stats,
+        "static_detail_lookup": static_detail_stats,
         "amenity_lookup": amenity_stats,
         "operators": {
             "min_stations": int(args.operator_min_stations),
@@ -2287,7 +4605,7 @@ def main() -> None:
         encoding="utf-8",
     )
 
-    log_info("Stage 7/7: Updating run history and README status")
+    log_info("Stage 8/8: Updating run history and README status")
     write_run_history(RUN_HISTORY_PATH, summary)
     update_readme_status(README_PATH, summary)
     log_info(f"Pipeline completed in {format_duration(time.monotonic() - pipeline_started)}")

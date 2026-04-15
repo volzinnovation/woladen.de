@@ -78,12 +78,14 @@ python scripts/build_site.py
 <!-- DATA_STATUS_START -->
 ## Data Build Status
 
-- Last build (UTC): `2026-04-13T09:42:29+00:00`
+- Last build (UTC): `2026-04-14T22:00:33+00:00`
 - Source: `https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-03-25.csv`
 - Fast chargers (>= 50.0 kW): `16347`
-- Fast chargers with live occupancy: `280`
-- Chargers with >=1 nearby amenity: `11904`
-- Occupancy sources scanned: `8` (matched EVSEs: `1389`)
+- Fast chargers with live occupancy: `282`
+- Fast chargers with static AFIR details: `5136` (price: `3162`, opening hours: `9323`)
+- Chargers with >=1 nearby amenity: `14966`
+- Occupancy sources scanned: `10` (matched EVSEs: `1390`)
+- Static AFIR sources used: `8` (helpdesk phones: `4735`)
 - Amenity backend: `osm-pbf`
 - Live amenity lookups this run: `0` (cache hits: `0`, deferred: `0`)
 
