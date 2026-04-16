@@ -20,6 +20,9 @@ ACTIVE_DYN_DATEX_SUBSCRIPTION_PROVIDER_UIDS = (
     "vaylens",
     "wirelane",
 )
+# eliso uses the same authenticated Mobilithek subscription flow, but publishes a
+# generic JSON model instead of DATEX V3.
+ACTIVE_DYNAMIC_SUBSCRIPTION_PROVIDER_UIDS = ACTIVE_DYN_DATEX_SUBSCRIPTION_PROVIDER_UIDS + ("eliso",)
 
 
 @dataclass(frozen=True)
@@ -296,7 +299,7 @@ def build_live_subscription_registry(
 ) -> dict[str, dict[str, Any]]:
     offer_list = list(offers)
     active_contracts = select_active_subscription_contracts_by_publication(offer_list, contracts)
-    supported_dynamic_uids = set(ACTIVE_DYN_DATEX_SUBSCRIPTION_PROVIDER_UIDS)
+    supported_dynamic_uids = set(ACTIVE_DYNAMIC_SUBSCRIPTION_PROVIDER_UIDS)
     registry: dict[str, dict[str, Any]] = {}
 
     for offer in offer_list:

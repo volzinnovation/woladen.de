@@ -116,6 +116,24 @@ def test_build_live_subscription_registry_pairs_dyn_and_stat_and_preserves_noaut
             access_mode="auth",
         ),
         SubscriptionOffer(
+            provider_uid="eliso",
+            display_name="eliso",
+            publisher="eliso GmbH",
+            publication_id="843502085052710912",
+            offer_title="eliso AFIR Dynamic Data (Station & Point)",
+            feed_kind="dynamic",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
+            provider_uid="eliso",
+            display_name="eliso",
+            publisher="eliso GmbH",
+            publication_id="843477276990078976",
+            offer_title="eliso AFIR Static Data (Station & Point)",
+            feed_kind="static",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
             provider_uid="m8mit",
             display_name="m8mit",
             publisher="msu solutions GmbH",
@@ -168,6 +186,8 @@ def test_build_live_subscription_registry_pairs_dyn_and_stat_and_preserves_noaut
             {"id": "980986189821227008", "dataOfferId": "972842599324557312", "contractStatus": "ACTIVE"},
             {"id": "980986204027498496", "dataOfferId": "972837891969273856", "contractStatus": "ACTIVE"},
             {"id": "980986321979551744", "dataOfferId": "955166494396665856", "contractStatus": "ACTIVE"},
+            {"id": "980986474933399552", "dataOfferId": "843502085052710912", "contractStatus": "ACTIVE"},
+            {"id": "980986489051262976", "dataOfferId": "843477276990078976", "contractStatus": "ACTIVE"},
             {"id": "980986232691372032", "dataOfferId": "970388804493828096", "contractStatus": "ACTIVE"},
             {"id": "980986244745637888", "dataOfferId": "970305056590979072", "contractStatus": "ACTIVE"},
             {"id": "980986356418981888", "dataOfferId": "953843379766972416", "contractStatus": "ACTIVE"},
@@ -184,6 +204,11 @@ def test_build_live_subscription_registry_pairs_dyn_and_stat_and_preserves_noaut
     assert registry["eco_movement"]["subscription_id"] == "980986321979551744"
     assert registry["eco_movement"]["fetch_kind"] == "mtls_subscription"
     assert registry["eco_movement"]["enabled"] is True
+
+    assert registry["eliso"]["subscription_id"] == "980986474933399552"
+    assert registry["eliso"]["static_subscription_id"] == "980986489051262976"
+    assert registry["eliso"]["fetch_kind"] == "mtls_subscription"
+    assert registry["eliso"]["enabled"] is True
 
     assert registry["m8mit"]["subscription_id"] == "980986232691372032"
     assert registry["m8mit"]["static_subscription_id"] == "980986244745637888"

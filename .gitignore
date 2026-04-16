@@ -5,6 +5,10 @@ __pycache__/
 # OS
 .DS_Store
 
+# Backup files
+*.old
+*.old.*
+
 # Local secrets
 secret/
 
