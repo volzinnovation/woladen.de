@@ -74,8 +74,8 @@ struct ChargerProperties: Decodable {
     let datexStationIDs: String
     let datexChargePointIDs: String
     let priceDisplay: String
-    let priceEnergyEURKwhMin: Double?
-    let priceEnergyEURKwhMax: Double?
+    let priceEnergyEURKwhMin: String
+    let priceEnergyEURKwhMax: String
     let priceCurrency: String
     let priceQuality: String
     let openingHoursDisplay: String
@@ -168,8 +168,8 @@ struct ChargerProperties: Decodable {
         datexStationIDs: String,
         datexChargePointIDs: String,
         priceDisplay: String,
-        priceEnergyEURKwhMin: Double?,
-        priceEnergyEURKwhMax: Double?,
+        priceEnergyEURKwhMin: String,
+        priceEnergyEURKwhMax: String,
         priceCurrency: String,
         priceQuality: String,
         openingHoursDisplay: String,
@@ -264,8 +264,8 @@ struct ChargerProperties: Decodable {
         datexStationIDs = (try? container.decode(String.self, forKey: .datexStationIDs)) ?? ""
         datexChargePointIDs = (try? container.decode(String.self, forKey: .datexChargePointIDs)) ?? ""
         priceDisplay = (try? container.decode(String.self, forKey: .priceDisplay)) ?? ""
-        priceEnergyEURKwhMin = container.decodeLossyDouble(forKey: .priceEnergyEURKwhMin)
-        priceEnergyEURKwhMax = container.decodeLossyDouble(forKey: .priceEnergyEURKwhMax)
+        priceEnergyEURKwhMin = container.decodeLossyString(forKey: .priceEnergyEURKwhMin)
+        priceEnergyEURKwhMax = container.decodeLossyString(forKey: .priceEnergyEURKwhMax)
         priceCurrency = (try? container.decode(String.self, forKey: .priceCurrency)) ?? ""
         priceQuality = (try? container.decode(String.self, forKey: .priceQuality)) ?? ""
         openingHoursDisplay = (try? container.decode(String.self, forKey: .openingHoursDisplay)) ?? ""
@@ -505,6 +505,19 @@ struct AnyCodingKey: CodingKey {
 }
 
 extension KeyedDecodingContainer {
+    fileprivate func decodeLossyString(forKey key: Key) -> String {
+        if let value = try? decode(String.self, forKey: key) {
+            return value
+        }
+        if let value = try? decode(Double.self, forKey: key) {
+            return String(value)
+        }
+        if let value = try? decode(Int.self, forKey: key) {
+            return String(value)
+        }
+        return ""
+    }
+
     fileprivate func decodeLossyDouble(forKey key: Key) -> Double? {
         if let value = try? decode(Double.self, forKey: key) {
             return value

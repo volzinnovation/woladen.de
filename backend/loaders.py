@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .models import ProviderTarget, SiteMatch, StationRecord
+from .models import EvseMatch, ProviderTarget, SiteMatch, StationRecord
 
 PUBLICATION_FILE_URL = "https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/{publication_id}/file"
 PUBLICATION_PUBLIC_FILE_URL = (
@@ -53,6 +53,27 @@ def _provider_uid_from_detail_source_uid(value: Any) -> str:
     if text.startswith(prefix) and text.endswith(suffix):
         return text[len(prefix) : -len(suffix)]
     return ""
+
+
+def _normalize_lookup_token(value: Any) -> str:
+    return "".join(ch for ch in str(value or "").upper() if ch.isalnum())
+
+
+def _split_pipe_ids(value: Any) -> list[str]:
+    return [part.strip() for part in str(value or "").split("|") if part.strip()]
+
+
+def _provider_uids_from_bundle_row(row: dict[str, Any]) -> list[str]:
+    provider_uids: set[str] = set()
+    detail_provider_uid = _provider_uid_from_detail_source_uid(row.get("detail_source_uid"))
+    if detail_provider_uid:
+        provider_uids.add(detail_provider_uid)
+
+    site_id = str(row.get("datex_site_id") or "").strip()
+    if site_id.startswith("Eliso GmbH-"):
+        provider_uids.add("eliso")
+
+    return sorted(provider_uids)
 
 
 def load_provider_targets(
@@ -175,17 +196,17 @@ def load_site_matches(site_match_path: Path, chargers_csv_path: Path | None = No
         with chargers_csv_path.open("r", encoding="utf-8", newline="") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
-                provider_uid = _provider_uid_from_detail_source_uid(row.get("detail_source_uid"))
                 site_id = str(row.get("datex_site_id") or "").strip()
                 station_id = str(row.get("station_id") or "").strip()
-                if not provider_uid or not site_id or not station_id:
+                if not site_id or not station_id:
                     continue
-                rows[(provider_uid, site_id)] = SiteMatch(
-                    provider_uid=provider_uid,
-                    site_id=site_id,
-                    station_id=station_id,
-                    score=0.0,
-                )
+                for provider_uid in _provider_uids_from_bundle_row(row):
+                    rows[(provider_uid, site_id)] = SiteMatch(
+                        provider_uid=provider_uid,
+                        site_id=site_id,
+                        station_id=station_id,
+                        score=0.0,
+                    )
 
     with site_match_path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -202,6 +223,40 @@ def load_site_matches(site_match_path: Path, chargers_csv_path: Path | None = No
                 score=_to_float(row.get("score")),
             )
     return sorted(rows.values(), key=lambda item: (item.provider_uid, item.site_id, item.station_id))
+
+
+def load_evse_matches(chargers_csv_path: Path) -> list[EvseMatch]:
+    rows: dict[tuple[str, str], EvseMatch] = {}
+
+    with chargers_csv_path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        for row in reader:
+            station_id = str(row.get("station_id") or "").strip()
+            if not station_id:
+                continue
+
+            provider_uids = _provider_uids_from_bundle_row(row)
+            if not provider_uids:
+                continue
+
+            site_id = str(row.get("datex_site_id") or "").strip()
+            station_ids = _split_pipe_ids(row.get("datex_station_ids"))
+            station_ref = station_ids[0] if station_ids else ""
+
+            for provider_uid in provider_uids:
+                for evse_id in _split_pipe_ids(row.get("datex_charge_point_ids")):
+                    normalized_evse_id = _normalize_lookup_token(evse_id)
+                    if not normalized_evse_id:
+                        continue
+                    rows[(provider_uid, normalized_evse_id)] = EvseMatch(
+                        provider_uid=provider_uid,
+                        evse_id=normalized_evse_id,
+                        station_id=station_id,
+                        site_id=site_id,
+                        station_ref=station_ref,
+                    )
+
+    return sorted(rows.values(), key=lambda item: (item.provider_uid, item.evse_id, item.station_id))
 
 
 def load_station_records(chargers_csv_path: Path) -> list[StationRecord]:

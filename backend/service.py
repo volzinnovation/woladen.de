@@ -7,7 +7,7 @@ from .archive import ResponseLogWriter
 from .config import AppConfig
 from .datex import decode_json_payload, extract_dynamic_facts
 from .fetcher import CurlFetcher
-from .loaders import load_provider_targets, load_site_matches, load_station_records
+from .loaders import load_evse_matches, load_provider_targets, load_site_matches, load_station_records
 from .models import FetchResponse
 from .store import LiveStore, utc_now_iso
 
@@ -36,6 +36,7 @@ class IngestionService:
             )
         )
         self.store.upsert_site_matches(load_site_matches(self.config.site_match_path, self.config.chargers_csv_path))
+        self.store.upsert_evse_matches(load_evse_matches(self.config.chargers_csv_path))
         self.store.reconcile_station_ids_from_site_matches()
         self.store.upsert_stations(load_station_records(self.config.chargers_csv_path))
 
@@ -48,7 +49,12 @@ class IngestionService:
         content_type: str,
     ) -> tuple[str, int, int]:
         payload = decode_json_payload(payload_bytes)
-        facts = extract_dynamic_facts(payload, provider_uid, self.store.get_site_station_map(provider_uid))
+        facts = extract_dynamic_facts(
+            payload,
+            provider_uid,
+            self.store.get_site_station_map(provider_uid),
+            self.store.get_evse_station_map(provider_uid),
+        )
         return self.store.persist_provider_observations(
             provider_uid=provider_uid,
             facts=facts,

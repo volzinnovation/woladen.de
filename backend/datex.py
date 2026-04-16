@@ -82,6 +82,35 @@ def decode_json_payload(content: bytes) -> dict[str, Any]:
     return payload
 
 
+def iter_status_publications(payload: dict[str, Any]):
+    candidate_containers: list[dict[str, Any]] = [payload]
+
+    message_container = payload.get("messageContainer")
+    if isinstance(message_container, dict):
+        message_payload = message_container.get("payload")
+        if isinstance(message_payload, dict):
+            candidate_containers.append(message_payload)
+        elif isinstance(message_payload, list):
+            candidate_containers.extend(item for item in message_payload if isinstance(item, dict))
+
+    direct_payload = payload.get("payload")
+    if isinstance(direct_payload, dict):
+        candidate_containers.append(direct_payload)
+    elif isinstance(direct_payload, list):
+        candidate_containers.extend(item for item in direct_payload if isinstance(item, dict))
+
+    seen_container_ids: set[int] = set()
+    for container in candidate_containers:
+        container_id = id(container)
+        if container_id in seen_container_ids:
+            continue
+        seen_container_ids.add(container_id)
+
+        publication = container.get("aegiEnergyInfrastructureStatusPublication")
+        if isinstance(publication, dict):
+            yield publication
+
+
 def iter_walk_nodes(value: Any):
     if isinstance(value, dict):
         yield value
@@ -278,6 +307,17 @@ def format_euro_amount(value: float) -> str:
     return f"{rounded:.2f}".replace(".", ",")
 
 
+def _to_float_or_none(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def format_price_scalar(value: float) -> str:
+    return f"{float(value):.6f}".rstrip("0").rstrip(".")
+
+
 def summarize_price_snapshot(price_components: dict[str, Any]) -> PriceSnapshot:
     kwh_values = [float(item) for item in price_components.get("kwh_values", [])]
     minute_values = [float(item) for item in price_components.get("minute_values", [])]
@@ -286,7 +326,7 @@ def summarize_price_snapshot(price_components: dict[str, Any]) -> PriceSnapshot:
     complex_tariff = bool(price_components.get("complex_tariff"))
 
     if not kwh_values and not minute_values:
-        return PriceSnapshot("", currency, None, None, None, None, "", complex_tariff)
+        return PriceSnapshot("", currency, "", "", None, None, "", complex_tariff)
 
     display = ""
     quality = ""
@@ -316,8 +356,8 @@ def summarize_price_snapshot(price_components: dict[str, Any]) -> PriceSnapshot:
     return PriceSnapshot(
         display=display,
         currency=currency,
-        energy_eur_kwh_min=round(kwh_min, 6) if kwh_min is not None and currency == "EUR" else None,
-        energy_eur_kwh_max=round(kwh_max, 6) if kwh_max is not None and currency == "EUR" else None,
+        energy_eur_kwh_min=format_price_scalar(kwh_min) if kwh_min is not None and currency == "EUR" else "",
+        energy_eur_kwh_max=format_price_scalar(kwh_max) if kwh_max is not None and currency == "EUR" else "",
         time_eur_min_min=round(minute_min, 6) if minute_min is not None and currency == "EUR" else None,
         time_eur_min_max=round(minute_max, 6) if minute_max is not None and currency == "EUR" else None,
         quality=quality,
@@ -327,17 +367,114 @@ def summarize_price_snapshot(price_components: dict[str, Any]) -> PriceSnapshot:
 
 def choose_price_snapshot(*snapshots: PriceSnapshot) -> PriceSnapshot:
     for snapshot in reversed(snapshots):
-        if snapshot.display or snapshot.energy_eur_kwh_min is not None or snapshot.time_eur_min_min is not None:
+        if snapshot.display or snapshot.energy_eur_kwh_min or snapshot.time_eur_min_min is not None:
             return snapshot
     return snapshots[0]
 
 
-def extract_dynamic_facts(payload: dict[str, Any], provider_uid: str, site_station_map: dict[str, str]) -> list[DynamicFact]:
-    root_payload = (payload.get("messageContainer") or {}).get("payload") or []
+def summarize_simple_price_snapshot(*, energy_eur_kwh: Any = None, time_eur_min: Any = None) -> PriceSnapshot:
+    energy_value = _to_float_or_none(energy_eur_kwh)
+    time_value = _to_float_or_none(time_eur_min)
+    return summarize_price_snapshot(
+        {
+            "kwh_values": [energy_value] if energy_value is not None else [],
+            "minute_values": [time_value] if time_value is not None else [],
+            "currencies": ["EUR"] if energy_value is not None or time_value is not None else [],
+            "complex_tariff": energy_value is not None and time_value is not None,
+        }
+    )
+
+
+def normalize_eliso_occupancy_status(availability_value: Any, operational_value: Any) -> tuple[str, str]:
+    availability_code = normalize_code_value(availability_value)
+    operational_code = normalize_code_value(operational_value)
+
+    if operational_code == "nonoperational":
+        return "out_of_order", "UNKNOWN"
+    if availability_code == "notinuse":
+        return "free", "AVAILABLE"
+    if availability_code == "inuse":
+        return "occupied", "CHARGING"
+    if operational_code == "operational":
+        return "unknown", "AVAILABLE"
+    return "unknown", "UNKNOWN" if operational_code else ""
+
+
+def lookup_evse_match(
+    evse_id: str,
+    evse_station_map: dict[str, dict[str, str]] | None,
+) -> dict[str, str]:
+    if not evse_station_map:
+        return {}
+
+    candidates = [evse_id]
+    match = re.search(r"(\d+)$", evse_id)
+    if match is not None:
+        numeric_suffix = match.group(1)
+        if numeric_suffix not in candidates:
+            candidates.append(numeric_suffix)
+
+    for candidate in candidates:
+        resolved = evse_station_map.get(candidate)
+        if resolved is not None:
+            return resolved
+    return {}
+
+
+def extract_dynamic_facts(
+    payload: dict[str, Any],
+    provider_uid: str,
+    site_station_map: dict[str, str],
+    evse_station_map: dict[str, dict[str, str]] | None = None,
+) -> list[DynamicFact]:
     seen: dict[tuple[str, str], DynamicFact] = {}
 
-    for container in root_payload:
-        publication = container.get("aegiEnergyInfrastructureStatusPublication") or {}
+    generic_evses = payload.get("evses")
+    if isinstance(generic_evses, list):
+        for item in generic_evses:
+            if not isinstance(item, dict):
+                continue
+
+            evse_id = normalize_evse_id(item.get("evseId"))
+            if not evse_id:
+                continue
+
+            evse_match = lookup_evse_match(evse_id, evse_station_map)
+            availability_status, operational_status = normalize_eliso_occupancy_status(
+                item.get("availability_status"),
+                item.get("operational_status"),
+            )
+            source_observed_at = choose_latest_timestamp([str(item.get("mobilithek_last_updated_dts") or "").strip()])
+
+            fact = DynamicFact(
+                provider_uid=provider_uid,
+                site_id=str(evse_match.get("site_id") or ""),
+                station_ref=str(evse_match.get("station_ref") or ""),
+                evse_id=evse_id,
+                station_id=str(evse_match.get("station_id") or "") or None,
+                availability_status=availability_status,
+                operational_status=operational_status,
+                price=summarize_simple_price_snapshot(
+                    energy_eur_kwh=item.get("adhoc_price"),
+                    time_eur_min=item.get("blocking_fee"),
+                ),
+                next_available_charging_slots=[],
+                supplemental_facility_status=[],
+                source_observed_at=source_observed_at,
+            )
+
+            key = (fact.site_id, evse_id)
+            previous = seen.get(key)
+            if previous is None:
+                seen[key] = fact
+                continue
+
+            prev_dt = parse_iso_datetime(previous.source_observed_at)
+            next_dt = parse_iso_datetime(fact.source_observed_at)
+            if prev_dt is None or (next_dt is not None and next_dt >= prev_dt):
+                seen[key] = fact
+
+    for publication in iter_status_publications(payload):
         for site_status in publication.get("energyInfrastructureSiteStatus") or []:
             site_id = str(((site_status.get("reference") or {}).get("idG")) or "").strip()
             if not site_id:
@@ -408,7 +545,8 @@ def extract_dynamic_facts(payload: dict[str, Any], provider_uid: str, site_stati
                         site_id=site_id,
                         station_ref=station_ref,
                         evse_id=evse_id,
-                        station_id=site_station_map.get(site_id),
+                        station_id=site_station_map.get(site_id)
+                        or (lookup_evse_match(evse_id, evse_station_map).get("station_id") or None),
                         availability_status=availability_status,
                         operational_status=operational_status,
                         price=price,

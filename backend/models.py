@@ -41,11 +41,20 @@ class SiteMatch:
 
 
 @dataclass(frozen=True)
+class EvseMatch:
+    provider_uid: str
+    evse_id: str
+    station_id: str
+    site_id: str
+    station_ref: str
+
+
+@dataclass(frozen=True)
 class PriceSnapshot:
     display: str
     currency: str
-    energy_eur_kwh_min: float | None
-    energy_eur_kwh_max: float | None
+    energy_eur_kwh_min: str
+    energy_eur_kwh_max: str
     time_eur_min_min: float | None
     time_eur_min_max: float | None
     quality: str

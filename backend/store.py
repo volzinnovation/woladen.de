@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .config import AppConfig
-from .models import DynamicFact, PriceSnapshot, ProviderTarget, SiteMatch, StationRecord
+from .models import DynamicFact, EvseMatch, PriceSnapshot, ProviderTarget, SiteMatch, StationRecord
 
 LIVE_JSON_FIELDS = ("next_available_charging_slots", "supplemental_facility_status")
+DESCRIPTIVE_PRICE_FIELDS = ("price_energy_eur_kwh_min", "price_energy_eur_kwh_max")
 
 
 def utc_now_iso() -> str:
@@ -106,6 +107,15 @@ class LiveStore:
                     PRIMARY KEY (provider_uid, site_id)
                 );
 
+                CREATE TABLE IF NOT EXISTS provider_evse_matches (
+                    provider_uid TEXT NOT NULL,
+                    provider_evse_id TEXT NOT NULL,
+                    station_id TEXT NOT NULL,
+                    site_id TEXT NOT NULL DEFAULT '',
+                    station_ref TEXT NOT NULL DEFAULT '',
+                    PRIMARY KEY (provider_uid, provider_evse_id)
+                );
+
                 CREATE TABLE IF NOT EXISTS stations (
                     station_id TEXT PRIMARY KEY,
                     operator TEXT NOT NULL,
@@ -170,8 +180,8 @@ class LiveStore:
                     operational_status TEXT NOT NULL,
                     price_display TEXT NOT NULL,
                     price_currency TEXT NOT NULL,
-                    price_energy_eur_kwh_min REAL,
-                    price_energy_eur_kwh_max REAL,
+                    price_energy_eur_kwh_min TEXT NOT NULL DEFAULT '',
+                    price_energy_eur_kwh_max TEXT NOT NULL DEFAULT '',
                     price_time_eur_min_min REAL,
                     price_time_eur_min_max REAL,
                     price_quality TEXT NOT NULL,
@@ -196,8 +206,8 @@ class LiveStore:
                     total_evses INTEGER NOT NULL DEFAULT 0,
                     price_display TEXT NOT NULL,
                     price_currency TEXT NOT NULL,
-                    price_energy_eur_kwh_min REAL,
-                    price_energy_eur_kwh_max REAL,
+                    price_energy_eur_kwh_min TEXT NOT NULL DEFAULT '',
+                    price_energy_eur_kwh_max TEXT NOT NULL DEFAULT '',
                     price_time_eur_min_min REAL,
                     price_time_eur_min_max REAL,
                     price_complex INTEGER NOT NULL DEFAULT 0,
@@ -253,6 +263,169 @@ class LiveStore:
             ("supplemental_facility_status", "TEXT NOT NULL DEFAULT ''"),
         ]
         self._ensure_table_columns(conn, "evse_current_state", additions)
+        self._migrate_live_state_price_columns(conn)
+
+    def _live_state_table_needs_price_migration(self, conn: sqlite3.Connection, table_name: str) -> bool:
+        column_types = {
+            str(row["name"]): str(row["type"] or "").upper()
+            for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+        }
+        return any(column_types.get(field_name) != "TEXT" for field_name in DESCRIPTIVE_PRICE_FIELDS)
+
+    def _migrate_live_state_price_columns(self, conn: sqlite3.Connection) -> None:
+        if self._live_state_table_needs_price_migration(conn, "evse_current_state"):
+            conn.execute("ALTER TABLE evse_current_state RENAME TO evse_current_state__legacy_price_columns")
+            conn.executescript(
+                """
+                CREATE TABLE evse_current_state (
+                    provider_uid TEXT NOT NULL,
+                    provider_site_id TEXT NOT NULL,
+                    provider_station_ref TEXT NOT NULL,
+                    provider_evse_id TEXT NOT NULL,
+                    station_id TEXT NOT NULL DEFAULT '',
+                    availability_status TEXT NOT NULL,
+                    operational_status TEXT NOT NULL,
+                    price_display TEXT NOT NULL,
+                    price_currency TEXT NOT NULL,
+                    price_energy_eur_kwh_min TEXT NOT NULL DEFAULT '',
+                    price_energy_eur_kwh_max TEXT NOT NULL DEFAULT '',
+                    price_time_eur_min_min REAL,
+                    price_time_eur_min_max REAL,
+                    price_quality TEXT NOT NULL,
+                    price_complex INTEGER NOT NULL DEFAULT 0,
+                    next_available_charging_slots TEXT NOT NULL DEFAULT '',
+                    supplemental_facility_status TEXT NOT NULL DEFAULT '',
+                    source_observed_at TEXT NOT NULL,
+                    fetched_at TEXT NOT NULL,
+                    ingested_at TEXT NOT NULL,
+                    payload_sha256 TEXT NOT NULL,
+                    PRIMARY KEY (provider_uid, provider_evse_id)
+                );
+                """
+            )
+            conn.execute(
+                """
+                INSERT INTO evse_current_state (
+                    provider_uid,
+                    provider_site_id,
+                    provider_station_ref,
+                    provider_evse_id,
+                    station_id,
+                    availability_status,
+                    operational_status,
+                    price_display,
+                    price_currency,
+                    price_energy_eur_kwh_min,
+                    price_energy_eur_kwh_max,
+                    price_time_eur_min_min,
+                    price_time_eur_min_max,
+                    price_quality,
+                    price_complex,
+                    next_available_charging_slots,
+                    supplemental_facility_status,
+                    source_observed_at,
+                    fetched_at,
+                    ingested_at,
+                    payload_sha256
+                )
+                SELECT
+                    provider_uid,
+                    provider_site_id,
+                    provider_station_ref,
+                    provider_evse_id,
+                    station_id,
+                    availability_status,
+                    operational_status,
+                    price_display,
+                    price_currency,
+                    COALESCE(CAST(price_energy_eur_kwh_min AS TEXT), ''),
+                    COALESCE(CAST(price_energy_eur_kwh_max AS TEXT), ''),
+                    price_time_eur_min_min,
+                    price_time_eur_min_max,
+                    price_quality,
+                    price_complex,
+                    next_available_charging_slots,
+                    supplemental_facility_status,
+                    source_observed_at,
+                    fetched_at,
+                    ingested_at,
+                    payload_sha256
+                FROM evse_current_state__legacy_price_columns
+                """
+            )
+            conn.execute("DROP TABLE evse_current_state__legacy_price_columns")
+
+        if self._live_state_table_needs_price_migration(conn, "station_current_state"):
+            conn.execute("ALTER TABLE station_current_state RENAME TO station_current_state__legacy_price_columns")
+            conn.executescript(
+                """
+                CREATE TABLE station_current_state (
+                    station_id TEXT PRIMARY KEY,
+                    provider_uid TEXT NOT NULL,
+                    availability_status TEXT NOT NULL,
+                    available_evses INTEGER NOT NULL DEFAULT 0,
+                    occupied_evses INTEGER NOT NULL DEFAULT 0,
+                    out_of_order_evses INTEGER NOT NULL DEFAULT 0,
+                    unknown_evses INTEGER NOT NULL DEFAULT 0,
+                    total_evses INTEGER NOT NULL DEFAULT 0,
+                    price_display TEXT NOT NULL,
+                    price_currency TEXT NOT NULL,
+                    price_energy_eur_kwh_min TEXT NOT NULL DEFAULT '',
+                    price_energy_eur_kwh_max TEXT NOT NULL DEFAULT '',
+                    price_time_eur_min_min REAL,
+                    price_time_eur_min_max REAL,
+                    price_complex INTEGER NOT NULL DEFAULT 0,
+                    source_observed_at TEXT NOT NULL,
+                    fetched_at TEXT NOT NULL,
+                    ingested_at TEXT NOT NULL
+                );
+                """
+            )
+            conn.execute(
+                """
+                INSERT INTO station_current_state (
+                    station_id,
+                    provider_uid,
+                    availability_status,
+                    available_evses,
+                    occupied_evses,
+                    out_of_order_evses,
+                    unknown_evses,
+                    total_evses,
+                    price_display,
+                    price_currency,
+                    price_energy_eur_kwh_min,
+                    price_energy_eur_kwh_max,
+                    price_time_eur_min_min,
+                    price_time_eur_min_max,
+                    price_complex,
+                    source_observed_at,
+                    fetched_at,
+                    ingested_at
+                )
+                SELECT
+                    station_id,
+                    provider_uid,
+                    availability_status,
+                    available_evses,
+                    occupied_evses,
+                    out_of_order_evses,
+                    unknown_evses,
+                    total_evses,
+                    price_display,
+                    price_currency,
+                    COALESCE(CAST(price_energy_eur_kwh_min AS TEXT), ''),
+                    COALESCE(CAST(price_energy_eur_kwh_max AS TEXT), ''),
+                    price_time_eur_min_min,
+                    price_time_eur_min_max,
+                    price_complex,
+                    source_observed_at,
+                    fetched_at,
+                    ingested_at
+                FROM station_current_state__legacy_price_columns
+                """
+            )
+            conn.execute("DROP TABLE station_current_state__legacy_price_columns")
 
     def _drop_legacy_observation_storage(self, conn: sqlite3.Connection) -> bool:
         table_exists = (
@@ -329,6 +502,28 @@ class LiveStore:
                         score=excluded.score
                     """,
                     (match.provider_uid, match.site_id, match.station_id, match.score),
+                )
+
+    def upsert_evse_matches(self, matches: Iterable[EvseMatch]) -> None:
+        with self.connection() as conn:
+            for match in matches:
+                conn.execute(
+                    """
+                    INSERT INTO provider_evse_matches (
+                        provider_uid, provider_evse_id, station_id, site_id, station_ref
+                    ) VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(provider_uid, provider_evse_id) DO UPDATE SET
+                        station_id=excluded.station_id,
+                        site_id=excluded.site_id,
+                        station_ref=excluded.station_ref
+                    """,
+                    (
+                        match.provider_uid,
+                        match.evse_id,
+                        match.station_id,
+                        match.site_id,
+                        match.station_ref,
+                    ),
                 )
 
     def reconcile_station_ids_from_site_matches(self) -> int:
@@ -515,6 +710,25 @@ class LiveStore:
                 (provider_uid,),
             ).fetchall()
         return {str(row["site_id"]): str(row["station_id"]) for row in rows}
+
+    def get_evse_station_map(self, provider_uid: str) -> dict[str, dict[str, str]]:
+        with self.connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT provider_evse_id, station_id, site_id, station_ref
+                FROM provider_evse_matches
+                WHERE provider_uid = ?
+                """,
+                (provider_uid,),
+            ).fetchall()
+        return {
+            str(row["provider_evse_id"]): {
+                "station_id": str(row["station_id"]),
+                "site_id": str(row["site_id"]),
+                "station_ref": str(row["station_ref"]),
+            }
+            for row in rows
+        }
 
     def start_poll_run(self, provider_uid: str) -> int:
         started_at = utc_now_iso()
@@ -730,13 +944,50 @@ class LiveStore:
         return (
             price.display,
             price.currency,
-            price.energy_eur_kwh_min,
-            price.energy_eur_kwh_max,
+            self._descriptive_price_text(price.energy_eur_kwh_min),
+            self._descriptive_price_text(price.energy_eur_kwh_max),
             price.time_eur_min_min,
             price.time_eur_min_max,
             price.quality,
             1 if price.complex_tariff else 0,
         )
+
+    @staticmethod
+    def _descriptive_price_text(value: Any) -> str:
+        if value is None:
+            return ""
+        text = str(value).strip()
+        if not text:
+            return ""
+        try:
+            number = float(text)
+        except (TypeError, ValueError):
+            return text
+        return f"{number:.6f}".rstrip("0").rstrip(".")
+
+    def _normalize_descriptive_price_fields(self, payload: dict[str, Any]) -> dict[str, Any]:
+        for field_name in DESCRIPTIVE_PRICE_FIELDS:
+            if field_name not in payload:
+                continue
+            payload[field_name] = self._descriptive_price_text(payload[field_name])
+        return payload
+
+    def _price_snapshot_from_row(
+        self,
+        row: sqlite3.Row | dict[str, Any],
+    ) -> tuple[str, str, str, str, float | None, float | None, int] | None:
+        price_display = str(row["price_display"] or "")
+        price_currency = str(row["price_currency"] or "")
+        energy_min = self._descriptive_price_text(row["price_energy_eur_kwh_min"])
+        energy_max = self._descriptive_price_text(row["price_energy_eur_kwh_max"])
+        time_min = row["price_time_eur_min_min"]
+        time_max = row["price_time_eur_min_max"]
+        price_complex = int(row["price_complex"] or 0)
+        if not (
+            price_display or energy_min or energy_max or time_min is not None or time_max is not None or price_complex
+        ):
+            return None
+        return (price_display, price_currency, energy_min, energy_max, time_min, time_max, price_complex)
 
     def _json_field_text(self, value: Any) -> str:
         if value is None:
@@ -784,24 +1035,25 @@ class LiveStore:
             if field_name not in payload:
                 continue
             payload[field_name] = self._json_field_value(payload[field_name])
-        return payload
+        return self._normalize_descriptive_price_fields(payload)
 
     def _state_signature(self, row: sqlite3.Row | dict[str, Any] | None) -> tuple[Any, ...]:
         if not row:
             return ()
+        normalized_row = self._normalize_descriptive_price_fields(dict(row))
         return (
-            row["availability_status"],
-            row["operational_status"],
-            row["price_display"],
-            row["price_currency"],
-            row["price_energy_eur_kwh_min"],
-            row["price_energy_eur_kwh_max"],
-            row["price_time_eur_min_min"],
-            row["price_time_eur_min_max"],
-            row["price_quality"],
-            row["price_complex"],
-            self._json_field_text(row["next_available_charging_slots"]),
-            self._json_field_text(row["supplemental_facility_status"]),
+            normalized_row["availability_status"],
+            normalized_row["operational_status"],
+            normalized_row["price_display"],
+            normalized_row["price_currency"],
+            normalized_row["price_energy_eur_kwh_min"],
+            normalized_row["price_energy_eur_kwh_max"],
+            normalized_row["price_time_eur_min_min"],
+            normalized_row["price_time_eur_min_max"],
+            normalized_row["price_quality"],
+            normalized_row["price_complex"],
+            self._json_field_text(normalized_row["next_available_charging_slots"]),
+            self._json_field_text(normalized_row["supplemental_facility_status"]),
         )
 
     def _fact_signature(self, fact: DynamicFact) -> tuple[Any, ...]:
@@ -810,8 +1062,8 @@ class LiveStore:
             fact.operational_status,
             fact.price.display,
             fact.price.currency,
-            fact.price.energy_eur_kwh_min,
-            fact.price.energy_eur_kwh_max,
+            self._descriptive_price_text(fact.price.energy_eur_kwh_min),
+            self._descriptive_price_text(fact.price.energy_eur_kwh_max),
             fact.price.time_eur_min_min,
             fact.price.time_eur_min_max,
             fact.price.quality,
@@ -927,34 +1179,30 @@ class LiveStore:
 
         price_display = ""
         price_currency = ""
-        energy_min: float | None = None
-        energy_max: float | None = None
+        energy_min = ""
+        energy_max = ""
         time_min: float | None = None
         time_max: float | None = None
         price_complex = 0
+        fallback_price_snapshot: tuple[str, str, str, str, float | None, float | None, int] | None = None
+        chosen_price_snapshot: tuple[str, str, str, str, float | None, float | None, int] | None = None
 
         for row in rows:
             status = str(row["availability_status"])
             counts[status if status in counts else "unknown"] += 1
-            if row["price_display"] and not price_display:
-                price_display = str(row["price_display"])
-            if row["price_currency"] and not price_currency:
-                price_currency = str(row["price_currency"])
-            if row["price_energy_eur_kwh_min"] is not None:
-                energy_min = row["price_energy_eur_kwh_min"] if energy_min is None else min(
-                    energy_min, row["price_energy_eur_kwh_min"]
-                )
-                energy_max = row["price_energy_eur_kwh_max"] if energy_max is None else max(
-                    energy_max or row["price_energy_eur_kwh_max"], row["price_energy_eur_kwh_max"]
-                )
-            if row["price_time_eur_min_min"] is not None:
-                time_min = row["price_time_eur_min_min"] if time_min is None else min(
-                    time_min, row["price_time_eur_min_min"]
-                )
-                time_max = row["price_time_eur_min_max"] if time_max is None else max(
-                    time_max or row["price_time_eur_min_max"], row["price_time_eur_min_max"]
-                )
-            price_complex = max(price_complex, int(row["price_complex"] or 0))
+            price_snapshot = self._price_snapshot_from_row(row)
+            if price_snapshot is None:
+                continue
+            if fallback_price_snapshot is None:
+                fallback_price_snapshot = price_snapshot
+            if price_snapshot[0] and chosen_price_snapshot is None:
+                chosen_price_snapshot = price_snapshot
+
+        selected_price_snapshot = chosen_price_snapshot or fallback_price_snapshot
+        if selected_price_snapshot is not None:
+            price_display, price_currency, energy_min, energy_max, time_min, time_max, price_complex = (
+                selected_price_snapshot
+            )
 
         availability_status = "unknown"
         if counts["free"] > 0:
@@ -1063,7 +1311,7 @@ class LiveStore:
         sql += " ORDER BY c.fetched_at DESC, s.station_id LIMIT ? OFFSET ?"
         params.extend([limit, offset])
         with self.connection() as conn:
-            return [dict(row) for row in conn.execute(sql, tuple(params)).fetchall()]
+            return [self._deserialize_live_row(row) for row in conn.execute(sql, tuple(params)).fetchall()]
 
     def list_station_summaries_by_ids(self, station_ids: Iterable[str]) -> list[dict[str, Any]]:
         ordered_station_ids: list[str] = []
@@ -1115,7 +1363,7 @@ class LiveStore:
         with self.connection() as conn:
             rows = conn.execute(sql, tuple(ordered_station_ids)).fetchall()
 
-        row_by_station_id = {str(row["station_id"]): dict(row) for row in rows}
+        row_by_station_id = {str(row["station_id"]): self._deserialize_live_row(row) for row in rows}
         return [row_by_station_id[station_id] for station_id in ordered_station_ids if station_id in row_by_station_id]
 
     def get_station_detail(self, station_id: str) -> dict[str, Any] | None:
@@ -1169,7 +1417,7 @@ class LiveStore:
             ).fetchall()
 
         return {
-            "station": dict(current),
+            "station": self._deserialize_live_row(current),
             "evses": [self._deserialize_live_row(row) for row in current_evses],
             "recent_observations": [],
         }

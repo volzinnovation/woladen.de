@@ -608,6 +608,8 @@ def load_direct_datex_sources(path: Path = MOBILITHEK_SUBSCRIPTION_REGISTRY_PATH
     for provider_uid, entry in registry.items():
         if not isinstance(entry, dict):
             continue
+        if "enabled" in entry and not bool(entry.get("enabled")):
+            continue
         fetch_kind = str(entry.get("fetch_kind") or "").strip()
         dynamic_url = str(entry.get("fetch_url") or "").strip()
         static_url = str(entry.get("static_fetch_url") or "").strip()
@@ -2751,6 +2753,25 @@ def fetch_mobilithek_static_payload_with_probe(
     return None, preferred_access_mode, last_error
 
 
+def derive_eliso_static_site_id(site: dict[str, Any]) -> str:
+    address = normalize_optional_text(site.get("address"))
+    postcode = normalize_optional_text(site.get("postalCode"))
+    city = normalize_optional_text(site.get("city"))
+    location_key = " | ".join(part for part in (address, postcode, city) if part)
+    if location_key:
+        return location_key
+
+    coordinates = site.get("coordinates") or {}
+    try:
+        lat = float(coordinates.get("latitude"))
+        lon = float(coordinates.get("longitude"))
+        return f"{lat:.6f},{lon:.6f}"
+    except (TypeError, ValueError):
+        pass
+
+    return normalize_optional_text(site.get("operator_name") or site.get("operator"))
+
+
 def parse_eliso_static_sites(payload: list[dict[str, Any]]) -> list[ElisoStaticSite]:
     sites: list[ElisoStaticSite] = []
     for site in payload:
@@ -2776,12 +2797,7 @@ def parse_eliso_static_sites(payload: list[dict[str, Any]]) -> list[ElisoStaticS
         if total_evses <= 0:
             total_evses = len(evse_ids)
 
-        site_id = normalize_optional_text(
-            site.get("operator")
-            or site.get("operator_name")
-            or site.get("address")
-            or f"{lat:.6f},{lon:.6f}"
-        )
+        site_id = derive_eliso_static_site_id(site)
         if not site_id:
             site_id = f"{lat:.6f},{lon:.6f}"
 
@@ -3533,11 +3549,7 @@ def apply_static_publication_payload(
             payload_kind = "eliso"
             site_records = parse_eliso_static_sites(payload)
             for site in payload:
-                site_id = normalize_optional_text(
-                    site.get("operator")
-                    or site.get("operator_name")
-                    or site.get("address")
-                )
+                site_id = derive_eliso_static_site_id(site)
                 if not site_id:
                     coords = site.get("coordinates") or {}
                     lat = coords.get("latitude")
@@ -3650,7 +3662,7 @@ def enrich_with_static_details(
         if field in {"opening_hours_is_24_7"}:
             enriched[field] = False
         else:
-            enriched[field] = ""
+            enriched[field] = pd.Series([""] * len(enriched), index=enriched.index, dtype="object")
 
     row_lookup: dict[str, int] = {}
     detail_scores: dict[str, int] = {}

@@ -18,7 +18,7 @@ from backend.archive import DailyResponseArchiver
 from backend.config import AppConfig
 from backend.datex import extract_dynamic_facts
 from backend.fetcher import CurlFetcher
-from backend.loaders import load_provider_targets, load_site_matches
+from backend.loaders import load_evse_matches, load_provider_targets, load_site_matches
 from backend.models import FetchResponse
 from backend.service import IngestionService
 from backend.store import LiveStore
@@ -111,6 +111,8 @@ def _write_chargers_fixture(path: Path) -> None:
                 "max_power_kw",
                 "detail_source_uid",
                 "datex_site_id",
+                "datex_station_ids",
+                "datex_charge_point_ids",
             ],
         )
         writer.writeheader()
@@ -127,6 +129,8 @@ def _write_chargers_fixture(path: Path) -> None:
                 "max_power_kw": "150",
                 "detail_source_uid": "mobilithek_qwello_static",
                 "datex_site_id": "SITE-1",
+                "datex_station_ids": "",
+                "datex_charge_point_ids": "",
             }
         )
 
@@ -389,6 +393,58 @@ def _dynamic_payload_with_energy_rate_update(
     }
 
 
+def _direct_payload_envelope(
+    *,
+    status: str = "charging",
+    second_evse_status: str = "available",
+    timestamp: str = "2026-04-15T08:00:00+00:00",
+) -> dict:
+    publication = json.loads(
+        json.dumps(
+            _dynamic_payload(
+                status=status,
+                second_evse_status=second_evse_status,
+                timestamp=timestamp,
+                point_wrapper="aegiRefillPointStatus",
+            )["messageContainer"]["payload"][0]["aegiEnergyInfrastructureStatusPublication"]
+        )
+    )
+    return {
+        "payload": {
+            "versionG": "3.5",
+            "modelBaseVersionG": "3",
+            "profileNameG": "AFIR Energy Infrastructure",
+            "profileVersionG": "01-00-00",
+            "aegiEnergyInfrastructureStatusPublication": publication,
+        }
+    }
+
+
+def _eliso_dynamic_payload() -> dict:
+    return {
+        "evses": [
+            {
+                "evseId": "DE*ELI*E3603098",
+                "adhoc_price": 0.49,
+                "blocking_fee": 0.1,
+                "operator_name": "eliso GmbH",
+                "operational_status": "Operational",
+                "availability_status": "Not in use",
+                "mobilithek_last_updated_dts": "2026-04-16T09:04:39.561456+00:00",
+            },
+            {
+                "evseId": "DE*ELI*E3603099",
+                "adhoc_price": 0.49,
+                "blocking_fee": 0.1,
+                "operator_name": "eliso GmbH",
+                "operational_status": "Non-operational",
+                "availability_status": "In use",
+                "mobilithek_last_updated_dts": "2026-04-16T09:05:39.561456+00:00",
+            },
+        ]
+    }
+
+
 class MockFetcher:
     def __init__(self, responses):
         self.responses = responses
@@ -517,6 +573,26 @@ def test_load_site_matches_derives_enbw_bundle_site_matches(app_config):
     assert by_key[("enbwmobility", "800018264")].station_id == "enbw-station-1"
 
 
+def test_load_evse_matches_infers_eliso_bundle_charge_point_aliases(app_config):
+    app_config.chargers_csv_path.write_text(
+        "\n".join(
+            [
+                "station_id,operator,address,postcode,city,lat,lon,charging_points_count,max_power_kw,detail_source_uid,datex_site_id,datex_station_ids,datex_charge_point_ids",
+                "station-2,eliso GmbH,Example 2,70174,Stuttgart,48.779,9.181,4,300,mobilithek_monta_static,Eliso GmbH-s1076907,s1076907,3603098|3603099",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    matches = load_evse_matches(app_config.chargers_csv_path)
+    by_key = {(item.provider_uid, item.evse_id): item for item in matches}
+
+    assert by_key[("eliso", "3603098")].station_id == "station-2"
+    assert by_key[("eliso", "3603098")].site_id == "Eliso GmbH-s1076907"
+    assert by_key[("eliso", "3603098")].station_ref == "s1076907"
+
+
 def test_load_active_dyn_datex_subscription_offers_filters_to_auth_datex_docs_subset(app_config):
     _write_active_subscription_provider_fixture(app_config.provider_config_path)
     offers = load_active_dyn_datex_subscription_offers(app_config.provider_config_path)
@@ -611,6 +687,47 @@ def test_extract_dynamic_facts_parses_refill_point_status_shape():
     assert facts[0].availability_status == "occupied"
 
 
+def test_extract_dynamic_facts_parses_direct_payload_envelope():
+    facts = extract_dynamic_facts(_direct_payload_envelope(), "mobidata_bw_datex", {"SITE-1": "station-1"})
+    assert len(facts) == 2
+    assert facts[0].station_id == "station-1"
+    assert facts[0].availability_status == "occupied"
+    assert facts[0].operational_status == "CHARGING"
+    assert facts[0].price.display == "0,59 €/kWh"
+    assert facts[1].availability_status == "free"
+    assert facts[1].operational_status == "AVAILABLE"
+
+
+def test_extract_dynamic_facts_parses_eliso_generic_payload():
+    facts = extract_dynamic_facts(
+        _eliso_dynamic_payload(),
+        "eliso",
+        {},
+        {
+            "3603098": {
+                "station_id": "station-2",
+                "site_id": "Eliso GmbH-s1076907",
+                "station_ref": "s1076907",
+            }
+        },
+    )
+    assert len(facts) == 2
+    by_evse_id = {fact.evse_id: fact for fact in facts}
+    matched = by_evse_id["DEELIE3603098"]
+    unmatched = by_evse_id["DEELIE3603099"]
+    assert matched.station_id == "station-2"
+    assert matched.site_id == "Eliso GmbH-s1076907"
+    assert matched.station_ref == "s1076907"
+    assert matched.availability_status == "free"
+    assert matched.operational_status == "AVAILABLE"
+    assert matched.price.display == "ab 0,49 €/kWh"
+    assert matched.price.energy_eur_kwh_min == "0.49"
+    assert matched.price.time_eur_min_min == 0.1
+    assert unmatched.station_id is None
+    assert unmatched.availability_status == "out_of_order"
+    assert unmatched.operational_status == "UNKNOWN"
+
+
 def test_extract_dynamic_facts_prefers_operation_status_and_normalizes_case():
     facts = extract_dynamic_facts(
         _dynamic_payload(
@@ -657,8 +774,8 @@ def test_extract_dynamic_facts_parses_energy_rate_update_prices():
     assert facts[0].station_id == "station-1"
     assert facts[0].price.display == "ab 0,70 €/kWh"
     assert facts[0].price.currency == "EUR"
-    assert facts[0].price.energy_eur_kwh_min == 0.7
-    assert facts[0].price.energy_eur_kwh_max == 0.7
+    assert facts[0].price.energy_eur_kwh_min == "0.7"
+    assert facts[0].price.energy_eur_kwh_max == "0.7"
     assert facts[0].price.time_eur_min_min == 0.03
     assert facts[0].price.time_eur_min_max == 0.03
     assert facts[0].price.quality == "from"
@@ -706,7 +823,7 @@ def test_ingestion_persists_price_from_energy_rate_update_payload(app_config):
     assert detail is not None
     assert detail["current"]["price_display"] == "0,50 €/kWh"
     assert detail["current"]["price_currency"] == "EUR"
-    assert detail["current"]["price_energy_eur_kwh_min"] == 0.5
+    assert detail["current"]["price_energy_eur_kwh_min"] == "0.5"
 
 
 def test_ingestion_persists_dynamic_slot_and_supplemental_fields(app_config):
@@ -944,8 +1061,8 @@ def test_initialize_drops_legacy_evse_observation_history(app_config):
                 operational_status TEXT NOT NULL DEFAULT '',
                 price_display TEXT NOT NULL DEFAULT '',
                 price_currency TEXT NOT NULL DEFAULT '',
-                price_energy_eur_kwh_min REAL,
-                price_energy_eur_kwh_max REAL,
+                price_energy_eur_kwh_min TEXT NOT NULL DEFAULT '',
+                price_energy_eur_kwh_max TEXT NOT NULL DEFAULT '',
                 price_time_eur_min_min REAL,
                 price_time_eur_min_max REAL,
                 price_quality TEXT NOT NULL DEFAULT '',
@@ -1016,6 +1133,210 @@ def test_initialize_drops_legacy_evse_observation_history(app_config):
     finally:
         conn.close()
     assert row is None
+
+
+def test_initialize_migrates_descriptive_price_columns_to_text(app_config):
+    conn = sqlite3.connect(app_config.db_path)
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE evse_current_state (
+                provider_uid TEXT NOT NULL,
+                provider_site_id TEXT NOT NULL,
+                provider_station_ref TEXT NOT NULL,
+                provider_evse_id TEXT NOT NULL,
+                station_id TEXT NOT NULL DEFAULT '',
+                availability_status TEXT NOT NULL,
+                operational_status TEXT NOT NULL,
+                price_display TEXT NOT NULL,
+                price_currency TEXT NOT NULL,
+                price_energy_eur_kwh_min REAL,
+                price_energy_eur_kwh_max REAL,
+                price_time_eur_min_min REAL,
+                price_time_eur_min_max REAL,
+                price_quality TEXT NOT NULL,
+                price_complex INTEGER NOT NULL DEFAULT 0,
+                source_observed_at TEXT NOT NULL,
+                fetched_at TEXT NOT NULL,
+                ingested_at TEXT NOT NULL,
+                payload_sha256 TEXT NOT NULL,
+                PRIMARY KEY (provider_uid, provider_evse_id)
+            );
+            CREATE TABLE station_current_state (
+                station_id TEXT PRIMARY KEY,
+                provider_uid TEXT NOT NULL,
+                availability_status TEXT NOT NULL,
+                available_evses INTEGER NOT NULL DEFAULT 0,
+                occupied_evses INTEGER NOT NULL DEFAULT 0,
+                out_of_order_evses INTEGER NOT NULL DEFAULT 0,
+                unknown_evses INTEGER NOT NULL DEFAULT 0,
+                total_evses INTEGER NOT NULL DEFAULT 0,
+                price_display TEXT NOT NULL,
+                price_currency TEXT NOT NULL,
+                price_energy_eur_kwh_min REAL,
+                price_energy_eur_kwh_max REAL,
+                price_time_eur_min_min REAL,
+                price_time_eur_min_max REAL,
+                price_complex INTEGER NOT NULL DEFAULT 0,
+                source_observed_at TEXT NOT NULL,
+                fetched_at TEXT NOT NULL,
+                ingested_at TEXT NOT NULL
+            );
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO evse_current_state (
+                provider_uid,
+                provider_site_id,
+                provider_station_ref,
+                provider_evse_id,
+                station_id,
+                availability_status,
+                operational_status,
+                price_display,
+                price_currency,
+                price_energy_eur_kwh_min,
+                price_energy_eur_kwh_max,
+                price_time_eur_min_min,
+                price_time_eur_min_max,
+                price_quality,
+                price_complex,
+                source_observed_at,
+                fetched_at,
+                ingested_at,
+                payload_sha256
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "qwello",
+                "SITE-1",
+                "STATION-REF-1",
+                "DEQWEE1",
+                "station-1",
+                "free",
+                "AVAILABLE",
+                "0,59 €/kWh",
+                "EUR",
+                0.59,
+                0.79,
+                None,
+                None,
+                "simple",
+                0,
+                "2026-04-15T08:00:00+00:00",
+                "2026-04-15T08:00:01+00:00",
+                "2026-04-15T08:00:02+00:00",
+                "legacy-sha",
+            ),
+        )
+        conn.execute(
+            """
+            INSERT INTO station_current_state (
+                station_id,
+                provider_uid,
+                availability_status,
+                available_evses,
+                occupied_evses,
+                out_of_order_evses,
+                unknown_evses,
+                total_evses,
+                price_display,
+                price_currency,
+                price_energy_eur_kwh_min,
+                price_energy_eur_kwh_max,
+                price_time_eur_min_min,
+                price_time_eur_min_max,
+                price_complex,
+                source_observed_at,
+                fetched_at,
+                ingested_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "station-1",
+                "qwello",
+                "free",
+                1,
+                0,
+                0,
+                0,
+                1,
+                "0,59 €/kWh",
+                "EUR",
+                0.59,
+                0.79,
+                None,
+                None,
+                0,
+                "2026-04-15T08:00:00+00:00",
+                "2026-04-15T08:00:01+00:00",
+                "2026-04-15T08:00:02+00:00",
+            ),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    _write_provider_fixture(app_config.provider_config_path)
+    _write_matches_fixture(app_config.site_match_path)
+    _write_chargers_fixture(app_config.chargers_csv_path)
+
+    store = LiveStore(app_config)
+    store.initialize()
+
+    with store.connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO stations (
+                station_id,
+                operator,
+                address,
+                postcode,
+                city,
+                lat,
+                lon,
+                charging_points_count,
+                max_power_kw,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "station-1",
+                "Qwello",
+                "Teststr. 1",
+                "10115",
+                "Berlin",
+                52.531,
+                13.3849,
+                2,
+                150.0,
+                "2026-04-15T08:00:03+00:00",
+            ),
+        )
+        evse_columns = {
+            str(row["name"]): str(row["type"] or "").upper()
+            for row in conn.execute("PRAGMA table_info(evse_current_state)").fetchall()
+        }
+        station_columns = {
+            str(row["name"]): str(row["type"] or "").upper()
+            for row in conn.execute("PRAGMA table_info(station_current_state)").fetchall()
+        }
+
+    assert evse_columns["price_energy_eur_kwh_min"] == "TEXT"
+    assert evse_columns["price_energy_eur_kwh_max"] == "TEXT"
+    assert station_columns["price_energy_eur_kwh_min"] == "TEXT"
+    assert station_columns["price_energy_eur_kwh_max"] == "TEXT"
+
+    evse = store.get_evse_detail("qwello", "DEQWEE1")
+    assert evse is not None
+    assert evse["current"]["price_energy_eur_kwh_min"] == "0.59"
+    assert evse["current"]["price_energy_eur_kwh_max"] == "0.79"
+
+    station = store.get_station_detail("station-1")
+    assert station is not None
+    assert station["station"]["price_energy_eur_kwh_min"] == "0.59"
+    assert station["station"]["price_energy_eur_kwh_max"] == "0.79"
 
 
 def test_round_robin_picks_never_polled_provider_first(app_config):
@@ -1159,6 +1480,96 @@ def test_api_returns_404_for_missing_records(app_config):
     assert client.get("/v1/evses/qwello/missing").status_code == 404
 
 
+def test_ingestion_persists_eliso_generic_payload_with_bundle_evse_alias_matches(app_config):
+    app_config.provider_config_path.write_text(
+        json.dumps(
+            {
+                "providers": [
+                    {
+                        "uid": "eliso",
+                        "display_name": "eliso",
+                        "publisher": "eliso GmbH",
+                        "feeds": {
+                            "dynamic": {
+                                "publication_id": "843502085052710912",
+                                "access_mode": "auth",
+                                "delta_delivery": False,
+                                "content_data": {},
+                            }
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    app_config.subscription_registry_path.write_text(
+        json.dumps(
+            {
+                "eliso": {
+                    "enabled": True,
+                    "fetch_kind": "mtls_generic_subscription",
+                    "fetch_url": "https://example.invalid/eliso",
+                    "subscription_id": "980986474933399552",
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    app_config.site_match_path.write_text("provider_uid,site_id,station_id,score\n", encoding="utf-8")
+    app_config.chargers_csv_path.write_text(
+        "\n".join(
+            [
+                "station_id,operator,address,postcode,city,lat,lon,charging_points_count,max_power_kw,detail_source_uid,datex_site_id,datex_station_ids,datex_charge_point_ids",
+                "station-2,eliso GmbH,Example 2,70174,Stuttgart,48.779,9.181,4,300,mobilithek_monta_static,Eliso GmbH-s1076907,s1076907,3603098|3603100",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    app_config.chargers_geojson_path.write_text(
+        json.dumps(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": {"type": "Point", "coordinates": [9.181, 48.779]},
+                        "properties": {"station_id": "station-2"},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    payload = json.dumps(_eliso_dynamic_payload()).encode("utf-8")
+    service = IngestionService(
+        app_config,
+        store=LiveStore(app_config),
+        fetcher=MockFetcher({"eliso": FetchResponse(payload, "application/json", 200)}),
+    )
+
+    result = service.ingest_provider("eliso")
+
+    assert result["result"] == "ok"
+    assert result["observation_count"] == 2
+
+    evse = service.store.get_evse_detail("eliso", "DEELIE3603098")
+    assert evse is not None
+    assert evse["current"]["station_id"] == "station-2"
+    assert evse["current"]["availability_status"] == "free"
+    assert evse["current"]["price_display"] == "ab 0,49 €/kWh"
+    assert evse["current"]["price_time_eur_min_min"] == 0.1
+
+    station = service.store.get_station_detail("station-2")
+    assert station is not None
+    assert station["station"]["provider_uid"] == "eliso"
+    assert station["station"]["availability_status"] == "free"
+    assert station["station"]["available_evses"] == 1
+    assert station["station"]["total_evses"] == 1
+
+
 def test_api_allows_local_cors_origins(app_config):
     _write_provider_fixture(app_config.provider_config_path)
     _write_matches_fixture(app_config.site_match_path)
@@ -1223,7 +1634,7 @@ def test_api_status_reports_bundle_coverage_and_provider_timestamps(app_config):
     assert providers["qwello"]["latest_attribute_updates"]["availability_status"]["station_id"] == "station-1"
     assert providers["qwello"]["latest_attribute_updates"]["availability_status"]["value"] == "free"
     assert providers["qwello"]["latest_attribute_updates"]["price_display"]["value"] == "0,59 €/kWh"
-    assert providers["qwello"]["latest_attribute_updates"]["price_energy_eur_kwh_min"]["value"] == 0.59
+    assert providers["qwello"]["latest_attribute_updates"]["price_energy_eur_kwh_min"]["value"] == "0.59"
     assert providers["qwello"]["latest_attribute_updates"]["next_available_charging_slots"]["value"] == [
         {
             "expectedAvailableFromTime": "2026-04-15T09:15:00+00:00",

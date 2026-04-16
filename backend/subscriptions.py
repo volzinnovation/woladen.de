@@ -10,6 +10,7 @@ MOBIDATA_BW_DATEX_STATIC_URL = "https://api.mobidata-bw.de/ocpdb/api/public/date
 MOBIDATA_BW_DATEX_DYNAMIC_URL = "https://api.mobidata-bw.de/ocpdb/api/public/datex/v3.5/json/realtime"
 ACTIVE_SUBSCRIPTION_STATUSES = frozenset({"ACTIVE"})
 ACTIVE_DYN_DATEX_SUBSCRIPTION_PROVIDER_UIDS = (
+    "eco_movement",
     "elu_mobility",
     "enbwmobility",
     "eround",

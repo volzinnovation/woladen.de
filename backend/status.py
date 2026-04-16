@@ -162,6 +162,19 @@ def _decode_live_json_field(value: Any) -> Any:
     return parsed
 
 
+def _normalize_descriptive_price_value(value: Any) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip()
+    if not text:
+        return ""
+    try:
+        number = float(text)
+    except (TypeError, ValueError):
+        return text
+    return f"{number:.6f}".rstrip("0").rstrip(".")
+
+
 def _update_latest_attribute(
     aggregate: dict[str, Any],
     *,
@@ -273,6 +286,8 @@ def build_bundle_live_status_report(
             value = row[attribute_name]
             if attribute_name in {"next_available_charging_slots", "supplemental_facility_status"}:
                 value = _decode_live_json_field(value)
+            elif attribute_name in {"price_energy_eur_kwh_min", "price_energy_eur_kwh_max"}:
+                value = _normalize_descriptive_price_value(value)
             _update_latest_attribute(
                 aggregate,
                 attribute_name=attribute_name,

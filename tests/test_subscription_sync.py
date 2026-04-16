@@ -89,6 +89,15 @@ def test_load_subscription_offers_includes_static_dynamic_noauth_and_model_other
 def test_build_live_subscription_registry_pairs_dyn_and_stat_and_preserves_noauth_behavior():
     offers = [
         SubscriptionOffer(
+            provider_uid="eco_movement",
+            display_name="eco movement",
+            publisher="Eco-Movement",
+            publication_id="955166494396665856",
+            offer_title="AFIR-recharging-dyn-Eco-Movement-v2 (JSON)",
+            feed_kind="dynamic",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
             provider_uid="m8mit",
             display_name="m8mit",
             publisher="msu solutions GmbH",
@@ -138,6 +147,7 @@ def test_build_live_subscription_registry_pairs_dyn_and_stat_and_preserves_noaut
     registry = build_live_subscription_registry(
         offers,
         [
+            {"id": "980986321979551744", "dataOfferId": "955166494396665856", "contractStatus": "ACTIVE"},
             {"id": "980986232691372032", "dataOfferId": "970388804493828096", "contractStatus": "ACTIVE"},
             {"id": "980986244745637888", "dataOfferId": "970305056590979072", "contractStatus": "ACTIVE"},
             {"id": "980986356418981888", "dataOfferId": "953843379766972416", "contractStatus": "ACTIVE"},
@@ -145,6 +155,10 @@ def test_build_live_subscription_registry_pairs_dyn_and_stat_and_preserves_noaut
             {"id": "980986256821039104", "dataOfferId": "969322788846231552", "contractStatus": "ACTIVE"},
         ],
     )
+
+    assert registry["eco_movement"]["subscription_id"] == "980986321979551744"
+    assert registry["eco_movement"]["fetch_kind"] == "mtls_subscription"
+    assert registry["eco_movement"]["enabled"] is True
 
     assert registry["m8mit"]["subscription_id"] == "980986232691372032"
     assert registry["m8mit"]["static_subscription_id"] == "980986244745637888"

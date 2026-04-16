@@ -52,8 +52,8 @@ def _write_live_db_fixture(path: Path) -> None:
                 operational_status TEXT NOT NULL DEFAULT '',
                 price_display TEXT NOT NULL DEFAULT '',
                 price_currency TEXT NOT NULL DEFAULT '',
-                price_energy_eur_kwh_min REAL,
-                price_energy_eur_kwh_max REAL,
+                price_energy_eur_kwh_min TEXT NOT NULL DEFAULT '',
+                price_energy_eur_kwh_max TEXT NOT NULL DEFAULT '',
                 price_time_eur_min_min REAL,
                 price_time_eur_min_max REAL,
                 price_quality TEXT NOT NULL DEFAULT '',
@@ -64,7 +64,24 @@ def _write_live_db_fixture(path: Path) -> None:
                 payload_sha256 TEXT NOT NULL DEFAULT ''
             );
             CREATE TABLE station_current_state (
-                station_id TEXT PRIMARY KEY
+                station_id TEXT PRIMARY KEY,
+                provider_uid TEXT NOT NULL DEFAULT '',
+                availability_status TEXT NOT NULL DEFAULT '',
+                available_evses INTEGER NOT NULL DEFAULT 0,
+                occupied_evses INTEGER NOT NULL DEFAULT 0,
+                out_of_order_evses INTEGER NOT NULL DEFAULT 0,
+                unknown_evses INTEGER NOT NULL DEFAULT 0,
+                total_evses INTEGER NOT NULL DEFAULT 0,
+                price_display TEXT NOT NULL DEFAULT '',
+                price_currency TEXT NOT NULL DEFAULT '',
+                price_energy_eur_kwh_min TEXT NOT NULL DEFAULT '',
+                price_energy_eur_kwh_max TEXT NOT NULL DEFAULT '',
+                price_time_eur_min_min REAL,
+                price_time_eur_min_max REAL,
+                price_complex INTEGER NOT NULL DEFAULT 0,
+                source_observed_at TEXT NOT NULL DEFAULT '',
+                fetched_at TEXT NOT NULL DEFAULT '',
+                ingested_at TEXT NOT NULL DEFAULT ''
             );
             """
         )
@@ -107,8 +124,8 @@ def _write_live_db_fixture(path: Path) -> None:
                     "OCCUPIED",
                     "0,61 €/kWh",
                     "EUR",
-                    0.61,
-                    0.61,
+                    "0.61",
+                    "0.61",
                     None,
                     None,
                     "simple",
@@ -130,8 +147,8 @@ def _write_live_db_fixture(path: Path) -> None:
                     "AVAILABLE",
                     "0,49 €/kWh",
                     "EUR",
-                    0.49,
-                    0.49,
+                    "0.49",
+                    "0.49",
                     None,
                     None,
                     "simple",
@@ -153,8 +170,8 @@ def _write_live_db_fixture(path: Path) -> None:
                     "CHARGING",
                     "0,39 €/kWh",
                     "EUR",
-                    0.39,
-                    0.39,
+                    "0.39",
+                    "0.39",
                     None,
                     None,
                     "simple",
@@ -176,8 +193,8 @@ def _write_live_db_fixture(path: Path) -> None:
                     "AVAILABLE",
                     "0,35 €/kWh",
                     "EUR",
-                    0.35,
-                    0.35,
+                    "0.35",
+                    "0.35",
                     None,
                     None,
                     "simple",
@@ -199,8 +216,8 @@ def _write_live_db_fixture(path: Path) -> None:
                     "AVAILABLE",
                     "",
                     "",
-                    None,
-                    None,
+                    "",
+                    "",
                     None,
                     None,
                     "",
@@ -257,7 +274,7 @@ def test_build_report_counts_bundle_station_coverage_from_live_observations(tmp_
     assert provider_by_uid["chargecloud"]["stations_with_any_live_observation"] == 1
     assert provider_by_uid["chargecloud"]["observation_rows"] == 1
     assert provider_by_uid["chargecloud"]["latest_updated_station_id"] == "station-2"
-    assert provider_by_uid["chargecloud"]["latest_attribute_updates"]["price_energy_eur_kwh_min"]["value"] == 0.49
+    assert provider_by_uid["chargecloud"]["latest_attribute_updates"]["price_energy_eur_kwh_min"]["value"] == "0.49"
     assert provider_by_uid["tesla"]["stations_with_any_live_observation"] == 1
     assert provider_by_uid["tesla"]["observation_rows"] == 1
     assert provider_by_uid["tesla"]["latest_updated_station_id"] == "station-2"
