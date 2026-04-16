@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timezone
 from pathlib import Path
 from typing import Collection
@@ -56,62 +56,109 @@ def load_env_file(path: Path, *, allowed_keys: Collection[str] | None = None) ->
 
 @dataclass(frozen=True)
 class AppConfig:
-    db_path: Path = _env_path("WOLADEN_LIVE_DB_PATH", REPO_ROOT / "data" / "live_state.sqlite3")
-    chargers_geojson_path: Path = _env_path(
-        "WOLADEN_LIVE_CHARGERS_GEOJSON_PATH",
-        REPO_ROOT / "data" / "chargers_fast.geojson",
-    )
-    raw_payload_dir: Path = _env_path("WOLADEN_LIVE_RAW_PAYLOAD_DIR", REPO_ROOT / "data" / "live_raw")
-    archive_dir: Path = _env_path("WOLADEN_LIVE_ARCHIVE_DIR", REPO_ROOT / "data" / "live_archives")
-    provider_config_path: Path = _env_path(
-        "WOLADEN_LIVE_PROVIDER_CONFIG_PATH",
-        REPO_ROOT / "data" / "mobilithek_afir_provider_configs.json",
-    )
-    site_match_path: Path = _env_path(
-        "WOLADEN_LIVE_SITE_MATCH_PATH",
-        REPO_ROOT / "data" / "mobilithek_afir_static_matches.csv",
-    )
-    chargers_csv_path: Path = _env_path("WOLADEN_LIVE_CHARGERS_CSV_PATH", REPO_ROOT / "data" / "chargers_fast.csv")
-    provider_override_path: Path | None = (
-        _env_path("WOLADEN_LIVE_PROVIDER_OVERRIDE_PATH", REPO_ROOT / "data" / "live_provider_overrides.json")
-        if str(os.environ.get("WOLADEN_LIVE_PROVIDER_OVERRIDE_PATH", "")).strip()
-        else None
-    )
-    subscription_registry_path: Path = _env_path(
-        "WOLADEN_LIVE_SUBSCRIPTION_REGISTRY_PATH",
-        REPO_ROOT / "secret" / "mobilithek_subscriptions.json",
-    )
-    machine_cert_p12: Path = _env_path("WOLADEN_MACHINE_CERT_P12", REPO_ROOT / "secret" / "certificate.p12")
-    machine_cert_password_file: Path = _env_path(
-        "WOLADEN_MACHINE_CERT_PASSWORD_FILE",
-        REPO_ROOT / "secret" / "pwd.txt",
-    )
-    api_host: str = str(os.environ.get("WOLADEN_LIVE_API_HOST", "127.0.0.1"))
-    api_port: int = int(os.environ.get("WOLADEN_LIVE_API_PORT", "8001"))
-    api_cors_allowed_origins: tuple[str, ...] = _env_csv("WOLADEN_LIVE_API_CORS_ALLOWED_ORIGINS")
-    api_cors_allowed_origin_regex: str = str(
-        os.environ.get(
-            "WOLADEN_LIVE_API_CORS_ALLOW_ORIGIN_REGEX",
-            r"https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$",
+    db_path: Path = field(default_factory=lambda: _env_path("WOLADEN_LIVE_DB_PATH", REPO_ROOT / "data" / "live_state.sqlite3"))
+    chargers_geojson_path: Path = field(
+        default_factory=lambda: _env_path(
+            "WOLADEN_LIVE_CHARGERS_GEOJSON_PATH",
+            REPO_ROOT / "data" / "chargers_fast.geojson",
         )
-    ).strip()
-    poll_timeout_seconds: int = int(os.environ.get("WOLADEN_LIVE_POLL_TIMEOUT_SECONDS", "10"))
-    poll_interval_delta_seconds: int = int(os.environ.get("WOLADEN_LIVE_POLL_INTERVAL_DELTA_SECONDS", "15"))
-    poll_interval_snapshot_seconds: int = int(os.environ.get("WOLADEN_LIVE_POLL_INTERVAL_SNAPSHOT_SECONDS", "30"))
-    poll_interval_no_data_max_seconds: int = int(
-        os.environ.get("WOLADEN_LIVE_POLL_INTERVAL_NO_DATA_MAX_SECONDS", "600")
     )
-    poll_interval_error_max_seconds: int = int(os.environ.get("WOLADEN_LIVE_POLL_INTERVAL_ERROR_MAX_SECONDS", "900"))
-    poll_interval_unchanged_max_seconds: int = int(
-        os.environ.get("WOLADEN_LIVE_POLL_INTERVAL_UNCHANGED_MAX_SECONDS", "300")
+    raw_payload_dir: Path = field(
+        default_factory=lambda: _env_path("WOLADEN_LIVE_RAW_PAYLOAD_DIR", REPO_ROOT / "data" / "live_raw")
     )
-    poll_idle_sleep_max_seconds: int = int(os.environ.get("WOLADEN_LIVE_POLL_IDLE_SLEEP_MAX_SECONDS", "30"))
-    sqlite_busy_timeout_ms: int = int(os.environ.get("WOLADEN_LIVE_SQLITE_BUSY_TIMEOUT_MS", "5000"))
-    archive_timezone_name: str = str(os.environ.get("WOLADEN_LIVE_ARCHIVE_TIMEZONE", "Europe/Berlin")).strip()
-    hf_archive_repo_id: str = str(os.environ.get("WOLADEN_LIVE_HF_ARCHIVE_REPO_ID", "")).strip()
-    hf_archive_repo_type: str = str(os.environ.get("WOLADEN_LIVE_HF_ARCHIVE_REPO_TYPE", "dataset")).strip() or "dataset"
-    hf_archive_path_prefix: str = str(os.environ.get("WOLADEN_LIVE_HF_ARCHIVE_PATH_PREFIX", "daily")).strip().strip("/")
-    hf_archive_token_file: Path | None = _env_optional_path("WOLADEN_LIVE_HF_ARCHIVE_TOKEN_FILE")
+    archive_dir: Path = field(
+        default_factory=lambda: _env_path("WOLADEN_LIVE_ARCHIVE_DIR", REPO_ROOT / "data" / "live_archives")
+    )
+    provider_config_path: Path = field(
+        default_factory=lambda: _env_path(
+            "WOLADEN_LIVE_PROVIDER_CONFIG_PATH",
+            REPO_ROOT / "data" / "mobilithek_afir_provider_configs.json",
+        )
+    )
+    site_match_path: Path = field(
+        default_factory=lambda: _env_path(
+            "WOLADEN_LIVE_SITE_MATCH_PATH",
+            REPO_ROOT / "data" / "mobilithek_afir_static_matches.csv",
+        )
+    )
+    chargers_csv_path: Path = field(
+        default_factory=lambda: _env_path("WOLADEN_LIVE_CHARGERS_CSV_PATH", REPO_ROOT / "data" / "chargers_fast.csv")
+    )
+    provider_override_path: Path | None = field(
+        default_factory=lambda: (
+            _env_path("WOLADEN_LIVE_PROVIDER_OVERRIDE_PATH", REPO_ROOT / "data" / "live_provider_overrides.json")
+            if str(os.environ.get("WOLADEN_LIVE_PROVIDER_OVERRIDE_PATH", "")).strip()
+            else None
+        )
+    )
+    subscription_registry_path: Path = field(
+        default_factory=lambda: _env_path(
+            "WOLADEN_LIVE_SUBSCRIPTION_REGISTRY_PATH",
+            REPO_ROOT / "secret" / "mobilithek_subscriptions.json",
+        )
+    )
+    machine_cert_p12: Path = field(
+        default_factory=lambda: _env_path("WOLADEN_MACHINE_CERT_P12", REPO_ROOT / "secret" / "certificate.p12")
+    )
+    machine_cert_password_file: Path = field(
+        default_factory=lambda: _env_path(
+            "WOLADEN_MACHINE_CERT_PASSWORD_FILE",
+            REPO_ROOT / "secret" / "pwd.txt",
+        )
+    )
+    api_host: str = field(default_factory=lambda: str(os.environ.get("WOLADEN_LIVE_API_HOST", "127.0.0.1")))
+    api_port: int = field(default_factory=lambda: int(os.environ.get("WOLADEN_LIVE_API_PORT", "8001")))
+    api_cors_allowed_origins: tuple[str, ...] = field(
+        default_factory=lambda: _env_csv("WOLADEN_LIVE_API_CORS_ALLOWED_ORIGINS")
+    )
+    api_cors_allowed_origin_regex: str = field(
+        default_factory=lambda: str(
+            os.environ.get(
+                "WOLADEN_LIVE_API_CORS_ALLOW_ORIGIN_REGEX",
+                r"https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$",
+            )
+        ).strip()
+    )
+    poll_timeout_seconds: int = field(
+        default_factory=lambda: int(os.environ.get("WOLADEN_LIVE_POLL_TIMEOUT_SECONDS", "10"))
+    )
+    poll_interval_delta_seconds: int = field(
+        default_factory=lambda: int(os.environ.get("WOLADEN_LIVE_POLL_INTERVAL_DELTA_SECONDS", "15"))
+    )
+    poll_interval_snapshot_seconds: int = field(
+        default_factory=lambda: int(os.environ.get("WOLADEN_LIVE_POLL_INTERVAL_SNAPSHOT_SECONDS", "30"))
+    )
+    poll_interval_no_data_max_seconds: int = field(
+        default_factory=lambda: int(os.environ.get("WOLADEN_LIVE_POLL_INTERVAL_NO_DATA_MAX_SECONDS", "600"))
+    )
+    poll_interval_error_max_seconds: int = field(
+        default_factory=lambda: int(os.environ.get("WOLADEN_LIVE_POLL_INTERVAL_ERROR_MAX_SECONDS", "900"))
+    )
+    poll_interval_unchanged_max_seconds: int = field(
+        default_factory=lambda: int(os.environ.get("WOLADEN_LIVE_POLL_INTERVAL_UNCHANGED_MAX_SECONDS", "300"))
+    )
+    poll_idle_sleep_max_seconds: int = field(
+        default_factory=lambda: int(os.environ.get("WOLADEN_LIVE_POLL_IDLE_SLEEP_MAX_SECONDS", "30"))
+    )
+    sqlite_busy_timeout_ms: int = field(
+        default_factory=lambda: int(os.environ.get("WOLADEN_LIVE_SQLITE_BUSY_TIMEOUT_MS", "5000"))
+    )
+    archive_timezone_name: str = field(
+        default_factory=lambda: str(os.environ.get("WOLADEN_LIVE_ARCHIVE_TIMEZONE", "Europe/Berlin")).strip()
+    )
+    hf_archive_repo_id: str = field(
+        default_factory=lambda: str(os.environ.get("WOLADEN_LIVE_HF_ARCHIVE_REPO_ID", "")).strip()
+    )
+    hf_archive_repo_type: str = field(
+        default_factory=lambda: str(os.environ.get("WOLADEN_LIVE_HF_ARCHIVE_REPO_TYPE", "dataset")).strip()
+        or "dataset"
+    )
+    hf_archive_path_prefix: str = field(
+        default_factory=lambda: str(os.environ.get("WOLADEN_LIVE_HF_ARCHIVE_PATH_PREFIX", "daily")).strip().strip("/")
+    )
+    hf_archive_token_file: Path | None = field(
+        default_factory=lambda: _env_optional_path("WOLADEN_LIVE_HF_ARCHIVE_TOKEN_FILE")
+    )
 
     def cert_password(self) -> str:
         return self.machine_cert_password_file.read_text(encoding="utf-8").strip()

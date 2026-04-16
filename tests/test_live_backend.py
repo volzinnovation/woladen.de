@@ -2006,9 +2006,12 @@ def test_daily_response_archiver_creates_tgz_uploads_and_cleans_up_sources(app_c
     class StubHfApi:
         def __init__(self):
             self.calls: list[dict] = []
+            self.archive_names: list[str] = []
 
         def upload_file(self, **kwargs):
             self.calls.append(kwargs)
+            with tarfile.open(kwargs["path_or_fileobj"], "r:gz") as archive_handle:
+                self.archive_names = sorted(archive_handle.getnames())
 
     stub_api = StubHfApi()
     configured = replace(
@@ -2025,16 +2028,32 @@ def test_daily_response_archiver_creates_tgz_uploads_and_cleans_up_sources(app_c
     assert len(stub_api.calls) == 1
     assert stub_api.calls[0]["repo_id"] == "raphaelvolz/woladen-live-archives"
     assert stub_api.calls[0]["path_in_repo"] == result["remote_path"]
+    assert "manifest.json" in stub_api.archive_names
+    assert "qwello/2026-04-14/20260414T000000000000Z-200-aaaa.json" in stub_api.archive_names
+    assert "wirelane/2026-04-14/20260414T010000000000Z-200-bbbb.json" in stub_api.archive_names
 
     archive_path = Path(result["archive_path"])
-    assert archive_path.exists()
-    with tarfile.open(archive_path, "r:gz") as archive_handle:
-        names = sorted(archive_handle.getnames())
-    assert "manifest.json" in names
-    assert "qwello/2026-04-14/20260414T000000000000Z-200-aaaa.json" in names
-    assert "wirelane/2026-04-14/20260414T010000000000Z-200-bbbb.json" in names
+    assert not archive_path.exists()
     assert not first_dir.exists()
     assert not second_dir.exists()
+
+
+def test_daily_response_archiver_local_only_keeps_tgz(app_config):
+    target_date = date(2026, 4, 14)
+    provider_dir = app_config.raw_payload_dir / "qwello" / target_date.isoformat()
+    provider_dir.mkdir(parents=True, exist_ok=True)
+    (provider_dir / "20260414T000000000000Z-200-aaaa.json").write_text(
+        json.dumps({"provider_uid": "qwello", "body_text": "first"}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    result = DailyResponseArchiver(app_config).archive_date(target_date, upload=False)
+
+    assert result["result"] == "archived_local_only"
+    assert result["file_count"] == 1
+    archive_path = Path(result["archive_path"])
+    assert archive_path.exists()
+    assert not provider_dir.exists()
 
 
 def test_load_env_file_can_filter_archive_settings(tmp_path, monkeypatch):

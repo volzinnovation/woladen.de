@@ -176,7 +176,7 @@ The backend persists into SQLite and keeps raw payload logs on disk.
 - Database: `data/live_state.sqlite3` by default
 - Raw poll logs: `data/live_raw/<provider_uid>/<YYYY-MM-DD>/*.json`
 - Raw push logs: `data/live_raw/<provider_uid>/<YYYY-MM-DD>/*-push-*.json`
-- Daily archives: `data/live_archives/live-provider-responses-<YYYY-MM-DD>.tgz`
+- Daily archives: `data/live_archives/live-provider-responses-<YYYY-MM-DD>.tgz` during local-only or retryable runs; removed after a successful Hugging Face upload
 
 Important tables:
 

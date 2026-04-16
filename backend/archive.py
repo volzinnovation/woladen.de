@@ -201,6 +201,9 @@ class DailyResponseArchiver:
         if upload:
             remote_path = self._upload_archive(archive_path, effective_date)
 
+        if remote_path:
+            archive_path.unlink(missing_ok=True)
+
         if delete_source_on_success and (not upload or remote_path):
             self._delete_source_files(source_files)
 
