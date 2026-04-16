@@ -628,6 +628,36 @@ def test_load_evse_matches_infers_eliso_bundle_charge_point_aliases(app_config):
     assert by_key[("eliso", "3603098")].station_ref == "s1076907"
 
 
+def test_load_evse_matches_reads_provider_specific_evse_ids_from_static_match_csv(app_config):
+    app_config.chargers_csv_path.write_text(
+        "\n".join(
+            [
+                "station_id,operator,address,postcode,city,lat,lon,charging_points_count,max_power_kw,detail_source_uid,datex_site_id,datex_station_ids,datex_charge_point_ids",
+                "station-3,EnBW,Example 3,70175,Stuttgart,48.780,9.182,2,300,mobilithek_enbwmobility_static,800018264,ENBW-STATION-1,DEENBWE1|DEENBWE2",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    app_config.site_match_path.write_text(
+        "\n".join(
+            [
+                "provider_uid,site_id,station_id,score,datex_station_ids,datex_charge_point_ids",
+                "ladenetz_de_ladestationsdaten,DE1ESS0205,station-3,-30.0,DE1ESS0205,DE1ESE020501|DE1ESE020502",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    matches = load_evse_matches(app_config.chargers_csv_path, app_config.site_match_path)
+    by_key = {(item.provider_uid, item.evse_id): item for item in matches}
+
+    assert by_key[("ladenetz_de_ladestationsdaten", "DE1ESE020501")].station_id == "station-3"
+    assert by_key[("ladenetz_de_ladestationsdaten", "DE1ESE020501")].site_id == "DE1ESS0205"
+    assert by_key[("ladenetz_de_ladestationsdaten", "DE1ESE020501")].station_ref == "DE1ESS0205"
+
+
 def test_load_active_dyn_datex_subscription_offers_filters_to_auth_datex_docs_subset(app_config):
     _write_active_subscription_provider_fixture(app_config.provider_config_path)
     offers = load_active_dyn_datex_subscription_offers(app_config.provider_config_path)

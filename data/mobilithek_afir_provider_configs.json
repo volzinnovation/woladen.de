@@ -1,18 +1,13 @@
 {
-  "generated_at": "2026-04-14T20:26:55+00:00",
+  "generated_at": "2026-04-16T13:34:29+00:00",
   "search_term": "AFIR",
-  "search_total_elements": 45,
-  "charging_offer_count": 42,
-  "provider_config_count": 25,
+  "search_total_elements": 48,
+  "charging_offer_count": 45,
+  "provider_config_count": 26,
   "source_chargers_csv": "/Users/raphaelvolz/Github/woladen.de/data/chargers_fast.csv",
   "machine_certificate_probe": {
-    "configured": true,
-    "status": "mtls_ok_no_subscription",
-    "certificate_path": "secret/certificate.p12",
-    "probe_url": "https://mobilithek.info:8443/mobilithek/api/v1.0/subscription/datexv3?subscriptionID=0",
-    "http_status": 404,
-    "stderr_excerpt": "",
-    "body_excerpt": ""
+    "configured": false,
+    "status": "missing_certificate"
   },
   "totals": {
     "stations": 16347,
@@ -157,9 +152,9 @@
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.168683881Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -295,9 +290,9 @@
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.328005255Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -305,15 +300,15 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.168683881Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.328005255Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
@@ -373,7 +368,7 @@
             "mediaType": "https://www.iana.org/assignments/media-types/application/json",
             "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
             "dataFormatAdditionalDescription": "https://developer.spirii.com/reference/afircontroller_getenergyinfrastructurestatuses_v2",
-            "description": "Dynamic data\nGET /v2/afir/energy-infrastructure-statuses\n\nReturns a DATEX II v3 payload containing real-time energy infrastructure statuses, including:\n\nSite, station, and refill point availability/status\nTariff information",
+            "description": "Dynamic data\nGET v2/afir/energy-infrastructure-statuses?customerIds=128650\n\nReturns a DATEX II v3 payload containing real-time energy infrastructure statuses, including:\n\nSite, station, and refill point availability/status\nTariff information",
             "byteSize": null,
             "fileName": null,
             "creationDate": "2026-04-14T12:18:03.643Z",
@@ -392,9 +387,9 @@
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 400,
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-04-16T13:33:57.366901806Z\"}",
+            "status": "error"
           }
         },
         "other": []
@@ -403,9 +398,9 @@
         "static": null,
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 400,
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-04-16T13:33:57.366901806Z\"}",
+          "status": "error"
         },
         "other": []
       },
@@ -464,7 +459,7 @@
             "mediaType": "https://www.iana.org/assignments/media-types/application/json",
             "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
             "dataFormatAdditionalDescription": "https://developer.spirii.com/reference/afircontroller_getenergyinfrastructuretables_v2",
-            "description": "Static data\nGET /v2/afir/energy-infrastructure-tables\n\nReturns a DATEX II v3 payload containing static energy infrastructure metadata, including:\n\nSites and stations (locations and chargeboxes in Spirii terms)\nRefill points and connectors (connectors in Spirii terms)\nOperating hours\nTariff information",
+            "description": "Static data\nGET /v2/afir/energy-infrastructure-tables?customerIds=128650\n\nReturns a DATEX II v3 payload containing static energy infrastructure metadata, including:\n\nSites and stations (locations and chargeboxes in Spirii terms)\nRefill points and connectors (connectors in Spirii terms)\nOperating hours\nTariff information",
             "byteSize": null,
             "fileName": null,
             "creationDate": "2026-04-14T12:14:58.523Z",
@@ -483,9 +478,9 @@
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 400,
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-04-16T13:33:57.554046828Z\"}",
+            "status": "error"
           }
         },
         "dynamic": null,
@@ -494,9 +489,9 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 400,
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-04-16T13:33:57.554046828Z\"}",
+          "status": "error"
         },
         "dynamic": null,
         "other": []
@@ -575,9 +570,9 @@
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 400,
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-04-16T13:34:04.840651554Z\"}",
+            "status": "error"
           }
         },
         "dynamic": null,
@@ -586,9 +581,9 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 400,
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-04-16T13:34:04.840651554Z\"}",
+          "status": "error"
         },
         "dynamic": null,
         "other": []
@@ -667,9 +662,9 @@
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 400,
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-04-16T13:34:02.480724906Z\"}",
+            "status": "error"
           }
         },
         "dynamic": null,
@@ -678,9 +673,9 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 400,
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-04-16T13:34:02.480724906Z\"}",
+          "status": "error"
         },
         "dynamic": null,
         "other": []
@@ -845,14 +840,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:58.678752618Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -983,14 +978,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:57.205776288Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -998,15 +993,15 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:58.678752618Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:57.205776288Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
@@ -1014,12 +1009,12 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
-          "locations_scanned": 4053,
-          "matched_locations": 430,
-          "matched_stations": 430,
-          "matched_charging_points": 1098,
-          "station_coverage_ratio": 0.026305,
-          "charging_point_coverage_ratio": 0.020977,
+          "locations_scanned": 5063,
+          "matched_locations": 597,
+          "matched_stations": 597,
+          "matched_charging_points": 1551,
+          "station_coverage_ratio": 0.03652,
+          "charging_point_coverage_ratio": 0.029631,
           "site_operator_samples": [
             "Stadtwerke Göttingen AG",
             "Ernst Malzfeldt KG",
@@ -1037,197 +1032,14 @@
           "fetch_status": "ok",
           "access_mode": "noauth",
           "delta_delivery": true,
-          "site_status_count": 10,
-          "station_status_count": 10,
-          "evse_status_count": 11,
-          "available_evses": 8,
-          "occupied_evses": 3,
-          "out_of_order_evses": 0,
-          "unknown_evses": 0,
-          "latest_last_updated": "2026-04-14T20:26:46.560Z"
-        }
-      }
-    },
-    {
-      "uid": "deprecated_chargecloud",
-      "display_name": "deprecated chargecloud",
-      "publisher": "chargecloud GmbH",
-      "feeds": {
-        "static": null,
-        "dynamic": {
-          "publication_id": "978598831184601088",
-          "title": "[deprecated] AFIR-recharging-dyn-chargecloud-json",
-          "publisher": "chargecloud GmbH",
-          "access_mode": "noauth",
-          "mdp_brokering": true,
-          "schema_profile_name": "AFIR-Recharging-Dynamic-01-00-00_Delta",
-          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
-          "delta_delivery": false,
-          "contract_offer": {
-            "contractStart": null,
-            "contractEnd": null,
-            "providerApprovalRequired": false,
-            "napApprovalRequired": null,
-            "providerApprovalAnonymousAccessRequired": true
-          },
-          "content_data": {
-            "accessUrl": null,
-            "endpointDocumentation": null,
-            "accessProtocol": null,
-            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
-            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
-            "dataFormatAdditionalDescription": null,
-            "description": null,
-            "byteSize": null,
-            "fileName": null,
-            "creationDate": null,
-            "commMethod": null,
-            "retentionPeriod": null,
-            "deltaDelivery": false,
-            "masterSchema": {
-              "title": "",
-              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_MessageContainer.json",
-              "description": "",
-              "modified": null,
-              "instance": {
-                "fileName": null,
-                "mediaType": null,
-                "byteSize": 0
-              },
-              "validFrom": null,
-              "validTo": null
-            },
-            "schema": [
-              {
-                "title": "",
-                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirEnergyInfrastructure.json",
-                "description": "",
-                "modified": null,
-                "instance": {
-                  "fileName": null,
-                  "mediaType": null,
-                  "byteSize": 0
-                },
-                "validFrom": null,
-                "validTo": null
-              },
-              {
-                "title": "",
-                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirFacilities.json",
-                "description": "",
-                "modified": null,
-                "instance": {
-                  "fileName": null,
-                  "mediaType": null,
-                  "byteSize": 0
-                },
-                "validFrom": null,
-                "validTo": null
-              },
-              {
-                "title": "",
-                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_Common.json",
-                "description": "",
-                "modified": null,
-                "instance": {
-                  "fileName": null,
-                  "mediaType": null,
-                  "byteSize": 0
-                },
-                "validFrom": null,
-                "validTo": null
-              },
-              {
-                "title": "",
-                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_CommonExtension.json",
-                "description": "",
-                "modified": null,
-                "instance": {
-                  "fileName": null,
-                  "mediaType": null,
-                  "byteSize": 0
-                },
-                "validFrom": null,
-                "validTo": null
-              },
-              {
-                "title": "",
-                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_D2Payload.json",
-                "description": "",
-                "modified": null,
-                "instance": {
-                  "fileName": null,
-                  "mediaType": null,
-                  "byteSize": 0
-                },
-                "validFrom": null,
-                "validTo": null
-              },
-              {
-                "title": "",
-                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_ExchangeInformation.json",
-                "description": "",
-                "modified": null,
-                "instance": {
-                  "fileName": null,
-                  "mediaType": null,
-                  "byteSize": 0
-                },
-                "validFrom": null,
-                "validTo": null
-              }
-            ],
-            "schemaProfileName": "AFIR-Recharging-Dynamic-01-00-00_Delta"
-          },
-          "file_access_probe": {
-            "status": "ok",
-            "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
-          },
-          "subscription_status": {
-            "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
-          }
-        },
-        "other": []
-      },
-      "subscription": {
-        "static": null,
-        "dynamic": {
-          "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
-        },
-        "other": []
-      },
-      "coverage": {
-        "static": {
-          "fetch_status": "no_static_feed",
-          "access_mode": "",
-          "locations_scanned": 0,
-          "matched_locations": 0,
-          "matched_stations": 0,
-          "matched_charging_points": 0,
-          "station_coverage_ratio": 0.0,
-          "charging_point_coverage_ratio": 0.0,
-          "site_operator_samples": []
-        },
-        "dynamic": {
-          "fetch_status": "ok",
-          "access_mode": "noauth",
-          "delta_delivery": false,
-          "site_status_count": 12,
-          "station_status_count": 12,
-          "evse_status_count": 12,
-          "available_evses": 3,
-          "occupied_evses": 8,
+          "site_status_count": 17,
+          "station_status_count": 17,
+          "evse_status_count": 17,
+          "available_evses": 6,
+          "occupied_evses": 10,
           "out_of_order_evses": 1,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-04-14T12:54:00.951Z"
+          "latest_last_updated": "2026-04-16T13:34:03.521Z"
         }
       }
     },
@@ -1395,9 +1207,9 @@
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 400,
+            "response_excerpt": "{\"message\":\"Data offer is expired\",\"code\":400,\"occurred\":\"2026-04-16T13:34:04.32301354Z\"}",
+            "status": "error"
           }
         },
         "dynamic": null,
@@ -1406,9 +1218,9 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 400,
+          "response_excerpt": "{\"message\":\"Data offer is expired\",\"code\":400,\"occurred\":\"2026-04-16T13:34:04.32301354Z\"}",
+          "status": "error"
         },
         "dynamic": null,
         "other": []
@@ -1573,14 +1385,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:02.301314042Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -1711,14 +1523,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:01.960764569Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -1726,42 +1538,53 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:02.301314042Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:01.960764569Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
       "coverage": {
         "static": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/954064102947180544/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 0,
-          "matched_locations": 0,
-          "matched_stations": 0,
-          "matched_charging_points": 0,
-          "station_coverage_ratio": 0.0,
-          "charging_point_coverage_ratio": 0.0,
-          "site_operator_samples": []
+          "locations_scanned": 12803,
+          "matched_locations": 3808,
+          "matched_stations": 3808,
+          "matched_charging_points": 12570,
+          "station_coverage_ratio": 0.232948,
+          "charging_point_coverage_ratio": 0.240147,
+          "site_operator_samples": [
+            "Citywatt GmbH",
+            "naturenergie holding AG",
+            "Ubitricity",
+            "Westfalen",
+            "ChargePoint",
+            "TotalEnergies",
+            "Contipark Ladestation",
+            "NIDEC GPM",
+            "Kaufland",
+            "Kreiswerke Main-Kinzig GmbH"
+          ]
         },
         "dynamic": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/955166494396665856/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 0,
-          "station_status_count": 0,
-          "evse_status_count": 0,
-          "available_evses": 0,
+          "site_status_count": 1,
+          "station_status_count": 1,
+          "evse_status_count": 1,
+          "available_evses": 1,
           "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": null
+          "latest_last_updated": "2026-04-16T13:34:11Z"
         }
       }
     },
@@ -1903,9 +1726,9 @@
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.898946304Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -2041,9 +1864,9 @@
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.734416889Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -2051,15 +1874,15 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.898946304Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.734416889Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
@@ -2132,14 +1955,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:04.655009072Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -2179,14 +2002,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:04.494355276Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -2194,15 +2017,15 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:04.655009072Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:04.494355276Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
@@ -2366,14 +2189,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:02.931251836Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -2504,14 +2327,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:00.048061154Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -2519,21 +2342,21 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:02.931251836Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:00.048061154Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
       "coverage": {
         "static": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/936298491949047808/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
           "locations_scanned": 0,
           "matched_locations": 0,
@@ -2691,14 +2514,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:03.267117466Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -2829,14 +2652,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:03.097434557Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -2844,42 +2667,44 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:03.267117466Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:03.097434557Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
       "coverage": {
         "static": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/907574882292453376/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 0,
-          "matched_locations": 0,
-          "matched_stations": 0,
-          "matched_charging_points": 0,
-          "station_coverage_ratio": 0.0,
-          "charging_point_coverage_ratio": 0.0,
-          "site_operator_samples": []
+          "locations_scanned": 2502,
+          "matched_locations": 1726,
+          "matched_stations": 1726,
+          "matched_charging_points": 8470,
+          "station_coverage_ratio": 0.105585,
+          "charging_point_coverage_ratio": 0.161817,
+          "site_operator_samples": [
+            "ENBW"
+          ]
         },
         "dynamic": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/907575401287241728/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 0,
-          "station_status_count": 0,
-          "evse_status_count": 0,
-          "available_evses": 0,
-          "occupied_evses": 0,
-          "out_of_order_evses": 0,
+          "site_status_count": 1,
+          "station_status_count": 4,
+          "evse_status_count": 8,
+          "available_evses": 3,
+          "occupied_evses": 4,
+          "out_of_order_evses": 1,
           "unknown_evses": 0,
-          "latest_last_updated": null
+          "latest_last_updated": "2026-04-16T15:34:13.775+02:00"
         }
       }
     },
@@ -3016,14 +2841,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:01.485584301Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -3154,14 +2979,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:01.313940591Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -3169,39 +2994,50 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:01.485584301Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:01.313940591Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
       "coverage": {
         "static": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/961625658278940672/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 0,
-          "matched_locations": 0,
-          "matched_stations": 0,
-          "matched_charging_points": 0,
-          "station_coverage_ratio": 0.0,
-          "charging_point_coverage_ratio": 0.0,
-          "site_operator_samples": []
+          "locations_scanned": 4393,
+          "matched_locations": 1641,
+          "matched_stations": 1641,
+          "matched_charging_points": 4220,
+          "station_coverage_ratio": 0.100385,
+          "charging_point_coverage_ratio": 0.080622,
+          "site_operator_samples": [
+            "EWE Go GmbH",
+            "Westfalen Weser Ladeservice GmbH",
+            "SachsenNetze HS.HD GmbH",
+            "Pfalzwerke AG",
+            "Hamburger Energiewerke Mobil GmbH",
+            "Stadtwerke Elmshorn",
+            "MaxSolar GmbH",
+            "Comfortcharge GmbH",
+            "nonoxx pro GmbH",
+            "GETEC mobility solutions GmbH"
+          ]
         },
         "dynamic": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/961629419076456448/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 0,
-          "station_status_count": 0,
-          "evse_status_count": 0,
+          "site_status_count": 1,
+          "station_status_count": 1,
+          "evse_status_count": 1,
           "available_evses": 0,
-          "occupied_evses": 0,
+          "occupied_evses": 1,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
           "latest_last_updated": null
@@ -3230,16 +3066,16 @@
             "providerApprovalAnonymousAccessRequired": null
           },
           "content_data": {
-            "accessUrl": "https://ladestationen.api.bund.dev/",
-            "endpointDocumentation": "https://ladestationen.api.bund.dev/",
+            "accessUrl": "https://api.mobidata-bw.de/ocpdb/api/public/datex/v3.5/json/realtime",
+            "endpointDocumentation": "https://api.mobidata-bw.de/ocpdb/api/public/datex/v3.5/json/realtime",
             "accessProtocol": null,
-            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "mediaType": "https://w3id.org/mdp/schema/media_type#MEDIA_OTHER",
             "dataModel": "https://w3id.org/mdp/schema/data_model#MODEL_OTHER",
             "dataFormatAdditionalDescription": null,
-            "description": "Dokumentation der API des Ladesäulenregisters der Bundesnetzagentur",
+            "description": "Zusätzlich zu den dynamischen Daten wird ein statischer Feed angeboten: \r\nhttps://api.mobidata-bw.de/ocpdb/api/public/datex/v3.5/json/static",
             "byteSize": null,
-            "fileName": "Dokumentation Ladestationen-API (JSON)",
-            "creationDate": "2021-08-23T10:19:50.262Z",
+            "fileName": "Ladesäulen (DATEX II)",
+            "creationDate": "2026-04-14T09:07:08.669Z",
             "commMethod": null,
             "retentionPeriod": null,
             "deltaDelivery": null,
@@ -3255,9 +3091,9 @@
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 400,
+            "response_excerpt": "{\"message\":\"Offer should not be harvested\",\"code\":400,\"occurred\":\"2026-04-16T13:34:05.024104005Z\"}",
+            "status": "error"
           }
         },
         "dynamic": null,
@@ -3266,16 +3102,16 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 400,
+          "response_excerpt": "{\"message\":\"Offer should not be harvested\",\"code\":400,\"occurred\":\"2026-04-16T13:34:05.024104005Z\"}",
+          "status": "error"
         },
         "dynamic": null,
         "other": []
       },
       "coverage": {
         "static": {
-          "fetch_status": "unsupported_static_format: https://www.iana.org/assignments/media-types/application/json",
+          "fetch_status": "unsupported_static_format: https://w3id.org/mdp/schema/media_type#MEDIA_OTHER",
           "access_mode": "auth",
           "locations_scanned": 0,
           "matched_locations": 0,
@@ -3289,6 +3125,331 @@
           "fetch_status": "no_dynamic_feed",
           "access_mode": "",
           "delta_delivery": false,
+          "site_status_count": 0,
+          "station_status_count": 0,
+          "evse_status_count": 0,
+          "available_evses": 0,
+          "occupied_evses": 0,
+          "out_of_order_evses": 0,
+          "unknown_evses": 0,
+          "latest_last_updated": null
+        }
+      }
+    },
+    {
+      "uid": "gls_mobility",
+      "display_name": "gls mobility",
+      "publisher": "GLS Mobility GmbH",
+      "feeds": {
+        "static": {
+          "publication_id": "980559859451379712",
+          "title": "AFIR-recharging-stat-gls-mobility",
+          "publisher": "GLS Mobility GmbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": false,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": true,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": false,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "https://docs.datex2.eu/_static/data/v3.7/DATEXII_3_D2Payload.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "https://docs.datex2.eu/_static/data/v3.7/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "https://docs.datex2.eu/_static/data/v3.7/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "https://docs.datex2.eu/_static/data/v3.7/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "https://docs.datex2.eu/_static/data/v3.7/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "https://docs.datex2.eu/_static/data/v3.7/DATEXII_3_LocationExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "https://mobilithek.info/mdp-api/files/aux/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationReferencing.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": null
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": false,
+            "response_excerpt": "{\"isAccessible\":false}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 200,
+            "response_excerpt": "981605287991169024",
+            "status": "created"
+          }
+        },
+        "dynamic": {
+          "publication_id": "980563757096464384",
+          "title": "AFIR-recharging-dyn-gls-mobility",
+          "publisher": "GLS Mobility GmbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": true,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": true,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": true,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "https://docs.datex2.eu/_static/data/v3.7/DATEXII_3_D2Payload.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "https://docs.datex2.eu/_static/data/v3.7/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "https://docs.datex2.eu/_static/data/v3.7/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "https://docs.datex2.eu/_static/data/v3.7/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "https://docs.datex2.eu/_static/data/v3.7/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "https://docs.datex2.eu/_static/data/v3.7/DATEXII_3_LocationExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "https://docs.datex2.eu/_static/data/v3.7/DATEXII_3_LocationReferencing.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": null
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": false,
+            "response_excerpt": "{\"isAccessible\":false}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:58.19620987Z\"}",
+            "status": "already_exists"
+          }
+        },
+        "other": []
+      },
+      "subscription": {
+        "static": {
+          "attempted": true,
+          "status_code": 200,
+          "response_excerpt": "981605287991169024",
+          "status": "created"
+        },
+        "dynamic": {
+          "attempted": true,
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:58.19620987Z\"}",
+          "status": "already_exists"
+        },
+        "other": []
+      },
+      "coverage": {
+        "static": {
+          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/980559859451379712/file/noauth",
+          "access_mode": "auth",
+          "locations_scanned": 0,
+          "matched_locations": 0,
+          "matched_stations": 0,
+          "matched_charging_points": 0,
+          "station_coverage_ratio": 0.0,
+          "charging_point_coverage_ratio": 0.0,
+          "site_operator_samples": []
+        },
+        "dynamic": {
+          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/980563757096464384/file/noauth",
+          "access_mode": "auth",
+          "delta_delivery": true,
           "site_status_count": 0,
           "station_status_count": 0,
           "evse_status_count": 0,
@@ -3433,14 +3594,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:03.635545434Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -3571,14 +3732,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:03.460527Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -3586,42 +3747,53 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:03.635545434Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:03.460527Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
       "coverage": {
         "static": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/902547569133924352/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 0,
-          "matched_locations": 0,
-          "matched_stations": 0,
-          "matched_charging_points": 0,
-          "station_coverage_ratio": 0.0,
-          "charging_point_coverage_ratio": 0.0,
-          "site_operator_samples": []
+          "locations_scanned": 2085,
+          "matched_locations": 217,
+          "matched_stations": 217,
+          "matched_charging_points": 648,
+          "station_coverage_ratio": 0.013275,
+          "charging_point_coverage_ratio": 0.01238,
+          "site_operator_samples": [
+            "DESTA",
+            "DEERM",
+            "DETEN",
+            "DEVEL",
+            "DEERK",
+            "DEWSW",
+            "DEJEN",
+            "DEFER",
+            "DEREF",
+            "DEMOS"
+          ]
         },
         "dynamic": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/903240716507836416/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": false,
-          "site_status_count": 0,
-          "station_status_count": 0,
-          "evse_status_count": 0,
-          "available_evses": 0,
-          "occupied_evses": 0,
-          "out_of_order_evses": 0,
-          "unknown_evses": 0,
-          "latest_last_updated": null
+          "site_status_count": 28,
+          "station_status_count": 2086,
+          "evse_status_count": 7340,
+          "available_evses": 6293,
+          "occupied_evses": 865,
+          "out_of_order_evses": 174,
+          "unknown_evses": 8,
+          "latest_last_updated": "2026-04-16T13:30:02Z"
         }
       }
     },
@@ -3758,14 +3930,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:00.675092947Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -3896,14 +4068,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:00.422891747Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -3911,42 +4083,53 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:00.675092947Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:00.422891747Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
       "coverage": {
         "static": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/970305056590979072/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 0,
-          "matched_locations": 0,
-          "matched_stations": 0,
-          "matched_charging_points": 0,
-          "station_coverage_ratio": 0.0,
-          "charging_point_coverage_ratio": 0.0,
-          "site_operator_samples": []
+          "locations_scanned": 147,
+          "matched_locations": 14,
+          "matched_stations": 14,
+          "matched_charging_points": 42,
+          "station_coverage_ratio": 0.000856,
+          "charging_point_coverage_ratio": 0.000802,
+          "site_operator_samples": [
+            "Autohaus Albrecht",
+            "Stadtwerke Bad Saulgau",
+            "BCW Hotels & Resorts GmbH",
+            "Karlsruher Messe GmbH",
+            "Braun Energiedienstleistungen GmbH & Co. KG",
+            "Energieversorgung Guben GmbH",
+            "ELTPLAN",
+            "Hyatt Place Frankfurt Airport",
+            "KSV Koblenzer GmbH",
+            "e-HET GmbH"
+          ]
         },
         "dynamic": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/970388804493828096/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 0,
-          "station_status_count": 0,
-          "evse_status_count": 0,
-          "available_evses": 0,
+          "site_status_count": 1,
+          "station_status_count": 1,
+          "evse_status_count": 1,
+          "available_evses": 1,
           "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": null
+          "latest_last_updated": "2026-04-16T13:34:03.4203402+00:00"
         }
       }
     },
@@ -4083,14 +4266,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:01.140257349Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": null,
@@ -4137,9 +4320,9 @@
             },
             "subscription_status": {
               "attempted": true,
-              "status_code": 403,
-              "response_excerpt": "",
-              "status": "forbidden"
+              "status_code": 400,
+              "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-04-16T13:34:04.147405663Z\"}",
+              "status": "error"
             }
           }
         ]
@@ -4147,31 +4330,42 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:01.140257349Z\"}",
+          "status": "already_exists"
         },
         "dynamic": null,
         "other": [
           {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 400,
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-04-16T13:34:04.147405663Z\"}",
+            "status": "error"
           }
         ]
       },
       "coverage": {
         "static": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/963836072152719360/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 0,
-          "matched_locations": 0,
-          "matched_stations": 0,
-          "matched_charging_points": 0,
-          "station_coverage_ratio": 0.0,
-          "charging_point_coverage_ratio": 0.0,
-          "site_operator_samples": []
+          "locations_scanned": 587,
+          "matched_locations": 168,
+          "matched_stations": 168,
+          "matched_charging_points": 530,
+          "station_coverage_ratio": 0.010277,
+          "charging_point_coverage_ratio": 0.010126,
+          "site_operator_samples": [
+            "Mangels-Elektro U. Sanitär GmbH",
+            "Service4Charger",
+            "Müller e-drive GmbH",
+            "Charge & Co GmbH",
+            "Charge-V GmbH",
+            "E-Service Haberkorn GmbH",
+            "eCHARGE HardyBarth",
+            "Lade Express 136",
+            "Moselland eG - Winzergenossenschaft",
+            "eliso GmbH"
+          ]
         },
         "dynamic": {
           "fetch_status": "no_dynamic_feed",
@@ -4321,14 +4515,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:00.956226205Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": null,
@@ -4337,24 +4531,26 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:00.956226205Z\"}",
+          "status": "already_exists"
         },
         "dynamic": null,
         "other": []
       },
       "coverage": {
         "static": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/969322788846231552/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 0,
+          "locations_scanned": 1,
           "matched_locations": 0,
           "matched_stations": 0,
           "matched_charging_points": 0,
           "station_coverage_ratio": 0.0,
           "charging_point_coverage_ratio": 0.0,
-          "site_operator_samples": []
+          "site_operator_samples": [
+            "Scherenberg e-Mobility e.K."
+          ]
         },
         "dynamic": {
           "fetch_status": "no_dynamic_feed",
@@ -4504,14 +4700,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.599089944Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -4642,14 +4838,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.465775066Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -4657,15 +4853,15 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.599089944Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.465775066Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
@@ -4673,26 +4869,28 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
-          "locations_scanned": 0,
-          "matched_locations": 0,
-          "matched_stations": 0,
-          "matched_charging_points": 0,
-          "station_coverage_ratio": 0.0,
-          "charging_point_coverage_ratio": 0.0,
-          "site_operator_samples": []
+          "locations_scanned": 634,
+          "matched_locations": 6,
+          "matched_stations": 6,
+          "matched_charging_points": 15,
+          "station_coverage_ratio": 0.000367,
+          "charging_point_coverage_ratio": 0.000287,
+          "site_operator_samples": [
+            "Qwello Germany"
+          ]
         },
         "dynamic": {
           "fetch_status": "ok",
           "access_mode": "noauth",
           "delta_delivery": false,
-          "site_status_count": 632,
-          "station_status_count": 1436,
-          "evse_status_count": 1635,
-          "available_evses": 1231,
-          "occupied_evses": 382,
-          "out_of_order_evses": 22,
+          "site_status_count": 634,
+          "station_status_count": 1440,
+          "evse_status_count": 1639,
+          "available_evses": 1250,
+          "occupied_evses": 371,
+          "out_of_order_evses": 18,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-04-14T20:10:06+00:00"
+          "latest_last_updated": "2026-04-16T13:19:49+00:00"
         }
       }
     },
@@ -4829,14 +5027,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:57.783285989Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -4967,14 +5165,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:01.70746056Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -4982,15 +5180,15 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:57.783285989Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:01.70746056Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
@@ -4998,6 +5196,333 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
+          "locations_scanned": 98,
+          "matched_locations": 19,
+          "matched_stations": 19,
+          "matched_charging_points": 52,
+          "station_coverage_ratio": 0.001162,
+          "charging_point_coverage_ratio": 0.000993,
+          "site_operator_samples": [
+            "SMATRICS"
+          ]
+        },
+        "dynamic": {
+          "fetch_status": "auth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/961319990963605504/file",
+          "access_mode": "noauth",
+          "delta_delivery": true,
+          "site_status_count": 0,
+          "station_status_count": 0,
+          "evse_status_count": 0,
+          "available_evses": 0,
+          "occupied_evses": 0,
+          "out_of_order_evses": 0,
+          "unknown_evses": 0,
+          "latest_last_updated": null
+        }
+      }
+    },
+    {
+      "uid": "tc_backend_qa",
+      "display_name": "tc backend qa",
+      "publisher": "Taubert Consulting GmbH",
+      "feeds": {
+        "static": {
+          "publication_id": "981218494322012160",
+          "title": "AFIR-recharging-stat-TC-Backend-QA",
+          "publisher": "Taubert Consulting GmbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Static-01-00-00",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": false,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": true,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": false,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_D2Payload.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationReferencing.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Static-01-00-00"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": false,
+            "response_excerpt": "{\"isAccessible\":false}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 200,
+            "response_excerpt": "981605283809447936",
+            "status": "created"
+          }
+        },
+        "dynamic": {
+          "publication_id": "981223821767557120",
+          "title": "AFIR-recharging-dyn-TC-Backend-QA",
+          "publisher": "Taubert Consulting GmbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Dynamic-01-00-00_Delta",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": true,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": true,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": true,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_MessageContainer.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_D2Payload.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_ExchangeInformation.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Dynamic-01-00-00_Delta"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": false,
+            "response_excerpt": "{\"isAccessible\":false}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 200,
+            "response_excerpt": "981605282697957376",
+            "status": "created"
+          }
+        },
+        "other": []
+      },
+      "subscription": {
+        "static": {
+          "attempted": true,
+          "status_code": 200,
+          "response_excerpt": "981605283809447936",
+          "status": "created"
+        },
+        "dynamic": {
+          "attempted": true,
+          "status_code": 200,
+          "response_excerpt": "981605282697957376",
+          "status": "created"
+        },
+        "other": []
+      },
+      "coverage": {
+        "static": {
+          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/981218494322012160/file/noauth",
+          "access_mode": "auth",
           "locations_scanned": 0,
           "matched_locations": 0,
           "matched_stations": 0,
@@ -5007,8 +5532,8 @@
           "site_operator_samples": []
         },
         "dynamic": {
-          "fetch_status": "auth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/961319990963605504/file",
-          "access_mode": "noauth",
+          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/981223821767557120/file/noauth",
+          "access_mode": "auth",
           "delta_delivery": true,
           "site_status_count": 0,
           "station_status_count": 0,
@@ -5154,14 +5679,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:02.779706905Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -5292,14 +5817,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:02.628823068Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -5307,15 +5832,15 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:02.779706905Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:02.628823068Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
@@ -5323,12 +5848,12 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
-          "locations_scanned": 312,
-          "matched_locations": 297,
-          "matched_stations": 297,
-          "matched_charging_points": 3595,
-          "station_coverage_ratio": 0.018168,
-          "charging_point_coverage_ratio": 0.068682,
+          "locations_scanned": 320,
+          "matched_locations": 298,
+          "matched_stations": 298,
+          "matched_charging_points": 3611,
+          "station_coverage_ratio": 0.01823,
+          "charging_point_coverage_ratio": 0.068987,
           "site_operator_samples": [
             "Tesla, Inc."
           ]
@@ -5344,7 +5869,7 @@
           "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-04-14T20:26:52Z"
+          "latest_last_updated": "2026-04-16T13:34:19Z"
         }
       }
     },
@@ -5481,14 +6006,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:58.527225302Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -5619,14 +6144,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:58.376819757Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -5634,42 +6159,53 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:58.527225302Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:58.376819757Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
       "coverage": {
         "static": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/979363267193040896/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 0,
-          "matched_locations": 0,
-          "matched_stations": 0,
-          "matched_charging_points": 0,
-          "station_coverage_ratio": 0.0,
-          "charging_point_coverage_ratio": 0.0,
-          "site_operator_samples": []
+          "locations_scanned": 10250,
+          "matched_locations": 917,
+          "matched_stations": 917,
+          "matched_charging_points": 2338,
+          "station_coverage_ratio": 0.056096,
+          "charging_point_coverage_ratio": 0.044667,
+          "site_operator_samples": [
+            "enercity AG",
+            "GWS Gemeindewerke Sinzheim GmbH & Co. KG",
+            "Envia  GmbH",
+            "energis GmbH",
+            "Westenergie Metering GmbH",
+            "Energieversorgung Oberhausen AG",
+            "Süwag Vertrieb AG & Co. KG",
+            "Franz Kleine Automobile GmbH & Co. KG",
+            "Erneuerbare Energien Rheingau-Taunus GmbH",
+            "Stadtwerke Unna GmbH"
+          ]
         },
         "dynamic": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/979364650281549824/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 0,
-          "station_status_count": 0,
-          "evse_status_count": 0,
+          "site_status_count": 1,
+          "station_status_count": 1,
+          "evse_status_count": 1,
           "available_evses": 0,
           "occupied_evses": 0,
           "out_of_order_evses": 0,
-          "unknown_evses": 0,
-          "latest_last_updated": null
+          "unknown_evses": 1,
+          "latest_last_updated": "2026-04-16T13:34:18Z"
         }
       }
     },
@@ -5811,9 +6347,9 @@
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:58.881956675Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -5949,9 +6485,9 @@
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.0234003Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -5959,15 +6495,15 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:58.881956675Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:33:59.0234003Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
@@ -6131,14 +6667,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:03.96975097Z\"}",
+            "status": "already_exists"
           }
         },
         "dynamic": {
@@ -6256,14 +6792,14 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
-            "status_code": 403,
-            "response_excerpt": "",
-            "status": "forbidden"
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:03.802640734Z\"}",
+            "status": "already_exists"
           }
         },
         "other": []
@@ -6271,42 +6807,44 @@
       "subscription": {
         "static": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:03.96975097Z\"}",
+          "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
-          "status_code": 403,
-          "response_excerpt": "",
-          "status": "forbidden"
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-04-16T13:34:03.802640734Z\"}",
+          "status": "already_exists"
         },
         "other": []
       },
       "coverage": {
         "static": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/869246425829892096/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 0,
-          "matched_locations": 0,
-          "matched_stations": 0,
-          "matched_charging_points": 0,
-          "station_coverage_ratio": 0.0,
-          "charging_point_coverage_ratio": 0.0,
-          "site_operator_samples": []
+          "locations_scanned": 1740,
+          "matched_locations": 61,
+          "matched_stations": 61,
+          "matched_charging_points": 141,
+          "station_coverage_ratio": 0.003732,
+          "charging_point_coverage_ratio": 0.002694,
+          "site_operator_samples": [
+            "Wirelane GmbH"
+          ]
         },
         "dynamic": {
-          "fetch_status": "noauth: 500 Server Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/876587237907525632/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 0,
-          "station_status_count": 0,
-          "evse_status_count": 0,
+          "site_status_count": 1,
+          "station_status_count": 1,
+          "evse_status_count": 2,
           "available_evses": 0,
-          "occupied_evses": 0,
+          "occupied_evses": 2,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": null
+          "latest_last_updated": "2026-03-30T00:32:38+00:00"
         }
       }
     }

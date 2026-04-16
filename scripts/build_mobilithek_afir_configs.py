@@ -107,6 +107,7 @@ GENERIC_OPERATOR_WORDS = GENERIC_STEM_WORDS | {
 class StaticSiteRecord:
     site_id: str
     station_ids: tuple[str, ...]
+    evse_ids: tuple[str, ...]
     lat: float
     lon: float
     postcode: str
@@ -330,6 +331,7 @@ def parse_static_sites_with_operator(payload: dict[str, Any]) -> list[StaticSite
             StaticSiteRecord(
                 site_id=site.site_id,
                 station_ids=site.station_ids,
+                evse_ids=site.evse_ids,
                 lat=float(site.lat),
                 lon=float(site.lon),
                 postcode=site.postcode,
@@ -473,6 +475,8 @@ def match_static_sites(
                         "site_city": site.city,
                         "site_total_evses": site.total_evses,
                         "station_id": str(station_row["station_id"]),
+                        "datex_station_ids": "|".join(site.station_ids),
+                        "datex_charge_point_ids": "|".join(site.evse_ids),
                         "station_operator": str(station_row.get("operator") or ""),
                         "station_address": str(station_row.get("address") or ""),
                         "station_postcode": str(station_row.get("postcode") or ""),

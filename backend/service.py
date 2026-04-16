@@ -36,7 +36,7 @@ class IngestionService:
             )
         )
         self.store.upsert_site_matches(load_site_matches(self.config.site_match_path, self.config.chargers_csv_path))
-        self.store.upsert_evse_matches(load_evse_matches(self.config.chargers_csv_path))
+        self.store.upsert_evse_matches(load_evse_matches(self.config.chargers_csv_path, self.config.site_match_path))
         self.store.reconcile_station_ids_from_site_matches()
         self.store.upsert_stations(load_station_records(self.config.chargers_csv_path))
 

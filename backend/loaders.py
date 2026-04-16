@@ -225,7 +225,7 @@ def load_site_matches(site_match_path: Path, chargers_csv_path: Path | None = No
     return sorted(rows.values(), key=lambda item: (item.provider_uid, item.site_id, item.station_id))
 
 
-def load_evse_matches(chargers_csv_path: Path) -> list[EvseMatch]:
+def load_evse_matches(chargers_csv_path: Path, site_match_path: Path | None = None) -> list[EvseMatch]:
     rows: dict[tuple[str, str], EvseMatch] = {}
 
     with chargers_csv_path.open("r", encoding="utf-8", newline="") as handle:
@@ -244,6 +244,30 @@ def load_evse_matches(chargers_csv_path: Path) -> list[EvseMatch]:
             station_ref = station_ids[0] if station_ids else ""
 
             for provider_uid in provider_uids:
+                for evse_id in _split_pipe_ids(row.get("datex_charge_point_ids")):
+                    normalized_evse_id = _normalize_lookup_token(evse_id)
+                    if not normalized_evse_id:
+                        continue
+                    rows[(provider_uid, normalized_evse_id)] = EvseMatch(
+                        provider_uid=provider_uid,
+                        evse_id=normalized_evse_id,
+                        station_id=station_id,
+                        site_id=site_id,
+                        station_ref=station_ref,
+                    )
+
+    if site_match_path is not None and site_match_path.exists():
+        with site_match_path.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                provider_uid = str(row.get("provider_uid") or "").strip()
+                station_id = str(row.get("station_id") or "").strip()
+                site_id = str(row.get("site_id") or "").strip()
+                if not provider_uid or not station_id:
+                    continue
+
+                station_ids = _split_pipe_ids(row.get("datex_station_ids"))
+                station_ref = station_ids[0] if station_ids else ""
                 for evse_id in _split_pipe_ids(row.get("datex_charge_point_ids")):
                     normalized_evse_id = _normalize_lookup_token(evse_id)
                     if not normalized_evse_id:
