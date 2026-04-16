@@ -62,6 +62,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var isLoading: Boolean by mutableStateOf(false)
         private set
 
+    var isAwaitingFirstLocationFix: Boolean by mutableStateOf(false)
+        private set
+
     var activeBundleInfo: ActiveDataBundleInfo? by mutableStateOf(null)
         private set
 
@@ -77,6 +80,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val discoveredById: MutableMap<String, GeoJsonFeature> = linkedMapOf()
     private val discoveredOrder: MutableList<String> = mutableListOf()
     private var didSeedFromUserLocation = false
+    private var lastUserLocationCenter: Pair<Double, Double>? = null
 
     private val liveSummaryFetchedAtByStationId: MutableMap<String, Long> = mutableMapOf()
     private val liveDetailFetchedAtByStationId: MutableMap<String, Long> = mutableMapOf()
@@ -120,9 +124,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 loadError = null
                 didSeedFromUserLocation = false
                 applyFilters(userLocation)
-                viewModelScope.launch {
-                    requestLiveSummaries(trackedStationIds(), force = true)
-                }
             }.onFailure { error ->
                 loadError = error.localizedMessage
                 allFeatures = emptyList()
@@ -130,6 +131,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 discoveredFeatures = emptyList()
                 operators = emptyList()
                 activeBundleInfo = null
+                isAwaitingFirstLocationFix = false
                 refreshNearbyJob?.cancel()
                 resetLiveState()
             }
@@ -168,28 +170,67 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun applyFilters(userLocation: Location?) {
         filterPool = allFeatures.filter { feature -> feature.properties.matches(filterState) }
         resetDiscoveredList()
-        didSeedFromUserLocation = false
         if (userLocation != null) {
             didSeedFromUserLocation = true
+            lastUserLocationCenter = userLocation.latitude to userLocation.longitude
+            isAwaitingFirstLocationFix = false
             refreshNearbyAsync(userLocation.latitude, userLocation.longitude)
         } else {
-            seedFallbackDiscoveredFeatures()
-            viewModelScope.launch {
-                requestLiveSummaries(trackedStationIds(), force = true)
-            }
+            didSeedFromUserLocation = false
+            lastUserLocationCenter = null
+            isAwaitingFirstLocationFix = allFeatures.isNotEmpty()
+            discoveredFeatures = emptyList()
         }
     }
 
     fun handleMapCenterChange(latitude: Double, longitude: Double) {
+        didSeedFromUserLocation = true
+        isAwaitingFirstLocationFix = false
         refreshNearbyAsync(latitude, longitude)
     }
 
     fun seedFromInitialUserLocation(location: Location?) {
         if (location == null || allFeatures.isEmpty()) return
         if (!didSeedFromUserLocation) {
-            // Replace the fallback seed with a real nearby selection once GPS is available.
+            // Start charger discovery from the first real location fix.
             applyFilters(location)
         }
+    }
+
+    fun reloadListForCurrentLocation(location: Location?) {
+        if (allFeatures.isEmpty()) return
+        if (location == null) {
+            isAwaitingFirstLocationFix = true
+            return
+        }
+        applyFilters(location)
+    }
+
+    fun reloadMapForCenter(latitude: Double?, longitude: Double?) {
+        if (allFeatures.isEmpty()) return
+        if (latitude == null || longitude == null) {
+            isAwaitingFirstLocationFix = true
+            return
+        }
+        handleMapCenterChange(latitude, longitude)
+    }
+
+    fun refreshNearbyFromUserLocation(location: Location?, force: Boolean = false) {
+        if (allFeatures.isEmpty()) return
+        if (location == null) {
+            isAwaitingFirstLocationFix = true
+            return
+        }
+        if (!didSeedFromUserLocation) {
+            applyFilters(location)
+            return
+        }
+        if (!shouldRefreshUserLocation(lastUserLocationCenter, location.latitude, location.longitude, force)) {
+            return
+        }
+        lastUserLocationCenter = location.latitude to location.longitude
+        isAwaitingFirstLocationFix = false
+        refreshNearbyAsync(location.latitude, location.longitude)
     }
 
     fun selectFeature(feature: GeoJsonFeature) {
@@ -425,22 +466,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         discoveredFeatures = emptyList()
     }
 
-    private fun seedFallbackDiscoveredFeatures() {
-        if (filterPool.isEmpty()) {
-            discoveredFeatures = emptyList()
-            return
-        }
-
-        val fallback = filterPool.take(maxVisibleChargers)
-        for (feature in fallback) {
-            if (!discoveredById.containsKey(feature.id)) {
-                discoveredOrder += feature.id
-            }
-            discoveredById[feature.id] = feature
-        }
-        discoveredFeatures = discoveredOrder.mapNotNull { discoveredById[it] }
-    }
-
     private fun refreshNearbyAsync(centerLat: Double, centerLon: Double) {
         val poolSnapshot = filterPool
         if (poolSnapshot.isEmpty()) {
@@ -519,4 +544,32 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val EARTH_RADIUS_METERS = 6_371_000.0
     }
+}
+
+internal fun shouldRefreshUserLocation(
+    lastCenter: Pair<Double, Double>?,
+    latitude: Double,
+    longitude: Double,
+    force: Boolean = false
+): Boolean {
+    if (force) return true
+    val last = lastCenter ?: return true
+    return haversineDistanceMeters(last.first, last.second, latitude, longitude) > 250.0
+}
+
+private fun haversineDistanceMeters(
+    latitudeA: Double,
+    longitudeA: Double,
+    latitudeB: Double,
+    longitudeB: Double
+): Double {
+    val latRadA = Math.toRadians(latitudeA)
+    val latRadB = Math.toRadians(latitudeB)
+    val dLat = latRadB - latRadA
+    val dLon = Math.toRadians(longitudeB - longitudeA)
+
+    val a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(latRadA) * cos(latRadB) * sin(dLon / 2) * sin(dLon / 2)
+    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return 6_371_000.0 * c
 }

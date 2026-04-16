@@ -24,16 +24,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import de.woladen.android.model.AvailabilityStatus
 import de.woladen.android.model.availabilityStatus
 import de.woladen.android.model.GeoJsonFeature
 import de.woladen.android.model.displayPrice
 import de.woladen.android.model.occupancySummaryLabel
+import de.woladen.android.service.LocationAuthorizationStatus
 import de.woladen.android.service.LocationService
 import de.woladen.android.ui.components.AmenityIcon
 import de.woladen.android.ui.components.markerColorForKey
@@ -46,6 +52,30 @@ fun ListTabView(
     locationService: LocationService,
     onShowFilter: () -> Unit
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(Unit) {
+        locationService.activate()
+        viewModel.reloadListForCurrentLocation(locationService.currentLocation)
+    }
+
+    LaunchedEffect(locationService.currentLocation) {
+        viewModel.refreshNearbyFromUserLocation(locationService.currentLocation)
+    }
+
+    DisposableEffect(lifecycleOwner, locationService) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                locationService.activate()
+                viewModel.reloadListForCurrentLocation(locationService.currentLocation)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         when {
             viewModel.loadError != null -> {
@@ -58,6 +88,14 @@ fun ListTabView(
 
             viewModel.isLoading && viewModel.allFeatures.isEmpty() -> {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            }
+
+            viewModel.isAwaitingFirstLocationFix -> {
+                EmptyState(
+                    title = initialLocationTitle(locationService.authorizationStatus),
+                    subtitle = initialLocationDescription(locationService.authorizationStatus),
+                    modifier = Modifier.align(Alignment.Center)
+                )
             }
 
             viewModel.discoveredFeatures.isEmpty() -> {
@@ -97,6 +135,24 @@ fun ListTabView(
         ) {
             Icon(Icons.Filled.FilterList, contentDescription = "Filter")
         }
+    }
+}
+
+private fun initialLocationTitle(status: LocationAuthorizationStatus): String {
+    return when (status) {
+        LocationAuthorizationStatus.DENIED -> "Standortfreigabe benötigt"
+        else -> "Warte auf ersten GPS-Fix"
+    }
+}
+
+private fun initialLocationDescription(status: LocationAuthorizationStatus): String {
+    return when (status) {
+        LocationAuthorizationStatus.NOT_DETERMINED ->
+            "Nahe Ladepunkte werden geladen, sobald dein Standort freigegeben ist."
+        LocationAuthorizationStatus.DENIED ->
+            "Aktiviere den Standortzugriff, damit die Liste nahe Ladepunkte laden kann."
+        LocationAuthorizationStatus.AUTHORIZED_WHEN_IN_USE ->
+            "Die Liste lädt Ladepunkte, sobald der erste Standort bestimmt wurde."
     }
 }
 

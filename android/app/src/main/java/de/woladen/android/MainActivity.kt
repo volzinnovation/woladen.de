@@ -12,20 +12,25 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.core.view.WindowCompat
 import de.woladen.android.service.LocationService
 import de.woladen.android.store.FavoritesStore
 import de.woladen.android.ui.WoladenTheme
 import de.woladen.android.ui.WoladenAppScreen
 import de.woladen.android.viewmodel.AppViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
 class MainActivity : ComponentActivity() {
     private val viewModel: AppViewModel by viewModels()
+    private lateinit var locationService: LocationService
+    private lateinit var favoritesStore: FavoritesStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, true)
+        locationService = LocationService(applicationContext)
+        favoritesStore = FavoritesStore(applicationContext)
 
         val isDebuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         if (isDebuggable) {
@@ -42,9 +47,6 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            val locationService = remember { LocationService(applicationContext) }
-            val favoritesStore = remember { FavoritesStore(applicationContext) }
-
             val permissionLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestMultiplePermissions()
             ) { result ->
@@ -62,7 +64,7 @@ class MainActivity : ComponentActivity() {
             }
 
             LaunchedEffect(Unit) {
-                locationService.refreshAuthorization()
+                locationService.activate()
                 viewModel.load(locationService.currentLocation)
             }
 
@@ -74,8 +76,15 @@ class MainActivity : ComponentActivity() {
                 viewModel.seedFromInitialUserLocation(locationService.currentLocation)
             }
 
-            DisposableEffect(Unit) {
+            DisposableEffect(locationService) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_START) {
+                        locationService.activate()
+                    }
+                }
+                lifecycle.addObserver(observer)
                 onDispose {
+                    lifecycle.removeObserver(observer)
                     locationService.stopUpdates()
                 }
             }

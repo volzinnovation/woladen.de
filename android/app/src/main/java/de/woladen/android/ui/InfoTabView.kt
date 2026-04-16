@@ -141,7 +141,7 @@ fun InfoTabView(
             InfoSection(title = "Standort") {
                 Text(locationStatusText(locationService.authorizationStatus))
                 Text(
-                    "Die App funktioniert auch ohne Standortfreigabe. Der Standort wird nur nach deiner Aktion abgefragt.",
+                    "Die App funktioniert auch ohne Standortfreigabe. Der Standort wird erst nach deiner Aktion abgefragt und danach für Kartenfokus und nahe Ladepunkte verwendet.",
                     color = infoMuted
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

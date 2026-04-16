@@ -18,6 +18,7 @@ final class AppViewModel: ObservableObject {
     @Published var selectedTab: AppTab = .list
     @Published private(set) var loadError: String?
     @Published private(set) var isLoading: Bool = false
+    @Published private(set) var isAwaitingFirstLocationFix: Bool = false
     @Published private(set) var activeBundleInfo: ActiveDataBundleInfo?
 
     private let liveAPIClient = LiveAPIClient()
@@ -69,9 +70,6 @@ final class AppViewModel: ObservableObject {
                     self.loadError = nil
                     self.didSeedFromUserLocation = false
                     self.applyFilters(userLocation: userLocation)
-                    Task {
-                        await self.refreshTrackedLiveSummaries(force: true)
-                    }
                 case .failure(let error):
                     self.loadError = error.localizedDescription
                     self.allFeatures = []
@@ -79,6 +77,7 @@ final class AppViewModel: ObservableObject {
                     self.discoveredFeatures = []
                     self.operators = []
                     self.activeBundleInfo = nil
+                    self.isAwaitingFirstLocationFix = false
                     self.resetLiveState()
                 }
             }
@@ -94,29 +93,47 @@ final class AppViewModel: ObservableObject {
             feature.properties.matches(filterState)
         }
         resetDiscoveredList()
-        didSeedFromUserLocation = false
         if let userLocation {
-            didSeedFromUserLocation = true
-            refreshNearby(center: userLocation.coordinate)
+            discoverNearby(
+                center: userLocation.coordinate,
+                resetHistory: false
+            )
         } else {
-            seedFallbackDiscoveredFeatures()
-            Task {
-                await refreshTrackedLiveSummaries(force: true)
-            }
+            didSeedFromUserLocation = false
+            isAwaitingFirstLocationFix = !allFeatures.isEmpty
+            discoveredFeatures = []
         }
     }
 
     func handleMapCenterChange(_ center: CLLocationCoordinate2D) {
-        refreshNearby(center: center)
+        discoverNearby(center: center, resetHistory: false)
     }
 
     func seedFromInitialUserLocation(_ location: CLLocation?) {
         guard let location else { return }
         guard !allFeatures.isEmpty else { return }
         if !didSeedFromUserLocation {
-            // Replace the fallback seed with a real nearby selection once GPS is available.
+            // Start charger discovery from the first real location fix.
             applyFilters(userLocation: location)
         }
+    }
+
+    func reloadListForCurrentLocation(_ location: CLLocation?) {
+        guard !allFeatures.isEmpty else { return }
+        guard let location else {
+            isAwaitingFirstLocationFix = true
+            return
+        }
+        applyFilters(userLocation: location)
+    }
+
+    func reloadMapForCenter(_ center: CLLocationCoordinate2D?) {
+        guard !allFeatures.isEmpty else { return }
+        guard let center else {
+            isAwaitingFirstLocationFix = true
+            return
+        }
+        discoverNearby(center: center, resetHistory: false)
     }
 
     func selectFeature(_ feature: GeoJSONFeature) {
@@ -356,20 +373,13 @@ final class AppViewModel: ObservableObject {
         discoveredFeatures = []
     }
 
-    private func seedFallbackDiscoveredFeatures() {
-        guard !filterPool.isEmpty else {
-            discoveredFeatures = []
-            return
+    private func discoverNearby(center: CLLocationCoordinate2D, resetHistory: Bool) {
+        didSeedFromUserLocation = true
+        isAwaitingFirstLocationFix = false
+        if resetHistory {
+            resetDiscoveredList()
         }
-
-        let fallback = Array(filterPool.prefix(maxVisibleChargers))
-        for feature in fallback {
-            if discoveredByID[feature.id] == nil {
-                discoveredOrder.append(feature.id)
-            }
-            discoveredByID[feature.id] = feature
-        }
-        discoveredFeatures = discoveredOrder.compactMap { discoveredByID[$0] }
+        refreshNearby(center: center)
     }
 
     private func refreshNearby(center: CLLocationCoordinate2D) {

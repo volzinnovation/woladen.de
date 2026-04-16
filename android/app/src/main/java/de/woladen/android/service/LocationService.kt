@@ -47,6 +47,16 @@ class LocationService(private val context: Context) {
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) = Unit
     }
 
+    fun activate() {
+        refreshAuthorization()
+        if (authorizationStatus == LocationAuthorizationStatus.AUTHORIZED_WHEN_IN_USE) {
+            requestSingleLocation()
+            startUpdates()
+        } else {
+            stopUpdates()
+        }
+    }
+
     fun refreshAuthorization() {
         authorizationStatus = if (hasLocationPermission()) {
             LocationAuthorizationStatus.AUTHORIZED_WHEN_IN_USE

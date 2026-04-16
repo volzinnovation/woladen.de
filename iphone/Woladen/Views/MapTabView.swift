@@ -2,6 +2,7 @@ import SwiftUI
 import MapKit
 
 struct MapTabView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
 
@@ -45,6 +46,8 @@ struct MapTabView: View {
             }
             .ignoresSafeArea(edges: [.top, .horizontal])
             .onMapCameraChange(frequency: .onEnd) { context in
+                guard hasCenteredInitialLocation else { return }
+                guard locationService.currentLocation != nil else { return }
                 let center = context.region.center
                 guard shouldQuery(for: center) else { return }
                 lastQueriedCenter = center
@@ -85,6 +88,16 @@ struct MapTabView: View {
                     .padding(.leading, 12)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
+
+            if viewModel.isAwaitingFirstLocationFix {
+                ContentUnavailableView(
+                    initialLocationTitle,
+                    systemImage: "location.magnifyingglass",
+                    description: Text(initialLocationDescription)
+                )
+                .padding(.horizontal, 24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            }
         }
         .onChange(of: locationService.currentLocation) { _, newValue in
             guard let newValue else { return }
@@ -93,16 +106,10 @@ struct MapTabView: View {
                 hasCenteredInitialLocation = true
             }
         }
-        .onAppear {
-            if !hasCenteredInitialLocation {
-                if let current = locationService.currentLocation {
-                    centerMap(on: current)
-                    hasCenteredInitialLocation = true
-                } else {
-                    centerOnNextLocationUpdate = true
-                    locationService.requestSingleLocation()
-                }
-            }
+        .onAppear(perform: handleActivation)
+        .onChange(of: scenePhase) { _, newValue in
+            guard newValue == .active else { return }
+            handleActivation()
         }
     }
 
@@ -127,6 +134,42 @@ struct MapTabView: View {
         let lhs = CLLocation(latitude: lastQueriedCenter.latitude, longitude: lastQueriedCenter.longitude)
         let rhs = CLLocation(latitude: center.latitude, longitude: center.longitude)
         return lhs.distance(from: rhs) > 250
+    }
+
+    private var initialLocationTitle: String {
+        switch locationService.authorizationStatus {
+        case .denied, .restricted:
+            return "Standortfreigabe benötigt"
+        default:
+            return "Warte auf ersten GPS-Fix"
+        }
+    }
+
+    private var initialLocationDescription: String {
+        switch locationService.authorizationStatus {
+        case .notDetermined:
+            return "Nahe Ladepunkte werden geladen, sobald dein Standort freigegeben ist."
+        case .denied, .restricted:
+            return "Aktiviere den Standortzugriff, damit die Karte nahe Ladepunkte laden kann."
+        case .authorizedWhenInUse, .authorizedAlways:
+            return "Die Karte lädt Ladepunkte, sobald der erste Standort bestimmt wurde."
+        @unknown default:
+            return "Die Karte lädt Ladepunkte, sobald der erste Standort bestimmt wurde."
+        }
+    }
+
+    private func handleActivation() {
+        if let current = locationService.currentLocation {
+            if !hasCenteredInitialLocation {
+                centerMap(on: current)
+                hasCenteredInitialLocation = true
+            } else {
+                viewModel.reloadMapForCenter(lastQueriedCenter ?? current.coordinate)
+            }
+        } else {
+            centerOnNextLocationUpdate = true
+            locationService.requestSingleLocation()
+        }
     }
 
     private func color(for key: String) -> Color {

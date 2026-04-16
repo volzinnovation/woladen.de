@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ListTabView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
 
@@ -11,6 +12,12 @@ struct ListTabView: View {
             Group {
                 if let error = viewModel.loadError {
                     ContentUnavailableView("Fehler beim Laden", systemImage: "exclamationmark.triangle", description: Text(error))
+                } else if viewModel.isAwaitingFirstLocationFix {
+                    ContentUnavailableView(
+                        initialLocationTitle,
+                        systemImage: "location.magnifyingglass",
+                        description: Text(initialLocationDescription)
+                    )
                 } else if viewModel.isLoading && viewModel.allFeatures.isEmpty {
                     ProgressView("Lade Ladepunkte...")
                 } else if viewModel.discoveredFeatures.isEmpty {
@@ -42,6 +49,11 @@ struct ListTabView: View {
                 .padding(.trailing, 14)
                 .padding(.top, 10)
             }
+        .onAppear(perform: reloadForActiveLocation)
+        .onChange(of: scenePhase) { _, newValue in
+            guard newValue == .active else { return }
+            reloadForActiveLocation()
+        }
     }
 
     private func color(for key: String) -> Color {
@@ -51,6 +63,32 @@ struct ListTabView: View {
         case "bronze": return Color.brown
         default: return Color.secondary
         }
+    }
+
+    private var initialLocationTitle: String {
+        switch locationService.authorizationStatus {
+        case .denied, .restricted:
+            return "Standortfreigabe benötigt"
+        default:
+            return "Warte auf ersten GPS-Fix"
+        }
+    }
+
+    private var initialLocationDescription: String {
+        switch locationService.authorizationStatus {
+        case .notDetermined:
+            return "Nahe Ladepunkte werden geladen, sobald dein Standort freigegeben ist."
+        case .denied, .restricted:
+            return "Aktiviere den Standortzugriff, damit die Liste nahe Ladepunkte laden kann."
+        case .authorizedWhenInUse, .authorizedAlways:
+            return "Die Liste lädt Ladepunkte, sobald der erste Standort bestimmt wurde."
+        @unknown default:
+            return "Die Liste lädt Ladepunkte, sobald der erste Standort bestimmt wurde."
+        }
+    }
+
+    private func reloadForActiveLocation() {
+        viewModel.reloadListForCurrentLocation(locationService.currentLocation)
     }
 }
 
