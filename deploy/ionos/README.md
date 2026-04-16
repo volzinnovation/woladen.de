@@ -128,6 +128,7 @@ The installer renders a Caddy config snippet to:
 If `caddy.service` exists, the deploy now automates the active config as well:
 
 - when `/etc/caddy/Caddyfile` does not exist yet, it installs the rendered live API config as the primary Caddyfile
+- when `/etc/caddy/Caddyfile` already contains a single `live.woladen.de` site block, it replaces that dedicated config with the rendered managed version
 - when `/etc/caddy/Caddyfile` already exists, it reuses an existing `/etc/woladen/*.Caddyfile` import if present
 - otherwise it appends `import /etc/woladen/live.woladen.de.Caddyfile`
 - it validates the resulting Caddy config and starts or reloads `caddy` as needed

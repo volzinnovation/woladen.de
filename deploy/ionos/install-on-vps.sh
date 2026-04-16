@@ -148,6 +148,7 @@ render_template() {
 
 ensure_caddy_integration() {
   local import_line
+  local site_block_count
 
   if ! systemctl list-unit-files caddy.service >/dev/null 2>&1; then
     CADDY_AUTOMATION_STATUS="service-missing"
@@ -160,6 +161,20 @@ ensure_caddy_integration() {
   if [[ ! -f "$CADDY_MAIN_CONFIG" ]]; then
     install -D -m 0644 "$RENDERED_CADDYFILE" "$CADDY_MAIN_CONFIG"
     CADDY_AUTOMATION_STATUS="installed-primary-config"
+  elif grep -Eq "^[[:space:]]*${LIVE_DOMAIN//./\\.}([[:space:],{]|$)" "$CADDY_MAIN_CONFIG"; then
+    site_block_count=$(awk '
+      /^[[:space:]]*#/ { next }
+      /^[[:space:]]*$/ { next }
+      /^[[:space:]]*\{$/ { next }
+      /^[^[:space:]][^{]*\{$/ { count++ }
+      END { print count + 0 }
+    ' "$CADDY_MAIN_CONFIG")
+    if [[ "$site_block_count" == "1" ]]; then
+      install -D -m 0644 "$RENDERED_CADDYFILE" "$CADDY_MAIN_CONFIG"
+      CADDY_AUTOMATION_STATUS="replaced-dedicated-live-config"
+    else
+      CADDY_AUTOMATION_STATUS="existing-live-site-left-untouched"
+    fi
   elif grep -Eq "^[[:space:]]*import[[:space:]]+(/etc/woladen/[^[:space:]]+\\.Caddyfile|/etc/woladen/\\*\\.Caddyfile)([[:space:]]|$)" "$CADDY_MAIN_CONFIG"; then
     CADDY_AUTOMATION_STATUS="managed-via-import"
   elif grep -Fqx "$import_line" "$CADDY_MAIN_CONFIG"; then
@@ -174,7 +189,7 @@ ensure_caddy_integration() {
   fi
   systemctl enable caddy.service >/dev/null 2>&1 || true
   if systemctl is-active --quiet caddy.service; then
-    if [[ "$CADDY_AUTOMATION_STATUS" == "installed-primary-config" || "$CADDY_AUTOMATION_STATUS" == "appended-import" || $RENDERED_CADDYFILE_CHANGED -eq 1 ]]; then
+    if [[ "$CADDY_AUTOMATION_STATUS" == "installed-primary-config" || "$CADDY_AUTOMATION_STATUS" == "replaced-dedicated-live-config" || "$CADDY_AUTOMATION_STATUS" == "appended-import" || $RENDERED_CADDYFILE_CHANGED -eq 1 ]]; then
       systemctl reload caddy
     fi
   else
