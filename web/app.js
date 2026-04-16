@@ -1290,15 +1290,11 @@ function renderDetailLiveState(feature, liveDetail = null) {
     return;
   }
 
-  const updatedText = formatDetailTimestamp(
-    props.live_source_observed_at || props.live_fetched_at || props.live_ingested_at,
-  );
-  els.detail.liveUpdated.textContent = updatedText ? `Stand ${updatedText}` : "";
-  els.detail.liveUpdated.hidden = !updatedText;
+  els.detail.liveUpdated.hidden = true;
+  els.detail.liveUpdated.textContent = "";
 
-  const sourceText = formatOccupancySource(props);
-  els.detail.liveSource.textContent = sourceText;
-  els.detail.liveSource.hidden = !sourceText;
+  els.detail.liveSource.hidden = true;
+  els.detail.liveSource.textContent = "";
   els.detail.liveList.innerHTML = "";
 
   if (evses.length === 0) {
@@ -1386,14 +1382,6 @@ function populateDetailContent(feature, liveDetail = null) {
     els.detail.occupancy.textContent = "";
     els.detail.occupancyPill.hidden = true;
   }
-  if (occupancySource) {
-    els.detail.occupancySource.textContent = occupancySource;
-    els.detail.occupancySource.hidden = false;
-  } else {
-    els.detail.occupancySource.textContent = "";
-    els.detail.occupancySource.hidden = true;
-  }
-
   const priceDisplay = getDisplayPrice(p, liveDetail);
   const openingHoursDisplay = String(p.opening_hours_display || "").trim();
   const showPower = Boolean(powerDisplay);
@@ -1410,6 +1398,14 @@ function populateDetailContent(feature, liveDetail = null) {
   renderDetailAmenities(p);
   renderDetailStaticInfo(p);
   renderDetailLiveState(feature, liveDetail);
+
+  if (occupancySource) {
+    els.detail.occupancySource.textContent = occupancySource;
+    els.detail.occupancySource.hidden = !els.detail.liveSection.hidden;
+  } else {
+    els.detail.occupancySource.textContent = "";
+    els.detail.occupancySource.hidden = true;
+  }
 }
 
 function openDetail(feature, options = {}) {
