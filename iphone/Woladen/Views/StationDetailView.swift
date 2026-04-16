@@ -28,8 +28,8 @@ struct StationDetailView: View {
                         mapSection(feature)
                         VStack(alignment: .leading, spacing: 14) {
                             headerSection(feature)
-                            liveSection(feature)
                             amenitySection(feature)
+                            liveSection(feature)
                             staticDetailsSection(feature)
                             sourceFooterSection(feature)
                         }
@@ -176,20 +176,8 @@ struct StationDetailView: View {
         let rows = feature.liveEVSERows
         if !rows.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Live")
+                Text(liveSectionTitle(for: feature))
                     .font(.headline)
-
-                if let updated = feature.liveUpdatedLabel {
-                    Text(updated)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                if let source = feature.occupancySourceLabel, !source.isEmpty {
-                    Text(source)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
 
                 ForEach(rows) { row in
                     VStack(alignment: .leading, spacing: 8) {
@@ -236,7 +224,7 @@ struct StationDetailView: View {
 
     private func amenitySection(_ feature: GeoJSONFeature) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("In der Nähe: \(feature.properties.amenitiesTotal) \(amenityCountLabel(for: feature))")
+            Text("\(feature.properties.amenitiesTotal) \(amenityCountLabel(for: feature))")
                 .font(.headline)
 
             if feature.properties.amenityExamples.isEmpty {
@@ -248,6 +236,38 @@ struct StationDetailView: View {
                 }
             }
         }
+    }
+
+    private func liveSectionTitle(for feature: GeoJSONFeature) -> String {
+        guard let provider = compactLiveProvider(from: feature.occupancySourceLabel) else {
+            return "Live"
+        }
+        if provider == "lokale API" {
+            return "Live von lokaler API"
+        }
+        return "Live von \(provider)"
+    }
+
+    private func compactLiveProvider(from sourceLabel: String?) -> String? {
+        guard let sourceLabel else { return nil }
+        let candidate = sourceLabel
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .components(separatedBy: " • ")
+            .first?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !candidate.isEmpty else { return nil }
+        if candidate.hasPrefix("Live via ") {
+            let provider = String(candidate.dropFirst("Live via ".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if provider == "lokaler API" {
+                return "lokale API"
+            }
+            return provider.isEmpty ? nil : provider
+        }
+        if candidate.hasPrefix("Live-Stand") || candidate.hasPrefix("Stand ") {
+            return nil
+        }
+        return candidate
     }
 
     @ViewBuilder

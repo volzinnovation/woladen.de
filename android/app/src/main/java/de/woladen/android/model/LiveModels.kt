@@ -200,6 +200,7 @@ val GeoJsonFeature.liveEvseRows: List<LiveEvseRow>
                 val meta = listOfNotNull(
                     formatEvseCode(evse.providerEvseId),
                     formatLiveTimestamp(firstNonEmpty(evse.sourceObservedAt, evse.fetchedAt, evse.ingestedAt))
+                        ?.let { "Seit $it" }
                 ).joinToString(" • ")
                 LiveEvseRow(
                     title = "Ladepunkt ${index + 1}",
@@ -337,7 +338,7 @@ private val LIVE_DYNAMIC_KEY_LABELS = mapOf(
     "expectedAvailableUntilTime" to "Bis",
     "startTime" to "Ab",
     "endTime" to "Bis",
-    "lastUpdated" to "Stand",
+    "lastUpdated" to "Seit",
     "value" to ""
 )
 

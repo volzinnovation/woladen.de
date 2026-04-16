@@ -39,7 +39,7 @@ const LIVE_DYNAMIC_KEY_LABELS = {
   expectedAvailableUntilTime: "Bis",
   startTime: "Ab",
   endTime: "Bis",
-  lastUpdated: "Stand",
+  lastUpdated: "Seit",
   value: "",
 };
 const AMENITY_MAPPING = {
@@ -271,13 +271,13 @@ function formatOccupancySource(props) {
       props.live_source_observed_at || props.live_fetched_at || props.live_ingested_at,
     );
     if (provider && timestamp) {
-      return `Live via ${provider} • Stand ${timestamp}`;
+      return `Live via ${provider} • Seit ${timestamp}`;
     }
     if (provider) {
       return `Live via ${provider}`;
     }
     if (timestamp) {
-      return `Live-Stand ${timestamp}`;
+      return `Live seit ${timestamp}`;
     }
     return "Live via lokaler API";
   }
@@ -639,8 +639,8 @@ const els = {
     detailsList: document.getElementById("detail-details-list"),
     detailsSource: document.getElementById("detail-details-source"),
     liveSection: document.getElementById("detail-live-section"),
+    liveTitle: document.getElementById("detail-live-title"),
     liveUpdated: document.getElementById("detail-live-updated"),
-    liveSource: document.getElementById("detail-live-source"),
     liveList: document.getElementById("detail-live-list"),
     favBtn: document.getElementById("btn-toggle-fav"),
     googleBtn: document.getElementById("btn-nav-google"),
@@ -1282,19 +1282,16 @@ function renderDetailLiveState(feature, liveDetail = null) {
   const hasLiveData = hasLiveStationSummary(props) || evses.length > 0;
   if (!hasLiveData) {
     els.detail.liveSection.hidden = true;
+    els.detail.liveTitle.textContent = "Live";
     els.detail.liveUpdated.hidden = true;
     els.detail.liveUpdated.textContent = "";
-    els.detail.liveSource.hidden = true;
-    els.detail.liveSource.textContent = "";
     els.detail.liveList.innerHTML = "";
     return;
   }
 
-  els.detail.liveUpdated.hidden = true;
+  els.detail.liveTitle.textContent = "Live";
   els.detail.liveUpdated.textContent = "";
-
-  els.detail.liveSource.hidden = true;
-  els.detail.liveSource.textContent = "";
+  els.detail.liveUpdated.hidden = true;
   els.detail.liveList.innerHTML = "";
 
   if (evses.length === 0) {
@@ -1382,6 +1379,7 @@ function populateDetailContent(feature, liveDetail = null) {
     els.detail.occupancy.textContent = "";
     els.detail.occupancyPill.hidden = true;
   }
+
   const priceDisplay = getDisplayPrice(p, liveDetail);
   const openingHoursDisplay = String(p.opening_hours_display || "").trim();
   const showPower = Boolean(powerDisplay);
@@ -1393,7 +1391,7 @@ function populateDetailContent(feature, liveDetail = null) {
   els.detail.hoursChip.hidden = !showHours;
   els.detail.price.textContent = priceDisplay;
   els.detail.hours.textContent = openingHoursDisplay;
-  els.detail.amenityTitle.textContent = `In der Nähe: ${formatAmenityCount(p.amenities_total)}`;
+  els.detail.amenityTitle.textContent = formatAmenityCount(p.amenities_total);
 
   renderDetailAmenities(p);
   renderDetailStaticInfo(p);

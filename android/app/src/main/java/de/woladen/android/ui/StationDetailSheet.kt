@@ -52,7 +52,6 @@ import de.woladen.android.model.availabilityStatus
 import de.woladen.android.model.displayPrice
 import de.woladen.android.model.hasPrimaryDetailHighlights
 import de.woladen.android.model.liveEvseRows
-import de.woladen.android.model.liveUpdatedLabel
 import de.woladen.android.model.occupancySourceLabel
 import de.woladen.android.model.occupancySummaryLabel
 import de.woladen.android.ui.components.AmenityIcon
@@ -215,29 +214,8 @@ fun StationDetailSheet(
                     }
                 }
 
-                if (feature.liveEvseRows.isNotEmpty()) {
-                    Text("Live", style = MaterialTheme.typography.titleMedium)
-                    feature.liveUpdatedLabel?.let { updated ->
-                        Text(
-                            updated,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    feature.occupancySourceLabel?.takeIf { it.isNotBlank() }?.let { source ->
-                        Text(
-                            source,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    for (row in feature.liveEvseRows) {
-                        LiveEvseRowCard(row)
-                    }
-                }
-
                 Text(
-                    "In der Nähe: ${feature.properties.amenitiesTotal} ${formatAmenityCountLabel(feature.properties.amenitiesTotal)}",
+                    "${feature.properties.amenitiesTotal} ${formatAmenityCountLabel(feature.properties.amenitiesTotal)}",
                     style = MaterialTheme.typography.titleMedium
                 )
                 if (feature.properties.amenityExamples.isEmpty()) {
@@ -245,6 +223,13 @@ fun StationDetailSheet(
                 } else {
                     for (item in feature.properties.amenityExamples) {
                         AmenityRow(item)
+                    }
+                }
+
+                if (feature.liveEvseRows.isNotEmpty()) {
+                    Text(liveSectionTitle(feature), style = MaterialTheme.typography.titleMedium)
+                    for (row in feature.liveEvseRows) {
+                        LiveEvseRowCard(row)
                     }
                 }
 
@@ -451,6 +436,36 @@ private fun availabilityColor(status: AvailabilityStatus): Color {
         AvailabilityStatus.OUT_OF_ORDER -> Color(0xFFB91C1C)
         AvailabilityStatus.UNKNOWN -> Color.Gray
     }
+}
+
+private fun liveSectionTitle(feature: GeoJsonFeature): String {
+    val provider = compactLiveProvider(feature.occupancySourceLabel)
+    return when {
+        provider.isNullOrBlank() -> "Live"
+        provider == "lokale API" -> "Live von lokaler API"
+        else -> "Live von $provider"
+    }
+}
+
+private fun compactLiveProvider(sourceLabel: String?): String? {
+    val candidate = sourceLabel
+        ?.trim()
+        ?.substringBefore(" • ")
+        ?.trim()
+        .orEmpty()
+    if (candidate.isBlank()) return null
+    if (candidate.startsWith("Live via ")) {
+        val provider = candidate.removePrefix("Live via ").trim()
+        return when {
+            provider.isBlank() -> null
+            provider == "lokaler API" -> "lokale API"
+            else -> provider
+        }
+    }
+    if (candidate.startsWith("Live-Stand") || candidate.startsWith("Stand ")) {
+        return null
+    }
+    return candidate
 }
 
 private fun buildDetailMapPoints(feature: GeoJsonFeature): List<DetailMapPoint> {

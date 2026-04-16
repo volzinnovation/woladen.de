@@ -6,7 +6,7 @@ private let liveDynamicKeyLabels: [String: String] = [
     "expectedAvailableUntilTime": "Bis",
     "startTime": "Ab",
     "endTime": "Bis",
-    "lastUpdated": "Stand",
+    "lastUpdated": "Seit",
     "value": ""
 ]
 
@@ -386,6 +386,9 @@ extension GeoJSONFeature {
                 let meta = [formattedEVSECode(evse.providerEVSEID), observedText]
                     .compactMap { value in
                         guard let value, !value.isEmpty else { return nil }
+                        if value == observedText {
+                            return "Seit \(value)"
+                        }
                         return value
                     }
                     .joined(separator: " • ")
