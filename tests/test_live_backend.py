@@ -1668,9 +1668,10 @@ def test_api_allows_local_cors_origins(app_config):
     _write_matches_fixture(app_config.site_match_path)
     _write_chargers_fixture(app_config.chargers_csv_path)
     client = TestClient(create_app(app_config))
-    response = client.get("/healthz", headers={"Origin": "http://127.0.0.1:8000"})
-    assert response.status_code == 200
-    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:8000"
+    for origin in ("http://127.0.0.1:8000", "http://0.0.0.0:4173", "http://[::1]:4173"):
+        response = client.get("/healthz", headers={"Origin": origin})
+        assert response.status_code == 200
+        assert response.headers["access-control-allow-origin"] == origin
 
 
 def test_api_allows_configured_cors_origins(app_config):

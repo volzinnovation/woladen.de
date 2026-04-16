@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import html
 import json
+import math
 import shutil
 from pathlib import Path
 
@@ -77,6 +78,20 @@ def to_int(value: object, default: int = 0) -> int:
 def format_amenity_count(count: int) -> str:
     label = "Angebot vor Ort" if count == 1 else "Angebote vor Ort"
     return f"{count} {label}"
+
+
+def sanitize_json_value(value: object) -> object:
+    if isinstance(value, dict):
+        return {key: sanitize_json_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [sanitize_json_value(item) for item in value]
+    if isinstance(value, tuple):
+        return [sanitize_json_value(item) for item in value]
+    if isinstance(value, str):
+        return "" if value.strip().lower() in {"nan", "nat"} else value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    return value
 
 
 def station_page_path(station_id: str) -> str:
@@ -330,7 +345,7 @@ def write_station_pages() -> list[str]:
     if not geojson_path.exists():
         return []
 
-    payload = json.loads(geojson_path.read_text(encoding="utf-8"))
+    payload = sanitize_json_value(json.loads(geojson_path.read_text(encoding="utf-8")))
     features = payload.get("features")
     if not isinstance(features, list):
         return []
@@ -383,7 +398,11 @@ def main() -> None:
     for filename in REQUIRED_DATA:
         source = DATA_DIR / filename
         if source.exists():
-            shutil.copy2(source, SITE_DATA_DIR / filename)
+            payload = sanitize_json_value(json.loads(source.read_text(encoding="utf-8")))
+            (SITE_DATA_DIR / filename).write_text(
+                json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False),
+                encoding="utf-8",
+            )
 
     station_page_paths = write_station_pages()
     write_sitemap(station_page_paths)

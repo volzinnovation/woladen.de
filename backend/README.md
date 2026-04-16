@@ -100,7 +100,7 @@ The backend uses `AppConfig` in [config.py](/Users/raphaelvolz/Github/woladen.de
 - `WOLADEN_LIVE_API_HOST`: FastAPI bind host. Default: `127.0.0.1`
 - `WOLADEN_LIVE_API_PORT`: FastAPI bind port. Default: `8001`
 - `WOLADEN_LIVE_API_CORS_ALLOWED_ORIGINS`: comma-separated explicit CORS allowlist
-- `WOLADEN_LIVE_API_CORS_ALLOW_ORIGIN_REGEX`: regex fallback for local development
+- `WOLADEN_LIVE_API_CORS_ALLOW_ORIGIN_REGEX`: regex fallback for local development (`localhost`, `127.0.0.1`, `0.0.0.0`, `[::1]` by default)
 - `WOLADEN_LIVE_POLL_TIMEOUT_SECONDS`: fetch timeout
 - `WOLADEN_LIVE_POLL_INTERVAL_DELTA_SECONDS`: base interval for delta feeds
 - `WOLADEN_LIVE_POLL_INTERVAL_SNAPSHOT_SECONDS`: base interval for snapshot feeds

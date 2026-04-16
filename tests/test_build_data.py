@@ -21,6 +21,43 @@ def _load_build_data_module():
 build_data = _load_build_data_module()
 
 
+def _strict_json_loads(text: str):
+    def _reject_constant(value: str):
+        raise ValueError(value)
+
+    return json.loads(text, parse_constant=_reject_constant)
+
+
+def test_dumps_minified_json_replaces_non_finite_numbers():
+    payload = {
+        "top_level": float("nan"),
+        "nested": [1, float("inf"), {"value": float("-inf")}],
+    }
+
+    text = build_data.dumps_minified_json(payload)
+
+    assert "NaN" not in text
+    assert "Infinity" not in text
+    assert _strict_json_loads(text) == {
+        "top_level": None,
+        "nested": [1, None, {"value": None}],
+    }
+
+
+def test_dumps_minified_json_normalizes_nan_like_strings():
+    payload = {
+        "opening_hours_display": "nan",
+        "nested": ["NaT", "ok"],
+    }
+
+    text = build_data.dumps_minified_json(payload)
+
+    assert _strict_json_loads(text) == {
+        "opening_hours_display": "",
+        "nested": ["", "ok"],
+    }
+
+
 def _ladenetz_static_xml_payload() -> bytes:
     payload = """<?xml version="1.0" encoding="UTF-8"?>
 <ns2:d2Payload

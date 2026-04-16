@@ -64,7 +64,7 @@ class AppConfig:
     api_cors_allowed_origin_regex: str = str(
         os.environ.get(
             "WOLADEN_LIVE_API_CORS_ALLOW_ORIGIN_REGEX",
-            r"https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+            r"https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$",
         )
     ).strip()
     poll_timeout_seconds: int = int(os.environ.get("WOLADEN_LIVE_POLL_TIMEOUT_SECONDS", "10"))

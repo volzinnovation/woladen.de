@@ -88,6 +88,15 @@ Build site bundle:
 python scripts/build_site.py
 ```
 
+Test the built web app locally against `https://live.woladen.de`:
+
+```bash
+python scripts/build_site.py
+python3 -m http.server 4173 --directory site
+```
+
+Then open `http://localhost:4173/`.
+
 ## Notes
 
 - `--amenity-backend auto` (default) uses local `data/germany-latest.osm.pbf` if present, otherwise Overpass.

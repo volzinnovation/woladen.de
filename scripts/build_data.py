@@ -1609,7 +1609,7 @@ def fetch_bnetza_csv(session: requests.Session, cache_path: Path, meta_path: Pat
                 "bytes": len(content),
                 "content_type": response.headers.get("content-type", ""),
             }
-            meta_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+            meta_path.write_text(dumps_pretty_json(metadata), encoding="utf-8")
             log_info(f"Fetched source ({len(content)} bytes)")
             return metadata
         except requests.RequestException as exc:
@@ -2523,6 +2523,8 @@ def normalize_optional_text(value: Any) -> str:
         return ""
     text = str(value).strip()
     if not text:
+        return ""
+    if text.lower() in {"nan", "nat"}:
         return ""
     # Collapse whitespace to keep popup payload compact and readable.
     return re.sub(r"\s+", " ", text)
@@ -4457,7 +4459,7 @@ def enrich_with_amenities_overpass(
     }
     cache["entries"] = entries
 
-    cache_path.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
+    cache_path.write_text(dumps_pretty_json(cache), encoding="utf-8")
 
     stats = {
         "backend": AMENITY_BACKEND_OVERPASS,
@@ -4812,8 +4814,51 @@ def finalize_bundle_geojson(feature_collection: dict[str, Any]) -> dict[str, Any
     return trimmed
 
 
+def sanitize_json_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: sanitize_json_value(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [sanitize_json_value(item) for item in value]
+    if isinstance(value, tuple):
+        return [sanitize_json_value(item) for item in value]
+    if isinstance(value, set):
+        return [sanitize_json_value(item) for item in sorted(value)]
+    if value is None or isinstance(value, (bool, int)):
+        return value
+    if isinstance(value, str):
+        return "" if value.strip().lower() in {"nan", "nat"} else value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if hasattr(value, "item") and callable(value.item):
+        return sanitize_json_value(value.item())
+    if pd.isna(value):
+        return None
+    return value
+
+
 def dumps_minified_json(payload: Any) -> str:
-    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    return json.dumps(
+        sanitize_json_value(payload),
+        ensure_ascii=False,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+
+
+def dumps_pretty_json(payload: Any) -> str:
+    return json.dumps(
+        sanitize_json_value(payload),
+        ensure_ascii=False,
+        indent=2,
+        allow_nan=False,
+    )
 
 
 def write_run_history(path: Path, summary: dict[str, Any]) -> None:
@@ -5121,17 +5166,14 @@ def main() -> None:
         },
     }
 
-    SUMMARY_JSON_PATH.write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    SUMMARY_JSON_PATH.write_text(dumps_pretty_json(summary), encoding="utf-8")
 
     log_info("Stage 8/8: Updating run history and README status")
     write_run_history(RUN_HISTORY_PATH, summary)
     update_readme_status(README_PATH, summary)
     log_info(f"Pipeline completed in {format_duration(time.monotonic() - pipeline_started)}")
 
-    print(json.dumps(summary, indent=2, ensure_ascii=False))
+    print(dumps_pretty_json(summary))
 
 
 if __name__ == "__main__":
