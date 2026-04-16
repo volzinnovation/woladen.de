@@ -8,6 +8,7 @@ This package targets a small IONOS VPS where:
 - a daily cron job archives the previous day of provider response logs
 - the archive job can upload to Hugging Face Hub with a token file
 - releases are staged under `/srv/woladen-live/releases/` and activated via the `current` symlink
+- the first automated deploy can migrate a legacy `/srv/woladen-live/current` directory into the staged release layout automatically
 
 ## Files
 

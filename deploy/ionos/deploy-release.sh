@@ -299,7 +299,7 @@ else
   bundle_dir=$(find "$bundle_extract_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1)
 fi
 
-if [[ -L "$current_link" ]]; then
+if [[ -e "$current_link" ]]; then
   current_release_dir=$(readlink -f "$current_link")
 fi
 

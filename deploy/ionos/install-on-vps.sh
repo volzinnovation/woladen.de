@@ -104,7 +104,7 @@ VENV_DIR="$INSTALL_ROOT/venv"
 ENV_FILE="$CONFIG_DIR/woladen-live.env"
 RENDERED_CADDYFILE="$CONFIG_DIR/${LIVE_DOMAIN}.Caddyfile"
 CRON_FILE=/etc/cron.d/woladen-live-log-archive
-CURRENT_RELEASE_DIR=$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)
+CURRENT_RELEASE_DIR=""
 
 require_path() {
   local path=$1
@@ -141,6 +141,32 @@ render_template() {
     -e "s|__STATE_DIR__|$STATE_DIR|g" \
     -e "s|live.woladen.de|$LIVE_DOMAIN|g" \
     "$template" >"$target"
+}
+
+resolve_current_release_dir() {
+  readlink -f "$CURRENT_LINK" 2>/dev/null || true
+}
+
+migrate_legacy_current_dir() {
+  local legacy_release_base
+  local legacy_release
+  local suffix
+
+  if [[ ! -d "$CURRENT_LINK" || -L "$CURRENT_LINK" ]]; then
+    return
+  fi
+
+  legacy_release_base="$RELEASES_DIR/legacy-$(date -u +%Y%m%dT%H%M%SZ)"
+  legacy_release="$legacy_release_base"
+  suffix=1
+  while [[ -e "$legacy_release" ]]; do
+    legacy_release="${legacy_release_base}-${suffix}"
+    suffix=$(( suffix + 1 ))
+  done
+
+  echo "Migrating legacy install layout: $CURRENT_LINK -> $legacy_release"
+  mv "$CURRENT_LINK" "$legacy_release"
+  ln -s "$legacy_release" "$CURRENT_LINK"
 }
 
 prune_releases() {
@@ -186,6 +212,8 @@ install -d -m 0750 -o "$APP_USER" -g "$APP_GROUP" \
   "$STATE_DIR" \
   "$STATE_DIR/live_raw" \
   "$STATE_DIR/live_archives"
+migrate_legacy_current_dir
+CURRENT_RELEASE_DIR=$(resolve_current_release_dir)
 
 rm -rf "$RELEASE_DIR"
 mkdir -p \
