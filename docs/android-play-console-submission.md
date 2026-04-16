@@ -131,7 +131,6 @@ Do not mark:
 
 If you make all of the changes below before release, you may be able to use a much simpler Data safety declaration:
 
-- remove automatic location prompt on first launch
 - avoid automatic map centering from permission-granted location
 - consider dropping `ACCESS_FINE_LOCATION`
 - ensure location is only used locally unless the user explicitly initiates an external navigation action
@@ -255,19 +254,19 @@ Before sending the app for review:
 
 ## Recommended pre-submit changes
 
-These are the two highest-value changes before publishing:
+These are the highest-value changes before publishing:
 
-1. Change location permission flow to user-initiated only.
+1. Consider reducing location scope from fine to coarse if product requirements allow it.
 
-- This is the biggest review-risk reduction.
+- This simplifies the privacy story and reduces Play review scrutiny.
 
-2. Add a privacy policy page and link it in-app.
+2. Keep the privacy policy URL and in-app link aligned with the final store listing.
 
 - This is required for a clean Play submission with location permissions.
 
-Optional third change:
+Optional additional change:
 
-3. Reduce location scope from fine to coarse if product requirements allow it.
+3. Avoid automatic map centering from a previously granted location if you want the most conservative Data safety position.
 
 ## Official sources used
 

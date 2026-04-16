@@ -10,6 +10,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "output" / "play-store" / "android"
 ASSET_DIR = OUTPUT_DIR / "assets"
+PLAY_METADATA_DIR = OUTPUT_DIR / "metadata"
 METADATA_DIR = OUTPUT_DIR / "metadata" / "de-DE"
 ICON_SOURCE = (
     ROOT
@@ -142,7 +143,9 @@ def generate_feature_graphic() -> Path:
 
 
 def write_metadata() -> None:
+    PLAY_METADATA_DIR.mkdir(parents=True, exist_ok=True)
     METADATA_DIR.mkdir(parents=True, exist_ok=True)
+    title = "Woladen"
     short_description = "Deutschlands Schnelllader mit Karte, Filtern und Tipps gegen Ladeweile"
     full_description = """Woladen zeigt dir Schnellladesäulen in Deutschland und hilft dir, gute Ladepausen zu finden. So findest du nicht nur den passenden Schnelllader, sondern auch Orte, an denen sich das Warten lohnt.
 
@@ -163,9 +166,20 @@ Die App ist bewusst schlank gehalten:
 Wenn du deinen Standort freigibst, wird er verwendet, um die Karte auf deine Umgebung zu fokussieren und nahe Schnelllader zu sortieren. Favoriten bleiben lokal auf deinem Gerät.
 
 Woladen ist ideal für alle, die unterwegs schnell laden und die Ladepause sinnvoll nutzen möchten."""
+    release_notes = """Erstveröffentlichung von Woladen für Android.
 
+- Schnelllader ab 50 kW in ganz Deutschland
+- Karte, Liste, Filter und Favoriten
+- Hinweise zur Aufenthaltsqualität aus OpenStreetMap
+- Optionaler Standortzugriff für Ladepunkte in der Nähe"""
+
+    (METADATA_DIR / "title.txt").write_text(title + "\n", encoding="utf-8")
     (METADATA_DIR / "short-description.txt").write_text(short_description + "\n", encoding="utf-8")
     (METADATA_DIR / "full-description.txt").write_text(full_description + "\n", encoding="utf-8")
+    (METADATA_DIR / "release-notes.txt").write_text(release_notes + "\n", encoding="utf-8")
+    (PLAY_METADATA_DIR / "support-email.txt").write_text("studios@moonshots.gmbh\n", encoding="utf-8")
+    (PLAY_METADATA_DIR / "website-url.txt").write_text("https://woladen.de/\n", encoding="utf-8")
+    (PLAY_METADATA_DIR / "privacy-policy-url.txt").write_text("https://woladen.de/privacy.html\n", encoding="utf-8")
 
 
 def main() -> None:

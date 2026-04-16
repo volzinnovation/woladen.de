@@ -7,6 +7,7 @@ final class LocationService: NSObject, ObservableObject {
     @Published private(set) var lastError: String?
 
     private let manager = CLLocationManager()
+    private let screenshotLocation = LocationService.resolveScreenshotLocation()
     private var requestedAlwaysUpgrade = false
 
     override init() {
@@ -14,10 +15,22 @@ final class LocationService: NSObject, ObservableObject {
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
         manager.distanceFilter = 20
-        authorizationStatus = manager.authorizationStatus
+        if let screenshotLocation {
+            authorizationStatus = .authorizedWhenInUse
+            currentLocation = screenshotLocation
+        } else {
+            authorizationStatus = manager.authorizationStatus
+        }
     }
 
     func activate() {
+        if let screenshotLocation {
+            authorizationStatus = .authorizedWhenInUse
+            currentLocation = screenshotLocation
+            lastError = nil
+            return
+        }
+
         authorizationStatus = manager.authorizationStatus
         switch authorizationStatus {
         case .notDetermined:
@@ -31,6 +44,7 @@ final class LocationService: NSObject, ObservableObject {
     }
 
     func requestAuthorization() {
+        guard screenshotLocation == nil else { return }
         switch authorizationStatus {
         case .notDetermined:
             manager.requestWhenInUseAuthorization()
@@ -42,6 +56,13 @@ final class LocationService: NSObject, ObservableObject {
     }
 
     func requestSingleLocation() {
+        if let screenshotLocation {
+            authorizationStatus = .authorizedWhenInUse
+            currentLocation = screenshotLocation
+            lastError = nil
+            return
+        }
+
         if authorizationStatus == .notDetermined {
             requestAuthorization()
             return
@@ -53,16 +74,37 @@ final class LocationService: NSObject, ObservableObject {
     }
 
     func startUpdates() {
+        guard screenshotLocation == nil else { return }
         manager.startUpdatingLocation()
     }
 
     func stopUpdates() {
+        guard screenshotLocation == nil else { return }
         manager.stopUpdatingLocation()
+    }
+
+    private static func resolveScreenshotLocation() -> CLLocation? {
+        guard let rawLocation = ProcessInfo.processInfo.environment["WOLADEN_SCREENSHOT_LOCATION"] else {
+            return nil
+        }
+
+        let parts = rawLocation
+            .split(separator: ",", maxSplits: 1)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+        guard parts.count == 2,
+              let latitude = Double(parts[0]),
+              let longitude = Double(parts[1]) else {
+            return nil
+        }
+
+        return CLLocation(latitude: latitude, longitude: longitude)
     }
 }
 
 extension LocationService: CLLocationManagerDelegate {
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        guard screenshotLocation == nil else { return }
         let status = manager.authorizationStatus
         DispatchQueue.main.async {
             self.authorizationStatus = status
@@ -81,6 +123,7 @@ extension LocationService: CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard screenshotLocation == nil else { return }
         if let first = locations.first {
             DispatchQueue.main.async {
                 self.currentLocation = first
@@ -90,6 +133,7 @@ extension LocationService: CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        guard screenshotLocation == nil else { return }
         DispatchQueue.main.async {
             self.lastError = error.localizedDescription
         }
