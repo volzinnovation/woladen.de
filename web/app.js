@@ -1746,8 +1746,23 @@ function getDistanceFormatted(feature) {
   return Math.round(d) + " m";
 }
 
-function queueStartupLocationRequest() {
+async function queueStartupLocationRequest() {
   if (state.startupLocationRequested || state.userPos || !navigator.geolocation) {
+    return;
+  }
+
+  const permissionsApi = navigator.permissions;
+  if (!permissionsApi || typeof permissionsApi.query !== "function") {
+    return;
+  }
+
+  try {
+    const permission = await permissionsApi.query({ name: "geolocation" });
+    if (permission.state !== "granted") {
+      return;
+    }
+  } catch (err) {
+    console.warn("Geolocation permission check failed", err);
     return;
   }
 
