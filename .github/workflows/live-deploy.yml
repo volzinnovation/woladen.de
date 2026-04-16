@@ -1,0 +1,140 @@
+name: Live Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - backend/**
+      - data/**
+      - deploy/ionos/**
+      - requirements-live.txt
+      - scripts/live_api.py
+      - scripts/live_archive_logs.py
+      - scripts/live_deploy_plan.py
+      - scripts/live_ingester.py
+      - scripts/live_subscription_registry.py
+      - scripts/sync_mobilithek_subscriptions.py
+      - .github/workflows/live-deploy.yml
+  workflow_run:
+    workflows:
+      - Daily Data Generation
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-live:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    env:
+      MOBILITHEK_USERNAME: ${{ secrets.MOBILITHEK_USERNAME }}
+      MOBILITHEK_PASSWORD: ${{ secrets.MOBILITHEK_PASSWORD }}
+      LIVE_DEPLOY_HOST: ${{ secrets.LIVE_DEPLOY_HOST }}
+      LIVE_DEPLOY_USER: ${{ secrets.LIVE_DEPLOY_USER }}
+      LIVE_DEPLOY_PORT: ${{ secrets.LIVE_DEPLOY_PORT }}
+      LIVE_DEPLOY_SUDO_PASSWORD: ${{ secrets.LIVE_DEPLOY_SUDO_PASSWORD }}
+
+    steps:
+      - name: Checkout Default Branch
+        if: github.event_name == 'workflow_run'
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Checkout Trigger Ref
+        if: github.event_name != 'workflow_run'
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt -r requirements-live.txt
+
+      - name: Prepare SSH
+        shell: bash
+        env:
+          LIVE_DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.LIVE_DEPLOY_SSH_PRIVATE_KEY }}
+        run: |
+          if [ -z "$LIVE_DEPLOY_HOST" ] || [ -z "$LIVE_DEPLOY_USER" ] || [ -z "$LIVE_DEPLOY_SUDO_PASSWORD" ] || [ -z "$LIVE_DEPLOY_SSH_PRIVATE_KEY" ]; then
+            echo "Missing one or more live deploy connection secrets" >&2
+            exit 1
+          fi
+          port="${LIVE_DEPLOY_PORT:-22}"
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          printf '%s\n' "$LIVE_DEPLOY_SSH_PRIVATE_KEY" > "$HOME/.ssh/live-deploy.key"
+          chmod 600 "$HOME/.ssh/live-deploy.key"
+          ssh-keyscan -p "$port" -H "$LIVE_DEPLOY_HOST" >> "$HOME/.ssh/known_hosts"
+
+      - name: Prepare Mobilithek Secrets
+        shell: bash
+        env:
+          MOBILITHEK_MACHINE_CERT_P12_BASE64: ${{ secrets.MOBILITHEK_MACHINE_CERT_P12_BASE64 }}
+          MOBILITHEK_MACHINE_CERT_PASSWORD: ${{ secrets.MOBILITHEK_MACHINE_CERT_PASSWORD }}
+        run: |
+          if [ -z "$MOBILITHEK_USERNAME" ] || [ -z "$MOBILITHEK_PASSWORD" ]; then
+            echo "Missing Mobilithek account secrets" >&2
+            exit 1
+          fi
+          if [ -z "$MOBILITHEK_MACHINE_CERT_P12_BASE64" ] || [ -z "$MOBILITHEK_MACHINE_CERT_PASSWORD" ]; then
+            echo "Missing Mobilithek machine certificate secrets" >&2
+            exit 1
+          fi
+          mkdir -p secret tmp/deploy
+          printf '%s' "$MOBILITHEK_MACHINE_CERT_P12_BASE64" | base64 --decode > secret/certificate.p12
+          printf '%s' "$MOBILITHEK_MACHINE_CERT_PASSWORD" > secret/pwd.txt
+          chmod 600 secret/certificate.p12 secret/pwd.txt
+
+      - name: Sync Mobilithek Subscriptions
+        run: python scripts/sync_mobilithek_subscriptions.py
+
+      - name: Prepare Optional Hugging Face Token
+        shell: bash
+        env:
+          HF_PRIVATE: ${{ secrets.HF_PRIVATE }}
+        run: |
+          mkdir -p tmp/deploy
+          if [ -n "$HF_PRIVATE" ]; then
+            printf '%s' "$HF_PRIVATE" > tmp/deploy/huggingface.token
+            chmod 600 tmp/deploy/huggingface.token
+          fi
+
+      - name: Build Release Bundle
+        id: build_release
+        shell: bash
+        run: |
+          archive_path=$(./deploy/ionos/build-release.sh)
+          echo "archive_path=$archive_path" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy Release
+        shell: bash
+        run: |
+          port="${LIVE_DEPLOY_PORT:-22}"
+          args=(
+            ./deploy/ionos/deploy-release.sh
+            --host "$LIVE_DEPLOY_HOST"
+            --ssh-user "$LIVE_DEPLOY_USER"
+            --port "$port"
+            --identity "$HOME/.ssh/live-deploy.key"
+            --archive "${{ steps.build_release.outputs.archive_path }}"
+            --cert secret/certificate.p12
+            --password-file secret/pwd.txt
+            --subscriptions secret/mobilithek_subscriptions.json
+          )
+          if [ -f tmp/deploy/huggingface.token ]; then
+            args+=(--hf-token tmp/deploy/huggingface.token)
+          fi
+          args+=(--hf-repo-id loffenauer/AFIR)
+          export WOLADEN_DEPLOY_SUDO_PASSWORD="$LIVE_DEPLOY_SUDO_PASSWORD"
+          "${args[@]}"

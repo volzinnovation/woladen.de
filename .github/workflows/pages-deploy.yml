@@ -10,6 +10,11 @@ on:
       - data/**
       - scripts/build_site.py
       - .github/workflows/pages-deploy.yml
+  workflow_run:
+    workflows:
+      - Daily Data Generation
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -22,10 +27,18 @@ concurrency:
 
 jobs:
   build-site:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout Default Branch
+        if: github.event_name == 'workflow_run'
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Checkout Trigger Ref
+        if: github.event_name != 'workflow_run'
         uses: actions/checkout@v4
 
       - name: Setup Python
