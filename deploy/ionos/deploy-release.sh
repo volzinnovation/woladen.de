@@ -25,7 +25,7 @@ Optional:
   --app-user USER          Remote service user (default: woladen)
   --app-group GROUP        Remote service group (default: woladen)
   --live-domain HOST       Public API hostname (default: live.woladen.de)
-  --keep-releases N        Number of releases to keep on the server (default: 5)
+  --keep-releases N        Number of releases to keep on the server after verification (default: 1)
   --help                   Show this help text
 
 Environment:
@@ -50,7 +50,7 @@ STATE_DIR="/var/lib/woladen"
 APP_USER="woladen"
 APP_GROUP="woladen"
 LIVE_DOMAIN="live.woladen.de"
-KEEP_RELEASES="5"
+KEEP_RELEASES="1"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -305,15 +305,46 @@ wait_for_api_health() {
   return 1
 }
 
-if remote_needs_bootstrap; then
+extract_release_bundle() {
   mkdir -p "$bundle_extract_dir"
   tar -xzf "$remote_tmp_dir/release.tar.gz" -C "$bundle_extract_dir"
+  rm -f "$remote_tmp_dir/release.tar.gz"
   bundle_dir=$(find "$bundle_extract_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+  if [[ -z "$bundle_dir" ]]; then
+    echo "Release archive did not unpack into a bundle directory" >&2
+    exit 1
+  fi
+}
+
+prune_releases() {
+  local current_release
+  local -a release_dirs
+  local removable_count
+
+  current_release=$(readlink -f "$current_link" 2>/dev/null || true)
+  mapfile -t release_dirs < <(sudo_cmd find "$install_root/releases" -mindepth 1 -maxdepth 1 -type d | sort)
+  removable_count=$(( ${#release_dirs[@]} - keep_releases ))
+  if [[ $removable_count -le 0 ]]; then
+    return
+  fi
+
+  for release_path in "${release_dirs[@]}"; do
+    if [[ "$release_path" == "$current_release" ]]; then
+      continue
+    fi
+    sudo_cmd rm -rf "$release_path"
+    removable_count=$(( removable_count - 1 ))
+    if [[ $removable_count -le 0 ]]; then
+      break
+    fi
+  done
+}
+
+if remote_needs_bootstrap; then
+  extract_release_bundle
   sudo_cmd bash "$bundle_dir/deploy/ionos/bootstrap-host.sh"
 else
-  mkdir -p "$bundle_extract_dir"
-  tar -xzf "$remote_tmp_dir/release.tar.gz" -C "$bundle_extract_dir"
-  bundle_dir=$(find "$bundle_extract_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+  extract_release_bundle
 fi
 
 if [[ -e "$current_link" ]]; then
@@ -337,7 +368,8 @@ sudo_cmd bash "$bundle_dir/deploy/ionos/install-on-vps.sh" \
   --app-user "$app_user" \
   --app-group "$app_group" \
   --live-domain "$live_domain" \
-  --keep-releases "$keep_releases"
+  --keep-releases "$keep_releases" \
+  --skip-prune
 
 env_changed=0
 subscriptions_changed=0
@@ -380,6 +412,7 @@ if [[ $DEPLOY_PLAN_RELOAD_CADDY -eq 1 ]] && sudo_cmd systemctl list-unit-files c
 fi
 
 wait_for_api_health
+prune_releases
 EOF
 
 echo "Release deployed to $SSH_TARGET"

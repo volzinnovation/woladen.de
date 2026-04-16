@@ -34,6 +34,9 @@ Deployments now distinguish between runtime change types:
 - Archive-only or documentation-only changes: install the new release without bouncing the live services
 
 The API keeps reading `data/chargers_fast.geojson` through `/srv/woladen-live/current`, so GeoJSON-only updates become visible immediately after the symlink switch.
+Runtime state lives under `/var/lib/woladen` by default, including the SQLite database at `/var/lib/woladen/live_state.sqlite3`.
+
+By default the deploy keeps only the current staged release after the post-deploy health check passes. Use `--keep-releases N` if you want to retain more rollback copies.
 
 ## Manual Fallback
 
@@ -159,7 +162,8 @@ Run the archive job manually:
 
 ```bash
 sudo -u woladen /srv/woladen-live/venv/bin/python \
-  /srv/woladen-live/current/scripts/live_archive_logs.py
+  /srv/woladen-live/current/scripts/live_archive_logs.py \
+  --env-file /etc/woladen/woladen-live.env
 ```
 
 Check the public endpoint after Caddy is reloaded:

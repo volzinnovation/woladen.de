@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 from datetime import timezone
 from pathlib import Path
+from typing import Collection
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -24,6 +25,33 @@ def _env_csv(name: str) -> tuple[str, ...]:
     if not value:
         return ()
     return tuple(part.strip() for part in value.split(",") if part.strip())
+
+
+def load_env_file(path: Path, *, allowed_keys: Collection[str] | None = None) -> None:
+    """Load simple KEY=value assignments from a runtime env file.
+
+    This loader is intentionally narrow. It supports the subset used by the
+    archive CLI and can optionally ignore unrelated keys that may use
+    shell-unsafe syntax.
+    """
+
+    allowed = set(allowed_keys) if allowed_keys is not None else None
+    for line_number, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        stripped = raw_line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if "=" not in raw_line:
+            raise ValueError(f"Invalid env assignment in {path}:{line_number}")
+        key, value = raw_line.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise ValueError(f"Missing env key in {path}:{line_number}")
+        if allowed is not None and key not in allowed:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        os.environ[key] = value
 
 
 @dataclass(frozen=True)

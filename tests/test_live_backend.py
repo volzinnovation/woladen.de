@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import gzip
 import json
+import os
 import sqlite3
 import tarfile
 from dataclasses import replace
@@ -16,7 +17,7 @@ from fastapi.testclient import TestClient
 
 from backend.api import create_app
 from backend.archive import DailyResponseArchiver
-from backend.config import AppConfig
+from backend.config import AppConfig, load_env_file
 from backend.datex import decode_json_payload, extract_dynamic_facts
 from backend.fetcher import CurlFetcher
 from backend.loaders import load_evse_matches, load_provider_targets, load_site_matches
@@ -2034,3 +2035,38 @@ def test_daily_response_archiver_creates_tgz_uploads_and_cleans_up_sources(app_c
     assert "wirelane/2026-04-14/20260414T010000000000Z-200-bbbb.json" in names
     assert not first_dir.exists()
     assert not second_dir.exists()
+
+
+def test_load_env_file_can_filter_archive_settings(tmp_path, monkeypatch):
+    env_file = tmp_path / "woladen-live.env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "# runtime env",
+                "WOLADEN_LIVE_RAW_PAYLOAD_DIR=/var/lib/woladen/live_raw",
+                'WOLADEN_LIVE_ARCHIVE_DIR="/var/lib/woladen/live archives"',
+                r"WOLADEN_LIVE_API_CORS_ALLOW_ORIGIN_REGEX=https?://(localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|\\[::1\\])(\\:\\d+)?$",
+                "WOLADEN_LIVE_HF_ARCHIVE_REPO_ID=loffenauer/AFIR",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("WOLADEN_LIVE_RAW_PAYLOAD_DIR", raising=False)
+    monkeypatch.delenv("WOLADEN_LIVE_ARCHIVE_DIR", raising=False)
+    monkeypatch.delenv("WOLADEN_LIVE_HF_ARCHIVE_REPO_ID", raising=False)
+    monkeypatch.delenv("WOLADEN_LIVE_API_CORS_ALLOW_ORIGIN_REGEX", raising=False)
+
+    load_env_file(
+        env_file,
+        allowed_keys={
+            "WOLADEN_LIVE_RAW_PAYLOAD_DIR",
+            "WOLADEN_LIVE_ARCHIVE_DIR",
+            "WOLADEN_LIVE_HF_ARCHIVE_REPO_ID",
+        },
+    )
+
+    assert os.environ["WOLADEN_LIVE_RAW_PAYLOAD_DIR"] == "/var/lib/woladen/live_raw"
+    assert os.environ["WOLADEN_LIVE_ARCHIVE_DIR"] == "/var/lib/woladen/live archives"
+    assert os.environ["WOLADEN_LIVE_HF_ARCHIVE_REPO_ID"] == "loffenauer/AFIR"
+    assert "WOLADEN_LIVE_API_CORS_ALLOW_ORIGIN_REGEX" not in os.environ

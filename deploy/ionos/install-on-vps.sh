@@ -13,7 +13,8 @@ Options:
   --app-user USER        Service user (default: woladen)
   --app-group GROUP      Service group (default: woladen)
   --live-domain HOST     Public API hostname (default: live.woladen.de)
-  --keep-releases N      Number of staged releases to retain (default: 5)
+  --keep-releases N      Number of staged releases to retain when pruning (default: 1)
+  --skip-prune           Leave old releases in place for a later verified cleanup step
   --start                Restart services after installing
   --no-enable            Do not enable services
   --help                 Show this help text
@@ -32,7 +33,8 @@ STATE_DIR=/var/lib/woladen
 APP_USER=woladen
 APP_GROUP=woladen
 LIVE_DOMAIN=live.woladen.de
-KEEP_RELEASES=5
+KEEP_RELEASES=1
+PRUNE_RELEASES=1
 ENABLE_SERVICES=1
 START_SERVICES=0
 
@@ -69,6 +71,10 @@ while [[ $# -gt 0 ]]; do
     --keep-releases)
       KEEP_RELEASES=$2
       shift 2
+      ;;
+    --skip-prune)
+      PRUNE_RELEASES=0
+      shift
       ;;
     --start)
       START_SERVICES=1
@@ -259,6 +265,22 @@ prune_releases() {
   done
 }
 
+ensure_state_dir_ownership() {
+  local path
+
+  # SQLite sidecar files can appear and disappear while the live services are
+  # active, so treat ENOENT during the ownership pass as a harmless race.
+  while IFS= read -r -d '' path; do
+    if chown "$APP_USER:$APP_GROUP" "$path" 2>/dev/null; then
+      continue
+    fi
+    if [[ ! -e "$path" && ! -L "$path" ]]; then
+      continue
+    fi
+    chown "$APP_USER:$APP_GROUP" "$path"
+  done < <(find "$STATE_DIR" -ignore_readdir_race -print0)
+}
+
 if ! getent group "$APP_GROUP" >/dev/null 2>&1; then
   groupadd --system "$APP_GROUP"
 fi
@@ -321,7 +343,7 @@ fi
 
 chown -R root:root "$RELEASE_DIR"
 chmod -R a+rX "$RELEASE_DIR"
-chown -R "$APP_USER:$APP_GROUP" "$STATE_DIR"
+ensure_state_dir_ownership
 
 if [[ ! -f "$ENV_FILE" ]]; then
   install -D -m 0640 -o root -g "$APP_GROUP" \
@@ -345,7 +367,9 @@ ensure_caddy_integration
 
 ln -sfn "$RELEASE_DIR" "$CURRENT_LINK.next"
 mv -Tf "$CURRENT_LINK.next" "$CURRENT_LINK"
-prune_releases
+if [[ $PRUNE_RELEASES -eq 1 ]]; then
+  prune_releases
+fi
 
 systemctl daemon-reload
 
