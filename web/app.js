@@ -1,4 +1,18 @@
 import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs";
+import {
+  LOCATION_ERROR_PERMISSION_DENIED,
+  LOCATION_PERMISSION_DENIED,
+  LOCATION_PERMISSION_GRANTED,
+  LOCATION_PERMISSION_UNKNOWN,
+  LOCATION_PERMISSION_UNSUPPORTED,
+  LOCATION_REQUEST_ERROR,
+  LOCATION_REQUEST_IDLE,
+  LOCATION_REQUEST_PENDING,
+  LOCATION_REQUEST_READY,
+  getLocationLookupViewModel,
+  normalizeLocationPermissionState,
+  requestBrowserLocation,
+} from "./location.mjs";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -566,6 +580,11 @@ const state = {
   favorites: new Set(), // Set of station_ids
   userPos: null, // { lat, lon }
   startupLocationRequested: false,
+  location: {
+    permissionState: LOCATION_PERMISSION_UNKNOWN,
+    requestState: LOCATION_REQUEST_IDLE,
+    errorCode: "",
+  },
   filters: {
     operator: "",
     minPower: 50,
@@ -710,6 +729,7 @@ async function loadData() {
     populateOperators(opData);
     setAppMeta(geoData, summaryData);
     renderAmenityFilters(); // Render dynamic amenity filters
+    await syncLocationPermissionState();
 
     applyFilters(); // Initial render
     syncDetailModalWithUrl();
@@ -853,6 +873,67 @@ function refreshRenderedViews() {
     const stationId = getStationIdFromProps(currentDetailFeature.properties);
     populateDetailContent(currentDetailFeature, state.live.detailByStationId.get(stationId) || null);
   }
+}
+
+function hasResolvedUserLocation() {
+  return Boolean(
+    state.userPos &&
+    Number.isFinite(Number(state.userPos.lat)) &&
+    Number.isFinite(Number(state.userPos.lon))
+  );
+}
+
+function updateLocationState(patch = {}) {
+  Object.assign(state.location, patch);
+  if (hasResolvedUserLocation()) {
+    state.location.requestState = LOCATION_REQUEST_READY;
+    state.location.errorCode = "";
+  }
+  if (els.views.list.classList.contains("active")) {
+    renderList();
+  }
+}
+
+function getLocationListViewModel() {
+  return getLocationLookupViewModel({
+    hasLocation: hasResolvedUserLocation(),
+    isRequesting: state.location.requestState === LOCATION_REQUEST_PENDING,
+    permissionState: state.location.permissionState,
+    errorCode: state.location.errorCode,
+    geolocationSupported: Boolean(navigator.geolocation),
+  });
+}
+
+function renderLocationGate(container, viewModel) {
+  container.innerHTML = "";
+
+  const panel = document.createElement("section");
+  panel.className = `location-gate location-gate-${viewModel.kind}`;
+  panel.setAttribute("data-nosnippet", "");
+
+  const title = document.createElement("h3");
+  title.className = "location-gate-title";
+  title.textContent = viewModel.title;
+  panel.appendChild(title);
+
+  const copy = document.createElement("p");
+  copy.className = "location-gate-copy";
+  copy.textContent = viewModel.message;
+  panel.appendChild(copy);
+
+  if (viewModel.actionLabel) {
+    const actions = document.createElement("div");
+    actions.className = "location-gate-actions";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "primary-btn";
+    button.textContent = viewModel.actionLabel;
+    button.addEventListener("click", () => requestUserLocation(false));
+    actions.appendChild(button);
+    panel.appendChild(actions);
+  }
+
+  container.appendChild(panel);
 }
 
 async function loadLiveStationDetail(stationId) {
@@ -1150,6 +1231,12 @@ function applyFilters() {
 function renderList() {
   const container = els.lists.chargers;
   container.innerHTML = "";
+
+  const locationViewModel = getLocationListViewModel();
+  if (locationViewModel.blocksStationList) {
+    renderLocationGate(container, locationViewModel);
+    return;
+  }
 
   // Limit to first 50 items for performance
   const displayItems = state.filtered.slice(0, 50);
@@ -1744,19 +1831,7 @@ async function queueStartupLocationRequest() {
   if (state.startupLocationRequested || state.userPos || !navigator.geolocation) {
     return;
   }
-
-  const permissionsApi = navigator.permissions;
-  if (!permissionsApi || typeof permissionsApi.query !== "function") {
-    return;
-  }
-
-  try {
-    const permission = await permissionsApi.query({ name: "geolocation" });
-    if (permission.state !== "granted") {
-      return;
-    }
-  } catch (err) {
-    console.warn("Geolocation permission check failed", err);
+  if (state.location.permissionState !== LOCATION_PERMISSION_GRANTED) {
     return;
   }
 
@@ -1793,35 +1868,101 @@ async function queueStartupLocationRequest() {
   attemptWhenVisible();
 }
 
-function requestUserLocation(silent = false) {
-  const silentMode = silent === true;
+async function syncLocationPermissionState() {
   if (!navigator.geolocation) {
-    if (!silentMode) alert("Geolocation nicht unterstützt.");
+    updateLocationState({
+      permissionState: LOCATION_PERMISSION_UNSUPPORTED,
+      requestState: LOCATION_REQUEST_ERROR,
+      errorCode: "unsupported",
+    });
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      state.userPos = {
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude,
-      };
-      updateUserMarker();
-      // Use Leaflet distanceTo for better accuracy if desired, but custom calc is fine
-      // Sort list if needed
-      applyFilters();
+  const permissionsApi = navigator.permissions;
+  if (!permissionsApi || typeof permissionsApi.query !== "function") {
+    updateLocationState({
+      permissionState: normalizeLocationPermissionState("unknown"),
+      requestState: LOCATION_REQUEST_IDLE,
+      errorCode: "",
+    });
+    return;
+  }
 
-      // Fly to user on map if not silent
-      if (!silentMode && state.views.map) {
-        state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
-      }
-    },
-    (err) => {
-      console.warn("Location error", err);
-      if (!silentMode) alert("Standort konnte nicht ermittelt werden.");
-    },
-    { enableHighAccuracy: true, timeout: 5000 },
-  );
+  try {
+    const permission = await permissionsApi.query({ name: "geolocation" });
+    const permissionState = normalizeLocationPermissionState(permission.state);
+    updateLocationState({
+      permissionState,
+      requestState: permissionState === LOCATION_PERMISSION_DENIED
+        ? LOCATION_REQUEST_ERROR
+        : LOCATION_REQUEST_IDLE,
+      errorCode: permissionState === LOCATION_PERMISSION_DENIED
+        ? LOCATION_ERROR_PERMISSION_DENIED
+        : "",
+    });
+  } catch (err) {
+    console.warn("Geolocation permission check failed", err);
+    updateLocationState({
+      permissionState: normalizeLocationPermissionState("unknown"),
+      requestState: LOCATION_REQUEST_IDLE,
+      errorCode: "",
+    });
+  }
+}
+
+async function requestUserLocation(silent = false) {
+  const silentMode = silent === true;
+  if (!navigator.geolocation) {
+    updateLocationState({
+      permissionState: LOCATION_PERMISSION_UNSUPPORTED,
+      requestState: LOCATION_REQUEST_ERROR,
+      errorCode: "unsupported",
+    });
+    if (!silentMode && els.views.map.classList.contains("active")) {
+      switchView("view-list");
+    }
+    return;
+  }
+
+  updateLocationState({
+    requestState: LOCATION_REQUEST_PENDING,
+    errorCode: "",
+  });
+
+  try {
+    const position = await requestBrowserLocation(navigator.geolocation, {
+      enableHighAccuracy: true,
+      timeout: 5000,
+    });
+
+    state.userPos = {
+      lat: position.lat,
+      lon: position.lon,
+    };
+    updateLocationState({
+      permissionState: LOCATION_PERMISSION_GRANTED,
+      requestState: LOCATION_REQUEST_READY,
+      errorCode: "",
+    });
+    updateUserMarker();
+    applyFilters();
+
+    if (!silentMode && state.views.map) {
+      state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
+    }
+  } catch (err) {
+    console.warn("Location error", err);
+    updateLocationState({
+      permissionState: err.code === LOCATION_ERROR_PERMISSION_DENIED
+        ? LOCATION_PERMISSION_DENIED
+        : state.location.permissionState,
+      requestState: LOCATION_REQUEST_ERROR,
+      errorCode: err.code || "unknown",
+    });
+    if (!silentMode && els.views.map.classList.contains("active")) {
+      switchView("view-list");
+    }
+  }
 }
 
 /* --- LOCALSTORAGE --- */
