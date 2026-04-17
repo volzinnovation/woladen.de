@@ -1,4 +1,22 @@
 import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs";
+import {
+  LOCATION_ERROR_PERMISSION_DENIED,
+  LOCATION_PERMISSION_DENIED,
+  LOCATION_PERMISSION_GRANTED,
+  LOCATION_PERMISSION_UNKNOWN,
+  LOCATION_PERMISSION_UNSUPPORTED,
+  LOCATION_REQUEST_ERROR,
+  LOCATION_REQUEST_IDLE,
+  LOCATION_REQUEST_PENDING,
+  LOCATION_REQUEST_READY,
+  getLocationLookupViewModel,
+  normalizeLocationPermissionState,
+  requestBrowserLocation,
+} from "./location.mjs";
+import {
+  normalizeLiveApiBaseUrl,
+  resolveLiveApiBaseUrl as computeLiveApiBaseUrl,
+} from "./live-api.mjs";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -9,12 +27,6 @@ const MAX_DISPLAY_POWER_KW = 400;
 const LIVE_SUMMARY_REFRESH_MS = 15000;
 const LIVE_API_TIMEOUT_MS = 3500;
 const LIVE_DETAIL_TIMEOUT_MS = 4000;
-const LIVE_LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "0.0.0.0", "::1", "[::1]"]);
-const LIVE_REMOTE_HOSTS = new Map([
-  ["woladen.de", "https://live.woladen.de"],
-  ["www.woladen.de", "https://live.woladen.de"],
-  ["live.woladen.de", "https://live.woladen.de"],
-]);
 const LIVE_STATION_FIELDS = [
   "availability_status",
   "available_evses",
@@ -39,7 +51,7 @@ const LIVE_DYNAMIC_KEY_LABELS = {
   expectedAvailableUntilTime: "Bis",
   startTime: "Ab",
   endTime: "Bis",
-  lastUpdated: "Stand",
+  lastUpdated: "Seit",
   value: "",
 };
 const AMENITY_MAPPING = {
@@ -100,35 +112,19 @@ function formatAmenityCount(count) {
   return `${rounded} ${rounded === 1 ? "Angebot vor Ort" : "Angebote vor Ort"}`;
 }
 
-function normalizeLiveApiBaseUrl(value) {
-  const candidate = String(value || "").trim();
-  if (!candidate) {
-    return "";
-  }
-  try {
-    const url = new URL(candidate);
-    return url.toString().replace(/\/+$/, "");
-  } catch (error) {
-    console.warn("Ignoring invalid live API base URL", candidate, error);
-    return "";
-  }
-}
-
 function resolveLiveApiBaseUrl() {
-  const configured = typeof window.WOLADEN_LIVE_API_BASE_URL === "string"
+  const configuredValue = typeof window.WOLADEN_LIVE_API_BASE_URL === "string"
     ? window.WOLADEN_LIVE_API_BASE_URL.trim()
     : "";
-  if (configured) {
-    return normalizeLiveApiBaseUrl(configured);
+  const resolved = computeLiveApiBaseUrl({
+    configuredValue,
+    locationHref: window.location.href,
+    locationHostname: window.location.hostname,
+  });
+  if (!resolved && configuredValue) {
+    console.warn("Ignoring invalid live API base URL", configuredValue);
   }
-  const hostname = String(window.location.hostname || "").trim();
-  if (LIVE_LOCAL_HOSTS.has(hostname)) {
-    return normalizeLiveApiBaseUrl("https://live.woladen.de");
-  }
-  if (LIVE_REMOTE_HOSTS.has(hostname)) {
-    return normalizeLiveApiBaseUrl(LIVE_REMOTE_HOSTS.get(hostname) || "");
-  }
-  return "";
+  return resolved;
 }
 
 const LIVE_API_BASE_URL = resolveLiveApiBaseUrl();
@@ -271,13 +267,13 @@ function formatOccupancySource(props) {
       props.live_source_observed_at || props.live_fetched_at || props.live_ingested_at,
     );
     if (provider && timestamp) {
-      return `Live via ${provider} • Stand ${timestamp}`;
+      return `Live via ${provider} • Seit ${timestamp}`;
     }
     if (provider) {
       return `Live via ${provider}`;
     }
     if (timestamp) {
-      return `Live-Stand ${timestamp}`;
+      return `Live seit ${timestamp}`;
     }
     return "Live via lokaler API";
   }
@@ -566,6 +562,11 @@ const state = {
   favorites: new Set(), // Set of station_ids
   userPos: null, // { lat, lon }
   startupLocationRequested: false,
+  location: {
+    permissionState: LOCATION_PERMISSION_UNKNOWN,
+    requestState: LOCATION_REQUEST_IDLE,
+    errorCode: "",
+  },
   filters: {
     operator: "",
     minPower: 50,
@@ -639,8 +640,8 @@ const els = {
     detailsList: document.getElementById("detail-details-list"),
     detailsSource: document.getElementById("detail-details-source"),
     liveSection: document.getElementById("detail-live-section"),
+    liveTitle: document.getElementById("detail-live-title"),
     liveUpdated: document.getElementById("detail-live-updated"),
-    liveSource: document.getElementById("detail-live-source"),
     liveList: document.getElementById("detail-live-list"),
     favBtn: document.getElementById("btn-toggle-fav"),
     googleBtn: document.getElementById("btn-nav-google"),
@@ -710,6 +711,7 @@ async function loadData() {
     populateOperators(opData);
     setAppMeta(geoData, summaryData);
     renderAmenityFilters(); // Render dynamic amenity filters
+    await syncLocationPermissionState();
 
     applyFilters(); // Initial render
     syncDetailModalWithUrl();
@@ -853,6 +855,67 @@ function refreshRenderedViews() {
     const stationId = getStationIdFromProps(currentDetailFeature.properties);
     populateDetailContent(currentDetailFeature, state.live.detailByStationId.get(stationId) || null);
   }
+}
+
+function hasResolvedUserLocation() {
+  return Boolean(
+    state.userPos &&
+    Number.isFinite(Number(state.userPos.lat)) &&
+    Number.isFinite(Number(state.userPos.lon))
+  );
+}
+
+function updateLocationState(patch = {}) {
+  Object.assign(state.location, patch);
+  if (hasResolvedUserLocation()) {
+    state.location.requestState = LOCATION_REQUEST_READY;
+    state.location.errorCode = "";
+  }
+  if (els.views.list.classList.contains("active")) {
+    renderList();
+  }
+}
+
+function getLocationListViewModel() {
+  return getLocationLookupViewModel({
+    hasLocation: hasResolvedUserLocation(),
+    isRequesting: state.location.requestState === LOCATION_REQUEST_PENDING,
+    permissionState: state.location.permissionState,
+    errorCode: state.location.errorCode,
+    geolocationSupported: Boolean(navigator.geolocation),
+  });
+}
+
+function renderLocationGate(container, viewModel) {
+  container.innerHTML = "";
+
+  const panel = document.createElement("section");
+  panel.className = `location-gate location-gate-${viewModel.kind}`;
+  panel.setAttribute("data-nosnippet", "");
+
+  const title = document.createElement("h3");
+  title.className = "location-gate-title";
+  title.textContent = viewModel.title;
+  panel.appendChild(title);
+
+  const copy = document.createElement("p");
+  copy.className = "location-gate-copy";
+  copy.textContent = viewModel.message;
+  panel.appendChild(copy);
+
+  if (viewModel.actionLabel) {
+    const actions = document.createElement("div");
+    actions.className = "location-gate-actions";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "primary-btn";
+    button.textContent = viewModel.actionLabel;
+    button.addEventListener("click", () => requestUserLocation(false));
+    actions.appendChild(button);
+    panel.appendChild(actions);
+  }
+
+  container.appendChild(panel);
 }
 
 async function loadLiveStationDetail(stationId) {
@@ -1151,6 +1214,12 @@ function renderList() {
   const container = els.lists.chargers;
   container.innerHTML = "";
 
+  const locationViewModel = getLocationListViewModel();
+  if (locationViewModel.blocksStationList) {
+    renderLocationGate(container, locationViewModel);
+    return;
+  }
+
   // Limit to first 50 items for performance
   const displayItems = state.filtered.slice(0, 50);
 
@@ -1214,7 +1283,7 @@ function createStationCard(feature) {
   const availabilityStatus = getAvailabilityStatus(p);
 
   // Top Amenities (max 3 badges)
-  const badges = Object.keys(AMENITY_MAPPING)
+  const amenityBadges = Object.keys(AMENITY_MAPPING)
     .filter((k) => p[k] > 0)
     .sort((a, b) => p[b] - p[a]) // Most frequent first
     .slice(0, 3)
@@ -1225,6 +1294,13 @@ function createStationCard(feature) {
     : "";
   const priceBadge = priceDisplay
     ? `<span class="badge badge-price">${escapeHtml(priceDisplay)}</span>`
+    : "";
+  const dynamicBadges = `${liveBadge}${priceBadge}`;
+  const dynamicLine = dynamicBadges
+    ? `<div class="card-badge-line card-badge-line-dynamic">${dynamicBadges}</div>`
+    : "";
+  const amenityLine = amenityBadges
+    ? `<div class="card-badge-line card-badge-line-amenities">${amenityBadges}</div>`
     : "";
 
   const markerColor = getMarkerColor(p);
@@ -1242,7 +1318,7 @@ function createStationCard(feature) {
       ${Math.round(getDisplayedMaxPowerKw(p))} kW max • ${getChargingPointCount(p)} Ladepunkte • ${formatAmenityCount(p.amenities_total)}
     </div>
     <div class="card-badges">
-      ${liveBadge}${priceBadge}${badges}
+      ${dynamicLine}${amenityLine}
     </div>
   `;
 
@@ -1275,23 +1351,16 @@ function renderDetailLiveState(feature, liveDetail = null) {
   const hasLiveData = hasLiveStationSummary(props) || evses.length > 0;
   if (!hasLiveData) {
     els.detail.liveSection.hidden = true;
+    els.detail.liveTitle.textContent = "Live";
     els.detail.liveUpdated.hidden = true;
     els.detail.liveUpdated.textContent = "";
-    els.detail.liveSource.hidden = true;
-    els.detail.liveSource.textContent = "";
     els.detail.liveList.innerHTML = "";
     return;
   }
 
-  const updatedText = formatDetailTimestamp(
-    props.live_source_observed_at || props.live_fetched_at || props.live_ingested_at,
-  );
-  els.detail.liveUpdated.textContent = updatedText ? `Stand ${updatedText}` : "";
-  els.detail.liveUpdated.hidden = !updatedText;
-
-  const sourceText = formatOccupancySource(props);
-  els.detail.liveSource.textContent = sourceText;
-  els.detail.liveSource.hidden = !sourceText;
+  els.detail.liveTitle.textContent = "Live";
+  els.detail.liveUpdated.textContent = "";
+  els.detail.liveUpdated.hidden = true;
   els.detail.liveList.innerHTML = "";
 
   if (evses.length === 0) {
@@ -1379,13 +1448,6 @@ function populateDetailContent(feature, liveDetail = null) {
     els.detail.occupancy.textContent = "";
     els.detail.occupancyPill.hidden = true;
   }
-  if (occupancySource) {
-    els.detail.occupancySource.textContent = occupancySource;
-    els.detail.occupancySource.hidden = false;
-  } else {
-    els.detail.occupancySource.textContent = "";
-    els.detail.occupancySource.hidden = true;
-  }
 
   const priceDisplay = getDisplayPrice(p, liveDetail);
   const openingHoursDisplay = String(p.opening_hours_display || "").trim();
@@ -1398,11 +1460,19 @@ function populateDetailContent(feature, liveDetail = null) {
   els.detail.hoursChip.hidden = !showHours;
   els.detail.price.textContent = priceDisplay;
   els.detail.hours.textContent = openingHoursDisplay;
-  els.detail.amenityTitle.textContent = `In der Nähe: ${formatAmenityCount(p.amenities_total)}`;
+  els.detail.amenityTitle.textContent = formatAmenityCount(p.amenities_total);
 
   renderDetailAmenities(p);
   renderDetailStaticInfo(p);
   renderDetailLiveState(feature, liveDetail);
+
+  if (occupancySource) {
+    els.detail.occupancySource.textContent = occupancySource;
+    els.detail.occupancySource.hidden = !els.detail.liveSection.hidden;
+  } else {
+    els.detail.occupancySource.textContent = "";
+    els.detail.occupancySource.hidden = true;
+  }
 }
 
 function openDetail(feature, options = {}) {
@@ -1739,8 +1809,11 @@ function getDistanceFormatted(feature) {
   return Math.round(d) + " m";
 }
 
-function queueStartupLocationRequest() {
+async function queueStartupLocationRequest() {
   if (state.startupLocationRequested || state.userPos || !navigator.geolocation) {
+    return;
+  }
+  if (state.location.permissionState !== LOCATION_PERMISSION_GRANTED) {
     return;
   }
 
@@ -1777,35 +1850,101 @@ function queueStartupLocationRequest() {
   attemptWhenVisible();
 }
 
-function requestUserLocation(silent = false) {
-  const silentMode = silent === true;
+async function syncLocationPermissionState() {
   if (!navigator.geolocation) {
-    if (!silentMode) alert("Geolocation nicht unterstützt.");
+    updateLocationState({
+      permissionState: LOCATION_PERMISSION_UNSUPPORTED,
+      requestState: LOCATION_REQUEST_ERROR,
+      errorCode: "unsupported",
+    });
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      state.userPos = {
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude,
-      };
-      updateUserMarker();
-      // Use Leaflet distanceTo for better accuracy if desired, but custom calc is fine
-      // Sort list if needed
-      applyFilters();
+  const permissionsApi = navigator.permissions;
+  if (!permissionsApi || typeof permissionsApi.query !== "function") {
+    updateLocationState({
+      permissionState: normalizeLocationPermissionState("unknown"),
+      requestState: LOCATION_REQUEST_IDLE,
+      errorCode: "",
+    });
+    return;
+  }
 
-      // Fly to user on map if not silent
-      if (!silentMode && state.views.map) {
-        state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
-      }
-    },
-    (err) => {
-      console.warn("Location error", err);
-      if (!silentMode) alert("Standort konnte nicht ermittelt werden.");
-    },
-    { enableHighAccuracy: true, timeout: 5000 },
-  );
+  try {
+    const permission = await permissionsApi.query({ name: "geolocation" });
+    const permissionState = normalizeLocationPermissionState(permission.state);
+    updateLocationState({
+      permissionState,
+      requestState: permissionState === LOCATION_PERMISSION_DENIED
+        ? LOCATION_REQUEST_ERROR
+        : LOCATION_REQUEST_IDLE,
+      errorCode: permissionState === LOCATION_PERMISSION_DENIED
+        ? LOCATION_ERROR_PERMISSION_DENIED
+        : "",
+    });
+  } catch (err) {
+    console.warn("Geolocation permission check failed", err);
+    updateLocationState({
+      permissionState: normalizeLocationPermissionState("unknown"),
+      requestState: LOCATION_REQUEST_IDLE,
+      errorCode: "",
+    });
+  }
+}
+
+async function requestUserLocation(silent = false) {
+  const silentMode = silent === true;
+  if (!navigator.geolocation) {
+    updateLocationState({
+      permissionState: LOCATION_PERMISSION_UNSUPPORTED,
+      requestState: LOCATION_REQUEST_ERROR,
+      errorCode: "unsupported",
+    });
+    if (!silentMode && els.views.map.classList.contains("active")) {
+      switchView("view-list");
+    }
+    return;
+  }
+
+  updateLocationState({
+    requestState: LOCATION_REQUEST_PENDING,
+    errorCode: "",
+  });
+
+  try {
+    const position = await requestBrowserLocation(navigator.geolocation, {
+      enableHighAccuracy: true,
+      timeout: 5000,
+    });
+
+    state.userPos = {
+      lat: position.lat,
+      lon: position.lon,
+    };
+    updateLocationState({
+      permissionState: LOCATION_PERMISSION_GRANTED,
+      requestState: LOCATION_REQUEST_READY,
+      errorCode: "",
+    });
+    updateUserMarker();
+    applyFilters();
+
+    if (!silentMode && state.views.map) {
+      state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
+    }
+  } catch (err) {
+    console.warn("Location error", err);
+    updateLocationState({
+      permissionState: err.code === LOCATION_ERROR_PERMISSION_DENIED
+        ? LOCATION_PERMISSION_DENIED
+        : state.location.permissionState,
+      requestState: LOCATION_REQUEST_ERROR,
+      errorCode: err.code || "unknown",
+    });
+    if (!silentMode && els.views.map.classList.contains("active")) {
+      switchView("view-list");
+    }
+  }
 }
 
 /* --- LOCALSTORAGE --- */
