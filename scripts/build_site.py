@@ -32,6 +32,7 @@ REQUIRED_DATA = [
 
 ROOT_URLS = [
     "",
+    "management.html",
     "privacy.html",
     "imprint.html",
 ]
@@ -382,6 +383,27 @@ def write_sitemap(page_paths: list[str]) -> None:
     (SITE_DIR / "sitemap.xml").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def copy_management_data_tree() -> None:
+    source_root = DATA_DIR / "management"
+    if not source_root.exists():
+        return
+    target_root = SITE_DATA_DIR / "management"
+    for source_path in sorted(source_root.rglob("*")):
+        if source_path.is_dir():
+            continue
+        relative_path = source_path.relative_to(source_root)
+        target_path = target_root / relative_path
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        if source_path.suffix.lower() == ".json":
+            payload = sanitize_json_value(json.loads(source_path.read_text(encoding="utf-8")))
+            target_path.write_text(
+                json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False),
+                encoding="utf-8",
+            )
+        else:
+            shutil.copy2(source_path, target_path)
+
+
 def main() -> None:
     if SITE_DIR.exists():
         shutil.rmtree(SITE_DIR)
@@ -403,6 +425,7 @@ def main() -> None:
                 json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False),
                 encoding="utf-8",
             )
+    copy_management_data_tree()
 
     station_page_paths = write_station_pages()
     write_sitemap(station_page_paths)

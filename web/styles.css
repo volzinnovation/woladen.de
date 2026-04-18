@@ -1667,3 +1667,325 @@ select:focus-visible {
     outline-color: rgba(45, 212, 191, 0.45);
   }
 }
+
+/* ========== Management Page ========== */
+.management-page {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Manrope", "Avenir Next", sans-serif;
+  color: #132029;
+  background:
+    radial-gradient(circle at top left, rgba(18, 102, 79, 0.12), transparent 24rem),
+    linear-gradient(180deg, #f4f0e8 0%, #f8faf8 100%);
+}
+
+.management-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1.2rem 3rem;
+}
+
+.management-hero {
+  margin-bottom: 1.5rem;
+}
+
+.management-kicker {
+  margin: 0 0 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #12664f;
+}
+
+.management-kicker a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.management-hero h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3.6rem);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+.management-subtitle {
+  max-width: 56rem;
+  margin: 0.8rem 0 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #42505c;
+}
+
+.management-panel {
+  border-radius: 24px;
+  border: 1px solid rgba(19, 32, 41, 0.08);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 22px 60px rgba(19, 32, 41, 0.08);
+  padding: 1.1rem 1.1rem 1.2rem;
+}
+
+.management-panel + .management-panel,
+.management-kpis + .management-grid,
+.management-grid + .management-panel {
+  margin-top: 1rem;
+}
+
+.management-panel-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.management-panel-head p {
+  margin: 0.35rem 0 0;
+  color: #5a6772;
+  line-height: 1.5;
+}
+
+.management-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.management-controls.management-controls--single {
+  grid-template-columns: 1fr;
+}
+
+.management-control label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #42505c;
+}
+
+.management-date-row {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.management-btn,
+.management-control select,
+.management-control input[type="date"] {
+  width: 100%;
+  min-height: 2.75rem;
+  border-radius: 14px;
+  border: 1px solid rgba(19, 32, 41, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  color: #132029;
+  font: inherit;
+}
+
+.management-btn {
+  width: 2.75rem;
+  cursor: pointer;
+}
+
+.management-status {
+  margin-bottom: 1rem;
+  color: #42505c;
+}
+
+.management-status.is-error {
+  color: #8f2d2a;
+}
+
+.management-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.management-kpi {
+  padding: 1rem 1.05rem;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(250, 245, 238, 0.96));
+  border: 1px solid rgba(19, 32, 41, 0.08);
+}
+
+.management-kpi-label {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #5a6772;
+}
+
+.management-kpi-value {
+  margin-top: 0.4rem;
+  font-size: clamp(1.25rem, 2.2vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.management-kpi-detail {
+  margin-top: 0.45rem;
+  color: #5a6772;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.management-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.management-grid > .management-panel:only-child {
+  grid-column: 1 / -1;
+}
+
+.management-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.management-chart-wrap {
+  position: relative;
+  min-height: 320px;
+  margin-top: 0.9rem;
+}
+
+.management-chart-wrap-wide {
+  min-height: 520px;
+}
+
+.management-table-wrap {
+  margin-top: 0.9rem;
+  overflow-x: auto;
+}
+
+.management-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.management-table th,
+.management-table td {
+  padding: 0.72rem 0.55rem;
+  border-bottom: 1px solid rgba(19, 32, 41, 0.08);
+  text-align: left;
+  vertical-align: top;
+}
+
+.management-table th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #5a6772;
+}
+
+.management-table a {
+  color: #12664f;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.provider-sub {
+  margin-top: 0.2rem;
+  color: #74808a;
+  font-size: 0.8rem;
+}
+
+.tier-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.24rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.tier-pill.tier-eligible {
+  background: rgba(18, 102, 79, 0.12);
+  color: #12664f;
+}
+
+.tier-pill.tier-review {
+  background: rgba(196, 143, 16, 0.14);
+  color: #8a5a00;
+}
+
+.tier-pill.tier-exclude {
+  background: rgba(143, 45, 42, 0.12);
+  color: #8f2d2a;
+}
+
+.management-notes ul {
+  margin: 0.9rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.management-notes li + li {
+  margin-top: 0.55rem;
+}
+
+.management-notes a {
+  color: #12664f;
+}
+
+.management-notes code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: rgba(19, 32, 41, 0.06);
+  padding: 0.08rem 0.3rem;
+  border-radius: 6px;
+}
+
+.management-app-promo {
+  margin-top: 1rem;
+}
+
+.management-bottom-nav {
+  margin-top: 1rem;
+  border-radius: 24px;
+  border: 1px solid rgba(19, 32, 41, 0.08);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 22px 60px rgba(19, 32, 41, 0.08);
+  overflow: hidden;
+}
+
+.management-bottom-nav .nav-item {
+  min-height: var(--nav-height);
+  text-decoration: none;
+}
+
+@media (max-width: 1100px) {
+  .management-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .management-shell {
+    padding: 1.2rem 0.9rem 2rem;
+  }
+
+  .management-controls,
+  .management-kpis,
+  .management-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .management-chart-wrap {
+    min-height: 260px;
+  }
+
+  .management-chart-wrap-wide {
+    min-height: 420px;
+  }
+}
+
+@media (min-width: 768px) {
+  .management-bottom-nav {
+    max-width: none;
+    border: 1px solid rgba(19, 32, 41, 0.08);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.82);
+  }
+}

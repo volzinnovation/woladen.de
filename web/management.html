@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      woladen.de | Zustand des öffentlichen Ladenetzes in Deutschland
+    </title>
+    <meta
+      name="description"
+      content="woladen.de Analyse auf Basis der AFIR-Daten aus der Mobilithek für öffentliche deutsche Ladesäulen."
+    />
+    <link rel="canonical" href="https://woladen.de/management.html" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="woladen.de | Zustand des öffentlichen Ladenetzes in Deutschland"
+    />
+    <meta
+      property="og:description"
+      content="woladen.de Analyse auf Basis der AFIR-Daten aus der Mobilithek für öffentliche deutsche Ladesäulen."
+    />
+    <meta property="og:url" content="https://woladen.de/management.html" />
+    <meta property="og:site_name" content="woladen.de" />
+    <meta property="og:locale" content="de_DE" />
+    <meta
+      property="og:image"
+      content="https://woladen.de/img/social-card-home.png?v=20260411"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="woladen.de | Zustand des öffentlichen Ladenetzes in Deutschland"
+    />
+    <meta
+      name="twitter:description"
+      content="woladen.de Analyse auf Basis der AFIR-Daten aus der Mobilithek für öffentliche deutsche Ladesäulen."
+    />
+    <meta
+      name="twitter:image"
+      content="https://woladen.de/img/social-card-home.png?v=20260411"
+    />
+    <link rel="icon" href="/favicon.ico?v=20260411" sizes="any" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/favicon-32x32.png?v=20260411"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="/favicon-16x16.png?v=20260411"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css?v=20260418f" />
+    <script
+      src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+      defer
+    ></script>
+    <script type="module" src="./management.mjs?v=20260418f"></script>
+  </head>
+  <body class="management-page">
+    <main class="management-shell">
+      <header class="management-hero">
+        <p class="management-kicker">
+          <a href="https://woladen.de">woladen.de</a> Tagesauswertung
+        </p>
+        <h1>Zustand des öffentlichen Ladenetzes in Deutschland</h1>
+        <p id="management-subtitle" class="management-subtitle">
+          Störungen und Auslastung der öffentlichen Ladesäulen in Deutschland am
+          Donnerstag 17.04.2026
+        </p>
+      </header>
+
+      <section
+        id="management-app-promo"
+        class="app-install-promo management-app-promo"
+        aria-label="wo-laden als App"
+      >
+        <div class="app-install-head">
+          <div class="app-install-copy">
+            <p class="app-install-kicker">Auch als App</p>
+            <h2>Wo laden? Immer dabei</h2>
+            <p>
+              Kostenfrei für
+              <a
+                class="app-install-copy-link"
+                href="https://apps.apple.com/de/app/wo-laden/id6759499459"
+                >iPhone im App Store</a
+              >
+              und
+              <a
+                id="management-app-link-google"
+                class="app-install-copy-link"
+                href="https://play.google.com/store/apps/details?id=de.woladen.android"
+                >Android bei Google Play</a
+              >.
+            </p>
+          </div>
+          <div class="app-install-links" aria-label="Store-Links">
+            <a
+              class="app-install-link"
+              href="https://apps.apple.com/de/app/wo-laden/id6759499459"
+              aria-label="wo-laden im App Store öffnen"
+              title="Im App Store öffnen"
+            >
+              <img
+                class="app-install-store-badge app-install-store-badge--apple"
+                src="img/app-store-badge.svg"
+                alt="Laden im App Store"
+                width="250"
+                height="83"
+                decoding="async"
+              />
+            </a>
+            <a
+              id="management-app-badge-google"
+              class="app-install-link"
+              href="https://play.google.com/store/apps/details?id=de.woladen.android"
+              aria-label="wo-laden bei Google Play öffnen"
+              title="Bei Google Play öffnen"
+            >
+              <img
+                class="app-install-store-badge app-install-store-badge--google"
+                src="img/google-play-badge.png"
+                alt="Jetzt bei Google Play"
+                width="646"
+                height="250"
+                decoding="async"
+              />
+            </a>
+          </div>
+          <button
+            id="management-app-dismiss"
+            class="app-install-dismiss"
+            type="button"
+            aria-label="App-Hinweis ausblenden"
+          >
+            ×
+          </button>
+        </div>
+      </section>
+
+      <section class="management-panel management-controls">
+        <div class="management-control">
+          <label for="management-date">Datum</label>
+          <div class="management-date-row">
+            <button
+              id="management-prev-day"
+              type="button"
+              class="management-btn"
+            >
+              ←
+            </button>
+            <input id="management-date" type="date" />
+            <button
+              id="management-next-day"
+              type="button"
+              class="management-btn"
+            >
+              →
+            </button>
+          </div>
+        </div>
+        <div id="management-overview-control" class="management-control">
+          <label for="management-overview-metric">Zeitreihe</label>
+          <select id="management-overview-metric"></select>
+        </div>
+      </section>
+
+      <div id="management-status" class="management-status" hidden></div>
+
+      <section id="management-kpis" class="management-kpis"></section>
+
+      <section class="management-grid">
+        <article class="management-panel">
+          <div class="management-panel-head">
+            <h2>Störungen an Stationen</h2>
+            <p>
+              So hat sich die Zahl der Stationen mit Störungen von Tag zu Tag
+              entwickelt.
+            </p>
+          </div>
+          <div class="management-chart-wrap">
+            <canvas id="management-overview-chart"></canvas>
+          </div>
+        </article>
+      </section>
+
+      <section class="management-stack">
+        <article class="management-panel">
+          <div class="management-panel-head">
+            <h2>Top 10 Stationen mit Störungen</h2>
+            <p>
+              Stationen, die im Tagesverlauf gestörte Ladesäulen hatten oder am
+              Tagesende noch gestört waren.
+            </p>
+          </div>
+          <div class="management-table-wrap">
+            <table class="management-table">
+              <thead>
+                <tr>
+                  <th>Station</th>
+                  <th>Ort</th>
+                  <th>Betroffene Ladepunkte</th>
+                  <th>Noch gestört</th>
+                  <th>Ausfallzeit</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="broken-stations-body"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="management-panel">
+          <div class="management-panel-head">
+            <h2>Top 10 Stationen mit hoher Auslastung</h2>
+            <p>
+              Hohe Nutzung von Ladesäulen zeigt sich hier durch häufige Wechsel
+              zwischen frei und belegt Status.
+            </p>
+          </div>
+          <div class="management-table-wrap">
+            <table class="management-table">
+              <thead>
+                <tr>
+                  <th>Station</th>
+                  <th>Ort</th>
+                  <th>Wechsel frei/belegt</th>
+                  <th>Beteiligte Ladepunkte</th>
+                  <th>Leistung</th>
+                </tr>
+              </thead>
+              <tbody id="busy-stations-body"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="management-panel management-notes">
+        <div class="management-panel-head">
+          <h2>So liest woladen.de die Zahlen</h2>
+        </div>
+        <ul>
+          <li>
+            Die Kennzahlen oben betrachten alle Stationen mit AFIR-Daten in
+            Deutschland. In den Top-Listen führen Stationsnamen, wenn verfügbar,
+            direkt zu woladen.de.
+          </li>
+          <li>
+            Als Störung zählt ein Ladepunkt, wenn er an einem Tag als nicht
+            verfügbar gemeldet wurde.
+          </li>
+          <li>
+            Hohe Auslastung heißt hier: häufige Wechsel zwischen frei und
+            belegt. Störungen oder unbekannte Zustände zählen dafür nicht mit.
+          </li>
+          <li>
+            Grundlage sind tägliche AFIR-Datensätze der Mobilithek, hier für
+            woladen.de gespiegelt.
+          </li>
+        </ul>
+      </section>
+
+      <nav
+        class="bottom-nav management-bottom-nav"
+        data-nosnippet
+        role="navigation"
+        aria-label="Hauptnavigation"
+      >
+        <a class="nav-item" href="./">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          <span>Liste</span>
+        </a>
+        <a class="nav-item" href="./#view-map">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polygon
+              points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"
+            ></polygon>
+            <line x1="8" y1="2" x2="8" y2="18"></line>
+            <line x1="16" y1="6" x2="16" y2="22"></line>
+          </svg>
+          <span>Karte</span>
+        </a>
+        <a class="nav-item" href="./#view-favorites">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polygon
+              points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+            ></polygon>
+          </svg>
+          <span>Favoriten</span>
+        </a>
+        <a class="nav-item" href="./#view-info">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>Info</span>
+        </a>
+      </nav>
+    </main>
+  </body>
+</html>

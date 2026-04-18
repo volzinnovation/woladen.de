@@ -657,13 +657,17 @@ const els = {
   meta: document.getElementById("app-meta"),
 };
 
+const VIEW_IDS = new Set(["view-list", "view-map", "view-favorites", "view-info"]);
+
 /* --- INITIALIZATION --- */
 async function init() {
   loadFavorites();
   initMap();
   initNavigation();
+  syncViewWithRequestedHash();
   initFilters();
   window.addEventListener("popstate", syncDetailModalWithUrl);
+  window.addEventListener("hashchange", syncViewWithRequestedHash);
 
   // Event Listeners
   els.buttons.locate.addEventListener("click", () => requestUserLocation(false));
@@ -1072,17 +1076,40 @@ function updateUserMarker() {
 function initNavigation() {
   els.navItems.forEach((btn) => {
     btn.addEventListener("click", () => {
-      // Switch active state
-      els.navItems.forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-
       const targetId = btn.dataset.target;
       switchView(targetId);
     });
   });
 }
 
-function switchView(viewId) {
+function setActiveNavItem(viewId) {
+  els.navItems.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.target === viewId);
+  });
+}
+
+function getRequestedViewIdFromHash() {
+  const hash = String(window.location.hash || "").replace(/^#/, "").trim();
+  return VIEW_IDS.has(hash) ? hash : "view-list";
+}
+
+function updateRequestedViewHash(viewId) {
+  const url = new URL(window.location.href);
+  url.hash = viewId && viewId !== "view-list" ? viewId : "";
+  const next = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState(window.history.state, "", next);
+}
+
+function syncViewWithRequestedHash() {
+  const viewId = getRequestedViewIdFromHash();
+  switchView(viewId, { syncHash: false });
+}
+
+function switchView(viewId, options = {}) {
+  const { syncHash = true } = options;
+  if (!VIEW_IDS.has(viewId)) {
+    return;
+  }
   // Hide all views
   Object.values(els.views).forEach((el) => {
     el.classList.remove("active");
@@ -1098,6 +1125,10 @@ function switchView(viewId) {
     // Force reflow
     void target.offsetWidth;
     target.classList.add("active");
+  }
+  setActiveNavItem(viewId);
+  if (syncHash) {
+    updateRequestedViewHash(viewId);
   }
 
   // Refresh lists if needed

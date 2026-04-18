@@ -1,0 +1,141 @@
+name: Daily Management Analysis
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 23 * * *"
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: management-data-writer
+  cancel-in-progress: false
+
+jobs:
+  generate-management-snapshot:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Berlin
+      WOLADEN_LIVE_HF_ARCHIVE_REPO_ID: loffenauer/AFIR
+      WOLADEN_LIVE_HF_ARCHIVE_PATH_PREFIX: provider-response-archives
+      WOLADEN_LIVE_HF_ARCHIVE_TOKEN_FILE: ${{ github.workspace }}/tmp/hf_private
+
+    steps:
+      - name: Gate Berlin 01:00 schedule
+        id: berlin_gate
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          BERLIN_HOUR=$(TZ=Europe/Berlin date +%H)
+          if [ "$BERLIN_HOUR" = "01" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping scheduled run outside 01:00 Europe/Berlin (current hour: $BERLIN_HOUR)."
+          fi
+
+      - name: Checkout
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: pip install -r requirements.txt -r requirements-live.txt
+
+      - name: Prepare Hugging Face token
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        shell: bash
+        env:
+          HF_PRIVATE: ${{ secrets.HF_PRIVATE }}
+        run: |
+          if [ -z "$HF_PRIVATE" ]; then
+            echo "Missing HF_PRIVATE secret" >&2
+            exit 1
+          fi
+          mkdir -p tmp
+          printf '%s' "$HF_PRIVATE" > tmp/hf_private
+          chmod 600 tmp/hf_private
+
+      - name: Wait for prior-day archive
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: |
+          python - <<'PY'
+          import time
+          from datetime import datetime, timedelta
+          from zoneinfo import ZoneInfo
+
+          from backend.archive import DailyResponseArchiveDownloader
+          from backend.config import AppConfig
+
+          target_date = datetime.now(ZoneInfo("Europe/Berlin")).date() - timedelta(days=1)
+          wait_minutes = 240
+          interval_seconds = 300
+          attempts = max(1, wait_minutes * 60 // interval_seconds)
+          downloader = DailyResponseArchiveDownloader(AppConfig())
+
+          for attempt in range(1, attempts + 1):
+              available_dates = {
+                  str(row.get("target_date") or "")
+                  for row in downloader.list_available_archives()
+              }
+              if target_date.isoformat() in available_dates:
+                  print(f"{target_date.isoformat()} archive is available.")
+                  break
+              if attempt == attempts:
+                  raise SystemExit(
+                      f"{target_date.isoformat()} archive still unavailable after {wait_minutes} minutes."
+                  )
+              print(
+                  f"{target_date.isoformat()} archive not published yet "
+                  f"(attempt {attempt}/{attempts}); retrying in {interval_seconds // 60} minutes."
+              )
+              time.sleep(interval_seconds)
+          PY
+
+      - name: Download prior-day archive
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: |
+          TARGET_DATE=$(python - <<'PY'
+          from datetime import datetime, timedelta
+          from zoneinfo import ZoneInfo
+          print((datetime.now(ZoneInfo("Europe/Berlin")).date() - timedelta(days=1)).isoformat())
+          PY
+          )
+          echo "TARGET_DATE=$TARGET_DATE" >> "$GITHUB_ENV"
+          python scripts/live_download_archive.py --date "$TARGET_DATE"
+
+      - name: Generate management snapshot
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: python scripts/generate_management_snapshot.py --date "$TARGET_DATE" --output-root data/management
+
+      - name: Configure git
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit generated management data
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: |
+          git add data/management
+          if git diff --cached --quiet; then
+            echo "No management snapshot changes"
+            exit 0
+          fi
+          git commit -m "chore(management): refresh AFIR daily snapshot"
+          git fetch origin main
+          git rebase origin/main
+          git push origin main

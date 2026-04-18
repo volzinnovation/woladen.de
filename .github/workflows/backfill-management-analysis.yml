@@ -1,0 +1,103 @@
+name: Backfill Management Analysis
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: First archive day in YYYY-MM-DD
+        required: true
+        default: "2026-04-16"
+      end_date:
+        description: Last archive day in YYYY-MM-DD
+        required: true
+        default: "2026-04-17"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: management-data-writer
+  cancel-in-progress: false
+
+jobs:
+  backfill-management-snapshots:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Berlin
+      WOLADEN_LIVE_HF_ARCHIVE_REPO_ID: loffenauer/AFIR
+      WOLADEN_LIVE_HF_ARCHIVE_PATH_PREFIX: provider-response-archives
+      WOLADEN_LIVE_HF_ARCHIVE_TOKEN_FILE: ${{ github.workspace }}/tmp/hf_private
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-live.txt
+
+      - name: Prepare Hugging Face token
+        shell: bash
+        env:
+          HF_PRIVATE: ${{ secrets.HF_PRIVATE }}
+        run: |
+          if [ -z "$HF_PRIVATE" ]; then
+            echo "Missing HF_PRIVATE secret" >&2
+            exit 1
+          fi
+          mkdir -p tmp
+          printf '%s' "$HF_PRIVATE" > tmp/hf_private
+          chmod 600 tmp/hf_private
+
+      - name: Download and generate snapshots
+        run: |
+          python - <<'PY'
+          from datetime import date, timedelta
+          import subprocess
+          import sys
+
+          start = date.fromisoformat("${{ inputs.start_date }}")
+          end = date.fromisoformat("${{ inputs.end_date }}")
+          if end < start:
+              raise SystemExit("end_date must be on or after start_date")
+
+          current = start
+          while current <= end:
+              target = current.isoformat()
+              subprocess.run([sys.executable, "scripts/live_download_archive.py", "--date", target], check=True)
+              subprocess.run(
+                  [
+                      sys.executable,
+                      "scripts/generate_management_snapshot.py",
+                      "--date",
+                      target,
+                      "--output-root",
+                      "data/management",
+                  ],
+                  check=True,
+              )
+              current += timedelta(days=1)
+          PY
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit generated management data
+        run: |
+          git add data/management
+          if git diff --cached --quiet; then
+            echo "No management snapshot changes"
+            exit 0
+          fi
+          git commit -m "chore(management): backfill AFIR management snapshots"
+          git fetch origin main
+          git rebase origin/main
+          git push origin main
