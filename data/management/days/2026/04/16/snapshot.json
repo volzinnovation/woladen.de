@@ -1,6 +1,8 @@
 {
-  "snapshot_date": "2026-04-16",
+  "broken_stations": [],
+  "busiest_stations": [],
   "generated_at": "2026-04-18T20:54:19+00:00",
+  "snapshot_date": "2026-04-16",
   "source": {
     "archive_date": "2026-04-16",
     "archive_name": "live-provider-responses-2026-04-16.tgz",
@@ -26,7 +28,5 @@
     "stations_all_evses_out_of_order_end_of_day": 0,
     "stations_with_disruptions": 0,
     "status_changes_total": 0
-  },
-  "busiest_stations": [],
-  "broken_stations": []
+  }
 }
