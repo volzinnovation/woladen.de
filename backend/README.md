@@ -119,6 +119,22 @@ Before any architecture change, collect evidence about which part is actually sa
 
 If the API is the bottleneck, increase local API workers first. If the ingester is the bottleneck, profile provider fetch, decode, match, and write cost before introducing more moving parts.
 
+### Open Production Latency Note
+
+As of April 19, 2026, the live API path appears roughly an order of magnitude faster than before after the `station_current_state.evses_json` materialization work and the `station_id` lookup improvements. Treat that as a backend win, not as proof that the full browser path improved by the same factor.
+
+- Treat browser-observed latency and backend compute latency as separate measurements.
+- Do not assume the browser-visible wait matches the backend speedup one-to-one.
+- The current backend path for station detail is intentionally simple: one indexed `station_id` lookup plus JSON decode.
+- If the browser still feels slow, measure the full path: TLS, Caddy, transfer size, compression, JSON encode, browser download, browser JSON parse, and frontend render/update cost.
+- In particular, large `lookup` batches and large detail payloads can make network transfer and client-side parsing/rendering look like “API slowness” even when SQLite is already fast.
+- Always compare:
+  - `Server-Timing` (`db-query`, `db-decode`, `payload`, `json-encode`, `app`)
+  - browser resource timing (`requestStart`, `responseStart`, `responseEnd`, total `duration`)
+  - payload size (`Content-Length`)
+  - frontend work after the response arrives
+- If the browser still lags well behind `app` time, focus next on payload size, request fanout, response compression, and frontend main-thread work before planning a database migration.
+
 ### Phase 3: Separate Storage Before Horizontal Scaling
 
 Do not add multiple app servers that depend on the same SQLite file. When the product needs real horizontal scaling or higher availability, move the live state to a client/server database first.

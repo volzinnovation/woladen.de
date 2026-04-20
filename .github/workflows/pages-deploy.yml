@@ -11,8 +11,11 @@ on:
       - scripts/build_site.py
       - .github/workflows/pages-deploy.yml
   workflow_run:
+    # Management snapshots are written by automation and need an explicit Pages rebuild trigger.
     workflows:
       - Daily Data Generation
+      - Daily Management Analysis
+      - Backfill Management Analysis
     types:
       - completed
 
