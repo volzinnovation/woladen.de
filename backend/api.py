@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field
 
 from .config import AppConfig
 from .service import IngestionService
-from .status import build_bundle_live_status_report
 from .store import LiveStore
 
 STATIC_STATION_RESPONSE_FIELDS = {
@@ -204,11 +203,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.get("/status")
     @app.get("/v1/status")
     def status() -> dict:
-        return build_bundle_live_status_report(
-            store=app.state.store,
-            geojson_path=app.state.config.chargers_geojson_path,
-            receipt_queue_stats=app.state.receipt_queue.stats(),
-        )
+        raise HTTPException(status_code=404, detail="status_endpoint_disabled")
 
     @app.head("/v1/push")
     @app.head("/v1/push/{provider_uid}")
