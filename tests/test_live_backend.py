@@ -7,7 +7,6 @@ import json
 import os
 import sqlite3
 import tarfile
-import tempfile
 import time
 from dataclasses import replace
 from datetime import date, datetime, timedelta, timezone
@@ -695,16 +694,37 @@ def test_real_monta_subscription_registry_entry_enables_mtls_target():
     assert monta.fetch_url.endswith("subscriptionID=982024950290042880")
 
 
-def test_real_enio_override_entry_enables_mtls_target_without_registry_entry():
-    repo_root = Path(__file__).resolve().parent.parent
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        empty_registry = Path(tmp_dir) / "subscriptions.json"
-        empty_registry.write_text("{}\n", encoding="utf-8")
-        providers = load_provider_targets(
-            repo_root / "data" / "mobilithek_afir_provider_configs.json",
-            override_path=repo_root / "data" / "live_provider_overrides.json",
-            subscription_registry_path=empty_registry,
-        )
+def test_load_provider_targets_adds_synthetic_mtls_provider_from_override(app_config):
+    app_config.provider_config_path.write_text(json.dumps({"providers": []}), encoding="utf-8")
+    override_path = app_config.provider_config_path.parent / "live_provider_overrides.json"
+    override_path.write_text(
+        json.dumps(
+            {
+                "enio": {
+                    "display_name": "enio",
+                    "publisher": "ENIO GmbH",
+                    "enabled": True,
+                    "fetch_kind": "mtls_subscription",
+                    "fetch_url": (
+                        "https://mobilithek.info:8443/mobilithek/api/v1.0/subscription/datexv3"
+                        "?subscriptionID=983491435542016000"
+                    ),
+                    "subscription_id": "983491435542016000",
+                    "publication_id": "968541134128902144",
+                    "access_mode": "auth",
+                    "delta_delivery": True,
+                    "delivery_mode": "push_with_poll_fallback",
+                    "push_fallback_after_seconds": 300,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    providers = load_provider_targets(
+        app_config.provider_config_path,
+        override_path=override_path,
+    )
 
     enio = [provider for provider in providers if provider.provider_uid == "enio"][0]
     assert enio.enabled is True

@@ -4,7 +4,11 @@
     "publisher": "ENIO GmbH",
     "enabled": true,
     "fetch_kind": "mtls_subscription",
+    "fetch_url": "https://mobilithek.info:8443/mobilithek/api/v1.0/subscription/datexv3?subscriptionID=983491435542016000",
     "subscription_id": "983491435542016000",
+    "publication_id": "968541134128902144",
+    "access_mode": "auth",
+    "delta_delivery": true,
     "static_subscription_id": "983491437521539072",
     "delivery_mode": "push_with_poll_fallback",
     "push_fallback_after_seconds": 300
