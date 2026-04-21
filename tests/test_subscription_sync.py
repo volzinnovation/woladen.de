@@ -327,6 +327,24 @@ def test_build_live_subscription_registry_applies_push_overrides_for_remaining_p
             access_mode="auth",
         ),
         SubscriptionOffer(
+            provider_uid="gls_mobility",
+            display_name="gls mobility",
+            publisher="GLS Mobility GmbH",
+            publication_id="980563757096464384",
+            offer_title="AFIR-recharging-dyn-gls-mobility",
+            feed_kind="dynamic",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
+            provider_uid="gls_mobility",
+            display_name="gls mobility",
+            publisher="GLS Mobility GmbH",
+            publication_id="980559859451379712",
+            offer_title="AFIR-recharging-stat-gls-mobility",
+            feed_kind="static",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
             provider_uid="monta",
             display_name="monta",
             publisher="Monta ApS",
@@ -369,6 +387,8 @@ def test_build_live_subscription_registry_applies_push_overrides_for_remaining_p
         [
             {"id": "980986017846382592", "dataOfferId": "980862594474274816", "contractStatus": "ACTIVE"},
             {"id": "980985483907280896", "dataOfferId": "907575401287241728", "contractStatus": "ACTIVE"},
+            {"id": "981536505742471168", "dataOfferId": "980563757096464384", "contractStatus": "ACTIVE"},
+            {"id": "981605287991169024", "dataOfferId": "980559859451379712", "contractStatus": "ACTIVE"},
             {"id": "982024950290042880", "dataOfferId": "963870983660167168", "contractStatus": "ACTIVE"},
             {"id": "980986307605835776", "dataOfferId": "961319990963605504", "contractStatus": "ACTIVE"},
             {"id": "980986055062597632", "dataOfferId": "979364650281549824", "contractStatus": "ACTIVE"},
@@ -376,9 +396,14 @@ def test_build_live_subscription_registry_applies_push_overrides_for_remaining_p
         ],
     )
 
-    for provider_uid in ("chargecloud", "enbwmobility", "monta", "smatrics", "vaylens", "wirelane"):
+    for provider_uid in ("chargecloud", "enbwmobility", "gls_mobility", "monta", "smatrics", "vaylens", "wirelane"):
         assert registry[provider_uid]["delivery_mode"] == "push_with_poll_fallback"
         assert registry[provider_uid]["push_fallback_after_seconds"] == 300
+
+    assert registry["gls_mobility"]["subscription_id"] == "981536505742471168"
+    assert registry["gls_mobility"]["static_subscription_id"] == "981605287991169024"
+    assert registry["gls_mobility"]["fetch_kind"] == "mtls_subscription"
+    assert registry["gls_mobility"]["enabled"] is True
 
 
 def test_resolve_credentials_reads_secret_files(tmp_path: Path, monkeypatch):

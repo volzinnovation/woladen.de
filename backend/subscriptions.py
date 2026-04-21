@@ -12,6 +12,7 @@ ACTIVE_SUBSCRIPTION_STATUSES = frozenset({"ACTIVE"})
 ACTIVE_DYN_DATEX_SUBSCRIPTION_PROVIDER_UIDS = (
     "edri",
     "eco_movement",
+    "gls_mobility",
     "elu_mobility",
     "enbwmobility",
     "eround",
@@ -33,6 +34,7 @@ LIVE_PUSH_FALLBACK_PROVIDER_UIDS = frozenset(
         "elu_mobility",
         "enbwmobility",
         "eround",
+        "gls_mobility",
         "ladenetz_de_ladestationsdaten",
         "m8mit",
         "monta",

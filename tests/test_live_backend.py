@@ -198,6 +198,19 @@ def _write_active_subscription_provider_fixture(path: Path) -> None:
                 },
             },
             {
+                "uid": "gls_mobility",
+                "display_name": "gls mobility",
+                "publisher": "GLS Mobility GmbH",
+                "feeds": {
+                    "dynamic": {
+                        "publication_id": "980563757096464384",
+                        "access_mode": "auth",
+                        "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+                        "title": "AFIR-recharging-dyn-gls-mobility",
+                    }
+                },
+            },
+            {
                 "uid": "smatrics",
                 "display_name": "SMATRICS",
                 "publisher": "SMATRICS",
@@ -754,6 +767,7 @@ def test_load_active_dyn_datex_subscription_offers_filters_to_auth_datex_docs_su
     offers = load_active_dyn_datex_subscription_offers(app_config.provider_config_path)
     assert [(offer.provider_uid, offer.publication_id) for offer in offers] == [
         ("elu_mobility", "971513500454850560"),
+        ("gls_mobility", "980563757096464384"),
         ("m8mit", "970388804493828096"),
         ("volkswagencharginggroup", "976223649023320064"),
         ("wirelane", "876587237907525632"),
