@@ -345,6 +345,24 @@ def test_build_live_subscription_registry_applies_push_overrides_for_remaining_p
             access_mode="auth",
         ),
         SubscriptionOffer(
+            provider_uid="enio",
+            display_name="enio",
+            publisher="ENIO GmbH",
+            publication_id="968541134128902144",
+            offer_title="AFIR-recharging-dyn-enio",
+            feed_kind="dynamic",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
+            provider_uid="enio",
+            display_name="enio",
+            publisher="ENIO GmbH",
+            publication_id="963766220171735040",
+            offer_title="AFIR-recharging-stat-enio",
+            feed_kind="static",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
             provider_uid="monta",
             display_name="monta",
             publisher="Monta ApS",
@@ -386,6 +404,8 @@ def test_build_live_subscription_registry_applies_push_overrides_for_remaining_p
         offers,
         [
             {"id": "980986017846382592", "dataOfferId": "980862594474274816", "contractStatus": "ACTIVE"},
+            {"id": "983491435542016000", "dataOfferId": "968541134128902144", "contractStatus": "ACTIVE"},
+            {"id": "983491437521539072", "dataOfferId": "963766220171735040", "contractStatus": "ACTIVE"},
             {"id": "980985483907280896", "dataOfferId": "907575401287241728", "contractStatus": "ACTIVE"},
             {"id": "981536505742471168", "dataOfferId": "980563757096464384", "contractStatus": "ACTIVE"},
             {"id": "981605287991169024", "dataOfferId": "980559859451379712", "contractStatus": "ACTIVE"},
@@ -396,9 +416,14 @@ def test_build_live_subscription_registry_applies_push_overrides_for_remaining_p
         ],
     )
 
-    for provider_uid in ("chargecloud", "enbwmobility", "gls_mobility", "monta", "smatrics", "vaylens", "wirelane"):
+    for provider_uid in ("chargecloud", "enbwmobility", "enio", "gls_mobility", "monta", "smatrics", "vaylens", "wirelane"):
         assert registry[provider_uid]["delivery_mode"] == "push_with_poll_fallback"
         assert registry[provider_uid]["push_fallback_after_seconds"] == 300
+
+    assert registry["enio"]["subscription_id"] == "983491435542016000"
+    assert registry["enio"]["static_subscription_id"] == "983491437521539072"
+    assert registry["enio"]["fetch_kind"] == "mtls_subscription"
+    assert registry["enio"]["enabled"] is True
 
     assert registry["gls_mobility"]["subscription_id"] == "981536505742471168"
     assert registry["gls_mobility"]["static_subscription_id"] == "981605287991169024"
