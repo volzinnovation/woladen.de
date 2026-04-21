@@ -286,6 +286,17 @@ class DailyResponseArchiver:
         for target_date in self._iter_pending_dates(before_date=effective_cutoff + timedelta(days=1)):
             if target_date not in uploaded_dates:
                 continue
+            queue_reference = self._active_queue_reference_for_date(target_date)
+            if queue_reference is not None:
+                cleanup_results.append(
+                    {
+                        "result": "skipped_queue_references",
+                        "target_date": target_date.isoformat(),
+                        "remote_path": self.remote_path_for_date(target_date),
+                        "queue_reference": queue_reference,
+                    }
+                )
+                continue
             source_cleanup = self._delete_source_files_for_date(target_date)
             archive_path = self._archive_path(target_date)
             temp_archive_path = self._temp_archive_path(target_date)
@@ -305,6 +316,49 @@ class DailyResponseArchiver:
                 }
             )
         return cleanup_results
+
+    def _active_queue_reference_for_date(self, target_date: date) -> dict[str, str] | None:
+        for queue_name in ("pending", "processing"):
+            queue_dir = self.config.queue_dir / queue_name
+            if not queue_dir.exists():
+                continue
+            for task_path in queue_dir.iterdir():
+                if not task_path.is_file() or task_path.suffix != ".json":
+                    continue
+                try:
+                    payload = json.loads(task_path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+                    continue
+                if not isinstance(payload, dict):
+                    continue
+                if self._queue_task_archive_date(payload) != target_date:
+                    continue
+                return {
+                    "queue_dir": queue_name,
+                    "task_id": task_path.stem,
+                    "receipt_at": str(payload.get("receipt_at") or ""),
+                    "receipt_log_path": str(payload.get("receipt_log_path") or ""),
+                }
+        return None
+
+    def _queue_task_archive_date(self, payload: Mapping[str, Any]) -> date | None:
+        receipt_log_path_text = str(payload.get("receipt_log_path") or "").strip()
+        if receipt_log_path_text:
+            receipt_log_path = Path(receipt_log_path_text)
+            try:
+                relative_path = receipt_log_path.relative_to(self.config.raw_payload_dir)
+            except ValueError:
+                relative_path = None
+            if relative_path is not None and len(relative_path.parts) >= 2:
+                try:
+                    return date.fromisoformat(relative_path.parts[1])
+                except ValueError:
+                    pass
+
+        receipt_at = _parse_iso_datetime(str(payload.get("receipt_at") or ""))
+        if receipt_at is None:
+            return None
+        return receipt_at.astimezone(self.config.archive_timezone()).date()
 
     def _iter_source_files_for_date(self, target_date: date):
         archive_date = target_date.isoformat()

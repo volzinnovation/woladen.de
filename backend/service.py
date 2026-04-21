@@ -205,6 +205,35 @@ class IngestionService:
             payload.update(extra)
         return payload
 
+    def _duplicate_push_result_payload(
+        self,
+        *,
+        provider_uid: str,
+        receipt_at: str,
+        subscription_id: str = "",
+        publication_id: str = "",
+        duplicate_of_push_run_id: int | None = None,
+        payload_sha256: str = "",
+    ) -> dict[str, Any]:
+        payload = {
+            "provider_uid": provider_uid,
+            "subscription_id": subscription_id,
+            "publication_id": publication_id,
+            "result": "duplicate",
+            "received_at": receipt_at,
+            "observation_count": 0,
+            "mapped_observation_count": 0,
+            "dropped_observation_count": 0,
+            "changed_observation_count": 0,
+            "changed_mapped_observation_count": 0,
+            "changed_dropped_observation_count": 0,
+        }
+        if duplicate_of_push_run_id is not None:
+            payload["duplicate_of_push_run_id"] = duplicate_of_push_run_id
+        if payload_sha256:
+            payload["payload_sha256"] = payload_sha256
+        return payload
+
     def ingest_provider(self, provider_uid: str, *, bootstrap: bool = True) -> dict[str, Any]:
         if bootstrap:
             self.bootstrap()
@@ -591,6 +620,7 @@ class IngestionService:
                 publication_id=publication_id,
             )
             resolved_provider_uid = str(provider["provider_uid"])
+            payload_sha256 = hashlib.sha256(payload_bytes).hexdigest()
             request_log_path = self.response_log_writer.write_push_request(
                 provider_uid=resolved_provider_uid,
                 received_at=received_at,
@@ -603,6 +633,38 @@ class IngestionService:
                 request_query=request_query,
                 request_headers=request_headers,
             )
+            duplicate_run = self.store.find_recent_push_run(
+                resolved_provider_uid,
+                payload_sha256=payload_sha256,
+                received_at=received_at,
+                within_seconds=self.store.push_duplicate_window_seconds(provider),
+            )
+            if duplicate_run is not None:
+                push_run_id = self.store.start_push_run(
+                    resolved_provider_uid,
+                    subscription_id=subscription_id,
+                    publication_id=publication_id,
+                    received_at=received_at,
+                    content_type=content_type,
+                    content_encoding=content_encoding,
+                    request_path=request_path,
+                    request_query=request_query,
+                )
+                self.store.finish_push_run(
+                    push_run_id,
+                    provider_uid=resolved_provider_uid,
+                    result="duplicate",
+                    received_at=received_at,
+                    payload_sha256=payload_sha256,
+                )
+                return self._duplicate_push_result_payload(
+                    provider_uid=resolved_provider_uid,
+                    receipt_at=received_at,
+                    subscription_id=subscription_id,
+                    publication_id=publication_id,
+                    duplicate_of_push_run_id=int(duplicate_run["id"]),
+                    payload_sha256=payload_sha256,
+                )
             push_run_id = self.store.start_push_run(
                 resolved_provider_uid,
                 subscription_id=subscription_id,
@@ -613,7 +675,6 @@ class IngestionService:
                 request_path=request_path,
                 request_query=request_query,
             )
-            payload_sha256 = hashlib.sha256(payload_bytes).hexdigest()
             task = self.receipt_queue.build_task(
                 task_kind="push",
                 provider_uid=resolved_provider_uid,

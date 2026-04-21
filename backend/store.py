@@ -781,6 +781,12 @@ class LiveStore:
             return configured_seconds
         return max(self._base_poll_interval_seconds(provider) * 4, 60)
 
+    def _push_fallback_grace_seconds(self, provider: dict[str, Any]) -> int:
+        return max(1, self._base_poll_interval_seconds(provider))
+
+    def push_duplicate_window_seconds(self, provider: dict[str, Any]) -> int:
+        return max(1, self._base_poll_interval_seconds(provider))
+
     def _provider_due_at(self, provider: dict[str, Any]) -> datetime | None:
         if not bool(provider.get("enabled")):
             return None
@@ -797,7 +803,9 @@ class LiveStore:
         if last_push_received_at is None:
             return next_poll_at or IMMEDIATE_DUE_AT
 
-        push_due_at = last_push_received_at + timedelta(seconds=self._push_fallback_after_seconds(provider))
+        push_due_at = last_push_received_at + timedelta(
+            seconds=self._push_fallback_after_seconds(provider) + self._push_fallback_grace_seconds(provider)
+        )
         if next_poll_at is None:
             return push_due_at
         return max(next_poll_at, push_due_at)
@@ -805,6 +813,37 @@ class LiveStore:
     def get_provider(self, provider_uid: str) -> dict[str, Any] | None:
         with self.connection() as conn:
             row = conn.execute("SELECT * FROM providers WHERE provider_uid = ?", (provider_uid,)).fetchone()
+        return dict(row) if row else None
+
+    def find_recent_push_run(
+        self,
+        provider_uid: str,
+        *,
+        payload_sha256: str,
+        received_at: str = "",
+        within_seconds: int = 0,
+    ) -> dict[str, Any] | None:
+        provider_uid_text = str(provider_uid or "").strip()
+        payload_sha256_text = str(payload_sha256 or "").strip()
+        if not provider_uid_text or not payload_sha256_text:
+            return None
+        window_seconds = max(1, int(within_seconds or 0))
+        reference_dt = _parse_iso_utc(received_at) or datetime.now(timezone.utc)
+        cutoff_text = (reference_dt - timedelta(seconds=window_seconds)).replace(microsecond=0).isoformat()
+        with self.connection() as conn:
+            row = conn.execute(
+                """
+                SELECT *
+                FROM provider_push_runs
+                WHERE provider_uid = ?
+                  AND payload_sha256 = ?
+                  AND started_at >= ?
+                  AND result IN ('started', 'queued', 'ok', 'duplicate')
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (provider_uid_text, payload_sha256_text, cutoff_text),
+            ).fetchone()
         return dict(row) if row else None
 
     def get_provider_by_subscription_id(self, subscription_id: str) -> dict[str, Any] | None:

@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import csv
 import gzip
+import hashlib
 import json
 import os
 import sqlite3
 import tarfile
 import time
 from dataclasses import replace
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -1645,6 +1646,92 @@ def test_round_robin_skips_recent_push_provider_until_fallback(app_config):
     assert provider["provider_uid"] == "qwello"
 
 
+def test_round_robin_requires_push_fallback_grace_before_polling(app_config):
+    _write_subscription_registry(app_config.subscription_registry_path)
+    app_config.subscription_registry_path.write_text(
+        json.dumps(
+            {
+                "ampeco": {
+                    "enabled": True,
+                    "fetch_kind": "mtls_subscription",
+                    "subscription_id": "2000001",
+                    "delivery_mode": "push_with_poll_fallback",
+                    "push_fallback_after_seconds": 300,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    fetcher = MockFetcher({"ampeco": TimeoutError("skip"), "qwello": TimeoutError("skip")})
+    service = _build_service(app_config, fetcher)
+    service.bootstrap()
+
+    with service.store.connection() as conn:
+        conn.execute("UPDATE providers SET enabled = 0 WHERE provider_uid = ?", ("qwello",))
+        conn.execute(
+            """
+            UPDATE providers
+            SET last_push_received_at = ?, last_push_result = ?, updated_at = ?
+            WHERE provider_uid = ?
+            """,
+            (
+                (datetime.now(timezone.utc).replace(microsecond=0) - timedelta(seconds=300)).isoformat(),
+                "ok",
+                utc_now_iso(),
+                "ampeco",
+            ),
+        )
+
+    assert service.store.get_next_provider_for_round_robin() is None
+    due_in_seconds = service.store.seconds_until_next_provider_due()
+    assert due_in_seconds is not None
+    assert 0 < due_in_seconds <= app_config.poll_interval_delta_seconds
+
+
+def test_round_robin_polls_after_push_fallback_grace_expires(app_config):
+    _write_subscription_registry(app_config.subscription_registry_path)
+    app_config.subscription_registry_path.write_text(
+        json.dumps(
+            {
+                "ampeco": {
+                    "enabled": True,
+                    "fetch_kind": "mtls_subscription",
+                    "subscription_id": "2000001",
+                    "delivery_mode": "push_with_poll_fallback",
+                    "push_fallback_after_seconds": 300,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    fetcher = MockFetcher({"ampeco": TimeoutError("skip"), "qwello": TimeoutError("skip")})
+    service = _build_service(app_config, fetcher)
+    service.bootstrap()
+
+    with service.store.connection() as conn:
+        conn.execute("UPDATE providers SET enabled = 0 WHERE provider_uid = ?", ("qwello",))
+        conn.execute(
+            """
+            UPDATE providers
+            SET last_push_received_at = ?, last_push_result = ?, updated_at = ?
+            WHERE provider_uid = ?
+            """,
+            (
+                (
+                    datetime.now(timezone.utc).replace(microsecond=0)
+                    - timedelta(seconds=300 + app_config.poll_interval_delta_seconds + 1)
+                ).isoformat(),
+                "ok",
+                utc_now_iso(),
+                "ampeco",
+            ),
+        )
+
+    provider = service.store.get_next_provider_for_round_robin()
+    assert provider is not None
+    assert provider["provider_uid"] == "ampeco"
+
+
 def test_curl_fetcher_uses_machine_certificate_and_gzip_header(app_config, monkeypatch):
     commands = []
 
@@ -2104,6 +2191,46 @@ def test_api_push_endpoint_accepts_get_post_and_head(app_config):
     evse = store.get_evse_detail("ampeco", "DEQWEE1")
     assert evse is not None
     assert evse["current"]["price_display"] == "0,81 €/kWh"
+
+
+def test_receive_push_skips_recent_duplicate_payload_queueing(app_config):
+    payload = json.dumps(_dynamic_payload(status="AVAILABLE")).encode("utf-8")
+    payload_sha256 = hashlib.sha256(payload).hexdigest()
+    service = _build_service(app_config, MockFetcher({"qwello": TimeoutError("skip"), "ampeco": TimeoutError("skip")}))
+
+    first_result = service.receive_push(
+        provider_uid="qwello",
+        payload_bytes=payload,
+        content_type="application/json",
+        request_path="/v1/push/qwello",
+    )
+    duplicate_result = service.receive_push(
+        provider_uid="qwello",
+        payload_bytes=payload,
+        content_type="application/json",
+        request_path="/v1/push/qwello",
+    )
+
+    assert first_result["result"] == "queued"
+    assert duplicate_result["result"] == "duplicate"
+    assert duplicate_result["provider_uid"] == "qwello"
+    assert duplicate_result["payload_sha256"] == payload_sha256
+    assert duplicate_result["duplicate_of_push_run_id"] == 1
+    assert len(list((app_config.queue_dir / "pending").glob("*.json"))) == 1
+
+    with service.store.connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, result, payload_sha256
+            FROM provider_push_runs
+            ORDER BY id
+            """
+        ).fetchall()
+
+    assert [dict(row) for row in rows] == [
+        {"id": 1, "result": "queued", "payload_sha256": payload_sha256},
+        {"id": 2, "result": "duplicate", "payload_sha256": payload_sha256},
+    ]
 
 
 def test_store_retries_retryable_sqlite_lock_errors(app_config, monkeypatch):
@@ -2659,6 +2786,74 @@ def test_daily_response_archiver_cleanup_removes_only_remote_confirmed_local_art
     assert not uploaded_archive.exists()
     assert skipped_archive.exists()
     assert future_archive.exists()
+
+
+def test_daily_response_archiver_cleanup_skips_dates_with_active_queue_reference(app_config):
+    uploaded_date = date(2026, 4, 13)
+    uploaded_dir = app_config.raw_payload_dir / "qwello" / uploaded_date.isoformat()
+    uploaded_dir.mkdir(parents=True, exist_ok=True)
+    source_file = uploaded_dir / "20260413T000000000000Z-200-aaaa.json"
+    source_file.write_text("{}", encoding="utf-8")
+
+    token_file = app_config.archive_dir / "huggingface.token"
+    token_file.parent.mkdir(parents=True, exist_ok=True)
+    token_file.write_text("secret-token\n", encoding="utf-8")
+
+    class StubHfApi:
+        def list_repo_files(self, **kwargs):
+            return [
+                "provider-response-archives/2026/04/live-provider-responses-2026-04-13.tgz",
+            ]
+
+    configured = replace(
+        app_config,
+        hf_archive_repo_id="raphaelvolz/woladen-live-archives",
+        hf_archive_token_file=token_file,
+        hf_archive_path_prefix="provider-response-archives",
+    )
+    uploaded_archive = configured.archive_dir / "live-provider-responses-2026-04-13.tgz"
+    uploaded_archive.parent.mkdir(parents=True, exist_ok=True)
+    uploaded_archive.write_bytes(b"uploaded")
+    uploaded_temp_archive = configured.archive_dir / "live-provider-responses-2026-04-13.tgz.tmp"
+    uploaded_temp_archive.write_bytes(b"temp")
+
+    pending_task = configured.queue_dir / "pending" / "20260413T010203000000Z-edri.json"
+    pending_task.parent.mkdir(parents=True, exist_ok=True)
+    pending_task.write_text(
+        json.dumps(
+            {
+                "task_id": "20260413T010203000000Z-edri",
+                "task_kind": "poll",
+                "provider_uid": "qwello",
+                "run_id": 1,
+                "receipt_log_path": str(source_file),
+                "receipt_at": "2026-04-13T00:00:00+00:00",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    cleanup_results = DailyResponseArchiver(configured, hf_api=StubHfApi()).cleanup_uploaded_artifacts(
+        cutoff_date=uploaded_date
+    )
+
+    assert cleanup_results == [
+        {
+            "result": "skipped_queue_references",
+            "target_date": "2026-04-13",
+            "remote_path": "provider-response-archives/2026/04/live-provider-responses-2026-04-13.tgz",
+            "queue_reference": {
+                "queue_dir": "pending",
+                "task_id": "20260413T010203000000Z-edri",
+                "receipt_at": "2026-04-13T00:00:00+00:00",
+                "receipt_log_path": str(source_file),
+            },
+        }
+    ]
+    assert uploaded_dir.exists()
+    assert source_file.exists()
+    assert uploaded_archive.exists()
+    assert uploaded_temp_archive.exists()
 
 
 def test_daily_response_archive_downloader_fetches_expected_remote_tgz(app_config):
