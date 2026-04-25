@@ -1,6 +1,6 @@
 
 
-# woladen.de
+# Projekt67
 
 Fast chargers in Germany with nearby amenities from OpenStreetMap, now with AFIR-based live data, where available.
 
