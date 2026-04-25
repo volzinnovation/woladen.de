@@ -1,4 +1,4 @@
-![Mobile test](test-results/mobile_test.webp)
+
 
 # woladen.de
 
