@@ -105,3 +105,11 @@ def test_app_config_reads_sqlite_retry_and_queue_retention_env(monkeypatch):
     assert config.queue_cleanup_interval_seconds == 123.0
     assert config.queue_done_retention_seconds == 456.0
     assert config.queue_failed_retention_seconds == 789.0
+
+
+def test_app_config_reads_api_push_enabled_env(monkeypatch):
+    monkeypatch.setenv("WOLADEN_LIVE_API_PUSH_ENABLED", "0")
+
+    config = AppConfig()
+
+    assert config.api_push_enabled is False

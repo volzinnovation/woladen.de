@@ -208,11 +208,15 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.head("/v1/push")
     @app.head("/v1/push/{provider_uid}")
     def push_healthcheck(provider_uid: str = "") -> Response:
+        if not effective_config.api_push_enabled:
+            return Response(status_code=404)
         return Response(status_code=200)
 
     @app.get("/v1/push")
     @app.get("/v1/push/{provider_uid}")
     def push_probe(provider_uid: str = "") -> dict[str, bool | str | None]:
+        if not effective_config.api_push_enabled:
+            raise HTTPException(status_code=404, detail="push_endpoint_disabled")
         return {
             "ok": True,
             "provider_uid": provider_uid or None,
@@ -221,6 +225,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.post("/v1/push")
     @app.post("/v1/push/{provider_uid}")
     async def push_ingest(request: Request, provider_uid: str = "") -> Response:
+        if not effective_config.api_push_enabled:
+            raise HTTPException(status_code=404, detail="push_endpoint_disabled")
         payload_bytes = await request.body()
         resolved_provider_uid = provider_uid or _request_lookup_value(request, PROVIDER_LOOKUP_KEYS)
         subscription_id = _request_lookup_value(request, SUBSCRIPTION_LOOKUP_KEYS)

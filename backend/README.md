@@ -5,6 +5,8 @@ It ingests DATEX II v3 payloads from Mobilithek subscriptions, persists normaliz
 state in SQLite, exposes a read API via FastAPI, and stores raw payload logs for audit and archiving.
 
 For deployment-specific instructions, see [deploy/ionos/README.md](/Users/raphaelvolz/Github/woladen.de/deploy/ionos/README.md).
+For local VPS-like disk and inode testing, see
+[deploy/local-live-constrained/README.md](/Users/raphaelvolz/Github/woladen.de/deploy/local-live-constrained/README.md).
 For the higher-level product note, see [docs/live-api-mvp.md](/Users/raphaelvolz/Github/woladen.de/docs/live-api-mvp.md).
 For the version history and rollout evidence, see [docs/live-backend-evolution.md](/Users/raphaelvolz/Github/woladen.de/docs/live-backend-evolution.md).
 
@@ -170,6 +172,7 @@ The backend uses `AppConfig` in [config.py](/Users/raphaelvolz/Github/woladen.de
 - `WOLADEN_MACHINE_CERT_PASSWORD_FILE`: password file for the PKCS#12 certificate
 - `WOLADEN_LIVE_API_HOST`: FastAPI bind host. Default: `127.0.0.1`
 - `WOLADEN_LIVE_API_PORT`: FastAPI bind port. Default: `8001`
+- `WOLADEN_LIVE_API_PUSH_ENABLED`: enable Mobilithek push routes. Default: `1`
 - `WOLADEN_LIVE_API_CORS_ALLOWED_ORIGINS`: comma-separated explicit CORS allowlist
 - `WOLADEN_LIVE_API_CORS_ALLOW_ORIGIN_REGEX`: regex fallback for local development (`localhost`, `127.0.0.1`, `0.0.0.0`, `[::1]` by default)
 - `WOLADEN_LIVE_POLL_TIMEOUT_SECONDS`: fetch timeout

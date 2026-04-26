@@ -1,0 +1,71 @@
+name: woladen-live-constrained
+
+x-live-service: &live-service
+  build:
+    context: ../..
+    dockerfile: deploy/local-live-constrained/Dockerfile
+  cpus: "${WOLADEN_CONSTRAINED_CPUS:-2}"
+  mem_limit: "${WOLADEN_CONSTRAINED_MEMORY:-2g}"
+  memswap_limit: "${WOLADEN_CONSTRAINED_MEMORY_SWAP:-6g}"
+  env_file:
+    - ./live.env
+  environment:
+    WOLADEN_MACHINE_CERT_P12_B64: ${WOLADEN_MACHINE_CERT_P12_B64:-}
+    WOLADEN_MACHINE_CERT_PASSWORD: ${WOLADEN_MACHINE_CERT_PASSWORD:-}
+    WOLADEN_LIVE_SUBSCRIPTION_REGISTRY_JSON: ${WOLADEN_LIVE_SUBSCRIPTION_REGISTRY_JSON:-}
+  read_only: true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777
+    - /run/secrets/woladen:rw,noexec,nosuid,nodev,size=1m,uid=10001,gid=10001,mode=0700
+  volumes:
+    - live_state:/var/lib/woladen
+
+services:
+  live-api:
+    <<: *live-service
+    command: ["python", "scripts/live_api.py"]
+    ports:
+      - "127.0.0.1:${WOLADEN_CONSTRAINED_API_PORT:-8001}:8001"
+
+  live-ingester:
+    <<: *live-service
+    command:
+      [
+        "python",
+        "scripts/live_ingester.py",
+        "--loop",
+        "--sleep-seconds",
+        "${WOLADEN_CONSTRAINED_INGESTER_SLEEP_SECONDS:-5}",
+      ]
+    profiles: ["workers"]
+
+  live-queue-worker:
+    <<: *live-service
+    command:
+      [
+        "python",
+        "scripts/live_queue_worker.py",
+        "--sleep-seconds",
+        "${WOLADEN_CONSTRAINED_QUEUE_SLEEP_SECONDS:-1}",
+      ]
+    profiles: ["workers"]
+
+  live-tools:
+    <<: *live-service
+    command:
+      [
+        "python",
+        "scripts/live_inode_stress.py",
+        "--records",
+        "${WOLADEN_CONSTRAINED_STRESS_RECORDS:-1000}",
+        "--legacy-file-probe",
+      ]
+    profiles: ["tools"]
+
+volumes:
+  live_state:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: "size=${WOLADEN_CONSTRAINED_STATE_SIZE:-80g},nr_inodes=${WOLADEN_CONSTRAINED_STATE_INODES:-5242880},uid=10001,gid=10001,mode=0750"

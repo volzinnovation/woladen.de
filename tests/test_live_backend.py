@@ -2287,6 +2287,27 @@ def test_api_push_endpoint_accepts_get_post_and_head(app_config):
     assert evse["current"]["price_display"] == "0,81 €/kWh"
 
 
+def test_api_push_endpoint_can_be_disabled(app_config):
+    _write_provider_fixture(app_config.provider_config_path)
+    _write_matches_fixture(app_config.site_match_path)
+    _write_chargers_fixture(app_config.chargers_csv_path)
+    client = TestClient(create_app(replace(app_config, api_push_enabled=False)))
+
+    assert client.head("/v1/push/ampeco").status_code == 404
+
+    get_response = client.get("/v1/push/ampeco")
+    assert get_response.status_code == 404
+    assert get_response.json()["detail"] == "push_endpoint_disabled"
+
+    post_response = client.post(
+        "/v1/push/ampeco",
+        content=json.dumps(_dynamic_payload()).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+    )
+    assert post_response.status_code == 404
+    assert post_response.json()["detail"] == "push_endpoint_disabled"
+
+
 def test_receive_push_skips_recent_duplicate_payload_queueing(app_config):
     payload = json.dumps(_dynamic_payload(status="AVAILABLE")).encode("utf-8")
     payload_sha256 = hashlib.sha256(payload).hexdigest()
