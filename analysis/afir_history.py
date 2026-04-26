@@ -529,8 +529,9 @@ def _window_end_at(archive_dates: Iterable[str], config: AppConfig) -> str:
 
 
 def _iter_archive_members(archive_path: Path) -> Iterable[tuple[str, dict[str, Any]]]:
-    with tarfile.open(archive_path, mode="r:gz") as archive_handle:
-        for member in sorted(archive_handle.getmembers(), key=lambda item: item.name):
+    # Gzip streams cannot seek cheaply; read members in physical archive order.
+    with tarfile.open(archive_path, mode="r|gz") as archive_handle:
+        for member in archive_handle:
             if not member.isfile() or member.name == "manifest.json" or not member.name.endswith(".json"):
                 continue
             extracted = archive_handle.extractfile(member)

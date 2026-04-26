@@ -7,7 +7,7 @@ import json
 import tarfile
 from pathlib import Path
 
-from analysis.afir_history import _competitive_analysis_status, run_analysis
+from analysis.afir_history import _competitive_analysis_status, _iter_archive_members, run_analysis
 from backend.config import AppConfig
 
 
@@ -184,6 +184,29 @@ def _write_archive(path: Path) -> None:
 def _read_csv(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle))
+
+
+def test_iter_archive_members_streams_gzip_archive_without_member_index(tmp_path, monkeypatch):
+    archive_path = tmp_path / "live-provider-responses-2026-04-15.tgz"
+    _write_archive(archive_path)
+
+    def fail_getmembers(self):
+        raise AssertionError("gzip archive reader must not build a seek-heavy member index")
+
+    monkeypatch.setattr(tarfile.TarFile, "getmembers", fail_getmembers)
+
+    members = list(_iter_archive_members(archive_path))
+
+    assert [name for name, _record in members] == [
+        "qwello/2026-04-15/20260415T080000000000Z-200-a.json",
+        "qwello/2026-04-15/20260415T091500000000Z-200-b.json",
+        "qwello/2026-04-15/20260415T103000000000Z-200-c.json",
+    ]
+    assert [record["fetched_at"] for _name, record in members] == [
+        "2026-04-15T08:00:00+00:00",
+        "2026-04-15T09:15:00+00:00",
+        "2026-04-15T10:30:00+00:00",
+    ]
 
 
 def test_run_analysis_builds_history_csvs_from_archives(tmp_path):
