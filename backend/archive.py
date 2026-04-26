@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import fcntl
 import gzip
 import hashlib
 import io
 import json
+import os
 import re
 import shutil
 import tarfile
@@ -14,8 +16,11 @@ from typing import Any, Iterable, Mapping
 
 from .config import AppConfig
 from .models import FetchResponse
+from .receipt_queue import ReceiptQueue
 
 ARCHIVE_NAME_RE = re.compile(r"live-provider-responses-(\d{4}-\d{2}-\d{2})\.tgz$")
+JOURNAL_REFERENCE_RE = re.compile(r"^journal:(?P<path>.+)#(?P<offset>\d+):(?P<length>\d+)$")
+JOURNAL_FILENAME = "records.jsonl"
 
 
 def _utc_now() -> datetime:
@@ -63,7 +68,7 @@ class ResponseLogWriter:
         self.config = config
         self.root_dir = config.raw_payload_dir
 
-    def write_http_response(self, *, provider_uid: str, fetched_at: str, response: FetchResponse) -> Path:
+    def write_http_response(self, *, provider_uid: str, fetched_at: str, response: FetchResponse) -> str:
         payload_sha256 = hashlib.sha256(response.body).hexdigest()
         body_text, body_is_gzip = _decode_body_text(response.body)
         record = {
@@ -81,9 +86,7 @@ class ResponseLogWriter:
             "body_text": body_text,
         }
         filename = f"{self._filename_stamp()}-{int(response.http_status):03d}-{payload_sha256[:12]}.json"
-        target_path = self._target_path(provider_uid, record["archive_date"], filename)
-        self._write_json(target_path, record)
-        return target_path
+        return self._write_record(provider_uid, record["archive_date"], filename, record)
 
     def write_fetch_failure(
         self,
@@ -92,7 +95,7 @@ class ResponseLogWriter:
         fetched_at: str,
         failure_kind: str,
         error_text: str,
-    ) -> Path:
+    ) -> str:
         record = {
             "kind": "fetch_failure",
             "provider_uid": provider_uid,
@@ -103,9 +106,7 @@ class ResponseLogWriter:
             "error_text": error_text,
         }
         filename = f"{self._filename_stamp()}-{failure_kind}.json"
-        target_path = self._target_path(provider_uid, record["archive_date"], filename)
-        self._write_json(target_path, record)
-        return target_path
+        return self._write_record(provider_uid, record["archive_date"], filename, record)
 
     def write_push_request(
         self,
@@ -120,7 +121,7 @@ class ResponseLogWriter:
         request_path: str = "",
         request_query: str = "",
         request_headers: Mapping[str, Any] | None = None,
-    ) -> Path:
+    ) -> str:
         payload_sha256 = hashlib.sha256(payload_bytes).hexdigest()
         body_text, body_is_gzip = _decode_body_text(payload_bytes)
         record = {
@@ -142,9 +143,10 @@ class ResponseLogWriter:
             "body_text": body_text,
         }
         filename = f"{self._filename_stamp()}-push-{payload_sha256[:12]}.json"
-        target_path = self._target_path(provider_uid, record["archive_date"], filename)
-        self._write_json(target_path, record)
-        return target_path
+        return self._write_record(provider_uid, record["archive_date"], filename, record)
+
+    def read_record(self, reference: str) -> dict[str, Any]:
+        return read_response_log_record(reference)
 
     def _archive_date_text(self, fetched_at: str) -> str:
         fetched_dt = _parse_iso_datetime(fetched_at) or _utc_now()
@@ -157,6 +159,28 @@ class ResponseLogWriter:
         target_dir = self.root_dir / _safe_provider_uid(provider_uid) / archive_date
         target_dir.mkdir(parents=True, exist_ok=True)
         return target_dir / filename
+
+    def _journal_path(self, provider_uid: str, archive_date: str) -> Path:
+        target_dir = self.root_dir / _safe_provider_uid(provider_uid) / archive_date
+        target_dir.mkdir(parents=True, exist_ok=True)
+        return target_dir / JOURNAL_FILENAME
+
+    def _write_record(self, provider_uid: str, archive_date: str, filename: str, payload: dict[str, Any]) -> str:
+        record = dict(payload)
+        record["archive_filename"] = filename
+        journal_path = self._journal_path(provider_uid, archive_date)
+        record_bytes = (json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8")
+        with journal_path.open("a+b") as handle:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            try:
+                handle.seek(0, os.SEEK_END)
+                offset = handle.tell()
+                handle.write(record_bytes)
+                handle.flush()
+                os.fsync(handle.fileno())
+            finally:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        return f"journal:{journal_path}#{offset}:{len(record_bytes)}"
 
     def _write_json(self, target_path: Path, payload: dict[str, Any]) -> None:
         temp_path = target_path.with_suffix(f"{target_path.suffix}.tmp")
@@ -177,6 +201,38 @@ class ArchiveBuildResult:
     archive_path: Path
     file_count: int
     provider_count: int
+
+
+@dataclass(frozen=True)
+class ArchiveSourceRecord:
+    arcname: str
+    provider_uid: str
+    payload_bytes: bytes
+
+
+def _parse_journal_reference(reference: str) -> tuple[Path, int, int] | None:
+    match = JOURNAL_REFERENCE_RE.match(str(reference or "").strip())
+    if not match:
+        return None
+    return (
+        Path(match.group("path")),
+        int(match.group("offset")),
+        int(match.group("length")),
+    )
+
+
+def read_response_log_record(reference: str) -> dict[str, Any]:
+    journal_reference = _parse_journal_reference(reference)
+    if journal_reference is None:
+        payload = json.loads(Path(reference).read_text(encoding="utf-8"))
+    else:
+        journal_path, offset, length = journal_reference
+        with journal_path.open("rb") as handle:
+            handle.seek(offset)
+            payload = json.loads(handle.read(length).decode("utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"invalid_receipt_log:{reference}")
+    return payload
 
 
 class DailyResponseArchiver:
@@ -318,28 +374,7 @@ class DailyResponseArchiver:
         return cleanup_results
 
     def _active_queue_reference_for_date(self, target_date: date) -> dict[str, str] | None:
-        for queue_name in ("pending", "processing"):
-            queue_dir = self.config.queue_dir / queue_name
-            if not queue_dir.exists():
-                continue
-            for task_path in queue_dir.iterdir():
-                if not task_path.is_file() or task_path.suffix != ".json":
-                    continue
-                try:
-                    payload = json.loads(task_path.read_text(encoding="utf-8"))
-                except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-                    continue
-                if not isinstance(payload, dict):
-                    continue
-                if self._queue_task_archive_date(payload) != target_date:
-                    continue
-                return {
-                    "queue_dir": queue_name,
-                    "task_id": task_path.stem,
-                    "receipt_at": str(payload.get("receipt_at") or ""),
-                    "receipt_log_path": str(payload.get("receipt_log_path") or ""),
-                }
-        return None
+        return ReceiptQueue(self.config).active_reference_for_archive_date(target_date.isoformat())
 
     def _queue_task_archive_date(self, payload: Mapping[str, Any]) -> date | None:
         receipt_log_path_text = str(payload.get("receipt_log_path") or "").strip()
@@ -375,8 +410,47 @@ class DailyResponseArchiver:
                 if path.is_file():
                     yield path
 
+    def _iter_source_records_for_date(self, target_date: date):
+        archive_date = target_date.isoformat()
+        root_dir = self.config.raw_payload_dir
+        if not root_dir.exists():
+            return
+        for provider_dir in sorted(root_dir.iterdir()):
+            if not provider_dir.is_dir():
+                continue
+            archive_dir = provider_dir / archive_date
+            if not archive_dir.is_dir():
+                continue
+            for path in sorted(archive_dir.glob("*.json")):
+                if path.is_file():
+                    yield ArchiveSourceRecord(
+                        arcname=str(path.relative_to(root_dir)),
+                        provider_uid=provider_dir.name,
+                        payload_bytes=path.read_bytes(),
+                    )
+            journal_path = archive_dir / JOURNAL_FILENAME
+            if not journal_path.is_file():
+                continue
+            with journal_path.open("rb") as journal_handle:
+                for index, line in enumerate(journal_handle):
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    try:
+                        payload = json.loads(stripped.decode("utf-8"))
+                    except (json.JSONDecodeError, UnicodeDecodeError):
+                        continue
+                    if not isinstance(payload, dict):
+                        continue
+                    archive_filename = str(payload.get("archive_filename") or f"journal-record-{index:012d}.json")
+                    yield ArchiveSourceRecord(
+                        arcname=str(Path(provider_dir.name) / archive_date / archive_filename),
+                        provider_uid=provider_dir.name,
+                        payload_bytes=line if line.endswith(b"\n") else line + b"\n",
+                    )
+
     def _count_source_files_for_date(self, target_date: date) -> int:
-        return sum(1 for _ in self._iter_source_files_for_date(target_date))
+        return sum(1 for _ in self._iter_source_records_for_date(target_date))
 
     def _iter_source_dates(self) -> Iterable[date]:
         root_dir = self.config.raw_payload_dir
@@ -434,10 +508,12 @@ class DailyResponseArchiver:
         file_count = 0
         provider_uids: set[str] = set()
         with tarfile.open(temp_path, mode="w:gz") as archive_handle:
-            for source_file in self._iter_source_files_for_date(target_date):
-                archive_handle.add(source_file, arcname=str(source_file.relative_to(self.config.raw_payload_dir)))
+            for source_record in self._iter_source_records_for_date(target_date):
+                source_info = tarfile.TarInfo(name=source_record.arcname)
+                source_info.size = len(source_record.payload_bytes)
+                archive_handle.addfile(source_info, io.BytesIO(source_record.payload_bytes))
                 file_count += 1
-                provider_uids.add(source_file.parent.parent.name)
+                provider_uids.add(source_record.provider_uid)
             if file_count == 0:
                 temp_path.unlink(missing_ok=True)
                 return ArchiveBuildResult(archive_path=archive_path, file_count=0, provider_count=0)
