@@ -8,9 +8,10 @@
     "2026-04-21",
     "2026-04-22",
     "2026-04-23",
-    "2026-04-24"
+    "2026-04-24",
+    "2026-04-25"
   ],
-  "generated_at": "2026-04-24T23:38:28+00:00",
+  "generated_at": "2026-04-26T13:26:26+00:00",
   "summary_series": [
     {
       "afir_stations_observed": 0,
@@ -209,6 +210,28 @@
       "stations_all_evses_out_of_order_end_of_day": 1503,
       "stations_with_disruptions": 10719,
       "status_changes_total": 865002
+    },
+    {
+      "afir_stations_observed": 30518,
+      "archive_messages_total": 739189,
+      "bundle_stations_observed": 8729,
+      "bundle_stations_observed_unique": 8729,
+      "busy_evse_count": 43752,
+      "busy_station_count": 18678,
+      "busy_transition_count": 574354,
+      "charger_changes_total": 830518,
+      "current_out_of_order_evses": 4854,
+      "current_out_of_order_stations": 2532,
+      "disruptions_at_end_of_day": 2532,
+      "fully_out_of_service_stations": 685,
+      "high_utilization_stations": 18678,
+      "observations_total": 6065350,
+      "out_of_order_duration_seconds_total": 1529431254,
+      "out_of_order_evses_end_of_day": 4854,
+      "snapshot_date": "2026-04-25",
+      "stations_all_evses_out_of_order_end_of_day": 685,
+      "stations_with_disruptions": 7970,
+      "status_changes_total": 830518
     }
   ]
 }
