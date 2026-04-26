@@ -431,6 +431,95 @@ def test_build_live_subscription_registry_applies_push_overrides_for_remaining_p
     assert registry["gls_mobility"]["enabled"] is True
 
 
+def test_build_live_subscription_registry_enables_new_active_afir_providers():
+    offers = [
+        SubscriptionOffer(
+            provider_uid="grid",
+            display_name="grid",
+            publisher="Grid & Co. GmbH",
+            publication_id="984103903968534528",
+            offer_title="AFIR-recharging-dyn-Grid&Co",
+            feed_kind="dynamic",
+            access_mode="noauth",
+        ),
+        SubscriptionOffer(
+            provider_uid="grid",
+            display_name="grid",
+            publisher="Grid & Co. GmbH",
+            publication_id="984104561811357696",
+            offer_title="AFIR-recharging-stat-Grid&Co",
+            feed_kind="static",
+            access_mode="noauth",
+        ),
+        SubscriptionOffer(
+            provider_uid="ladebusiness_ladestationsdaten",
+            display_name="ladebusiness ladestationsdaten",
+            publisher="Smartlab Innovationsgesellschaft mbH",
+            publication_id="903321397006716928",
+            offer_title="ladebusiness Ladestationsdaten - dynamisch",
+            feed_kind="dynamic",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
+            provider_uid="ladebusiness_ladestationsdaten",
+            display_name="ladebusiness ladestationsdaten",
+            publisher="Smartlab Innovationsgesellschaft mbH",
+            publication_id="903241622921695232",
+            offer_title="ladebusiness Ladestationsdaten - statisch",
+            feed_kind="static",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
+            provider_uid="stadtwerke_erft",
+            display_name="stadtwerke erft",
+            publisher="Stadtwerke Erft GmbH",
+            publication_id="982973289122725888",
+            offer_title="AFIR-recharging-dyn-Stadtwerke Erft GmbH",
+            feed_kind="dynamic",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
+            provider_uid="stadtwerke_erft",
+            display_name="stadtwerke erft",
+            publisher="Stadtwerke Erft GmbH",
+            publication_id="982969565784539136",
+            offer_title="AFIR-recharging-stat-Stadtwerke Erft GmbH",
+            feed_kind="static",
+            access_mode="auth",
+        ),
+    ]
+
+    registry = build_live_subscription_registry(
+        offers,
+        [
+            {"id": "984414112490385408", "dataOfferId": "984103903968534528", "contractStatus": "ACTIVE"},
+            {"id": "984414030168719360", "dataOfferId": "984104561811357696", "contractStatus": "ACTIVE"},
+            {"id": "985185069718962176", "dataOfferId": "903321397006716928", "contractStatus": "ACTIVE"},
+            {"id": "985185057874120704", "dataOfferId": "903241622921695232", "contractStatus": "ACTIVE"},
+            {"id": "983032226584989696", "dataOfferId": "982973289122725888", "contractStatus": "ACTIVE"},
+            {"id": "983032272248377344", "dataOfferId": "982969565784539136", "contractStatus": "ACTIVE"},
+        ],
+    )
+
+    assert registry["grid"]["subscription_id"] == "984414112490385408"
+    assert registry["grid"]["static_subscription_id"] == "984414030168719360"
+    assert "fetch_kind" not in registry["grid"]
+    assert "enabled" not in registry["grid"]
+    assert registry["grid"]["delivery_mode"] == "push_with_poll_fallback"
+
+    assert registry["ladebusiness_ladestationsdaten"]["subscription_id"] == "985185069718962176"
+    assert registry["ladebusiness_ladestationsdaten"]["static_subscription_id"] == "985185057874120704"
+    assert registry["ladebusiness_ladestationsdaten"]["fetch_kind"] == "mtls_subscription"
+    assert registry["ladebusiness_ladestationsdaten"]["enabled"] is True
+    assert registry["ladebusiness_ladestationsdaten"]["delivery_mode"] == "push_with_poll_fallback"
+
+    assert registry["stadtwerke_erft"]["subscription_id"] == "983032226584989696"
+    assert registry["stadtwerke_erft"]["static_subscription_id"] == "983032272248377344"
+    assert registry["stadtwerke_erft"]["fetch_kind"] == "mtls_subscription"
+    assert registry["stadtwerke_erft"]["enabled"] is True
+    assert registry["stadtwerke_erft"]["delivery_mode"] == "push_with_poll_fallback"
+
+
 def test_resolve_credentials_reads_secret_files(tmp_path: Path, monkeypatch):
     user_path = tmp_path / "mobilithek_user.txt"
     pwd_path = tmp_path / "mobilithek_pwd.txt"

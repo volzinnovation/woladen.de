@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-21T18:39:16+00:00",
+  "generated_at": "2026-04-26T10:51:43+00:00",
   "source_chargers_csv": "/Users/raphaelvolz/Github/woladen.de/data/chargers_full.csv",
   "source_bundle_chargers_csv": "/Users/raphaelvolz/Github/woladen.de/data/chargers_fast.csv",
   "machine_certificate_probe": {
@@ -550,6 +550,127 @@
       }
     },
     {
+      "provider_uid": "grid",
+      "display_name": "grid",
+      "publisher": "Grid & Co. GmbH",
+      "static": {
+        "fetch_status": "ok",
+        "access_mode": "noauth",
+        "locations_scanned": 320,
+        "matched_locations": 176,
+        "matched_stations": 176,
+        "matched_charging_points": 516,
+        "station_coverage_ratio": 0.002456,
+        "charging_point_coverage_ratio": 0.002638,
+        "bundle_matched_stations": 79,
+        "bundle_matched_charging_points": 273,
+        "bundle_station_coverage_ratio": 0.005279,
+        "bundle_charging_point_coverage_ratio": 0.005357,
+        "site_operator_samples": [
+          "becharged GmbH",
+          "EAM Natur Energie GmbH",
+          "Stadt Schwalmstadt",
+          "Stadt Kirchhain",
+          "Regensburger Energie- und Wasserversorgung AG & Co KG",
+          "Landkreis Schwalm Eder",
+          "Stadt Grebenstein",
+          "Gemeinde Fuldabrück",
+          "Neustadt (Hessen)",
+          "Main-Kinzig-Kliniken Gelnhausen"
+        ]
+      },
+      "dynamic": {
+        "fetch_status": "ok",
+        "access_mode": "noauth",
+        "delta_delivery": false,
+        "site_status_count": 320,
+        "station_status_count": 320,
+        "evse_status_count": 553,
+        "available_evses": 509,
+        "occupied_evses": 15,
+        "out_of_order_evses": 12,
+        "unknown_evses": 17,
+        "latest_last_updated": "2026-04-26T10:50:05.901Z"
+      }
+    },
+    {
+      "provider_uid": "k_u_l_rudnick_bau_und_bautr_ger",
+      "display_name": "k u l rudnick bau und bautr ger",
+      "publisher": "K.u.L. Rudnick Bau und Bauträger GmbH",
+      "static": {
+        "fetch_status": "mtls_subscription: Expecting value: line 1 column 1 (char 0)",
+        "access_mode": "mtls_subscription",
+        "locations_scanned": 0,
+        "matched_locations": 0,
+        "matched_stations": 0,
+        "matched_charging_points": 0,
+        "station_coverage_ratio": 0.0,
+        "charging_point_coverage_ratio": 0.0,
+        "bundle_matched_stations": 0,
+        "bundle_matched_charging_points": 0,
+        "bundle_station_coverage_ratio": 0.0,
+        "bundle_charging_point_coverage_ratio": 0.0,
+        "site_operator_samples": []
+      },
+      "dynamic": {
+        "fetch_status": "no_dynamic_feed",
+        "access_mode": "",
+        "delta_delivery": false,
+        "site_status_count": 0,
+        "station_status_count": 0,
+        "evse_status_count": 0,
+        "available_evses": 0,
+        "occupied_evses": 0,
+        "out_of_order_evses": 0,
+        "unknown_evses": 0,
+        "latest_last_updated": null
+      }
+    },
+    {
+      "provider_uid": "ladebusiness_ladestationsdaten",
+      "display_name": "ladebusiness ladestationsdaten",
+      "publisher": "Smartlab Innovationsgesellschaft mbH",
+      "static": {
+        "fetch_status": "ok",
+        "access_mode": "auth",
+        "locations_scanned": 977,
+        "matched_locations": 602,
+        "matched_stations": 602,
+        "matched_charging_points": 1876,
+        "station_coverage_ratio": 0.008402,
+        "charging_point_coverage_ratio": 0.009589,
+        "bundle_matched_stations": 171,
+        "bundle_matched_charging_points": 538,
+        "bundle_station_coverage_ratio": 0.011426,
+        "bundle_charging_point_coverage_ratio": 0.010557,
+        "site_operator_samples": [
+          "DEAHF",
+          "DENB1",
+          "DELET",
+          "DELEU",
+          "DEMGS",
+          "DERAI",
+          "DEWSS",
+          "DERAG",
+          "DEHER",
+          "DE226"
+        ]
+      },
+      "dynamic": {
+        "fetch_status": "ok",
+        "access_mode": "auth",
+        "delta_delivery": false,
+        "site_status_count": 161,
+        "station_status_count": 977,
+        "evse_status_count": 2884,
+        "available_evses": 2344,
+        "occupied_evses": 309,
+        "out_of_order_evses": 225,
+        "unknown_evses": 6,
+        "latest_last_updated": "2026-04-26T10:50:01Z"
+      }
+    },
+    {
       "provider_uid": "ladenetz_de_ladestationsdaten",
       "display_name": "ladenetz de ladestationsdaten",
       "publisher": "Smartlab Innovationsgesellschaft mbH",
@@ -791,8 +912,8 @@
       "display_name": "stadtwerke erft",
       "publisher": "Stadtwerke Erft GmbH",
       "static": {
-        "fetch_status": "noauth: 403 Client Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/982969565784539136/file/noauth",
-        "access_mode": "auth",
+        "fetch_status": "mtls_subscription: Expecting value: line 1 column 1 (char 0)",
+        "access_mode": "mtls_subscription",
         "locations_scanned": 0,
         "matched_locations": 0,
         "matched_stations": 0,
@@ -806,8 +927,8 @@
         "site_operator_samples": []
       },
       "dynamic": {
-        "fetch_status": "noauth: 403 Client Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/982973289122725888/file/noauth",
-        "access_mode": "auth",
+        "fetch_status": "mtls_subscription: Expecting value: line 1 column 1 (char 0)",
+        "access_mode": "mtls_subscription",
         "delta_delivery": true,
         "site_status_count": 0,
         "station_status_count": 0,
@@ -999,5 +1120,6 @@
         "latest_last_updated": "2026-03-30T00:31:20+00:00"
       }
     }
-  ]
+  ],
+  "provider_count": 30
 }

@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-04-21T18:39:16+00:00",
+  "generated_at": "2026-04-26T10:51:43+00:00",
   "search_term": "AFIR",
-  "search_total_elements": 51,
-  "charging_offer_count": 48,
-  "provider_config_count": 27,
+  "search_total_elements": 68,
+  "charging_offer_count": 64,
+  "provider_config_count": 30,
   "source_chargers_csv": "/Users/raphaelvolz/Github/woladen.de/data/chargers_full.csv",
   "source_bundle_chargers_csv": "/Users/raphaelvolz/Github/woladen.de/data/chargers_fast.csv",
   "machine_certificate_probe": {
@@ -3531,6 +3531,863 @@
       }
     },
     {
+      "uid": "grid",
+      "display_name": "grid",
+      "publisher": "Grid & Co. GmbH",
+      "feeds": {
+        "static": {
+          "publication_id": "984104561811357696",
+          "title": "AFIR-recharging-stat-Grid&Co",
+          "publisher": "Grid & Co. GmbH",
+          "access_mode": "noauth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Static-01-00-00",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": false,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": false,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": true
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": false,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_D2Payload.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationReferencing.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Static-01-00-00"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
+          },
+          "subscription_status": {
+            "attempted": false,
+            "status": "active_contract",
+            "contract_id": "984414030168719360"
+          }
+        },
+        "dynamic": {
+          "publication_id": "984103903968534528",
+          "title": "AFIR-recharging-dyn-Grid&Co",
+          "publisher": "Grid & Co. GmbH",
+          "access_mode": "noauth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Dynamic-01-00-00_Delta",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": false,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": false,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": true
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": false,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_MessageContainer.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_D2Payload.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_ExchangeInformation.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Dynamic-01-00-00_Delta"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
+          },
+          "subscription_status": {
+            "attempted": false,
+            "status": "active_contract",
+            "contract_id": "984414112490385408"
+          }
+        },
+        "other": []
+      },
+      "subscription": {
+        "static": {
+          "attempted": false,
+          "status": "active_contract",
+          "contract_id": "984414030168719360"
+        },
+        "dynamic": {
+          "attempted": false,
+          "status": "active_contract",
+          "contract_id": "984414112490385408"
+        },
+        "other": []
+      },
+      "coverage": {
+        "static": {
+          "fetch_status": "ok",
+          "access_mode": "noauth",
+          "locations_scanned": 320,
+          "matched_locations": 176,
+          "matched_stations": 176,
+          "matched_charging_points": 516,
+          "station_coverage_ratio": 0.002456,
+          "charging_point_coverage_ratio": 0.002638,
+          "bundle_matched_stations": 79,
+          "bundle_matched_charging_points": 273,
+          "bundle_station_coverage_ratio": 0.005279,
+          "bundle_charging_point_coverage_ratio": 0.005357,
+          "site_operator_samples": [
+            "becharged GmbH",
+            "EAM Natur Energie GmbH",
+            "Stadt Schwalmstadt",
+            "Stadt Kirchhain",
+            "Regensburger Energie- und Wasserversorgung AG & Co KG",
+            "Landkreis Schwalm Eder",
+            "Stadt Grebenstein",
+            "Gemeinde Fuldabrück",
+            "Neustadt (Hessen)",
+            "Main-Kinzig-Kliniken Gelnhausen"
+          ]
+        },
+        "dynamic": {
+          "fetch_status": "ok",
+          "access_mode": "noauth",
+          "delta_delivery": false,
+          "site_status_count": 320,
+          "station_status_count": 320,
+          "evse_status_count": 553,
+          "available_evses": 509,
+          "occupied_evses": 15,
+          "out_of_order_evses": 12,
+          "unknown_evses": 17,
+          "latest_last_updated": "2026-04-26T10:50:05.901Z"
+        }
+      }
+    },
+    {
+      "uid": "k_u_l_rudnick_bau_und_bautr_ger",
+      "display_name": "k u l rudnick bau und bautr ger",
+      "publisher": "K.u.L. Rudnick Bau und Bauträger GmbH",
+      "feeds": {
+        "static": {
+          "publication_id": "983747474988376064",
+          "title": "AFIR-recharging-stat-K.u.L. Rudnick Bau und Bauträger GmbH",
+          "publisher": "K.u.L. Rudnick Bau und Bauträger GmbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Static-01-00-00",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": false,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": false,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": false,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_D2Payload.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationReferencing.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Static-01-00-00"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
+          },
+          "subscription_status": {
+            "attempted": false,
+            "status": "active_contract",
+            "contract_id": "985184925426388992"
+          }
+        },
+        "dynamic": null,
+        "other": []
+      },
+      "subscription": {
+        "static": {
+          "attempted": false,
+          "status": "active_contract",
+          "contract_id": "985184925426388992"
+        },
+        "dynamic": null,
+        "other": []
+      },
+      "coverage": {
+        "static": {
+          "fetch_status": "mtls_subscription: Expecting value: line 1 column 1 (char 0)",
+          "access_mode": "mtls_subscription",
+          "locations_scanned": 0,
+          "matched_locations": 0,
+          "matched_stations": 0,
+          "matched_charging_points": 0,
+          "station_coverage_ratio": 0.0,
+          "charging_point_coverage_ratio": 0.0,
+          "bundle_matched_stations": 0,
+          "bundle_matched_charging_points": 0,
+          "bundle_station_coverage_ratio": 0.0,
+          "bundle_charging_point_coverage_ratio": 0.0,
+          "site_operator_samples": []
+        },
+        "dynamic": {
+          "fetch_status": "no_dynamic_feed",
+          "access_mode": "",
+          "delta_delivery": false,
+          "site_status_count": 0,
+          "station_status_count": 0,
+          "evse_status_count": 0,
+          "available_evses": 0,
+          "occupied_evses": 0,
+          "out_of_order_evses": 0,
+          "unknown_evses": 0,
+          "latest_last_updated": null
+        }
+      }
+    },
+    {
+      "uid": "ladebusiness_ladestationsdaten",
+      "display_name": "ladebusiness ladestationsdaten",
+      "publisher": "Smartlab Innovationsgesellschaft mbH",
+      "feeds": {
+        "static": {
+          "publication_id": "903241622921695232",
+          "title": "ladebusiness Ladestationsdaten - statisch",
+          "publisher": "Smartlab Innovationsgesellschaft mbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Static-01-00-00",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": true,
+          "contract_offer": {
+            "contractStart": "2025-09-15",
+            "contractEnd": null,
+            "providerApprovalRequired": false,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": true,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_D2Payload.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationReferencing.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Static-01-00-00"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
+          },
+          "subscription_status": {
+            "attempted": false,
+            "status": "active_contract",
+            "contract_id": "985185057874120704"
+          }
+        },
+        "dynamic": {
+          "publication_id": "903321397006716928",
+          "title": "ladebusiness Ladestationsdaten - dynamisch",
+          "publisher": "Smartlab Innovationsgesellschaft mbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Dynamic-01-00-00_Delta",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": false,
+          "contract_offer": {
+            "contractStart": "2025-09-15",
+            "contractEnd": null,
+            "providerApprovalRequired": false,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": false,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_MessageContainer.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_D2Payload.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_ExchangeInformation.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Dynamic-01-00-00_Delta"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
+          },
+          "subscription_status": {
+            "attempted": false,
+            "status": "active_contract",
+            "contract_id": "985185069718962176"
+          }
+        },
+        "other": []
+      },
+      "subscription": {
+        "static": {
+          "attempted": false,
+          "status": "active_contract",
+          "contract_id": "985185057874120704"
+        },
+        "dynamic": {
+          "attempted": false,
+          "status": "active_contract",
+          "contract_id": "985185069718962176"
+        },
+        "other": []
+      },
+      "coverage": {
+        "static": {
+          "fetch_status": "ok",
+          "access_mode": "auth",
+          "locations_scanned": 977,
+          "matched_locations": 602,
+          "matched_stations": 602,
+          "matched_charging_points": 1876,
+          "station_coverage_ratio": 0.008402,
+          "charging_point_coverage_ratio": 0.009589,
+          "bundle_matched_stations": 171,
+          "bundle_matched_charging_points": 538,
+          "bundle_station_coverage_ratio": 0.011426,
+          "bundle_charging_point_coverage_ratio": 0.010557,
+          "site_operator_samples": [
+            "DEAHF",
+            "DENB1",
+            "DELET",
+            "DELEU",
+            "DEMGS",
+            "DERAI",
+            "DEWSS",
+            "DERAG",
+            "DEHER",
+            "DE226"
+          ]
+        },
+        "dynamic": {
+          "fetch_status": "ok",
+          "access_mode": "auth",
+          "delta_delivery": false,
+          "site_status_count": 161,
+          "station_status_count": 977,
+          "evse_status_count": 2884,
+          "available_evses": 2344,
+          "occupied_evses": 309,
+          "out_of_order_evses": 225,
+          "unknown_evses": 6,
+          "latest_last_updated": "2026-04-26T10:50:01Z"
+        }
+      }
+    },
+    {
       "uid": "ladenetz_de_ladestationsdaten",
       "display_name": "ladenetz de ladestationsdaten",
       "publisher": "Smartlab Innovationsgesellschaft mbH",
@@ -5756,8 +6613,8 @@
       },
       "coverage": {
         "static": {
-          "fetch_status": "noauth: 403 Client Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/982969565784539136/file/noauth",
-          "access_mode": "auth",
+          "fetch_status": "mtls_subscription: Expecting value: line 1 column 1 (char 0)",
+          "access_mode": "mtls_subscription",
           "locations_scanned": 0,
           "matched_locations": 0,
           "matched_stations": 0,
@@ -5771,8 +6628,8 @@
           "site_operator_samples": []
         },
         "dynamic": {
-          "fetch_status": "noauth: 403 Client Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/982973289122725888/file/noauth",
-          "access_mode": "auth",
+          "fetch_status": "mtls_subscription: Expecting value: line 1 column 1 (char 0)",
+          "access_mode": "mtls_subscription",
           "delta_delivery": true,
           "site_status_count": 0,
           "station_status_count": 0,
