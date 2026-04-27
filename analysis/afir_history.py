@@ -532,14 +532,24 @@ def _iter_archive_members(archive_path: Path) -> Iterable[tuple[str, dict[str, A
     # Gzip streams cannot seek cheaply; read members in physical archive order.
     with tarfile.open(archive_path, mode="r|gz") as archive_handle:
         for member in archive_handle:
-            if not member.isfile() or member.name == "manifest.json" or not member.name.endswith(".json"):
+            if not member.isfile() or member.name == "manifest.json":
                 continue
             extracted = archive_handle.extractfile(member)
             if extracted is None:
                 continue
-            payload = json.loads(extracted.read().decode("utf-8"))
-            if isinstance(payload, dict):
-                yield member.name, payload
+            if member.name.endswith(".json"):
+                payload = json.loads(extracted.read().decode("utf-8"))
+                if isinstance(payload, dict):
+                    yield member.name, payload
+                continue
+            if member.name.endswith(".jsonl"):
+                for line_number, line in enumerate(extracted, start=1):
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    payload = json.loads(stripped.decode("utf-8"))
+                    if isinstance(payload, dict):
+                        yield f"{member.name}#{line_number}", payload
 
 
 def _extract_facts_from_record(

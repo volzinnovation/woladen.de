@@ -429,25 +429,12 @@ class DailyResponseArchiver:
                         payload_bytes=path.read_bytes(),
                     )
             journal_path = archive_dir / JOURNAL_FILENAME
-            if not journal_path.is_file():
-                continue
-            with journal_path.open("rb") as journal_handle:
-                for index, line in enumerate(journal_handle):
-                    stripped = line.strip()
-                    if not stripped:
-                        continue
-                    try:
-                        payload = json.loads(stripped.decode("utf-8"))
-                    except (json.JSONDecodeError, UnicodeDecodeError):
-                        continue
-                    if not isinstance(payload, dict):
-                        continue
-                    archive_filename = str(payload.get("archive_filename") or f"journal-record-{index:012d}.json")
-                    yield ArchiveSourceRecord(
-                        arcname=str(Path(provider_dir.name) / archive_date / archive_filename),
-                        provider_uid=provider_dir.name,
-                        payload_bytes=line if line.endswith(b"\n") else line + b"\n",
-                    )
+            if journal_path.is_file():
+                yield ArchiveSourceRecord(
+                    arcname=str(journal_path.relative_to(root_dir)),
+                    provider_uid=provider_dir.name,
+                    payload_bytes=journal_path.read_bytes(),
+                )
 
     def _count_source_files_for_date(self, target_date: date) -> int:
         return sum(1 for _ in self._iter_source_records_for_date(target_date))
@@ -556,7 +543,7 @@ class DailyResponseArchiver:
                         continue
                     manifest = json.loads(extracted.read().decode("utf-8"))
                     continue
-                if not member.name.endswith(".json"):
+                if not (member.name.endswith(".json") or member.name.endswith(".jsonl")):
                     continue
                 file_count += 1
                 parts = Path(member.name).parts

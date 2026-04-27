@@ -209,6 +209,45 @@ def test_iter_archive_members_streams_gzip_archive_without_member_index(tmp_path
     ]
 
 
+def test_iter_archive_members_streams_jsonl_archive_members(tmp_path, monkeypatch):
+    archive_path = tmp_path / "live-provider-responses-2026-04-15.tgz"
+    records = [
+        _build_record(
+            provider_uid="qwello",
+            fetched_at="2026-04-15T08:00:00+00:00",
+            body=_dynamic_payload(status="AVAILABLE", timestamp="2026-04-15T08:00:00+00:00"),
+            archive_date="2026-04-15",
+        ),
+        _build_record(
+            provider_uid="qwello",
+            fetched_at="2026-04-15T09:15:00+00:00",
+            body=_dynamic_payload(status="OCCUPIED", timestamp="2026-04-15T09:15:00+00:00"),
+            archive_date="2026-04-15",
+        ),
+    ]
+    payload = b"\n".join(json.dumps(record, ensure_ascii=False).encode("utf-8") for record in records) + b"\n"
+    with tarfile.open(archive_path, "w:gz") as archive_handle:
+        info = tarfile.TarInfo(name="qwello/2026-04-15/records.jsonl")
+        info.size = len(payload)
+        archive_handle.addfile(info, io.BytesIO(payload))
+
+    def fail_getmembers(self):
+        raise AssertionError("gzip archive reader must not build a seek-heavy member index")
+
+    monkeypatch.setattr(tarfile.TarFile, "getmembers", fail_getmembers)
+
+    members = list(_iter_archive_members(archive_path))
+
+    assert [name for name, _record in members] == [
+        "qwello/2026-04-15/records.jsonl#1",
+        "qwello/2026-04-15/records.jsonl#2",
+    ]
+    assert [record["fetched_at"] for _name, record in members] == [
+        "2026-04-15T08:00:00+00:00",
+        "2026-04-15T09:15:00+00:00",
+    ]
+
+
 def test_run_analysis_builds_history_csvs_from_archives(tmp_path):
     provider_config_path = tmp_path / "provider_config.json"
     chargers_csv_path = tmp_path / "chargers.csv"

@@ -2612,7 +2612,7 @@ def test_ingestion_keeps_http_error_body_in_response_logs(app_config):
     assert "provider unavailable" in record["body_text"]
 
 
-def test_daily_response_archiver_exports_journal_records_as_json_members(app_config):
+def test_daily_response_archiver_preserves_journal_as_jsonl_member(app_config):
     target_date = date(2026, 4, 14)
     writer = ResponseLogWriter(app_config)
     writer.write_http_response(
@@ -2630,14 +2630,20 @@ def test_daily_response_archiver_exports_journal_records_as_json_members(app_con
 
     result = DailyResponseArchiver(app_config).archive_date(target_date, upload=False)
 
-    assert result["file_count"] == 2
+    assert result["file_count"] == 1
     archive_path = Path(result["archive_path"])
     with tarfile.open(archive_path, "r:gz") as archive_handle:
         names = sorted(archive_handle.getnames())
         payload_names = [name for name in names if name != "manifest.json"]
-        assert len(payload_names) == 2
-        assert all(name.startswith("qwello/2026-04-14/") for name in payload_names)
-        assert all(name.endswith(".json") for name in payload_names)
+        assert payload_names == ["qwello/2026-04-14/records.jsonl"]
+        journal_file = archive_handle.extractfile("qwello/2026-04-14/records.jsonl")
+        assert journal_file is not None
+        journal_records = [
+            json.loads(line)
+            for line in journal_file.read().decode("utf-8").splitlines()
+            if line.strip()
+        ]
+        assert [record["kind"] for record in journal_records] == ["http_response", "push_request"]
 
 
 def test_daily_response_archiver_creates_tgz_uploads_and_cleans_up_sources(app_config):

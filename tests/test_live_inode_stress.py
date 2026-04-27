@@ -26,13 +26,22 @@ def test_live_inode_stress_uses_journal_and_sqlite_queue(app_config):
     assert {record["kind"] for record in records} == {"http_response"}
     assert result["queue_stats"]["pending_count"] == 12
     assert result["archive_result"]["result"] == "archived_local_only"
-    assert result["archive_result"]["file_count"] == 12
+    assert result["archive_result"]["file_count"] == 1
 
     archive_path = Path(result["archive_result"]["archive_path"])
     with tarfile.open(archive_path, mode="r:gz") as archive_handle:
         names = archive_handle.getnames()
+        archived_journal = archive_handle.extractfile("stress_provider/2026-04-19/records.jsonl")
+        assert archived_journal is not None
+        archived_records = [
+            json.loads(line)
+            for line in archived_journal.read().decode("utf-8").splitlines()
+            if line.strip()
+        ]
     assert "manifest.json" in names
-    assert sum(1 for name in names if name.endswith(".json") and name != "manifest.json") == 12
+    assert "stress_provider/2026-04-19/records.jsonl" in names
+    assert sum(1 for name in names if name.endswith(".json") and name != "manifest.json") == 0
+    assert len(archived_records) == 12
     assert sorted(path.name for path in journal_path.parent.iterdir()) == ["records.jsonl"]
 
 
