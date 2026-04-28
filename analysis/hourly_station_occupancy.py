@@ -21,7 +21,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from backend.config import AppConfig, load_env_file
-from backend.datex import decode_json_payload, extract_dynamic_facts, parse_iso_datetime
+from backend.datex import decode_json_payload, extract_dynamic_facts, normalize_evse_id, parse_iso_datetime
 from backend.loaders import load_evse_matches, load_site_matches, load_station_records
 from backend.models import StationRecord
 
@@ -179,6 +179,90 @@ def archive_path_for_date(config: AppConfig, target_date: date) -> Path:
     return config.archive_dir / f"live-provider-responses-{target_date.isoformat()}.tgz"
 
 
+def _dict_items(value: Any) -> list[dict[str, Any]]:
+    if isinstance(value, dict):
+        return [value]
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, dict)]
+    return []
+
+
+def _reference_id(value: Any) -> str:
+    if isinstance(value, dict):
+        for key in ("idG", "id"):
+            text = str(value.get(key) or "").strip()
+            if text:
+                return text
+    return str(value or "").strip()
+
+
+def _site_status_matches_identifiers(site_status: dict[str, Any], identifiers: StationIdentifiers) -> bool:
+    site_id = _reference_id(site_status.get("reference"))
+    if site_id and site_id in identifiers.site_ids:
+        return True
+
+    for station_status in _dict_items(site_status.get("energyInfrastructureStationStatus")):
+        station_ref = _reference_id(station_status.get("reference"))
+        if station_ref and station_ref in identifiers.station_refs:
+            return True
+
+        for refill_point_status in _dict_items(station_status.get("refillPointStatus")):
+            charging_point_status = (
+                refill_point_status.get("aegiElectricChargingPointStatus")
+                or refill_point_status.get("aegiRefillPointStatus")
+                or refill_point_status
+            )
+            if not isinstance(charging_point_status, dict):
+                continue
+            evse_id = normalize_evse_id(_reference_id(charging_point_status.get("reference")))
+            if evse_id and evse_id in identifiers.evse_ids:
+                return True
+
+    return False
+
+
+def prune_payload_to_station(payload: dict[str, Any], identifiers: StationIdentifiers) -> dict[str, Any]:
+    """Trim decoded live payloads before running the generic DATEX extractor.
+
+    Hugging Face daily archives store provider snapshots as large JSONL
+    records. A single matching snapshot can contain tens of thousands of EVSEs,
+    while this chart only needs one station. Mutating the decoded payload keeps
+    backend status normalization unchanged but avoids materializing facts for
+    unrelated stations.
+    """
+
+    def prune(value: Any) -> None:
+        if isinstance(value, list):
+            for item in value:
+                prune(item)
+            return
+        if not isinstance(value, dict):
+            return
+
+        generic_evses = value.get("evses")
+        if isinstance(generic_evses, list) and identifiers.evse_ids:
+            value["evses"] = [
+                item
+                for item in generic_evses
+                if isinstance(item, dict) and normalize_evse_id(item.get("evseId")) in identifiers.evse_ids
+            ]
+
+        site_statuses = value.get("energyInfrastructureSiteStatus")
+        if site_statuses:
+            filtered_statuses = [
+                site_status
+                for site_status in _dict_items(site_statuses)
+                if _site_status_matches_identifiers(site_status, identifiers)
+            ]
+            value["energyInfrastructureSiteStatus"] = filtered_statuses
+
+        for item in value.values():
+            prune(item)
+
+    prune(payload)
+    return payload
+
+
 def _record_timestamp(record: dict[str, Any]) -> str:
     return str(record.get("received_at") or record.get("fetched_at") or record.get("logged_at") or "")
 
@@ -189,6 +273,8 @@ def empty_archive_stats() -> dict[str, int]:
         "provider_members_seen": 0,
         "matching_messages": 0,
         "parse_errors": 0,
+        "records_seen": 0,
+        "records_skipped_by_token": 0,
     }
 
 
@@ -239,55 +325,77 @@ def collect_status_events(
     token_bytes = [token.encode("utf-8") for token in sorted(tokens)]
     provider_filter = identifiers.provider_uids
 
+    def iter_member_records(extracted: Any, member_name: str):
+        if member_name.endswith(".jsonl"):
+            for line in extracted:
+                stripped = line.strip()
+                if stripped:
+                    yield stripped
+            return
+        raw_record = extracted.read()
+        if raw_record.strip():
+            yield raw_record
+
+    def collect_record_events(raw_record: bytes, provider_uid: str) -> None:
+        stats["records_seen"] += 1
+        if token_bytes and not any(token in raw_record for token in token_bytes):
+            stats["records_skipped_by_token"] += 1
+            return
+        stats["matching_messages"] += 1
+
+        try:
+            record = json.loads(raw_record.decode("utf-8"))
+            payload = decode_json_payload(str(record.get("body_text") or "").encode("utf-8"))
+            payload = prune_payload_to_station(payload, identifiers)
+            facts = extract_dynamic_facts(
+                payload,
+                provider_uid,
+                site_station_maps.get(provider_uid, {}),
+                evse_station_maps.get(provider_uid, {}),
+            )
+        except Exception:
+            stats["parse_errors"] += 1
+            return
+
+        message_timestamp = _record_timestamp(record)
+        for fact in facts:
+            if fact.station_id != identifiers.station.station_id and fact.evse_id not in identifiers.evse_ids:
+                continue
+            observed_at = parse_iso_datetime(fact.source_observed_at or message_timestamp)
+            if observed_at is None or observed_at < window_start or observed_at > window_end:
+                continue
+            events.append(
+                (
+                    observed_at,
+                    fact.evse_id,
+                    str(fact.availability_status or "unknown"),
+                    str(fact.operational_status or ""),
+                )
+            )
+
     events: list[tuple[datetime, str, str, str]] = []
     stats = empty_archive_stats()
+    seen_provider_filter: set[str] = set()
 
-    with tarfile.open(archive_path, mode="r:gz") as archive:
+    with tarfile.open(archive_path, mode="r|gz") as archive:
         for member in archive:
             if not member.isfile():
                 continue
             stats["archive_members_seen"] += 1
             provider_uid = Path(member.name).parts[0] if Path(member.name).parts else ""
             if provider_filter and provider_uid not in provider_filter:
+                if seen_provider_filter >= provider_filter:
+                    break
                 continue
+            if provider_filter:
+                seen_provider_filter.add(provider_uid)
             stats["provider_members_seen"] += 1
 
             extracted = archive.extractfile(member)
             if extracted is None:
                 continue
-            raw_record = extracted.read()
-            if token_bytes and not any(token in raw_record for token in token_bytes):
-                continue
-            stats["matching_messages"] += 1
-
-            try:
-                record = json.loads(raw_record.decode("utf-8"))
-                payload = decode_json_payload(str(record.get("body_text") or "").encode("utf-8"))
-                facts = extract_dynamic_facts(
-                    payload,
-                    provider_uid,
-                    site_station_maps.get(provider_uid, {}),
-                    evse_station_maps.get(provider_uid, {}),
-                )
-            except Exception:
-                stats["parse_errors"] += 1
-                continue
-
-            message_timestamp = _record_timestamp(record)
-            for fact in facts:
-                if fact.station_id != identifiers.station.station_id and fact.evse_id not in identifiers.evse_ids:
-                    continue
-                observed_at = parse_iso_datetime(fact.source_observed_at or message_timestamp)
-                if observed_at is None or observed_at < window_start or observed_at > window_end:
-                    continue
-                events.append(
-                    (
-                        observed_at,
-                        fact.evse_id,
-                        str(fact.availability_status or "unknown"),
-                        str(fact.operational_status or ""),
-                    )
-                )
+            for raw_record in iter_member_records(extracted, member.name):
+                collect_record_events(raw_record, provider_uid)
 
     events.sort(key=lambda item: (item[0], item[1], item[2], item[3]))
     return events, stats
@@ -554,6 +662,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR, help="Output directory for JSON and SVG")
     parser.add_argument("--archive-dir", type=Path, default=None, help="Directory containing local live-provider-responses-YYYY-MM-DD.tgz archives")
     parser.add_argument("--env-file", type=Path, default=None, help="Optional env file with local archive settings")
+    parser.add_argument("--quiet", action="store_true", help="Suppress per-day progress output on stderr")
     return parser.parse_args()
 
 
@@ -581,10 +690,18 @@ def main() -> None:
 
     daily_results: list[dict[str, Any]] = []
     missing_archives: list[str] = []
-    for target_date in target_dates:
+    for day_index, target_date in enumerate(target_dates, start=1):
         archive_path = args.archive if args.archive is not None else archive_path_for_date(config, target_date)
+        if not args.quiet:
+            print(
+                f"[{day_index}/{len(target_dates)}] {target_date.isoformat()}: reading {archive_path}",
+                file=sys.stderr,
+                flush=True,
+            )
         if not archive_path.exists():
             missing_archives.append(target_date.isoformat())
+            if not args.quiet:
+                print(f"[{day_index}/{len(target_dates)}] {target_date.isoformat()}: missing archive", file=sys.stderr, flush=True)
             continue
         events, stats = collect_status_events(
             archive_path,
@@ -603,6 +720,13 @@ def main() -> None:
                 "hourly_values": hourly_values,
             }
         )
+        if not args.quiet:
+            print(
+                f"[{day_index}/{len(target_dates)}] {target_date.isoformat()}: "
+                f"{len(changes)} status changes from {stats['matching_messages']} matching records",
+                file=sys.stderr,
+                flush=True,
+            )
 
     if missing_archives and args.require_complete:
         raise SystemExit(f"Missing archives for requested window: {', '.join(missing_archives)}")
