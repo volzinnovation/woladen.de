@@ -1003,6 +1003,25 @@ input[type="search"]::placeholder {
   gap: 0.75rem;
 }
 
+.amenity-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.amenity-group-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.amenity-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .amenity-item {
   display: flex;
   align-items: center;
@@ -1314,6 +1333,20 @@ input[type="search"]::placeholder {
   display: block;
   margin-bottom: 4px;
   color: var(--color-text-main);
+}
+
+.station-amenity-group-title {
+  font-size: 0.9rem;
+}
+
+.station-amenity-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.station-amenity-item {
+  line-height: 1.75;
 }
 
 .station-note {

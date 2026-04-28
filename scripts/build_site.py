@@ -53,6 +53,19 @@ AMENITY_LABELS = {
     "toilets": "Toiletten",
 }
 
+AMENITY_GROUPS = (
+    ("Essen & Trinken", ("restaurant", "cafe", "fast_food", "ice_cream", "bakery")),
+    ("Einkaufsmöglichkeiten", ("supermarket", "convenience", "pharmacy")),
+    ("Freizeit & Natur", ("museum", "playground", "park")),
+    ("Unterkunft", ("hotel",)),
+    ("Sonstiges", ()),
+)
+AMENITY_GROUP_BY_CATEGORY = {
+    category: label
+    for label, categories in AMENITY_GROUPS
+    for category in categories
+}
+
 
 def format_text(value: object) -> str:
     return html.escape(str(value or "").strip())
@@ -121,31 +134,66 @@ def amenity_summary(properties: dict[str, object]) -> list[str]:
     return [label for _, label in counts[:6]]
 
 
+def amenity_group_label(category: str) -> str:
+    return AMENITY_GROUP_BY_CATEGORY.get(category, "Sonstiges")
+
+
+def amenity_example_sort_key(example: dict[str, object]) -> tuple[float, str, str]:
+    distance = example.get("distance_m")
+    try:
+        distance_value = float(distance)
+    except (TypeError, ValueError):
+        distance_value = math.inf
+    category = str(example.get("category") or "")
+    name = str(example.get("name") or "").lower()
+    return distance_value, category, name
+
+
+def render_amenity_example_item(example: dict[str, object]) -> str:
+    category = str(example.get("category") or "").strip()
+    label = AMENITY_LABELS.get(category, category.replace("_", " ").title() or "Angebot vor Ort")
+    name = str(example.get("name") or "").strip() or label
+    meta_parts = [label]
+    distance = example.get("distance_m")
+    if distance not in (None, ""):
+        try:
+            meta_parts.append(f"{round(float(distance))} m entfernt")
+        except (TypeError, ValueError):
+            pass
+    return (
+        '<div class="station-amenity-item">'
+        f"<strong>{html.escape(name)}</strong>"
+        f"{html.escape(' • '.join(meta_parts))}"
+        "</div>"
+    )
+
+
 def render_amenity_items(properties: dict[str, object]) -> str:
     examples = properties.get("amenity_examples")
     if isinstance(examples, list):
-        items: list[str] = []
+        grouped_examples: dict[str, list[dict[str, object]]] = {
+            label: [] for label, _ in AMENITY_GROUPS
+        }
         for example in examples[:8]:
             if not isinstance(example, dict):
                 continue
             category = str(example.get("category") or "").strip()
-            label = AMENITY_LABELS.get(category, category.replace("_", " ").title() or "Angebot vor Ort")
-            name = str(example.get("name") or "").strip() or label
-            meta_parts = [label]
-            distance = example.get("distance_m")
-            if distance not in (None, ""):
-                try:
-                    meta_parts.append(f"{round(float(distance))} m entfernt")
-                except (TypeError, ValueError):
-                    pass
-            items.append(
-                "<li>"
-                f"<strong>{html.escape(name)}</strong>"
-                f"{html.escape(' • '.join(meta_parts))}"
+            grouped_examples[amenity_group_label(category)].append(example)
+
+        groups: list[str] = []
+        for label, _ in AMENITY_GROUPS:
+            group_items = sorted(grouped_examples[label], key=amenity_example_sort_key)
+            if not group_items:
+                continue
+            rendered_items = "".join(render_amenity_example_item(example) for example in group_items)
+            groups.append(
+                '<li class="station-amenity-group">'
+                f'<strong class="station-amenity-group-title">{html.escape(label)}</strong>'
+                f'<div class="station-amenity-group-items">{rendered_items}</div>'
                 "</li>"
             )
-        if items:
-            return "".join(items)
+        if groups:
+            return "".join(groups)
 
     summary = amenity_summary(properties)
     if not summary:
