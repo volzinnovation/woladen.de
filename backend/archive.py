@@ -207,7 +207,8 @@ class ArchiveBuildResult:
 class ArchiveSourceRecord:
     arcname: str
     provider_uid: str
-    payload_bytes: bytes
+    path: Path
+    byte_length: int
 
 
 def _parse_journal_reference(reference: str) -> tuple[Path, int, int] | None:
@@ -426,14 +427,16 @@ class DailyResponseArchiver:
                     yield ArchiveSourceRecord(
                         arcname=str(path.relative_to(root_dir)),
                         provider_uid=provider_dir.name,
-                        payload_bytes=path.read_bytes(),
+                        path=path,
+                        byte_length=path.stat().st_size,
                     )
             journal_path = archive_dir / JOURNAL_FILENAME
             if journal_path.is_file():
                 yield ArchiveSourceRecord(
                     arcname=str(journal_path.relative_to(root_dir)),
                     provider_uid=provider_dir.name,
-                    payload_bytes=journal_path.read_bytes(),
+                    path=journal_path,
+                    byte_length=journal_path.stat().st_size,
                 )
 
     def _count_source_files_for_date(self, target_date: date) -> int:
@@ -497,8 +500,9 @@ class DailyResponseArchiver:
         with tarfile.open(temp_path, mode="w:gz") as archive_handle:
             for source_record in self._iter_source_records_for_date(target_date):
                 source_info = tarfile.TarInfo(name=source_record.arcname)
-                source_info.size = len(source_record.payload_bytes)
-                archive_handle.addfile(source_info, io.BytesIO(source_record.payload_bytes))
+                source_info.size = source_record.byte_length
+                with source_record.path.open("rb") as source_handle:
+                    archive_handle.addfile(source_info, source_handle)
                 file_count += 1
                 provider_uids.add(source_record.provider_uid)
             if file_count == 0:

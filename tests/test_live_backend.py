@@ -2646,6 +2646,47 @@ def test_daily_response_archiver_preserves_journal_as_jsonl_member(app_config):
         assert [record["kind"] for record in journal_records] == ["http_response", "push_request"]
 
 
+def test_daily_response_archiver_streams_source_files_without_read_bytes(app_config, monkeypatch):
+    target_date = date(2026, 4, 14)
+    journal_dir = app_config.raw_payload_dir / "qwello" / target_date.isoformat()
+    legacy_dir = app_config.raw_payload_dir / "wirelane" / target_date.isoformat()
+    journal_dir.mkdir(parents=True, exist_ok=True)
+    legacy_dir.mkdir(parents=True, exist_ok=True)
+    journal_path = journal_dir / "records.jsonl"
+    legacy_path = legacy_dir / "20260414T010000000000Z-200-bbbb.json"
+    journal_bytes = (json.dumps({"provider_uid": "qwello", "kind": "http_response"}, ensure_ascii=False) + "\n").encode(
+        "utf-8"
+    )
+    legacy_bytes = json.dumps({"provider_uid": "wirelane", "body_text": "legacy"}, ensure_ascii=False).encode("utf-8")
+    journal_path.write_bytes(journal_bytes)
+    legacy_path.write_bytes(legacy_bytes)
+
+    original_read_bytes = Path.read_bytes
+
+    def fail_for_raw_payloads(path: Path) -> bytes:
+        if path in {journal_path, legacy_path}:
+            raise AssertionError(f"archiver buffered source payload with read_bytes: {path}")
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", fail_for_raw_payloads)
+
+    result = DailyResponseArchiver(app_config).archive_date(target_date, upload=False)
+
+    assert result["result"] == "archived_local_only"
+    assert result["file_count"] == 2
+    archive_path = Path(result["archive_path"])
+    with tarfile.open(archive_path, "r:gz") as archive_handle:
+        assert sorted(archive_handle.getnames()) == [
+            "manifest.json",
+            "qwello/2026-04-14/records.jsonl",
+            "wirelane/2026-04-14/20260414T010000000000Z-200-bbbb.json",
+        ]
+        assert archive_handle.extractfile("qwello/2026-04-14/records.jsonl").read() == journal_bytes
+        assert archive_handle.extractfile(
+            "wirelane/2026-04-14/20260414T010000000000Z-200-bbbb.json"
+        ).read() == legacy_bytes
+
+
 def test_daily_response_archiver_creates_tgz_uploads_and_cleans_up_sources(app_config):
     target_date = date(2026, 4, 14)
     first_dir = app_config.raw_payload_dir / "qwello" / target_date.isoformat()
