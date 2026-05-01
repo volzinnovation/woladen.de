@@ -46,12 +46,14 @@ jobs:
             echo "should_run=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          BERLIN_HOUR=$(TZ=Europe/Berlin date +%H)
-          if [ "$BERLIN_HOUR" = "01" ]; then
+          SCHEDULE="${{ github.event.schedule }}"
+          BERLIN_OFFSET=$(TZ=Europe/Berlin date +%z)
+          if { [ "$BERLIN_OFFSET" = "+0200" ] && [ "$SCHEDULE" = "30 23 * * *" ]; } || \
+             { [ "$BERLIN_OFFSET" = "+0100" ] && [ "$SCHEDULE" = "30 0 * * *" ]; }; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
           else
             echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "Skipping scheduled run outside 01:30 Europe/Berlin (current hour: $BERLIN_HOUR)."
+            echo "Skipping inactive DST companion schedule ($SCHEDULE, Berlin offset: $BERLIN_OFFSET)."
           fi
 
       - name: Resolve chart inputs
