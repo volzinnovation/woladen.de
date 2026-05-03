@@ -30,6 +30,7 @@ export function matchesAmenityNameQuery(properties, query) {
 }
 
 export function countActiveFilters(filters) {
+  const minPower = Number(filters?.minPower ?? 50);
   const selectedAmenities =
     filters?.amenities instanceof Set
       ? filters.amenities.size
@@ -39,7 +40,7 @@ export function countActiveFilters(filters) {
 
   return (
     (filters?.operator ? 1 : 0) +
-    (Number(filters?.minPower ?? 50) > 50 ? 1 : 0) +
+    (Number.isFinite(minPower) && minPower !== 50 ? 1 : 0) +
     selectedAmenities +
     (normalizeAmenityNameQuery(filters?.amenityNameQuery).length > 0 ? 1 : 0)
   );

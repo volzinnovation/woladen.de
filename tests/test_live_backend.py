@@ -1881,6 +1881,86 @@ def test_api_station_lookup_returns_requested_station_ids(app_config):
         assert key not in payload["stations"][0]
 
 
+def test_store_upserts_station_ratings_by_client(app_config):
+    store = LiveStore(app_config)
+    store.initialize()
+
+    first = store.upsert_station_rating("station-1", 5, "client-a-0000000000")
+    assert first == {
+        "station_id": "station-1",
+        "average_rating": 5.0,
+        "rating_count": 1,
+    }
+
+    second = store.upsert_station_rating("station-1", 3, "client-b-0000000000")
+    assert second == {
+        "station_id": "station-1",
+        "average_rating": 4.0,
+        "rating_count": 2,
+    }
+
+    updated = store.upsert_station_rating("station-1", 1, "client-a-0000000000")
+    assert updated == {
+        "station_id": "station-1",
+        "average_rating": 2.0,
+        "rating_count": 2,
+    }
+    assert store.list_station_rating_summaries_by_ids(["missing", "station-1"]) == [updated]
+
+
+def test_api_accepts_station_ratings_and_returns_aggregates(app_config):
+    client = TestClient(create_app(app_config))
+
+    first = client.post(
+        "/v1/ratings",
+        json={
+            "station_id": "station-1",
+            "rating": 5,
+            "client_id": "client-a-0000000000",
+        },
+    )
+    assert first.status_code == 200
+    assert first.json() == {
+        "rating": {
+            "station_id": "station-1",
+            "average_rating": 5.0,
+            "rating_count": 1,
+        },
+        "user_rating": 5,
+    }
+
+    second = client.post(
+        "/v1/ratings",
+        json={
+            "station_id": "station-1",
+            "rating": 3,
+            "client_id": "client-b-0000000000",
+        },
+    )
+    assert second.status_code == 200
+    assert second.json()["rating"] == {
+        "station_id": "station-1",
+        "average_rating": 4.0,
+        "rating_count": 2,
+    }
+
+    lookup = client.post(
+        "/v1/ratings/lookup",
+        json={"station_ids": ["station-1", "missing", "station-1"]},
+    )
+    assert lookup.status_code == 200
+    assert lookup.json() == {
+        "ratings": [
+            {
+                "station_id": "station-1",
+                "average_rating": 4.0,
+                "rating_count": 2,
+            }
+        ],
+        "missing_station_ids": ["missing"],
+    }
+
+
 def test_api_profile_headers_expose_server_timing_breakdown(app_config):
     payload = json.dumps(_dynamic_payload()).encode("utf-8")
     fetcher = MockFetcher({"qwello": FetchResponse(payload, "application/json", 200), "ampeco": TimeoutError("skip")})

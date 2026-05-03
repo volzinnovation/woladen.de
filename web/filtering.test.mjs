@@ -50,3 +50,8 @@ test("active filter count includes amenity-name query", () => {
 
   assert.equal(countActiveFilters(filters), 5);
 });
+
+test("active filter count treats under-50 kW as an explicit filter change", () => {
+  assert.equal(countActiveFilters({ minPower: 50, amenities: new Set() }), 0);
+  assert.equal(countActiveFilters({ minPower: 0, amenities: new Set() }), 1);
+});

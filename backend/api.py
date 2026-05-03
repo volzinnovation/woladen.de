@@ -39,10 +39,21 @@ PUBLICATION_LOOKUP_KEYS = (
 PROFILE_FLAG_VALUES = {"1", "true", "yes", "on"}
 PROFILE_HEADER_NAMES = ("Server-Timing", "Timing-Allow-Origin", "Content-Length")
 MAX_STATION_LOOKUP_IDS = 20
+MAX_RATING_LOOKUP_IDS = 50
 
 
 class StationLookupRequest(BaseModel):
     station_ids: list[str] = Field(default_factory=list, max_length=MAX_STATION_LOOKUP_IDS)
+
+
+class RatingLookupRequest(BaseModel):
+    station_ids: list[str] = Field(default_factory=list, max_length=MAX_RATING_LOOKUP_IDS)
+
+
+class StationRatingRequest(BaseModel):
+    station_id: str = Field(min_length=1, max_length=128)
+    rating: int = Field(ge=1, le=5)
+    client_id: str = Field(min_length=16, max_length=128)
 
 
 def _strip_fields(payload: dict, excluded_fields: set[str]) -> dict:
@@ -302,6 +313,44 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             (time.perf_counter() - payload_started_at) * 1000.0,
             "Response shaping",
         )
+        return _json_response(request, response_payload)
+
+    @app.post("/v1/ratings/lookup")
+    def lookup_ratings(request: Request, payload: RatingLookupRequest) -> JSONResponse:
+        station_ids = [str(station_id or "").strip() for station_id in payload.station_ids]
+        station_ids = [station_id for station_id in station_ids if station_id]
+        timings: dict[str, float] | None = {} if request.state.profiling_enabled else None
+        ratings = app.state.store.list_station_rating_summaries_by_ids(station_ids, timings=timings)
+        _record_store_timings(request, timings)
+        payload_started_at = time.perf_counter()
+        found_station_ids = {str(rating["station_id"]) for rating in ratings}
+        missing_station_ids = [station_id for station_id in station_ids if station_id not in found_station_ids]
+        response_payload = {
+            "ratings": ratings,
+            "missing_station_ids": missing_station_ids,
+        }
+        _record_profile_metric(
+            request,
+            "payload",
+            (time.perf_counter() - payload_started_at) * 1000.0,
+            "Response shaping",
+        )
+        return _json_response(request, response_payload)
+
+    @app.post("/v1/ratings")
+    def submit_rating(request: Request, payload: StationRatingRequest) -> JSONResponse:
+        try:
+            rating = app.state.store.upsert_station_rating(
+                station_id=payload.station_id,
+                rating=payload.rating,
+                client_id=payload.client_id,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        response_payload = {
+            "rating": rating,
+            "user_rating": payload.rating,
+        }
         return _json_response(request, response_payload)
 
     @app.get("/v1/stations/{station_id}")
