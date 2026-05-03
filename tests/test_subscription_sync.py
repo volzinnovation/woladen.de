@@ -487,6 +487,24 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
             feed_kind="static",
             access_mode="auth",
         ),
+        SubscriptionOffer(
+            provider_uid="lichtblick_emobility",
+            display_name="lichtblick emobility",
+            publisher="LichtBlick eMobility GmbH",
+            publication_id="962731482363617280",
+            offer_title="AFIR-recharging-dyn-LichtBlick eMobility",
+            feed_kind="dynamic",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
+            provider_uid="lichtblick_emobility",
+            display_name="lichtblick emobility",
+            publisher="LichtBlick eMobility GmbH",
+            publication_id="962721207430316032",
+            offer_title="AFIR-recharging-stat-LichtBlick eMobility",
+            feed_kind="static",
+            access_mode="auth",
+        ),
     ]
 
     registry = build_live_subscription_registry(
@@ -498,6 +516,8 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
             {"id": "985185057874120704", "dataOfferId": "903241622921695232", "contractStatus": "ACTIVE"},
             {"id": "983032226584989696", "dataOfferId": "982973289122725888", "contractStatus": "ACTIVE"},
             {"id": "983032272248377344", "dataOfferId": "982969565784539136", "contractStatus": "ACTIVE"},
+            {"id": "986210555324723200", "dataOfferId": "962731482363617280", "contractStatus": "ACTIVE"},
+            {"id": "986210552611008512", "dataOfferId": "962721207430316032", "contractStatus": "ACTIVE"},
         ],
     )
 
@@ -518,6 +538,12 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
     assert registry["stadtwerke_erft"]["fetch_kind"] == "mtls_subscription"
     assert registry["stadtwerke_erft"]["enabled"] is True
     assert registry["stadtwerke_erft"]["delivery_mode"] == "push_with_poll_fallback"
+
+    assert registry["lichtblick_emobility"]["subscription_id"] == "986210555324723200"
+    assert registry["lichtblick_emobility"]["static_subscription_id"] == "986210552611008512"
+    assert registry["lichtblick_emobility"]["fetch_kind"] == "mtls_subscription"
+    assert registry["lichtblick_emobility"]["enabled"] is True
+    assert registry["lichtblick_emobility"]["delivery_mode"] == "push_with_poll_fallback"
 
 
 def test_resolve_credentials_reads_secret_files(tmp_path: Path, monkeypatch):
