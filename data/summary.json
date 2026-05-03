@@ -1,17 +1,17 @@
 {
   "run": {
-    "started_at": "2026-05-03T01:37:40+00:00",
-    "finished_at": "2026-05-03T03:08:51+00:00"
+    "started_at": "2026-05-03T09:36:31+00:00",
+    "finished_at": "2026-05-03T11:08:52+00:00"
   },
   "source": {
     "source_url": "https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-04-22.csv",
-    "fetched_at": "2026-05-03T01:38:16.150076+00:00",
+    "fetched_at": "2026-05-03T09:37:08.350088+00:00",
     "bytes": 49684448,
     "content_type": "application/octet-stream",
     "bnetza_api_ladestation_source": {
       "source_url": "https://d1269bxe5ubfat.cloudfront.net/bnetza-api/data/bnetza_api_ladestation000.csv?v=1",
       "label": "bnetza_api_ladestation",
-      "fetched_at": "2026-05-03T01:38:23.481674+00:00",
+      "fetched_at": "2026-05-03T09:37:15.763138+00:00",
       "error": "403 Client Error: Forbidden for url: https://d1269bxe5ubfat.cloudfront.net/bnetza-api/data/bnetza_api_ladestation000.csv?v=1",
       "unavailable": true
     }
@@ -32,18 +32,18 @@
     "fast_chargers_total": 15214,
     "stations_with_live_occupancy": 406,
     "stations_with_static_details": 9422,
-    "stations_with_price": 7612,
+    "stations_with_price": 7626,
     "stations_with_opening_hours": 10955,
     "stations_with_helpdesk": 5522,
     "stations_with_amenities": 15214
   },
   "occupancy_lookup": {
-    "sources_discovered": 30,
-    "sources_used": 27,
-    "locations_scanned": 49009,
-    "matched_locations": 409,
+    "sources_discovered": 31,
+    "sources_used": 28,
+    "locations_scanned": 50291,
+    "matched_locations": 410,
     "matched_stations": 430,
-    "matched_evses": 2754,
+    "matched_evses": 2759,
     "errors": [
       "elu_mobility: mtls_subscription: Expecting value: line 1 column 1 (char 0)",
       "stadtwerke_erft: mtls_subscription: Expecting value: line 1 column 1 (char 0)",
@@ -141,7 +141,7 @@
       {
         "uid": "eco_movement",
         "name": "eco movement",
-        "locations_scanned": 13153,
+        "locations_scanned": 13254,
         "matched_locations": 0,
         "matched_stations": 0,
         "matched_evses": 0
@@ -158,9 +158,9 @@
         "uid": "enbwmobility",
         "name": "enbwmobility",
         "locations_scanned": 2513,
-        "matched_locations": 0,
-        "matched_stations": 0,
-        "matched_evses": 0
+        "matched_locations": 1,
+        "matched_stations": 1,
+        "matched_evses": 5
       },
       {
         "uid": "enio",
@@ -211,9 +211,17 @@
         "matched_evses": 0
       },
       {
+        "uid": "lichtblick_emobility",
+        "name": "lichtblick emobility",
+        "locations_scanned": 1182,
+        "matched_locations": 0,
+        "matched_stations": 0,
+        "matched_evses": 0
+      },
+      {
         "uid": "m8mit",
         "name": "m8mit",
-        "locations_scanned": 144,
+        "locations_scanned": 141,
         "matched_locations": 0,
         "matched_stations": 0,
         "matched_evses": 0
@@ -221,7 +229,7 @@
       {
         "uid": "monta",
         "name": "monta",
-        "locations_scanned": 583,
+        "locations_scanned": 585,
         "matched_locations": 0,
         "matched_stations": 0,
         "matched_evses": 0
@@ -272,9 +280,9 @@
     "offers_discovered": 58,
     "static_offers_considered": 29,
     "sources_used": 20,
-    "matched_sites": 10352,
+    "matched_sites": 10351,
     "matched_stations": 10007,
-    "stations_with_price": 8092,
+    "stations_with_price": 8108,
     "stations_with_opening_hours": 11803,
     "stations_with_helpdesk": 5825,
     "errors": [
@@ -429,7 +437,7 @@
         "uid": "mobilithek_edri_static",
         "publication_id": "972837891969273856",
         "title": "AFIR-recharging-stat-EDRI",
-        "publisher": "Аmpeco Ltd.",
+        "publisher": "Ampeco Ltd.",
         "access_mode": "auth",
         "status": "ok",
         "payload_kind": "datex",
@@ -445,9 +453,9 @@
         "access_mode": "auth",
         "status": "ok",
         "payload_kind": "datex",
-        "sites_scanned": 144,
-        "matched_sites": 16,
-        "matched_stations": 16
+        "sites_scanned": 141,
+        "matched_sites": 15,
+        "matched_stations": 15
       },
       {
         "uid": "mobilithek_pump_static",
@@ -469,7 +477,7 @@
         "access_mode": "auth",
         "status": "ok",
         "payload_kind": "datex",
-        "sites_scanned": 583,
+        "sites_scanned": 585,
         "matched_sites": 180,
         "matched_stations": 180
       },
@@ -489,7 +497,7 @@
         "uid": "mobilithek_lichtblick_emobility_static",
         "publication_id": "962721207430316032",
         "title": "AFIR-recharging-stat-LichtBlick eMobility",
-        "publisher": "",
+        "publisher": "LichtBlick eMobility GmbH",
         "access_mode": "auth",
         "status": "ok",
         "payload_kind": "datex",
@@ -517,7 +525,7 @@
         "access_mode": "auth",
         "status": "ok",
         "payload_kind": "datex",
-        "sites_scanned": 13153,
+        "sites_scanned": 13254,
         "matched_sites": 3815,
         "matched_stations": 3761
       },
@@ -634,15 +642,15 @@
     "lookup_errors": 0,
     "cache_entries": 0,
     "osm_pbf_path": "data/germany-latest.osm.pbf",
-    "osm_pbf_bytes": 4751034127,
+    "osm_pbf_bytes": 4751907892,
     "osm_pbf_downloaded": true,
-    "osm_pbf_points": 335140,
-    "osm_pbf_grid_cells": 120742,
-    "osm_pbf_nodes_seen": 432785284,
-    "osm_pbf_ways_seen": 70064270,
-    "osm_pbf_relations_seen": 889352,
-    "osm_pbf_nodes_kept": 206250,
-    "osm_pbf_ways_kept": 128890
+    "osm_pbf_points": 335180,
+    "osm_pbf_grid_cells": 120748,
+    "osm_pbf_nodes_seen": 432847966,
+    "osm_pbf_ways_seen": 70072373,
+    "osm_pbf_relations_seen": 889509,
+    "osm_pbf_nodes_kept": 206283,
+    "osm_pbf_ways_kept": 128897
   },
   "operators": {
     "min_stations": 100,
