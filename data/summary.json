@@ -1,17 +1,17 @@
 {
   "run": {
-    "started_at": "2026-05-03T09:36:31+00:00",
-    "finished_at": "2026-05-03T11:08:52+00:00"
+    "started_at": "2026-05-04T01:39:01+00:00",
+    "finished_at": "2026-05-04T03:16:02+00:00"
   },
   "source": {
     "source_url": "https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-04-22.csv",
-    "fetched_at": "2026-05-03T09:37:08.350088+00:00",
+    "fetched_at": "2026-05-04T01:40:03.454449+00:00",
     "bytes": 49684448,
     "content_type": "application/octet-stream",
     "bnetza_api_ladestation_source": {
       "source_url": "https://d1269bxe5ubfat.cloudfront.net/bnetza-api/data/bnetza_api_ladestation000.csv?v=1",
       "label": "bnetza_api_ladestation",
-      "fetched_at": "2026-05-03T09:37:15.763138+00:00",
+      "fetched_at": "2026-05-04T01:40:10.760508+00:00",
       "error": "403 Client Error: Forbidden for url: https://d1269bxe5ubfat.cloudfront.net/bnetza-api/data/bnetza_api_ladestation000.csv?v=1",
       "unavailable": true
     }
@@ -30,9 +30,9 @@
     "full_registry_stations_total": 72155,
     "full_registry_active_stations_total": 72130,
     "fast_chargers_total": 15214,
-    "stations_with_live_occupancy": 406,
-    "stations_with_static_details": 9422,
-    "stations_with_price": 7626,
+    "stations_with_live_occupancy": 405,
+    "stations_with_static_details": 9421,
+    "stations_with_price": 7625,
     "stations_with_opening_hours": 10955,
     "stations_with_helpdesk": 5522,
     "stations_with_amenities": 15214
@@ -41,9 +41,9 @@
     "sources_discovered": 31,
     "sources_used": 28,
     "locations_scanned": 50291,
-    "matched_locations": 410,
-    "matched_stations": 430,
-    "matched_evses": 2759,
+    "matched_locations": 408,
+    "matched_stations": 429,
+    "matched_evses": 2760,
     "errors": [
       "elu_mobility: mtls_subscription: Expecting value: line 1 column 1 (char 0)",
       "stadtwerke_erft: mtls_subscription: Expecting value: line 1 column 1 (char 0)",
@@ -160,7 +160,7 @@
         "locations_scanned": 2513,
         "matched_locations": 1,
         "matched_stations": 1,
-        "matched_evses": 5
+        "matched_evses": 8
       },
       {
         "uid": "enio",
@@ -246,17 +246,17 @@
         "uid": "smatrics",
         "name": "smatrics",
         "locations_scanned": 97,
-        "matched_locations": 1,
-        "matched_stations": 1,
-        "matched_evses": 1
+        "matched_locations": 0,
+        "matched_stations": 0,
+        "matched_evses": 0
       },
       {
         "uid": "tesla",
         "name": "tesla",
         "locations_scanned": 320,
-        "matched_locations": 1,
-        "matched_stations": 1,
-        "matched_evses": 1
+        "matched_locations": 0,
+        "matched_stations": 0,
+        "matched_evses": 0
       },
       {
         "uid": "vaylens",
@@ -280,9 +280,9 @@
     "offers_discovered": 58,
     "static_offers_considered": 29,
     "sources_used": 20,
-    "matched_sites": 10351,
-    "matched_stations": 10007,
-    "stations_with_price": 8108,
+    "matched_sites": 10350,
+    "matched_stations": 10006,
+    "stations_with_price": 8107,
     "stations_with_opening_hours": 11803,
     "stations_with_helpdesk": 5825,
     "errors": [
@@ -291,7 +291,7 @@
       "976221024898781184: mtls_subscription: Expecting value: line 1 column 1 (char 0)",
       "951517095896416256: direct_access_url: 403 Client Error: Forbidden for url: https://d1269bxe5ubfat.cloudfront.net/bnetza-api/data/bnetza_api_ladepunkt000.csv?v=1",
       "842113170303512576: direct_access_url: 403 Client Error: Forbidden for url: https://d1269bxe5ubfat.cloudfront.net/bnetza-lsr/data/ladepunktFactTable.csv?v=1",
-      "-2035239451501556619: direct_access_url: unbound prefix: line 60, column 52"
+      "-2035239451501556619: direct_access_url: Expecting value: line 1 column 1 (char 0)"
     ],
     "sources": [
       {
@@ -478,8 +478,8 @@
         "status": "ok",
         "payload_kind": "datex",
         "sites_scanned": 585,
-        "matched_sites": 180,
-        "matched_stations": 180
+        "matched_sites": 179,
+        "matched_stations": 179
       },
       {
         "uid": "mobilithek_enio_static",
@@ -627,7 +627,7 @@
         "publisher": "MobiData BW",
         "access_mode": "auth",
         "status": "fetch_failed",
-        "error": "direct_access_url: unbound prefix: line 60, column 52",
+        "error": "direct_access_url: Expecting value: line 1 column 1 (char 0)",
         "matched_sites": 0,
         "matched_stations": 0
       }
