@@ -4,8 +4,29 @@ const ANDROID_WEB_LINK = "https://play.google.com/store/apps/details?id=de.wolad
 const ANDROID_STORE_LINK = "market://details?id=de.woladen.android";
 
 export const OVERVIEW_METRICS = {
+  afir_stations_observed: {
+    label: "Stationen mit Live-Daten gemäß AFIR",
+    description: "Stationen mit Live-Daten gemäß AFIR in Deutschland an diesem Tag.",
+    kind: "count",
+  },
   stations_with_disruptions: {
     label: "Stationen mit Störungen",
+    description: "Stationen mit mindestens einer gemeldeten Störung im Tagesverlauf.",
+    kind: "count",
+  },
+  disruptions_at_end_of_day: {
+    label: "Störungen am Tagesende",
+    description: "Stationen, die am Ende des Tages noch mindestens eine Störung hatten.",
+    kind: "count",
+  },
+  high_utilization_stations: {
+    label: "Stationen mit hoher Auslastung",
+    description: "Stationen mit Wechseln zwischen frei und belegt im Tagesverlauf.",
+    kind: "count",
+  },
+  archive_messages_total: {
+    label: "AFIR Datenmeldungen",
+    description: "Archivierte AFIR-Aktualisierungen im Tagesverlauf.",
     kind: "count",
   },
 };
@@ -20,6 +41,12 @@ const WEEKDAY_DATE_LABEL_FORMAT = new Intl.DateTimeFormat("de-DE", {
   day: "2-digit",
   month: "2-digit",
   year: "numeric",
+});
+const TIMESTAMP_LABEL_FORMAT = new Intl.DateTimeFormat("de-DE", {
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
 });
 
 function numberFormat(value) {
@@ -36,6 +63,22 @@ function decimalFormat(value, digits = 1) {
 function durationHoursFormat(seconds) {
   const hours = Number(seconds || 0) / 3600;
   return `${decimalFormat(hours, 1)} h`;
+}
+
+function megabytesFormat(bytes) {
+  return `${decimalFormat(Number(bytes || 0) / 1_000_000, 1)} MB`;
+}
+
+function timestampFormat(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) {
+    return text;
+  }
+  return TIMESTAMP_LABEL_FORMAT.format(parsed);
 }
 
 export function normalizeManagementDate(value) {
@@ -74,6 +117,7 @@ export function buildOverviewSeries(trends, metricKey) {
   const rows = Array.isArray(trends?.summary_series) ? trends.summary_series : [];
   return {
     label: metric.label,
+    description: metric.description || "",
     kind: metric.kind,
     labels: rows.map((row) => formatDateLabel(row.snapshot_date)),
     values: rows.map((row) => Number(row?.[metricKey] || 0)),
@@ -115,22 +159,23 @@ export function buildStationRows(snapshot, key) {
   const rows = Array.isArray(snapshot?.[key]) ? [...snapshot[key]] : [];
   if (key === "broken_stations") {
     rows.sort((left, right) => {
-      const leftTuple = [
-        Number(Boolean(left?.fully_broken_now)),
-        Number(left?.current_broken_charger_count || 0),
-        Number(left?.out_of_order_duration_seconds_total || 0),
-        Number(left?.affected_charger_count || 0),
-      ];
-      const rightTuple = [
-        Number(Boolean(right?.fully_broken_now)),
-        Number(right?.current_broken_charger_count || 0),
-        Number(right?.out_of_order_duration_seconds_total || 0),
-        Number(right?.affected_charger_count || 0),
-      ];
-      for (let index = 0; index < leftTuple.length; index += 1) {
-        if (rightTuple[index] !== leftTuple[index]) {
-          return rightTuple[index] - leftTuple[index];
-        }
+      const outageDelta =
+        Number(right?.out_of_order_duration_seconds_total || 0) -
+        Number(left?.out_of_order_duration_seconds_total || 0);
+      if (outageDelta !== 0) {
+        return outageDelta;
+      }
+      const brokenDelta =
+        Number(right?.current_broken_charger_count || 0) -
+        Number(left?.current_broken_charger_count || 0);
+      if (brokenDelta !== 0) {
+        return brokenDelta;
+      }
+      const affectedDelta =
+        Number(right?.affected_charger_count || 0) -
+        Number(left?.affected_charger_count || 0);
+      if (affectedDelta !== 0) {
+        return affectedDelta;
       }
       return String(left?.station_id || "").localeCompare(String(right?.station_id || ""));
     });
@@ -145,6 +190,24 @@ export function buildStationRows(snapshot, key) {
     return String(left?.station_id || "").localeCompare(String(right?.station_id || ""));
   });
   return rows.slice(0, TOP_STATIONS_LIMIT);
+}
+
+export function buildProviderRows(snapshot) {
+  const rows = Array.isArray(snapshot?.provider_reports) ? [...snapshot.provider_reports] : [];
+  rows.sort((left, right) => {
+    const messageDelta = Number(right?.messages_total || 0) - Number(left?.messages_total || 0);
+    if (messageDelta !== 0) {
+      return messageDelta;
+    }
+    const observationDelta = Number(right?.observations_total || 0) - Number(left?.observations_total || 0);
+    if (observationDelta !== 0) {
+      return observationDelta;
+    }
+    return String(left?.display_name || left?.provider_uid || "").localeCompare(
+      String(right?.display_name || right?.provider_uid || ""),
+    );
+  });
+  return rows;
 }
 
 function formatDateLabel(value) {
@@ -362,6 +425,37 @@ function renderBusyStations(snapshot) {
   }
 }
 
+function renderProviderReports(snapshot) {
+  const rows = buildProviderRows(snapshot);
+  const tbody = document.getElementById("provider-reports-body");
+  if (!tbody) {
+    return;
+  }
+  tbody.innerHTML = "";
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7">Für diesen Tag wurden keine Anbieterberichte veröffentlicht.</td></tr>';
+    return;
+  }
+  for (const row of rows) {
+    const tr = document.createElement("tr");
+    const displayName = row.display_name || row.provider_uid || "";
+    const publisher = row.publisher || row.provider_uid || "";
+    tr.innerHTML = `
+      <td>
+        <span>${escapeHtml(displayName)}</span>
+        <div class="provider-sub">${escapeHtml(publisher)}</div>
+      </td>
+      <td>${numberFormat(row.messages_total)}</td>
+      <td>${numberFormat(row.push_messages_total)}</td>
+      <td>${numberFormat(row.http_response_messages_total)}</td>
+      <td>${numberFormat(Number(row.fetch_failure_messages_total || 0) + Number(row.http_error_messages_total || 0))}</td>
+      <td>${megabytesFormat(row.payload_byte_length_total)}</td>
+      <td>${escapeHtml(timestampFormat(row.latest_message_timestamp))}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
 async function initManagementPage() {
   const status = document.getElementById("management-status");
   wireAppPromoLinks();
@@ -421,6 +515,15 @@ async function initManagementPage() {
 
   function renderCharts() {
     if (overviewChart) overviewChart.destroy();
+    const selectedMetric = OVERVIEW_METRICS[overviewMetricSelect.value] || OVERVIEW_METRICS.stations_with_disruptions;
+    const title = document.getElementById("management-overview-title");
+    const description = document.getElementById("management-overview-description");
+    if (title) {
+      title.textContent = selectedMetric.label;
+    }
+    if (description) {
+      description.textContent = selectedMetric.description || "";
+    }
     overviewChart = createLineChart(
       "management-overview-chart",
       buildOverviewSeries(trendsPayload, overviewMetricSelect.value),
@@ -436,6 +539,7 @@ async function initManagementPage() {
     renderKpis(currentSnapshot);
     renderBrokenStations(currentSnapshot);
     renderBusyStations(currentSnapshot);
+    renderProviderReports(currentSnapshot);
     renderCharts();
 
     const summary = currentSnapshot.summary || {};

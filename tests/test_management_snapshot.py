@@ -6,6 +6,7 @@ from datetime import date
 from pathlib import Path
 
 from analysis.management_snapshot import (
+    SNAPSHOT_PROVIDER_LIMIT,
     SNAPSHOT_TOP_LIMIT,
     _public_snapshot_payload,
     build_management_snapshot_from_analysis_outputs,
@@ -301,6 +302,125 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
             },
         ],
     )
+    _write_csv(
+        analysis_output_dir / "provider_daily_summary.csv",
+        [
+            "archive_date",
+            "provider_uid",
+            "display_name",
+            "publisher",
+            "messages_total",
+            "parseable_messages_total",
+            "extracted_observation_count_total",
+            "extracted_mapped_observation_count_total",
+            "mapped_observation_ratio",
+            "evses_observed",
+            "mapped_evses_observed",
+            "mapped_stations_observed",
+            "mapped_stations_observed_in_bundle",
+            "out_of_order_evses_end_of_day",
+            "stations_all_evses_out_of_order",
+            "dynamic_station_coverage_ratio",
+            "dynamic_station_coverage_ratio_in_bundle",
+            "competitive_analysis_tier",
+            "latest_event_timestamp",
+        ],
+        [
+            {
+                "archive_date": "2026-04-17",
+                "provider_uid": "provider-a",
+                "display_name": "Provider A",
+                "publisher": "Publisher A",
+                "messages_total": "12",
+                "parseable_messages_total": "11",
+                "extracted_observation_count_total": "120",
+                "extracted_mapped_observation_count_total": "100",
+                "mapped_observation_ratio": "0.833333",
+                "evses_observed": "7",
+                "mapped_evses_observed": "7",
+                "mapped_stations_observed": "3",
+                "mapped_stations_observed_in_bundle": "2",
+                "out_of_order_evses_end_of_day": "3",
+                "stations_all_evses_out_of_order": "1",
+                "dynamic_station_coverage_ratio": "1.0",
+                "dynamic_station_coverage_ratio_in_bundle": "1.0",
+                "competitive_analysis_tier": "eligible",
+                "latest_event_timestamp": "2026-04-17T23:00:00+00:00",
+            },
+            {
+                "archive_date": "2026-04-17",
+                "provider_uid": "provider-b",
+                "display_name": "Provider B",
+                "publisher": "Publisher B",
+                "messages_total": "3",
+                "parseable_messages_total": "3",
+                "extracted_observation_count_total": "20",
+                "extracted_mapped_observation_count_total": "10",
+                "mapped_observation_ratio": "0.5",
+                "evses_observed": "2",
+                "mapped_evses_observed": "2",
+                "mapped_stations_observed": "1",
+                "mapped_stations_observed_in_bundle": "1",
+                "out_of_order_evses_end_of_day": "0",
+                "stations_all_evses_out_of_order": "0",
+                "dynamic_station_coverage_ratio": "0.5",
+                "dynamic_station_coverage_ratio_in_bundle": "0.5",
+                "competitive_analysis_tier": "review",
+                "latest_event_timestamp": "2026-04-17T23:05:00+00:00",
+            },
+        ],
+    )
+    _write_csv(
+        analysis_output_dir / "archive_messages.csv",
+        [
+            "archive_date",
+            "provider_uid",
+            "record_kind",
+            "message_timestamp",
+            "http_status",
+            "payload_byte_length",
+        ],
+        [
+            *[
+                {
+                    "archive_date": "2026-04-17",
+                    "provider_uid": "provider-a",
+                    "record_kind": "push_request",
+                    "message_timestamp": f"2026-04-17T12:{index:02d}:00+00:00",
+                    "http_status": "",
+                    "payload_byte_length": "100",
+                }
+                for index in range(10)
+            ],
+            {
+                "archive_date": "2026-04-17",
+                "provider_uid": "provider-a",
+                "record_kind": "http_response",
+                "message_timestamp": "2026-04-17T13:00:00+00:00",
+                "http_status": "200",
+                "payload_byte_length": "250",
+            },
+            {
+                "archive_date": "2026-04-17",
+                "provider_uid": "provider-a",
+                "record_kind": "fetch_failure",
+                "message_timestamp": "2026-04-17T13:05:00+00:00",
+                "http_status": "",
+                "payload_byte_length": "0",
+            },
+            *[
+                {
+                    "archive_date": "2026-04-17",
+                    "provider_uid": "provider-b",
+                    "record_kind": "push_request",
+                    "message_timestamp": f"2026-04-17T10:{index:02d}:00+00:00",
+                    "http_status": "",
+                    "payload_byte_length": "50",
+                }
+                for index in range(3)
+            ],
+        ],
+    )
 
     result = build_management_snapshot_from_analysis_outputs(
         target_date=date(2026, 4, 17),
@@ -331,6 +451,14 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
     assert result["broken_stations"][1]["status_label"] == "Derzeit eingeschränkt"
     assert result["busiest_stations"][0]["station_id"] == "station-1"
     assert result["busiest_stations"][0]["busy_transition_count"] == 2
+    assert result["provider_reports"][0]["provider_uid"] == "provider-a"
+    assert result["provider_reports"][0]["messages_total"] == 12
+    assert result["provider_reports"][0]["push_messages_total"] == 10
+    assert result["provider_reports"][0]["http_response_messages_total"] == 1
+    assert result["provider_reports"][0]["fetch_failure_messages_total"] == 1
+    assert result["provider_reports"][0]["payload_byte_length_total"] == 1250
+    assert result["provider_reports"][0]["mapped_observation_ratio"] == 0.833333
+    assert result["provider_reports"][1]["provider_uid"] == "provider-b"
     snapshot_path = output_root / "days" / "2026" / "04" / "17" / "snapshot.json"
     assert snapshot_path.exists()
 
@@ -355,6 +483,7 @@ def test_rebuild_management_indexes_builds_available_dates_and_summary_series(tm
                     },
                     "busiest_stations": [],
                     "broken_stations": [],
+                    "provider_reports": [{"provider_uid": "provider-a"}],
                 },
                 ensure_ascii=False,
             ),
@@ -379,11 +508,14 @@ def test_public_snapshot_payload_trims_rankings_and_drops_extra_fields():
         "summary": {"afir_stations_observed": 14032},
         "busiest_stations": [{"station_id": f"busy-{index}"} for index in range(SNAPSHOT_TOP_LIMIT + 3)],
         "broken_stations": [{"station_id": f"broken-{index}"} for index in range(SNAPSHOT_TOP_LIMIT + 5)],
-        "provider_rows": [{"provider_uid": "secret"}],
+        "provider_reports": [{"provider_uid": f"provider-{index}"} for index in range(SNAPSHOT_PROVIDER_LIMIT + 2)],
+        "provider_rows": [{"provider_uid": "legacy-private"}],
     }
 
     result = _public_snapshot_payload(payload)
 
     assert len(result["busiest_stations"]) == SNAPSHOT_TOP_LIMIT
     assert len(result["broken_stations"]) == SNAPSHOT_TOP_LIMIT
+    assert len(result["provider_reports"]) == SNAPSHOT_PROVIDER_LIMIT
+    assert result["provider_reports"][0]["provider_uid"] == "provider-0"
     assert "provider_rows" not in result

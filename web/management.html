@@ -182,8 +182,8 @@
       <section class="management-grid">
         <article class="management-panel">
           <div class="management-panel-head">
-            <h2>Störungen an Stationen</h2>
-            <p>
+            <h2 id="management-overview-title">Stationen mit Störungen</h2>
+            <p id="management-overview-description">
               So hat sich die Zahl der Stationen mit Störungen von Tag zu Tag
               entwickelt.
             </p>
@@ -240,6 +240,32 @@
                 </tr>
               </thead>
               <tbody id="busy-stations-body"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="management-panel">
+          <div class="management-panel-head">
+            <h2>AFIR-Meldungen nach Anbieter</h2>
+            <p>
+              Anbieteransicht für Datenmeldungen, Push-Verkehr und Polling im
+              Tagesarchiv.
+            </p>
+          </div>
+          <div class="management-table-wrap">
+            <table class="management-table">
+              <thead>
+                <tr>
+                  <th>Anbieter</th>
+                  <th>Datenmeldungen</th>
+                  <th>Push</th>
+                  <th>Pull</th>
+                  <th>Fehler</th>
+                  <th>Datenvolumen</th>
+                  <th>Letzte Meldung</th>
+                </tr>
+              </thead>
+              <tbody id="provider-reports-body"></tbody>
             </table>
           </div>
         </article>
