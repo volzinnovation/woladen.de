@@ -1,5 +1,9 @@
 import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs";
 import {
+  formatOpeningHoursForGermanDisplay,
+  getAmenityOpenStatus,
+} from "./opening-hours.mjs";
+import {
   LOCATION_ERROR_PERMISSION_DENIED,
   LOCATION_PERMISSION_DENIED,
   LOCATION_PERMISSION_GRANTED,
@@ -128,6 +132,17 @@ function formatAmenityCount(count) {
   const numeric = Number(count || 0);
   const rounded = Number.isFinite(numeric) ? Math.round(numeric) : 0;
   return `${rounded} ${rounded === 1 ? "Angebot vor Ort" : "Angebote vor Ort"}`;
+}
+
+function formatAmenityOpenStatus(item, date = new Date()) {
+  const status = getAmenityOpenStatus(item, date).state;
+  if (status === "open") {
+    return { label: "Jetzt geöffnet", className: "open" };
+  }
+  if (status === "closed") {
+    return { label: "Geschlossen", className: "closed" };
+  }
+  return { label: "Öffnungszeiten unbekannt", className: "unknown" };
 }
 
 function resolveLiveApiBaseUrl() {
@@ -597,6 +612,7 @@ const state = {
     minPower: DEFAULT_MIN_POWER_KW,
     amenities: new Set(),
     amenityNameQuery: "",
+    currentlyOpenOnly: false,
   },
   live: {
     baseUrl: LIVE_API_BASE_URL,
@@ -649,6 +665,7 @@ const els = {
     label: document.getElementById("filter-label"),
     operator: document.getElementById("filter-operator"),
     amenityName: document.getElementById("filter-amenity-name"),
+    currentlyOpen: document.getElementById("filter-currently-open"),
     power: document.getElementById("filter-power"),
     powerVal: document.getElementById("filter-power-val"),
     amenities: document.getElementById("filter-amenities"),
@@ -1363,6 +1380,12 @@ function initFilters() {
     updateFilters();
   });
 
+  // Currently open offers
+  els.filter.currentlyOpen.addEventListener("change", (e) => {
+    state.filters.currentlyOpenOnly = e.target.checked;
+    updateFilters();
+  });
+
   // Power
   els.filter.power.addEventListener("input", (e) => {
     state.filters.minPower = Number(e.target.value);
@@ -1503,8 +1526,9 @@ function updateRatingDependentViews() {
 }
 
 function applyFilters() {
+  const now = new Date();
   state.filtered = state.features.filter((feature) =>
-    matchesFeatureFilters(feature, state.filters, { getDisplayedMaxPowerKw }),
+    matchesFeatureFilters(feature, state.filters, { getDisplayedMaxPowerKw, now }),
   );
 
   // Re-sort if we have location
@@ -1944,7 +1968,7 @@ function populateDetailContent(feature, liveDetail = null) {
   }
 
   const priceDisplay = getDisplayPrice(p, liveDetail);
-  const openingHoursDisplay = String(p.opening_hours_display || "").trim();
+  const openingHoursDisplay = formatOpeningHoursForGermanDisplay(p.opening_hours_display);
   const showPower = Boolean(powerDisplay);
   const showOccupancy = Boolean(occupancySummary);
   const showPrice = Boolean(priceDisplay);
@@ -2109,6 +2133,7 @@ function renderDetailAmenities(props) {
     return;
   }
 
+  const now = new Date();
   examples.slice(0, 15).forEach((item) => {
     // item: { category, name, opening_hours, distance_m, lat, lon }
     const catConfig = AMENITY_MAPPING[`amenity_${item.category}`] || {
@@ -2118,9 +2143,15 @@ function renderDetailAmenities(props) {
 
     // Helper to format text
     const name = item.name || catConfig.label;
+    const openStatus = formatAmenityOpenStatus(item, now);
+    const openingHoursText = formatOpeningHoursForGermanDisplay(item.opening_hours);
+    const statusLabel = openStatus.className !== "unknown" || !openingHoursText
+      ? openStatus.label
+      : null;
     const meta = [
       item.distance_m ? `~${Math.round(item.distance_m)}m` : null,
-      item.opening_hours,
+      statusLabel,
+      openingHoursText,
     ]
       .filter(Boolean)
       .join(" • ");
@@ -2136,7 +2167,7 @@ function renderDetailAmenities(props) {
       ${iconHtml}
       <div class="amenity-detail">
         <span class="amenity-detail-name">${escapeHtml(name)}</span>
-        <span class="amenity-detail-meta">${escapeHtml(meta)}</span>
+        <span class="amenity-detail-meta ${openStatus.className}">${escapeHtml(meta)}</span>
       </div>
     `;
     els.detail.amenityList.appendChild(div);

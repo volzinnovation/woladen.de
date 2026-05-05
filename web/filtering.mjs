@@ -1,3 +1,5 @@
+import { hasOpenAmenity } from "./opening-hours.mjs";
+
 const COMBINING_MARKS = /[\u0300-\u036f]/g;
 const NON_ALPHANUMERIC = /[^\p{L}\p{N}]+/gu;
 
@@ -42,6 +44,7 @@ export function countActiveFilters(filters) {
     (filters?.operator ? 1 : 0) +
     (Number.isFinite(minPower) && minPower !== 50 ? 1 : 0) +
     selectedAmenities +
+    (filters?.currentlyOpenOnly ? 1 : 0) +
     (normalizeAmenityNameQuery(filters?.amenityNameQuery).length > 0 ? 1 : 0)
   );
 }
@@ -58,6 +61,10 @@ export function matchesFeatureFilters(feature, filters, options = {}) {
   }
 
   if (Number(getDisplayedMaxPowerKw(properties)) < Number(filters?.minPower ?? 50)) {
+    return false;
+  }
+
+  if (filters?.currentlyOpenOnly && !hasOpenAmenity(properties, options.now ?? new Date())) {
     return false;
   }
 
