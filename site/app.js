@@ -145,6 +145,25 @@ function formatAmenityOpenStatus(item, date = new Date()) {
   return { label: "Öffnungszeiten unbekannt", className: "unknown" };
 }
 
+function formatAmenityDistance(item) {
+  const distance = Number(item?.distance_m);
+  if (!Number.isFinite(distance)) return "";
+  return `${Math.round(distance)} m`;
+}
+
+function openAmenityDetailSheet(item, categoryLabel, now = new Date()) {
+  const name = item.name || categoryLabel || "Angebot vor Ort";
+  const openStatus = formatAmenityOpenStatus(item, now);
+  const openingHoursText = formatOpeningHoursForGermanDisplay(item.opening_hours);
+
+  els.amenitySheet.category.textContent = categoryLabel || "Angebot vor Ort";
+  els.amenitySheet.title.textContent = name;
+  els.amenitySheet.status.textContent = openStatus.label;
+  els.amenitySheet.status.className = `amenity-sheet-status ${openStatus.className}`;
+  els.amenitySheet.hours.textContent = openingHoursText || "Öffnungszeiten unbekannt";
+  openModal("amenityDetail");
+}
+
 function resolveLiveApiBaseUrl() {
   const configuredValue = typeof window.WOLADEN_LIVE_API_BASE_URL === "string"
     ? window.WOLADEN_LIVE_API_BASE_URL.trim()
@@ -655,6 +674,7 @@ const els = {
   modals: {
     filter: document.getElementById("modal-filter"),
     detail: document.getElementById("modal-detail"),
+    amenityDetail: document.getElementById("modal-amenity-detail"),
   },
   lists: {
     chargers: document.getElementById("charger-list"),
@@ -706,10 +726,17 @@ const els = {
     helpdeskPhoneBtn: document.getElementById("btn-helpdesk-phone"),
     mapContainer: document.getElementById("detail-map"),
   },
+  amenitySheet: {
+    category: document.getElementById("amenity-sheet-category"),
+    title: document.getElementById("amenity-sheet-title"),
+    status: document.getElementById("amenity-sheet-status"),
+    hours: document.getElementById("amenity-sheet-hours"),
+  },
   buttons: {
     locate: document.getElementById("btn-locate"),
     closeFilter: document.querySelector('[data-close="modal-filter"]'),
     closeDetail: document.querySelector('[data-close="modal-detail"]'),
+    closeAmenityDetail: document.querySelector('[data-close="modal-amenity-detail"]'),
   },
   meta: document.getElementById("app-meta"),
 };
@@ -735,12 +762,12 @@ async function init() {
 
   els.buttons.closeFilter.addEventListener("click", () => closeModal("filter"));
   els.buttons.closeDetail.addEventListener("click", () => closeModal("detail"));
+  els.buttons.closeAmenityDetail.addEventListener("click", () => closeModal("amenityDetail"));
 
   // Close modals on backdrop click
-  Object.values(els.modals).forEach((modal) => {
+  Object.entries(els.modals).forEach(([name, modal]) => {
     modal.addEventListener("click", (e) => {
-      if (e.target === modal)
-        closeModal(modal.id === "modal-filter" ? "filter" : "detail");
+      if (e.target === modal) closeModal(name);
     });
   });
 
@@ -2135,42 +2162,33 @@ function renderDetailAmenities(props) {
 
   const now = new Date();
   examples.slice(0, 15).forEach((item) => {
-    // item: { category, name, opening_hours, distance_m, lat, lon }
     const catConfig = AMENITY_MAPPING[`amenity_${item.category}`] || {
       label: item.category || "Angebot vor Ort",
     };
-    const iconPath = getAmenityIconPath(`amenity_${item.category}`);
 
-    // Helper to format text
     const name = item.name || catConfig.label;
+    const iconPath = getAmenityIconPath(`amenity_${item.category}`);
     const openStatus = formatAmenityOpenStatus(item, now);
-    const openingHoursText = formatOpeningHoursForGermanDisplay(item.opening_hours);
-    const statusLabel = openStatus.className !== "unknown" || !openingHoursText
-      ? openStatus.label
-      : null;
-    const meta = [
-      item.distance_m ? `~${Math.round(item.distance_m)}m` : null,
-      statusLabel,
-      openingHoursText,
-    ]
-      .filter(Boolean)
-      .join(" • ");
+    const distance = formatAmenityDistance(item);
 
-    const div = document.createElement("div");
-    div.className = "amenity-item";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "amenity-item";
+    button.addEventListener("click", () => openAmenityDetailSheet(item, catConfig.label, now));
 
-    let iconHtml = iconPath
-      ? `<img src="${iconPath}" alt="${catConfig.label}">`
-      : `<div style="width:24px;height:24px;background:#eee;border-radius:4px"></div>`;
-
-    div.innerHTML = `
-      ${iconHtml}
+    button.innerHTML = `
+      ${iconPath
+        ? `<img src="${iconPath}" alt="${escapeHtml(catConfig.label)}" loading="lazy">`
+        : `<span class="amenity-item-icon-fallback" aria-hidden="true"></span>`}
       <div class="amenity-detail">
         <span class="amenity-detail-name">${escapeHtml(name)}</span>
-        <span class="amenity-detail-meta ${openStatus.className}">${escapeHtml(meta)}</span>
+        <span class="amenity-detail-meta ${openStatus.className}">${escapeHtml(openStatus.label)}</span>
       </div>
+      <span class="amenity-item-spacer"></span>
+      ${distance ? `<span class="amenity-distance">${escapeHtml(distance)}</span>` : ""}
+      <span class="amenity-chevron" aria-hidden="true"></span>
     `;
-    els.detail.amenityList.appendChild(div);
+    els.detail.amenityList.appendChild(button);
   });
 }
 
