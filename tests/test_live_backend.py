@@ -1859,7 +1859,7 @@ def test_api_lists_stations_and_filters(app_config):
     client = TestClient(create_app(app_config))
     stations = client.get("/v1/stations").json()
     assert len(stations) == 1
-    assert stations[0]["station_id"] == "DE:station-1"
+    assert stations[0]["station_id"] == "station-1"
     assert stations[0]["availability_status"] == "free"
     for key in ("operator", "address", "postcode", "city", "lat", "lon", "charging_points_count", "max_power_kw", "provider_uid"):
         assert key not in stations[0]
@@ -1881,8 +1881,8 @@ def test_api_station_lookup_returns_requested_station_ids(app_config):
     )
     assert response.status_code == 200
     payload = response.json()
-    assert [station["station_id"] for station in payload["stations"]] == ["DE:station-1"]
-    assert payload["missing_station_ids"] == ["DE:missing"]
+    assert [station["station_id"] for station in payload["stations"]] == ["station-1"]
+    assert payload["missing_station_ids"] == ["missing"]
     for key in ("operator", "address", "postcode", "city", "lat", "lon", "charging_points_count", "max_power_kw", "provider_uid"):
         assert key not in payload["stations"][0]
 
