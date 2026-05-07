@@ -1,16 +1,21 @@
 {
-  "generated_at": "2026-04-26T10:51:43+00:00",
+  "generated_at": "2026-05-06T16:17:29+00:00",
   "source_chargers_csv": "/Users/raphaelvolz/Github/woladen.de/data/chargers_full.csv",
   "source_bundle_chargers_csv": "/Users/raphaelvolz/Github/woladen.de/data/chargers_fast.csv",
   "machine_certificate_probe": {
-    "configured": false,
-    "status": "missing_certificate"
+    "configured": true,
+    "status": "mtls_ok_no_subscription",
+    "certificate_path": "secret/certificate.p12",
+    "probe_url": "https://mobilithek.info:8443/mobilithek/api/v1.0/subscription/datexv3?subscriptionID=0",
+    "http_status": 404,
+    "stderr_excerpt": "",
+    "body_excerpt": ""
   },
   "totals": {
-    "stations": 71652,
-    "charging_points": 195637,
-    "bundle_stations": 14967,
-    "bundle_charging_points": 50962
+    "stations": 72155,
+    "charging_points": 197527,
+    "bundle_stations": 15214,
+    "bundle_charging_points": 51934
   },
   "providers": [
     {
@@ -152,16 +157,16 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "noauth",
-        "locations_scanned": 5190,
-        "matched_locations": 4493,
-        "matched_stations": 4493,
-        "matched_charging_points": 14833,
-        "station_coverage_ratio": 0.062706,
-        "charging_point_coverage_ratio": 0.075819,
-        "bundle_matched_stations": 492,
-        "bundle_matched_charging_points": 1503,
-        "bundle_station_coverage_ratio": 0.032872,
-        "bundle_charging_point_coverage_ratio": 0.029493,
+        "locations_scanned": 6460,
+        "matched_locations": 5632,
+        "matched_stations": 5632,
+        "matched_charging_points": 17550,
+        "station_coverage_ratio": 0.078054,
+        "charging_point_coverage_ratio": 0.088849,
+        "bundle_matched_stations": 594,
+        "bundle_matched_charging_points": 1824,
+        "bundle_station_coverage_ratio": 0.039043,
+        "bundle_charging_point_coverage_ratio": 0.035122,
         "site_operator_samples": [
           "Stadtwerke Göttingen Aktiengesellschaft",
           "Stadtwerke Ettlingen GmbH",
@@ -179,14 +184,14 @@
         "fetch_status": "ok",
         "access_mode": "noauth",
         "delta_delivery": true,
-        "site_status_count": 10,
-        "station_status_count": 11,
-        "evse_status_count": 12,
-        "available_evses": 3,
-        "occupied_evses": 7,
+        "site_status_count": 20,
+        "station_status_count": 20,
+        "evse_status_count": 20,
+        "available_evses": 8,
+        "occupied_evses": 10,
         "out_of_order_evses": 2,
         "unknown_evses": 0,
-        "latest_last_updated": "2026-04-21T18:35:12.936Z"
+        "latest_last_updated": "2026-05-06T16:12:42.278Z"
       }
     },
     {
@@ -229,27 +234,27 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "auth",
-        "locations_scanned": 12911,
-        "matched_locations": 8922,
-        "matched_stations": 8922,
-        "matched_charging_points": 25851,
-        "station_coverage_ratio": 0.124519,
-        "charging_point_coverage_ratio": 0.132138,
-        "bundle_matched_stations": 3495,
-        "bundle_matched_charging_points": 12198,
-        "bundle_station_coverage_ratio": 0.233514,
-        "bundle_charging_point_coverage_ratio": 0.239355,
+        "locations_scanned": 13586,
+        "matched_locations": 6553,
+        "matched_stations": 6553,
+        "matched_charging_points": 18000,
+        "station_coverage_ratio": 0.090818,
+        "charging_point_coverage_ratio": 0.091127,
+        "bundle_matched_stations": 2880,
+        "bundle_matched_charging_points": 9633,
+        "bundle_station_coverage_ratio": 0.189299,
+        "bundle_charging_point_coverage_ratio": 0.185485,
         "site_operator_samples": [
-          "Ubitricity",
-          "BASF InfraService & Solutions Lausitz GmbH",
-          "Techem Energy Services GmbH",
-          "JOLT Energy",
-          "Fastned",
-          "ChargePoint",
-          "Kreiswerke Main-Kinzig GmbH",
+          "Mer Germany",
+          "MDF Dienstleistungen Fischer",
+          "AVIA VOLT",
+          "E-Werk Mittelbaden",
+          "Stadtwerke Bochum",
           "Kaufland",
-          "eCarUp AG",
-          "Stadtwerke Witten Energielösungen GmbH"
+          "Aral pulse",
+          "EnBW Ostwürttemberg DonauRies AG",
+          "ChargePoint",
+          "Hochtief Ladepartner GmbH"
         ]
       },
       "dynamic": {
@@ -259,30 +264,30 @@
         "site_status_count": 1,
         "station_status_count": 1,
         "evse_status_count": 1,
-        "available_evses": 1,
-        "occupied_evses": 0,
+        "available_evses": 0,
+        "occupied_evses": 1,
         "out_of_order_evses": 0,
         "unknown_evses": 0,
-        "latest_last_updated": "2026-04-21T18:35:36Z"
+        "latest_last_updated": "2026-05-06T16:13:13Z"
       }
     },
     {
       "provider_uid": "edri",
       "display_name": "edri",
-      "publisher": "Аmpeco Ltd.",
+      "publisher": "Ampeco Ltd.",
       "static": {
         "fetch_status": "ok",
         "access_mode": "auth",
-        "locations_scanned": 456,
-        "matched_locations": 435,
-        "matched_stations": 435,
-        "matched_charging_points": 1184,
-        "station_coverage_ratio": 0.006071,
-        "charging_point_coverage_ratio": 0.006052,
-        "bundle_matched_stations": 252,
-        "bundle_matched_charging_points": 781,
-        "bundle_station_coverage_ratio": 0.016837,
-        "bundle_charging_point_coverage_ratio": 0.015325,
+        "locations_scanned": 457,
+        "matched_locations": 446,
+        "matched_stations": 446,
+        "matched_charging_points": 1246,
+        "station_coverage_ratio": 0.006181,
+        "charging_point_coverage_ratio": 0.006308,
+        "bundle_matched_stations": 261,
+        "bundle_matched_charging_points": 833,
+        "bundle_station_coverage_ratio": 0.017155,
+        "bundle_charging_point_coverage_ratio": 0.01604,
         "site_operator_samples": [
           "E.ON Drive Infrastructure GmbH"
         ]
@@ -291,14 +296,14 @@
         "fetch_status": "ok",
         "access_mode": "auth",
         "delta_delivery": true,
-        "site_status_count": 452,
-        "station_status_count": 687,
+        "site_status_count": 457,
+        "station_status_count": 686,
         "evse_status_count": 1371,
-        "available_evses": 1177,
-        "occupied_evses": 187,
+        "available_evses": 1096,
+        "occupied_evses": 268,
         "out_of_order_evses": 7,
         "unknown_evses": 0,
-        "latest_last_updated": "2026-04-21T18:35:09+00:00"
+        "latest_last_updated": "2026-05-06T16:05:25+00:00"
       }
     },
     {
@@ -308,16 +313,16 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "auth",
-        "locations_scanned": 47,
-        "matched_locations": 36,
-        "matched_stations": 36,
-        "matched_charging_points": 172,
-        "station_coverage_ratio": 0.000502,
-        "charging_point_coverage_ratio": 0.000879,
-        "bundle_matched_stations": 30,
-        "bundle_matched_charging_points": 144,
-        "bundle_station_coverage_ratio": 0.002004,
-        "bundle_charging_point_coverage_ratio": 0.002826,
+        "locations_scanned": 49,
+        "matched_locations": 38,
+        "matched_stations": 38,
+        "matched_charging_points": 174,
+        "station_coverage_ratio": 0.000527,
+        "charging_point_coverage_ratio": 0.000881,
+        "bundle_matched_stations": 31,
+        "bundle_matched_charging_points": 142,
+        "bundle_station_coverage_ratio": 0.002038,
+        "bundle_charging_point_coverage_ratio": 0.002734,
         "site_operator_samples": [
           "eliso GmbH"
         ]
@@ -328,12 +333,12 @@
         "delta_delivery": false,
         "site_status_count": 0,
         "station_status_count": 0,
-        "evse_status_count": 266,
-        "available_evses": 259,
-        "occupied_evses": 5,
-        "out_of_order_evses": 2,
+        "evse_status_count": 286,
+        "available_evses": 258,
+        "occupied_evses": 24,
+        "out_of_order_evses": 4,
         "unknown_evses": 0,
-        "latest_last_updated": "2026-04-21T18:33:22.586906+00:00"
+        "latest_last_updated": "2026-05-06T16:00:07.527263+00:00"
       }
     },
     {
@@ -376,16 +381,16 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "auth",
-        "locations_scanned": 2506,
-        "matched_locations": 2318,
-        "matched_stations": 2318,
-        "matched_charging_points": 9784,
-        "station_coverage_ratio": 0.032351,
-        "charging_point_coverage_ratio": 0.050011,
-        "bundle_matched_stations": 1638,
-        "bundle_matched_charging_points": 8051,
-        "bundle_station_coverage_ratio": 0.109441,
-        "bundle_charging_point_coverage_ratio": 0.15798,
+        "locations_scanned": 2514,
+        "matched_locations": 2328,
+        "matched_stations": 2328,
+        "matched_charging_points": 9843,
+        "station_coverage_ratio": 0.032264,
+        "charging_point_coverage_ratio": 0.049831,
+        "bundle_matched_stations": 1652,
+        "bundle_matched_charging_points": 8129,
+        "bundle_station_coverage_ratio": 0.108584,
+        "bundle_charging_point_coverage_ratio": 0.156526,
         "site_operator_samples": [
           "ENBW"
         ]
@@ -395,13 +400,13 @@
         "access_mode": "auth",
         "delta_delivery": true,
         "site_status_count": 1,
-        "station_status_count": 6,
-        "evse_status_count": 12,
-        "available_evses": 9,
-        "occupied_evses": 3,
+        "station_status_count": 16,
+        "evse_status_count": 36,
+        "available_evses": 21,
+        "occupied_evses": 15,
         "out_of_order_evses": 0,
         "unknown_evses": 0,
-        "latest_last_updated": "2026-04-21T20:36:05.642+02:00"
+        "latest_last_updated": "2026-05-06T18:13:40.418+02:00"
       }
     },
     {
@@ -411,12 +416,12 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "auth",
-        "locations_scanned": 5,
+        "locations_scanned": 4,
         "matched_locations": 3,
         "matched_stations": 3,
         "matched_charging_points": 5,
         "station_coverage_ratio": 4.2e-05,
-        "charging_point_coverage_ratio": 2.6e-05,
+        "charging_point_coverage_ratio": 2.5e-05,
         "bundle_matched_stations": 0,
         "bundle_matched_charging_points": 0,
         "bundle_station_coverage_ratio": 0.0,
@@ -434,7 +439,7 @@
         "occupied_evses": 0,
         "out_of_order_evses": 0,
         "unknown_evses": 0,
-        "latest_last_updated": "2026-04-21T20:29:19+02:00"
+        "latest_last_updated": "2026-05-06T16:43:20+02:00"
       }
     },
     {
@@ -444,27 +449,27 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "noauth",
-        "locations_scanned": 4524,
-        "matched_locations": 3678,
-        "matched_stations": 3678,
-        "matched_charging_points": 9621,
-        "station_coverage_ratio": 0.051331,
-        "charging_point_coverage_ratio": 0.049178,
-        "bundle_matched_stations": 1549,
-        "bundle_matched_charging_points": 4171,
-        "bundle_station_coverage_ratio": 0.103494,
-        "bundle_charging_point_coverage_ratio": 0.081845,
+        "locations_scanned": 4868,
+        "matched_locations": 3285,
+        "matched_stations": 3285,
+        "matched_charging_points": 8890,
+        "station_coverage_ratio": 0.045527,
+        "charging_point_coverage_ratio": 0.045007,
+        "bundle_matched_stations": 1391,
+        "bundle_matched_charging_points": 3666,
+        "bundle_station_coverage_ratio": 0.091429,
+        "bundle_charging_point_coverage_ratio": 0.07059,
         "site_operator_samples": [
           "EWE Go GmbH",
           "Westfalen Weser Ladeservice GmbH",
+          "Comfortcharge GmbH",
           "SachsenNetze HS.HD GmbH",
           "Pfalzwerke AG",
           "Hamburger Energiewerke Mobil GmbH",
           "Stadtwerke Elmshorn",
           "MaxSolar GmbH",
-          "Comfortcharge GmbH",
-          "nonoxx pro GmbH",
-          "GLS Mobility GmbH"
+          "GLS Mobility GmbH",
+          "nonoxx pro GmbH"
         ]
       },
       "dynamic": {
@@ -474,8 +479,8 @@
         "site_status_count": 1,
         "station_status_count": 1,
         "evse_status_count": 2,
-        "available_evses": 2,
-        "occupied_evses": 0,
+        "available_evses": 1,
+        "occupied_evses": 1,
         "out_of_order_evses": 0,
         "unknown_evses": 0,
         "latest_last_updated": null
@@ -486,7 +491,7 @@
       "display_name": "geb ndelte daten e lades ulen baden w rttemberg",
       "publisher": "MobiData BW",
       "static": {
-        "fetch_status": "unsupported_static_format: http://publications.europa.eu/resource/authority/file-type/CSV",
+        "fetch_status": "unsupported_static_format: https://w3id.org/mdp/schema/media_type#MEDIA_OTHER",
         "access_mode": "auth",
         "locations_scanned": 0,
         "matched_locations": 0,
@@ -526,10 +531,10 @@
         "matched_stations": 3,
         "matched_charging_points": 14,
         "station_coverage_ratio": 4.2e-05,
-        "charging_point_coverage_ratio": 7.2e-05,
+        "charging_point_coverage_ratio": 7.1e-05,
         "bundle_matched_stations": 1,
         "bundle_matched_charging_points": 2,
-        "bundle_station_coverage_ratio": 6.7e-05,
+        "bundle_station_coverage_ratio": 6.6e-05,
         "bundle_charging_point_coverage_ratio": 3.9e-05,
         "site_operator_samples": [
           "GLS Mobility GmbH"
@@ -556,41 +561,41 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "noauth",
-        "locations_scanned": 320,
-        "matched_locations": 176,
-        "matched_stations": 176,
-        "matched_charging_points": 516,
-        "station_coverage_ratio": 0.002456,
-        "charging_point_coverage_ratio": 0.002638,
-        "bundle_matched_stations": 79,
-        "bundle_matched_charging_points": 273,
-        "bundle_station_coverage_ratio": 0.005279,
-        "bundle_charging_point_coverage_ratio": 0.005357,
+        "locations_scanned": 977,
+        "matched_locations": 522,
+        "matched_stations": 522,
+        "matched_charging_points": 1553,
+        "station_coverage_ratio": 0.007234,
+        "charging_point_coverage_ratio": 0.007862,
+        "bundle_matched_stations": 122,
+        "bundle_matched_charging_points": 384,
+        "bundle_station_coverage_ratio": 0.008019,
+        "bundle_charging_point_coverage_ratio": 0.007394,
         "site_operator_samples": [
-          "becharged GmbH",
-          "EAM Natur Energie GmbH",
+          "TELIS Unternehmensgruppe AG",
+          "Stadtwerke Straubing GmbH",
           "Stadt Schwalmstadt",
-          "Stadt Kirchhain",
+          "Charge Green OnSite GmbH",
+          "EAM Natur Energie GmbH",
+          "becharged GmbH",
+          "EW Eichsfeldgas GmbH",
+          "Gemeinde Langgöns",
           "Regensburger Energie- und Wasserversorgung AG & Co KG",
-          "Landkreis Schwalm Eder",
-          "Stadt Grebenstein",
-          "Gemeinde Fuldabrück",
-          "Neustadt (Hessen)",
-          "Main-Kinzig-Kliniken Gelnhausen"
+          "Maschinenfabrik Reinhausen GmbH"
         ]
       },
       "dynamic": {
         "fetch_status": "ok",
         "access_mode": "noauth",
         "delta_delivery": false,
-        "site_status_count": 320,
-        "station_status_count": 320,
-        "evse_status_count": 553,
-        "available_evses": 509,
-        "occupied_evses": 15,
-        "out_of_order_evses": 12,
-        "unknown_evses": 17,
-        "latest_last_updated": "2026-04-26T10:50:05.901Z"
+        "site_status_count": 977,
+        "station_status_count": 977,
+        "evse_status_count": 1661,
+        "available_evses": 1528,
+        "occupied_evses": 96,
+        "out_of_order_evses": 13,
+        "unknown_evses": 24,
+        "latest_last_updated": "2026-05-06T16:13:45.596Z"
       }
     },
     {
@@ -633,16 +638,16 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "auth",
-        "locations_scanned": 977,
-        "matched_locations": 602,
-        "matched_stations": 602,
-        "matched_charging_points": 1876,
-        "station_coverage_ratio": 0.008402,
-        "charging_point_coverage_ratio": 0.009589,
-        "bundle_matched_stations": 171,
+        "locations_scanned": 972,
+        "matched_locations": 600,
+        "matched_stations": 600,
+        "matched_charging_points": 1866,
+        "station_coverage_ratio": 0.008315,
+        "charging_point_coverage_ratio": 0.009447,
+        "bundle_matched_stations": 172,
         "bundle_matched_charging_points": 538,
-        "bundle_station_coverage_ratio": 0.011426,
-        "bundle_charging_point_coverage_ratio": 0.010557,
+        "bundle_station_coverage_ratio": 0.011305,
+        "bundle_charging_point_coverage_ratio": 0.010359,
         "site_operator_samples": [
           "DEAHF",
           "DENB1",
@@ -660,14 +665,14 @@
         "fetch_status": "ok",
         "access_mode": "auth",
         "delta_delivery": false,
-        "site_status_count": 161,
-        "station_status_count": 977,
-        "evse_status_count": 2884,
-        "available_evses": 2344,
-        "occupied_evses": 309,
-        "out_of_order_evses": 225,
-        "unknown_evses": 6,
-        "latest_last_updated": "2026-04-26T10:50:01Z"
+        "site_status_count": 162,
+        "station_status_count": 963,
+        "evse_status_count": 2860,
+        "available_evses": 2330,
+        "occupied_evses": 295,
+        "out_of_order_evses": 231,
+        "unknown_evses": 4,
+        "latest_last_updated": "2026-05-06T16:10:00Z"
       }
     },
     {
@@ -677,16 +682,16 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "auth",
-        "locations_scanned": 2094,
-        "matched_locations": 1784,
-        "matched_stations": 1784,
-        "matched_charging_points": 5457,
-        "station_coverage_ratio": 0.024898,
-        "charging_point_coverage_ratio": 0.027893,
-        "bundle_matched_stations": 177,
-        "bundle_matched_charging_points": 675,
-        "bundle_station_coverage_ratio": 0.011826,
-        "bundle_charging_point_coverage_ratio": 0.013245,
+        "locations_scanned": 2210,
+        "matched_locations": 1873,
+        "matched_stations": 1873,
+        "matched_charging_points": 5659,
+        "station_coverage_ratio": 0.025958,
+        "charging_point_coverage_ratio": 0.028649,
+        "bundle_matched_stations": 201,
+        "bundle_matched_charging_points": 741,
+        "bundle_station_coverage_ratio": 0.013212,
+        "bundle_charging_point_coverage_ratio": 0.014268,
         "site_operator_samples": [
           "DESTA",
           "DEERM",
@@ -704,14 +709,47 @@
         "fetch_status": "ok",
         "access_mode": "auth",
         "delta_delivery": false,
-        "site_status_count": 28,
-        "station_status_count": 2097,
-        "evse_status_count": 7377,
-        "available_evses": 6368,
-        "occupied_evses": 843,
-        "out_of_order_evses": 159,
-        "unknown_evses": 7,
-        "latest_last_updated": "2026-04-21T18:35:07Z"
+        "site_status_count": 29,
+        "station_status_count": 2213,
+        "evse_status_count": 7659,
+        "available_evses": 6612,
+        "occupied_evses": 828,
+        "out_of_order_evses": 206,
+        "unknown_evses": 13,
+        "latest_last_updated": "2026-05-06T16:10:02Z"
+      }
+    },
+    {
+      "provider_uid": "lichtblick_emobility",
+      "display_name": "lichtblick emobility",
+      "publisher": "LichtBlick eMobility GmbH",
+      "static": {
+        "fetch_status": "ok",
+        "access_mode": "auth",
+        "locations_scanned": 1170,
+        "matched_locations": 937,
+        "matched_stations": 937,
+        "matched_charging_points": 3796,
+        "station_coverage_ratio": 0.012986,
+        "charging_point_coverage_ratio": 0.019218,
+        "bundle_matched_stations": 121,
+        "bundle_matched_charging_points": 468,
+        "bundle_station_coverage_ratio": 0.007953,
+        "bundle_charging_point_coverage_ratio": 0.009011,
+        "site_operator_samples": []
+      },
+      "dynamic": {
+        "fetch_status": "ok",
+        "access_mode": "auth",
+        "delta_delivery": true,
+        "site_status_count": 1,
+        "station_status_count": 1,
+        "evse_status_count": 1,
+        "available_evses": 0,
+        "occupied_evses": 1,
+        "out_of_order_evses": 0,
+        "unknown_evses": 0,
+        "latest_last_updated": "2026-05-06T16:14:07.2914406+00:00"
       }
     },
     {
@@ -721,16 +759,16 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "auth",
-        "locations_scanned": 142,
-        "matched_locations": 105,
-        "matched_stations": 105,
+        "locations_scanned": 138,
+        "matched_locations": 102,
+        "matched_stations": 102,
         "matched_charging_points": 259,
-        "station_coverage_ratio": 0.001465,
-        "charging_point_coverage_ratio": 0.001324,
-        "bundle_matched_stations": 5,
-        "bundle_matched_charging_points": 12,
-        "bundle_station_coverage_ratio": 0.000334,
-        "bundle_charging_point_coverage_ratio": 0.000235,
+        "station_coverage_ratio": 0.001414,
+        "charging_point_coverage_ratio": 0.001311,
+        "bundle_matched_stations": 4,
+        "bundle_matched_charging_points": 10,
+        "bundle_station_coverage_ratio": 0.000263,
+        "bundle_charging_point_coverage_ratio": 0.000193,
         "site_operator_samples": [
           "Autohaus Albrecht",
           "Stadtwerke Bad Saulgau",
@@ -739,9 +777,9 @@
           "Braun Energiedienstleistungen GmbH & Co. KG",
           "Energieversorgung Guben GmbH",
           "ELTPLAN",
+          "Autocenter Giraud GmbH",
           "Hyatt Place Frankfurt Airport",
-          "KSV Koblenzer GmbH",
-          "e-HET GmbH"
+          "KSV Koblenzer GmbH"
         ]
       },
       "dynamic": {
@@ -751,11 +789,11 @@
         "site_status_count": 1,
         "station_status_count": 1,
         "evse_status_count": 1,
-        "available_evses": 1,
-        "occupied_evses": 0,
+        "available_evses": 0,
+        "occupied_evses": 1,
         "out_of_order_evses": 0,
         "unknown_evses": 0,
-        "latest_last_updated": "2026-04-21T18:35:22.8664442+00:00"
+        "latest_last_updated": "2026-05-06T16:14:17.5280376+00:00"
       }
     },
     {
@@ -765,16 +803,16 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "auth",
-        "locations_scanned": 589,
-        "matched_locations": 366,
-        "matched_stations": 366,
-        "matched_charging_points": 1378,
-        "station_coverage_ratio": 0.005108,
-        "charging_point_coverage_ratio": 0.007044,
-        "bundle_matched_stations": 129,
-        "bundle_matched_charging_points": 458,
-        "bundle_station_coverage_ratio": 0.008619,
-        "bundle_charging_point_coverage_ratio": 0.008987,
+        "locations_scanned": 592,
+        "matched_locations": 374,
+        "matched_stations": 374,
+        "matched_charging_points": 1407,
+        "station_coverage_ratio": 0.005183,
+        "charging_point_coverage_ratio": 0.007123,
+        "bundle_matched_stations": 136,
+        "bundle_matched_charging_points": 480,
+        "bundle_station_coverage_ratio": 0.008939,
+        "bundle_charging_point_coverage_ratio": 0.009243,
         "site_operator_samples": [
           "Mangels-Elektro U. Sanitär GmbH",
           "Service4Charger",
@@ -795,11 +833,11 @@
         "site_status_count": 1,
         "station_status_count": 1,
         "evse_status_count": 1,
-        "available_evses": 0,
-        "occupied_evses": 1,
+        "available_evses": 1,
+        "occupied_evses": 0,
         "out_of_order_evses": 0,
         "unknown_evses": 0,
-        "latest_last_updated": "2026-04-21T18:36:04.080000Z"
+        "latest_last_updated": "2026-05-06T16:14:10.752000Z"
       }
     },
     {
@@ -809,18 +847,20 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "auth",
-        "locations_scanned": 1,
-        "matched_locations": 1,
-        "matched_stations": 1,
-        "matched_charging_points": 2,
-        "station_coverage_ratio": 1.4e-05,
-        "charging_point_coverage_ratio": 1e-05,
-        "bundle_matched_stations": 0,
-        "bundle_matched_charging_points": 0,
-        "bundle_station_coverage_ratio": 0.0,
-        "bundle_charging_point_coverage_ratio": 0.0,
+        "locations_scanned": 24,
+        "matched_locations": 22,
+        "matched_stations": 22,
+        "matched_charging_points": 50,
+        "station_coverage_ratio": 0.000305,
+        "charging_point_coverage_ratio": 0.000253,
+        "bundle_matched_stations": 16,
+        "bundle_matched_charging_points": 34,
+        "bundle_station_coverage_ratio": 0.001052,
+        "bundle_charging_point_coverage_ratio": 0.000655,
         "site_operator_samples": [
-          "Scherenberg e-Mobility e.K."
+          "SolarLoader+ GmbH",
+          "Olycharge",
+          "800 Volt Technologies GmbH"
         ]
       },
       "dynamic": {
@@ -844,12 +884,12 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "noauth",
-        "locations_scanned": 642,
-        "matched_locations": 601,
-        "matched_stations": 601,
-        "matched_charging_points": 1423,
-        "station_coverage_ratio": 0.008388,
-        "charging_point_coverage_ratio": 0.007274,
+        "locations_scanned": 654,
+        "matched_locations": 603,
+        "matched_stations": 603,
+        "matched_charging_points": 1425,
+        "station_coverage_ratio": 0.008357,
+        "charging_point_coverage_ratio": 0.007214,
         "bundle_matched_stations": 0,
         "bundle_matched_charging_points": 0,
         "bundle_station_coverage_ratio": 0.0,
@@ -862,14 +902,14 @@
         "fetch_status": "ok",
         "access_mode": "noauth",
         "delta_delivery": false,
-        "site_status_count": 644,
-        "station_status_count": 1460,
-        "evse_status_count": 1665,
-        "available_evses": 1074,
-        "occupied_evses": 577,
-        "out_of_order_evses": 14,
+        "site_status_count": 654,
+        "station_status_count": 1480,
+        "evse_status_count": 1692,
+        "available_evses": 1179,
+        "occupied_evses": 492,
+        "out_of_order_evses": 21,
         "unknown_evses": 0,
-        "latest_last_updated": "2026-04-21T18:10:07+00:00"
+        "latest_last_updated": "2026-05-06T16:10:11+00:00"
       }
     },
     {
@@ -879,32 +919,32 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "noauth",
-        "locations_scanned": 98,
+        "locations_scanned": 97,
         "matched_locations": 95,
         "matched_stations": 95,
         "matched_charging_points": 304,
-        "station_coverage_ratio": 0.001326,
-        "charging_point_coverage_ratio": 0.001554,
-        "bundle_matched_stations": 14,
-        "bundle_matched_charging_points": 45,
-        "bundle_station_coverage_ratio": 0.000935,
-        "bundle_charging_point_coverage_ratio": 0.000883,
+        "station_coverage_ratio": 0.001317,
+        "charging_point_coverage_ratio": 0.001539,
+        "bundle_matched_stations": 15,
+        "bundle_matched_charging_points": 47,
+        "bundle_station_coverage_ratio": 0.000986,
+        "bundle_charging_point_coverage_ratio": 0.000905,
         "site_operator_samples": [
           "SMATRICS"
         ]
       },
       "dynamic": {
-        "fetch_status": "mtls_subscription: Expecting value: line 1 column 1 (char 0)",
-        "access_mode": "mtls_subscription",
+        "fetch_status": "ok",
+        "access_mode": "noauth",
         "delta_delivery": true,
-        "site_status_count": 0,
+        "site_status_count": 2,
         "station_status_count": 0,
         "evse_status_count": 0,
         "available_evses": 0,
         "occupied_evses": 0,
         "out_of_order_evses": 0,
         "unknown_evses": 0,
-        "latest_last_updated": null
+        "latest_last_updated": "2026-05-06T16:14:00Z"
       }
     },
     {
@@ -981,31 +1021,31 @@
         "fetch_status": "ok",
         "access_mode": "noauth",
         "locations_scanned": 320,
-        "matched_locations": 300,
-        "matched_stations": 300,
-        "matched_charging_points": 3612,
-        "station_coverage_ratio": 0.004187,
-        "charging_point_coverage_ratio": 0.018463,
+        "matched_locations": 301,
+        "matched_stations": 301,
+        "matched_charging_points": 3616,
+        "station_coverage_ratio": 0.004172,
+        "charging_point_coverage_ratio": 0.018306,
         "bundle_matched_stations": 287,
         "bundle_matched_charging_points": 3489,
-        "bundle_station_coverage_ratio": 0.019176,
-        "bundle_charging_point_coverage_ratio": 0.068463,
+        "bundle_station_coverage_ratio": 0.018864,
+        "bundle_charging_point_coverage_ratio": 0.067181,
         "site_operator_samples": [
           "Tesla, Inc."
         ]
       },
       "dynamic": {
-        "fetch_status": "ok",
-        "access_mode": "noauth",
+        "fetch_status": "mtls_subscription: Expecting value: line 1 column 1 (char 0)",
+        "access_mode": "mtls_subscription",
         "delta_delivery": true,
-        "site_status_count": 1,
-        "station_status_count": 1,
-        "evse_status_count": 1,
-        "available_evses": 1,
+        "site_status_count": 0,
+        "station_status_count": 0,
+        "evse_status_count": 0,
+        "available_evses": 0,
         "occupied_evses": 0,
         "out_of_order_evses": 0,
         "unknown_evses": 0,
-        "latest_last_updated": "2026-04-21T18:37:51Z"
+        "latest_last_updated": null
       }
     },
     {
@@ -1015,21 +1055,21 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "auth",
-        "locations_scanned": 10254,
-        "matched_locations": 6935,
-        "matched_stations": 6935,
-        "matched_charging_points": 14516,
-        "station_coverage_ratio": 0.096787,
-        "charging_point_coverage_ratio": 0.074199,
-        "bundle_matched_stations": 797,
-        "bundle_matched_charging_points": 2030,
-        "bundle_station_coverage_ratio": 0.05325,
-        "bundle_charging_point_coverage_ratio": 0.039834,
+        "locations_scanned": 10273,
+        "matched_locations": 6948,
+        "matched_stations": 6948,
+        "matched_charging_points": 14534,
+        "station_coverage_ratio": 0.096293,
+        "charging_point_coverage_ratio": 0.07358,
+        "bundle_matched_stations": 804,
+        "bundle_matched_charging_points": 2053,
+        "bundle_station_coverage_ratio": 0.052846,
+        "bundle_charging_point_coverage_ratio": 0.039531,
         "site_operator_samples": [
           "enercity AG",
-          "GWS Gemeindewerke Sinzheim GmbH & Co. KG",
           "Envia  GmbH",
           "energis GmbH",
+          "Flächenentwicklungsgesellschaft Haltern am See mbH",
           "Westenergie Metering GmbH",
           "Energieversorgung Oberhausen AG",
           "Süwag Vertrieb AG & Co. KG",
@@ -1046,10 +1086,10 @@
         "station_status_count": 1,
         "evse_status_count": 1,
         "available_evses": 0,
-        "occupied_evses": 0,
-        "out_of_order_evses": 1,
+        "occupied_evses": 1,
+        "out_of_order_evses": 0,
         "unknown_evses": 0,
-        "latest_last_updated": "2026-04-21T18:38:30Z"
+        "latest_last_updated": "2026-05-06T16:16:43Z"
       }
     },
     {
@@ -1092,16 +1132,16 @@
       "static": {
         "fetch_status": "ok",
         "access_mode": "auth",
-        "locations_scanned": 1746,
-        "matched_locations": 976,
-        "matched_stations": 976,
-        "matched_charging_points": 2323,
-        "station_coverage_ratio": 0.013621,
-        "charging_point_coverage_ratio": 0.011874,
-        "bundle_matched_stations": 47,
-        "bundle_matched_charging_points": 111,
-        "bundle_station_coverage_ratio": 0.00314,
-        "bundle_charging_point_coverage_ratio": 0.002178,
+        "locations_scanned": 1773,
+        "matched_locations": 977,
+        "matched_stations": 977,
+        "matched_charging_points": 2325,
+        "station_coverage_ratio": 0.01354,
+        "charging_point_coverage_ratio": 0.011771,
+        "bundle_matched_stations": 48,
+        "bundle_matched_charging_points": 115,
+        "bundle_station_coverage_ratio": 0.003155,
+        "bundle_charging_point_coverage_ratio": 0.002214,
         "site_operator_samples": [
           "Wirelane GmbH"
         ]
@@ -1113,13 +1153,12 @@
         "site_status_count": 1,
         "station_status_count": 1,
         "evse_status_count": 2,
-        "available_evses": 2,
-        "occupied_evses": 0,
+        "available_evses": 1,
+        "occupied_evses": 1,
         "out_of_order_evses": 0,
         "unknown_evses": 0,
-        "latest_last_updated": "2026-03-30T00:31:20+00:00"
+        "latest_last_updated": "2026-03-30T00:31:02+00:00"
       }
     }
-  ],
-  "provider_count": 30
+  ]
 }
