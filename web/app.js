@@ -28,6 +28,9 @@ const LIST_VIEW_MAX_STATIONS = 20;
 const LIVE_SUMMARY_REFRESH_MS = 15000;
 const LIVE_API_TIMEOUT_MS = 3500;
 const LIVE_DETAIL_TIMEOUT_MS = 4000;
+const STATION_ID_NAMESPACE = "DE:";
+const LEGACY_STATION_ID_RE = /^[0-9a-f]{16}$/i;
+const NAMESPACED_STATION_ID_RE = /^DE:([0-9a-f]{16})$/i;
 const LIVE_STATION_FIELDS = [
   "availability_status",
   "available_evses",
@@ -1764,25 +1767,51 @@ function sanitizeDisplayedPowerKw(value) {
 }
 
 function getStationPagePath(props) {
-  const stationId = String(props?.station_id || "").trim();
+  const stationId = normalizeStationId(props?.station_id || "");
   if (!stationId) {
     return "./";
   }
-  return `./station/${encodeURIComponent(stationId)}.html`;
+  return `./station/${encodeStationIdValue(stationId)}.html`;
+}
+
+function encodeStationIdValue(value) {
+  return encodeURIComponent(String(value || "").trim()).replace(/%3A/gi, ":");
+}
+
+function normalizeStationId(value) {
+  const stationId = String(value || "").trim();
+  if (!stationId) {
+    return "";
+  }
+  if (LEGACY_STATION_ID_RE.test(stationId)) {
+    return `${STATION_ID_NAMESPACE}${stationId.toLowerCase()}`;
+  }
+  const namespacedMatch = stationId.match(NAMESPACED_STATION_ID_RE);
+  if (namespacedMatch) {
+    return `${STATION_ID_NAMESPACE}${namespacedMatch[1].toLowerCase()}`;
+  }
+  return stationId;
 }
 
 function getRequestedStationId() {
   const params = new URLSearchParams(window.location.search);
-  return (params.get("station") || "").trim();
+  return normalizeStationId(params.get("station") || "");
 }
 
 function updateRequestedStationId(stationId) {
   const url = new URL(window.location.href);
-  if (stationId) {
-    url.searchParams.set("station", stationId);
-  } else {
-    url.searchParams.delete("station");
+  const params = new URLSearchParams(url.search);
+  params.delete("station");
+  const searchParts = [];
+  const normalizedStationId = normalizeStationId(stationId);
+  if (normalizedStationId) {
+    searchParts.push(`station=${encodeStationIdValue(normalizedStationId)}`);
   }
+  const rest = params.toString();
+  if (rest) {
+    searchParts.push(rest);
+  }
+  url.search = searchParts.length ? `?${searchParts.join("&")}` : "";
   const next = `${url.pathname}${url.search}${url.hash}`;
   window.history.replaceState(window.history.state, "", next);
 }
@@ -1792,7 +1821,11 @@ function findFeatureByStationId(stationId) {
 }
 
 function syncDetailModalWithUrl() {
+  const rawStationId = new URLSearchParams(window.location.search).get("station") || "";
   const stationId = getRequestedStationId();
+  if (rawStationId && stationId && rawStationId !== stationId) {
+    updateRequestedStationId(stationId);
+  }
   if (!stationId) {
     if (!els.modals.detail.classList.contains("hidden")) {
       closeModal("detail", { syncUrl: false });

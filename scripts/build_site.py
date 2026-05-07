@@ -8,6 +8,7 @@ import json
 import math
 import shutil
 from pathlib import Path
+from urllib.parse import parse_qsl, quote, urlsplit, urlunsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB_DIR = ROOT / "web"
@@ -23,6 +24,7 @@ SOCIAL_IMAGE_HEIGHT = "630"
 SOCIAL_IMAGE_ALT = (
     "Vorschau der woladen.de Web-App mit Schnellladesäulen und Angeboten vor Ort."
 )
+STATION_ID_NAMESPACE = "DE:"
 
 REQUIRED_DATA = [
     "chargers_fast.geojson",
@@ -95,8 +97,59 @@ def sanitize_json_value(value: object) -> object:
     return value
 
 
+def public_station_id(value: object) -> str:
+    station_id = str(value or "").strip()
+    if not station_id:
+        return ""
+    if station_id.lower().startswith(STATION_ID_NAMESPACE.lower()):
+        return f"{STATION_ID_NAMESPACE}{station_id[len(STATION_ID_NAMESPACE):]}"
+    return f"{STATION_ID_NAMESPACE}{station_id}"
+
+
+def station_url_query(query: str) -> str:
+    parts: list[str] = []
+    for key, value in parse_qsl(query, keep_blank_values=True):
+        next_value = public_station_id(value) if key == "station" else value
+        parts.append(f"{quote(key)}={quote(str(next_value), safe=':')}")
+    return "&".join(parts)
+
+
+def public_station_url(value: object) -> str:
+    station_url = str(value or "").strip()
+    if not station_url:
+        return ""
+    split = urlsplit(station_url)
+    if not split.query:
+        return station_url
+    return urlunsplit(
+        (
+            split.scheme,
+            split.netloc,
+            split.path,
+            station_url_query(split.query),
+            split.fragment,
+        )
+    )
+
+
+def public_bundle_value(value: object, key: str = "") -> object:
+    if key == "station_id":
+        return public_station_id(value)
+    if key == "station_url":
+        return public_station_url(value)
+    if isinstance(value, dict):
+        return {item_key: public_bundle_value(item_value, item_key) for item_key, item_value in value.items()}
+    if isinstance(value, list):
+        return [public_bundle_value(item) for item in value]
+    return value
+
+
 def station_page_path(station_id: str) -> str:
-    return f"station/{station_id}.html"
+    return f"station/{quote(public_station_id(station_id), safe=':')}.html"
+
+
+def station_query_url(station_id: str) -> str:
+    return f"/?station={quote(public_station_id(station_id), safe=':')}"
 
 
 def absolute_url(path: str) -> str:
@@ -223,7 +276,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
     if not isinstance(properties, dict):
         properties = {}
 
-    station_id = str(properties.get("station_id") or "").strip()
+    station_id = public_station_id(properties.get("station_id"))
     operator = str(properties.get("operator") or "Unbekannt").strip()
     address = str(properties.get("address") or "").strip()
     postcode = str(properties.get("postcode") or "").strip()
@@ -239,7 +292,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
 
     page_path = station_page_path(station_id)
     canonical_url = absolute_url(page_path)
-    app_url = f"/?station={station_id}"
+    app_url = station_query_url(station_id)
     google_maps_url = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
     amenity_items = render_amenity_items(properties)
     static_detail_rows = build_static_detail_rows(properties)
@@ -359,7 +412,7 @@ def write_station_pages() -> list[str]:
         properties = feature.get("properties")
         if not isinstance(properties, dict):
             continue
-        station_id = str(properties.get("station_id") or "").strip()
+        station_id = public_station_id(properties.get("station_id"))
         if not station_id:
             continue
         page_path, page_html = build_station_page(feature)
@@ -395,7 +448,7 @@ def copy_management_data_tree() -> None:
         target_path = target_root / relative_path
         target_path.parent.mkdir(parents=True, exist_ok=True)
         if source_path.suffix.lower() == ".json":
-            payload = sanitize_json_value(json.loads(source_path.read_text(encoding="utf-8")))
+            payload = public_bundle_value(sanitize_json_value(json.loads(source_path.read_text(encoding="utf-8"))))
             target_path.write_text(
                 json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False),
                 encoding="utf-8",
@@ -420,7 +473,7 @@ def main() -> None:
     for filename in REQUIRED_DATA:
         source = DATA_DIR / filename
         if source.exists():
-            payload = sanitize_json_value(json.loads(source.read_text(encoding="utf-8")))
+            payload = public_bundle_value(sanitize_json_value(json.loads(source.read_text(encoding="utf-8"))))
             (SITE_DATA_DIR / filename).write_text(
                 json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False),
                 encoding="utf-8",
