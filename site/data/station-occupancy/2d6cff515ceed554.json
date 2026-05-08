@@ -1,0 +1,55 @@
+{
+  "station_id": "2d6cff515ceed554",
+  "start_date": "2026-05-01",
+  "end_date": "2026-05-07",
+  "included_days": 7,
+  "requested_days": 7,
+  "timezone": "Europe/Berlin",
+  "metric": "mean of daily average occupied EVSEs per hour; unknown status is not counted as occupied",
+  "station": {
+    "station_id": "2d6cff515ceed554",
+    "operator": "SWP Stadtwerke Pforzheim GmbH&Co.KG",
+    "address": "Vogesenallee 0 75173 Pforzheim Stadtkreis Pforzheim",
+    "city": "Pforzheim",
+    "charging_points_count": 4,
+    "max_power_kw": 50.0
+  },
+  "provider_uids": [
+    "chargecloud"
+  ],
+  "site_ids": [
+    "9582a5c5-7c55-4174-9fb9-7c59f8bf66b5"
+  ],
+  "evse_ids": [
+    "DESPFE10044001",
+    "DESPFE10044002",
+    "DESPFE10077001",
+    "DESPFE10077002"
+  ],
+  "hourly_average_occupied": {
+    "00:00": 0.0,
+    "01:00": 0.0,
+    "02:00": 0.0,
+    "03:00": 0.0,
+    "04:00": 0.0,
+    "05:00": 0.0,
+    "06:00": 0.252,
+    "07:00": 0.443,
+    "08:00": 0.704,
+    "09:00": 0.79,
+    "10:00": 0.595,
+    "11:00": 0.651,
+    "12:00": 0.982,
+    "13:00": 0.868,
+    "14:00": 1.021,
+    "15:00": 1.113,
+    "16:00": 1.105,
+    "17:00": 0.869,
+    "18:00": 1.038,
+    "19:00": 1.537,
+    "20:00": 1.376,
+    "21:00": 0.9,
+    "22:00": 0.547,
+    "23:00": 0.429
+  }
+}

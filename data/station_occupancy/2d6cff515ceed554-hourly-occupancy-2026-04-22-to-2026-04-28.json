@@ -1,0 +1,1264 @@
+{
+  "station": {
+    "station_id": "2d6cff515ceed554",
+    "operator": "SWP Stadtwerke Pforzheim GmbH&Co.KG",
+    "address": "Vogesenallee 0 75173 Pforzheim Stadtkreis Pforzheim",
+    "city": "Pforzheim",
+    "charging_points_count": 4,
+    "max_power_kw": 50.0
+  },
+  "start_date": "2026-04-22",
+  "end_date": "2026-04-28",
+  "requested_days": 7,
+  "included_days": 7,
+  "missing_archives": [],
+  "timezone": "Europe/Berlin",
+  "metric": "mean of daily average occupied EVSEs per hour; unknown status is not counted as occupied",
+  "provider_uids": [
+    "chargecloud"
+  ],
+  "site_ids": [
+    "9582a5c5-7c55-4174-9fb9-7c59f8bf66b5"
+  ],
+  "evse_ids": [
+    "DESPFE10044001",
+    "DESPFE10044002",
+    "DESPFE10077001",
+    "DESPFE10077002"
+  ],
+  "archive_stats": {
+    "archive_members_seen": 786591,
+    "provider_members_seen": 63301,
+    "matching_messages": 358,
+    "parse_errors": 0,
+    "records_seen": 95504,
+    "records_skipped_by_token": 95146
+  },
+  "hourly_average_occupied": {
+    "00:00": 0.057,
+    "01:00": 0.264,
+    "02:00": 0.286,
+    "03:00": 0.288,
+    "04:00": 0.429,
+    "05:00": 0.515,
+    "06:00": 0.708,
+    "07:00": 0.885,
+    "08:00": 0.853,
+    "09:00": 1.104,
+    "10:00": 1.619,
+    "11:00": 1.406,
+    "12:00": 1.316,
+    "13:00": 1.173,
+    "14:00": 1.247,
+    "15:00": 1.305,
+    "16:00": 1.107,
+    "17:00": 1.506,
+    "18:00": 1.208,
+    "19:00": 1.536,
+    "20:00": 1.234,
+    "21:00": 0.881,
+    "22:00": 0.958,
+    "23:00": 0.665
+  },
+  "daily_results": [
+    {
+      "date": "2026-04-22",
+      "archive": "/home/runner/work/woladen.de/woladen.de/data/live_archives/live-provider-responses-2026-04-22.tgz",
+      "archive_stats": {
+        "archive_members_seen": 16022,
+        "provider_members_seen": 16021,
+        "matching_messages": 74,
+        "parse_errors": 0,
+        "records_seen": 16021,
+        "records_skipped_by_token": 15947
+      },
+      "status_change_count": 28,
+      "hourly_average_occupied": {
+        "00:00": 0.0,
+        "01:00": 0.0,
+        "02:00": 0.0,
+        "03:00": 0.018,
+        "04:00": 1.0,
+        "05:00": 1.015,
+        "06:00": 1.0,
+        "07:00": 1.556,
+        "08:00": 0.999,
+        "09:00": 1.556,
+        "10:00": 2.612,
+        "11:00": 2.101,
+        "12:00": 2.107,
+        "13:00": 2.103,
+        "14:00": 2.0,
+        "15:00": 1.992,
+        "16:00": 1.191,
+        "17:00": 2.0,
+        "18:00": 1.07,
+        "19:00": 1.0,
+        "20:00": 1.0,
+        "21:00": 0.728,
+        "22:00": 1.0,
+        "23:00": 0.299
+      },
+      "status_changes": [
+        {
+          "time_local": "2026-04-22T03:58:55.360000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-22T05:54:27.763000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-22T05:55:22.964000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T06:07:02.745000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T06:07:02.745000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T07:37:48.585000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-22T07:43:34.648000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T07:43:40.668000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-22T07:44:16.550000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-22T07:45:23.112000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T07:45:44.372000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-22T07:56:35.004000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T07:59:27.331000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T08:17:47.096000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T08:17:51.314000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-22T09:26:35.306000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-22T10:23:12.982000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-22T11:06:06.652000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T12:53:32.411000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-22T13:06:11.244000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T15:59:31.876000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T16:48:31.170000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-22T18:07:02.526000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T18:47:58.295000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T18:50:47.815000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-22T21:07:46.087000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-22T21:24:06.287000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-22T23:17:55.709000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        }
+      ]
+    },
+    {
+      "date": "2026-04-23",
+      "archive": "/home/runner/work/woladen.de/woladen.de/data/live_archives/live-provider-responses-2026-04-23.tgz",
+      "archive_stats": {
+        "archive_members_seen": 15961,
+        "provider_members_seen": 15960,
+        "matching_messages": 55,
+        "parse_errors": 0,
+        "records_seen": 15960,
+        "records_skipped_by_token": 15905
+      },
+      "status_change_count": 25,
+      "hourly_average_occupied": {
+        "00:00": 0.0,
+        "01:00": 0.0,
+        "02:00": 0.0,
+        "03:00": 0.0,
+        "04:00": 0.0,
+        "05:00": 0.0,
+        "06:00": 0.0,
+        "07:00": 0.0,
+        "08:00": 0.0,
+        "09:00": 0.701,
+        "10:00": 1.0,
+        "11:00": 1.809,
+        "12:00": 1.341,
+        "13:00": 1.0,
+        "14:00": 1.0,
+        "15:00": 1.02,
+        "16:00": 2.0,
+        "17:00": 2.291,
+        "18:00": 0.531,
+        "19:00": 0.42,
+        "20:00": 1.0,
+        "21:00": 1.463,
+        "22:00": 1.688,
+        "23:00": 1.0
+      },
+      "status_changes": [
+        {
+          "time_local": "2026-04-23T06:07:03.251000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-23T06:07:03.251000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-23T06:07:03.251000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-23T06:07:03.251000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-23T09:17:33.175000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-23T09:18:58.658000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-23T09:19:19.619000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-23T11:11:14.748000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-23T11:15:03.974000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-23T11:15:14.929000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-23T12:20:29.125000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-23T15:58:46.293000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-23T17:18:38.111000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-23T17:22:56.549000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-23T17:24:28.693000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-23T17:24:50.573000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-23T17:24:52.254000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-23T17:46:23.558000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-23T18:07:01.023000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-23T18:24:50.391000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-23T19:34:47.144000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-23T21:32:12.057000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-23T22:07:37.404000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-23T22:23:19.526000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-23T22:25:35.784000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        }
+      ]
+    },
+    {
+      "date": "2026-04-24",
+      "archive": "/home/runner/work/woladen.de/woladen.de/data/live_archives/live-provider-responses-2026-04-24.tgz",
+      "archive_stats": {
+        "archive_members_seen": 16224,
+        "provider_members_seen": 16223,
+        "matching_messages": 45,
+        "parse_errors": 0,
+        "records_seen": 16223,
+        "records_skipped_by_token": 16178
+      },
+      "status_change_count": 20,
+      "hourly_average_occupied": {
+        "00:00": 0.4,
+        "01:00": 1.0,
+        "02:00": 1.0,
+        "03:00": 1.0,
+        "04:00": 1.0,
+        "05:00": 1.0,
+        "06:00": 0.677,
+        "07:00": 0.0,
+        "08:00": 0.169,
+        "09:00": 1.0,
+        "10:00": 1.0,
+        "11:00": 1.888,
+        "12:00": 1.213,
+        "13:00": 0.107,
+        "14:00": 0.0,
+        "15:00": 0.0,
+        "16:00": 0.101,
+        "17:00": 2.138,
+        "18:00": 1.0,
+        "19:00": 1.123,
+        "20:00": 2.0,
+        "21:00": 2.0,
+        "22:00": 2.0,
+        "23:00": 2.307
+      },
+      "status_changes": [
+        {
+          "time_local": "2026-04-24T00:35:59.972000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-24T06:06:58.288000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-24T06:06:58.288000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-24T06:06:58.288000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-24T06:40:39.803000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-24T08:49:50.227000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-24T11:06:36.392000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-24T11:47:27.492000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-24T11:47:31.290000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-24T12:12:47.871000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-24T13:06:24.297000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-24T16:54:38.839000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-24T16:59:17.141000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-24T17:00:29.961000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-24T17:01:00.380000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-24T17:30:38.826000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-24T17:43:50.156000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-24T17:55:39.328000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-24T19:52:36.936000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-24T23:41:31.250000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        }
+      ]
+    },
+    {
+      "date": "2026-04-25",
+      "archive": "/home/runner/work/woladen.de/woladen.de/data/live_archives/live-provider-responses-2026-04-25.tgz",
+      "archive_stats": {
+        "archive_members_seen": 732540,
+        "provider_members_seen": 9256,
+        "matching_messages": 52,
+        "parse_errors": 0,
+        "records_seen": 9256,
+        "records_skipped_by_token": 9204
+      },
+      "status_change_count": 22,
+      "hourly_average_occupied": {
+        "00:00": 0.0,
+        "01:00": 0.846,
+        "02:00": 1.0,
+        "03:00": 1.0,
+        "04:00": 1.0,
+        "05:00": 1.59,
+        "06:00": 2.999,
+        "07:00": 3.583,
+        "08:00": 2.802,
+        "09:00": 1.789,
+        "10:00": 1.787,
+        "11:00": 0.129,
+        "12:00": 0.549,
+        "13:00": 1.0,
+        "14:00": 1.0,
+        "15:00": 1.0,
+        "16:00": 1.0,
+        "17:00": 1.0,
+        "18:00": 1.0,
+        "19:00": 1.0,
+        "20:00": 1.0,
+        "21:00": 1.0,
+        "22:00": 1.0,
+        "23:00": 1.0
+      },
+      "status_changes": [
+        {
+          "time_local": "2026-04-25T01:09:12.157000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-25T05:42:17.663000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-25T05:42:17.663000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-25T06:07:00.779000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-25T07:24:57.472000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-25T08:32:33.508000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-25T08:32:53.510000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-25T08:46:30.887000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-25T08:53:49.934000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-25T08:57:36.053000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-25T09:00:04.367000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-25T09:00:14.907000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-25T09:00:24.789000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-25T09:00:33.006000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-25T09:12:55.766000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-25T10:43:46.266000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-25T10:48:56.128000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-25T10:52:25.309000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-25T11:06:42.536000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-25T11:58:55.843000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-25T12:24:29.309000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-25T12:51:33.256000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        }
+      ]
+    },
+    {
+      "date": "2026-04-26",
+      "archive": "/home/runner/work/woladen.de/woladen.de/data/live_archives/live-provider-responses-2026-04-26.tgz",
+      "archive_stats": {
+        "archive_members_seen": 5840,
+        "provider_members_seen": 5839,
+        "matching_messages": 27,
+        "parse_errors": 0,
+        "records_seen": 5839,
+        "records_skipped_by_token": 5812
+      },
+      "status_change_count": 15,
+      "hourly_average_occupied": {
+        "00:00": 0.0,
+        "01:00": 0.0,
+        "02:00": 0.0,
+        "03:00": 0.0,
+        "04:00": 0.0,
+        "05:00": 0.0,
+        "06:00": 0.0,
+        "07:00": 0.0,
+        "08:00": 0.0,
+        "09:00": 0.0,
+        "10:00": 0.932,
+        "11:00": 2.206,
+        "12:00": 3.0,
+        "13:00": 3.0,
+        "14:00": 3.0,
+        "15:00": 3.0,
+        "16:00": 3.0,
+        "17:00": 2.744,
+        "18:00": 0.794,
+        "19:00": 1.821,
+        "20:00": 1.189,
+        "21:00": 0.0,
+        "22:00": 0.0,
+        "23:00": 0.0
+      },
+      "status_changes": [
+        {
+          "time_local": "2026-04-26T10:15:37.484000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-26T10:16:41.983000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-26T10:17:38.003000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-26T10:50:52.176000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-26T10:52:15.614000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-26T10:53:47.672000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-26T11:47:37.138000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-26T17:44:39.313000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-26T18:07:00.694000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-26T18:07:00.694000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-26T18:07:00.694000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-26T18:26:19.384000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-26T19:10:41.171000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-26T20:26:36.641000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-26T20:44:44.587000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        }
+      ]
+    },
+    {
+      "date": "2026-04-27",
+      "archive": "/home/runner/work/woladen.de/woladen.de/data/live_archives/live-provider-responses-2026-04-27.tgz",
+      "archive_stats": {
+        "archive_members_seen": 2,
+        "provider_members_seen": 1,
+        "matching_messages": 51,
+        "parse_errors": 0,
+        "records_seen": 16112,
+        "records_skipped_by_token": 16061
+      },
+      "status_change_count": 20,
+      "hourly_average_occupied": {
+        "00:00": 0.0,
+        "01:00": 0.0,
+        "02:00": 0.0,
+        "03:00": 0.0,
+        "04:00": 0.0,
+        "05:00": 0.0,
+        "06:00": 0.0,
+        "07:00": 0.0,
+        "08:00": 0.0,
+        "09:00": 0.129,
+        "10:00": 1.0,
+        "11:00": 0.062,
+        "12:00": 0.0,
+        "13:00": 0.0,
+        "14:00": 0.732,
+        "15:00": 1.122,
+        "16:00": 0.166,
+        "17:00": 0.37,
+        "18:00": 2.33,
+        "19:00": 1.811,
+        "20:00": 1.0,
+        "21:00": 0.974,
+        "22:00": 0.096,
+        "23:00": 0.0
+      },
+      "status_changes": [
+        {
+          "time_local": "2026-04-27T00:33:44.554000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-27T00:33:50.614000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-27T06:07:01.005000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-27T06:07:01.005000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-27T09:52:16.720000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-27T11:03:42.588000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-27T14:16:05.485000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-27T15:33:02.873000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-27T15:40:24.352000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-27T16:09:57.372000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-27T17:37:47.580000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-27T18:00:45.440000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-27T18:26:01.822000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-27T18:46:39.271000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-27T19:48:41.046000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-27T21:58:27.639000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-27T22:00:23.319000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-27T22:03:26.399000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-27T22:04:30.800000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-27T22:05:07.401000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        }
+      ]
+    },
+    {
+      "date": "2026-04-28",
+      "archive": "/home/runner/work/woladen.de/woladen.de/data/live_archives/live-provider-responses-2026-04-28.tgz",
+      "archive_stats": {
+        "archive_members_seen": 2,
+        "provider_members_seen": 1,
+        "matching_messages": 54,
+        "parse_errors": 0,
+        "records_seen": 16093,
+        "records_skipped_by_token": 16039
+      },
+      "status_change_count": 22,
+      "hourly_average_occupied": {
+        "00:00": 0.0,
+        "01:00": 0.0,
+        "02:00": 0.0,
+        "03:00": 0.0,
+        "04:00": 0.0,
+        "05:00": 0.0,
+        "06:00": 0.277,
+        "07:00": 1.056,
+        "08:00": 2.0,
+        "09:00": 2.554,
+        "10:00": 3.0,
+        "11:00": 1.651,
+        "12:00": 1.0,
+        "13:00": 1.0,
+        "14:00": 1.0,
+        "15:00": 1.0,
+        "16:00": 0.289,
+        "17:00": 0.0,
+        "18:00": 1.728,
+        "19:00": 3.58,
+        "20:00": 1.448,
+        "21:00": 0.0,
+        "22:00": 0.924,
+        "23:00": 0.052
+      },
+      "status_changes": [
+        {
+          "time_local": "2026-04-28T01:26:14.570000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-28T01:26:14.853000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-28T06:07:00.872000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-28T06:07:00.872000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-28T06:43:20.320000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-28T06:55:26.722000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-28T06:55:28.101000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-28T07:56:38.903000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-28T09:26:41.042000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-28T11:12:02.778000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-28T11:27:03.517000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-28T16:17:19.613000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-28T18:04:32.036000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-28T18:30:03.084000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-28T18:41:42.130000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-28T19:07:23.705000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-28T19:46:53.704000+02:00",
+          "evse_id": "DESPFE10044002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-28T19:55:26.639000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-28T20:40:48.962000+02:00",
+          "evse_id": "DESPFE10044001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-28T20:46:05.604000+02:00",
+          "evse_id": "DESPFE10077002",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        },
+        {
+          "time_local": "2026-04-28T22:04:34.386000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "occupied",
+          "operational_status": "CHARGING"
+        },
+        {
+          "time_local": "2026-04-28T23:03:09.544000+02:00",
+          "evse_id": "DESPFE10077001",
+          "availability_status": "free",
+          "operational_status": "AVAILABLE"
+        }
+      ]
+    }
+  ]
+}

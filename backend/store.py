@@ -269,6 +269,15 @@ class LiveStore:
                     ingested_at TEXT NOT NULL,
                     evses_json TEXT NOT NULL DEFAULT '[]'
                 );
+
+                CREATE TABLE IF NOT EXISTS station_ratings (
+                    station_id TEXT NOT NULL,
+                    client_id_hash TEXT NOT NULL,
+                    rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    PRIMARY KEY (station_id, client_id_hash)
+                );
                 CREATE INDEX IF NOT EXISTS idx_provider_poll_runs_provider
                     ON provider_poll_runs (provider_uid, started_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_provider_push_runs_provider
@@ -348,6 +357,12 @@ class LiveStore:
             """
             CREATE INDEX IF NOT EXISTS idx_evse_current_state_station_lookup
             ON evse_current_state (station_id, provider_uid, provider_evse_id)
+            """
+        )
+        conn.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_station_ratings_station_lookup
+            ON station_ratings (station_id)
             """
         )
 
@@ -1982,6 +1997,136 @@ class LiveStore:
                 """,
                 upsert_rows,
             )
+
+    def _rating_client_hash(self, client_id: str) -> str:
+        normalized = str(client_id or "").strip()
+        return hashlib.sha256(f"woladen-rating-client:{normalized}".encode("utf-8")).hexdigest()
+
+    def _deserialize_rating_summary(self, row: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
+        return {
+            "station_id": str(row["station_id"] or ""),
+            "average_rating": round(float(row["average_rating"] or 0.0), 2),
+            "rating_count": int(row["rating_count"] or 0),
+        }
+
+    def _get_station_rating_summary_with_connection(
+        self,
+        conn: sqlite3.Connection,
+        station_id: str,
+    ) -> dict[str, Any] | None:
+        row = conn.execute(
+            """
+            SELECT
+                station_id,
+                AVG(rating) AS average_rating,
+                COUNT(*) AS rating_count
+            FROM station_ratings
+            WHERE station_id = ?
+            GROUP BY station_id
+            """,
+            (station_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return self._deserialize_rating_summary(row)
+
+    def upsert_station_rating(self, station_id: str, rating: int, client_id: str) -> dict[str, Any]:
+        normalized_station_id = str(station_id or "").strip()
+        normalized_client_id = str(client_id or "").strip()
+        normalized_rating = int(rating)
+        if not normalized_station_id:
+            raise ValueError("missing_station_id")
+        if len(normalized_client_id) < 16:
+            raise ValueError("missing_client_id")
+        if normalized_rating < 1 or normalized_rating > 5:
+            raise ValueError("invalid_rating")
+
+        client_id_hash = self._rating_client_hash(normalized_client_id)
+        updated_at = utc_now_iso()
+
+        def operation() -> dict[str, Any]:
+            with self.connection() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO station_ratings (
+                        station_id,
+                        client_id_hash,
+                        rating,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(station_id, client_id_hash) DO UPDATE SET
+                        rating = excluded.rating,
+                        updated_at = excluded.updated_at
+                    """,
+                    (
+                        normalized_station_id,
+                        client_id_hash,
+                        normalized_rating,
+                        updated_at,
+                        updated_at,
+                    ),
+                )
+                summary = self._get_station_rating_summary_with_connection(conn, normalized_station_id)
+                if summary is None:
+                    raise RuntimeError("rating_summary_missing")
+                return summary
+
+        return self._run_write_with_retry(operation)
+
+    def get_station_rating_summary(self, station_id: str) -> dict[str, Any] | None:
+        normalized_station_id = str(station_id or "").strip()
+        if not normalized_station_id:
+            return None
+        with self.connection() as conn:
+            return self._get_station_rating_summary_with_connection(conn, normalized_station_id)
+
+    def list_station_rating_summaries_by_ids(
+        self,
+        station_ids: Iterable[str],
+        *,
+        timings: dict[str, float] | None = None,
+    ) -> list[dict[str, Any]]:
+        ordered_station_ids: list[str] = []
+        seen_station_ids: set[str] = set()
+        for station_id in station_ids:
+            normalized = str(station_id or "").strip()
+            if not normalized or normalized in seen_station_ids:
+                continue
+            seen_station_ids.add(normalized)
+            ordered_station_ids.append(normalized)
+
+        if not ordered_station_ids:
+            return []
+
+        placeholders = ", ".join(["?"] * len(ordered_station_ids))
+        sql = f"""
+            SELECT
+                station_id,
+                AVG(rating) AS average_rating,
+                COUNT(*) AS rating_count
+            FROM station_ratings
+            WHERE station_id IN ({placeholders})
+            GROUP BY station_id
+        """
+        query_started_at = time.perf_counter()
+        with self.connection() as conn:
+            rows = conn.execute(sql, tuple(ordered_station_ids)).fetchall()
+        _record_timing_metric(timings, "db_query_ms", query_started_at)
+
+        decode_started_at = time.perf_counter()
+        row_by_station_id = {
+            str(row["station_id"]): self._deserialize_rating_summary(row)
+            for row in rows
+        }
+        ordered_rows = [
+            row_by_station_id[station_id]
+            for station_id in ordered_station_ids
+            if station_id in row_by_station_id
+        ]
+        _record_timing_metric(timings, "db_decode_ms", decode_started_at)
+        return ordered_rows
 
     def list_station_summaries(
         self,

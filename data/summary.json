@@ -35,7 +35,9 @@
     "stations_with_price": 7337,
     "stations_with_opening_hours": 10618,
     "stations_with_helpdesk": 5063,
-    "stations_with_amenities": 14967
+    "stations_with_amenities": 14967,
+    "chargers_under_50_total": 55288,
+    "chargers_all_active_total": 70255
   },
   "occupancy_lookup": {
     "sources_discovered": 26,

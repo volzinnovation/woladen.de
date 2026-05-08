@@ -99,6 +99,7 @@ AMENITY_CACHE_PATH = DATA_DIR / "osm_amenity_cache.json"
 FULL_CSV_PATH = DATA_DIR / "chargers_full.csv"
 FAST_CSV_PATH = DATA_DIR / "chargers_fast.csv"
 FAST_GEOJSON_PATH = DATA_DIR / "chargers_fast.geojson"
+UNDER_50_GEOJSON_PATH = DATA_DIR / "chargers_under_50.geojson"
 SUMMARY_JSON_PATH = DATA_DIR / "summary.json"
 OPERATORS_JSON_PATH = DATA_DIR / "operators.json"
 RUN_HISTORY_PATH = DATA_DIR / "run_history.csv"
@@ -2354,6 +2355,28 @@ def build_fast_projection_from_full_registry(
         & (full_df["max_power_kw"].fillna(0.0) >= min_power_kw)
     ].copy()
     return projected.drop(columns=["has_active_record"], errors="ignore").reset_index(drop=True)
+
+
+def build_under_power_projection_from_full_registry(
+    full_df: pd.DataFrame,
+    *,
+    max_power_kw: float,
+) -> pd.DataFrame:
+    projected = full_df[
+        full_df["has_active_record"].fillna(False).astype(bool)
+        & (full_df["max_power_kw"].fillna(0.0) < max_power_kw)
+    ].copy()
+    return projected.drop(columns=["has_active_record"], errors="ignore").reset_index(drop=True)
+
+
+def attach_empty_amenity_columns(df: pd.DataFrame, *, source: str = "not_enriched") -> pd.DataFrame:
+    prepared = df.copy()
+    for rule in AMENITY_RULES:
+        prepared[f"amenity_{rule.key}"] = 0
+    prepared["amenities_total"] = 0
+    prepared["amenities_source"] = source
+    prepared["amenity_examples"] = "[]"
+    return prepared
 
 
 def filter_fast_chargers_with_amenities(df: pd.DataFrame) -> pd.DataFrame:
@@ -5172,11 +5195,49 @@ def enrich_with_amenities(
     )
 
 
+def geojson_display_text(*values: Any) -> str:
+    for value in values:
+        if isinstance(value, (list, tuple, set)):
+            parts = [normalize_optional_text(item) for item in value]
+            text = " | ".join(part for part in parts if part)
+        else:
+            text = normalize_optional_text(value)
+        if text:
+            return text
+    return ""
+
+
+def geojson_int(value: Any, default: int = 0) -> int:
+    text = normalize_optional_text(value)
+    if not text:
+        return default
+    try:
+        return int(float(text))
+    except (TypeError, ValueError):
+        return default
+
+
 def dataframe_to_geojson(df: pd.DataFrame, source_meta: dict[str, Any]) -> dict[str, Any]:
     features: list[dict[str, Any]] = []
 
     for _, row in df.iterrows():
         green_energy = row.get("green_energy", "")
+        opening_hours_display = geojson_display_text(
+            row.get("opening_hours_display", ""),
+            row.get("bnetza_opening_hours", ""),
+        )
+        payment_methods_display = geojson_display_text(
+            row.get("payment_methods_display", ""),
+            row.get("bnetza_payment_systems", ""),
+        )
+        connector_types_display = geojson_display_text(
+            row.get("connector_types_display", ""),
+            row.get("connector_types", ""),
+        )
+        connector_count = geojson_int(
+            row.get("connector_count", ""),
+            default=int(row.get("charging_points_count", 0) or 0),
+        )
         properties: dict[str, Any] = {
             "station_id": row["station_id"],
             "operator": row["operator"],
@@ -5208,14 +5269,14 @@ def dataframe_to_geojson(df: pd.DataFrame, source_meta: dict[str, Any]) -> dict[
             "price_energy_eur_kwh_max": row.get("price_energy_eur_kwh_max", ""),
             "price_currency": row.get("price_currency", ""),
             "price_quality": row.get("price_quality", ""),
-            "opening_hours_display": row.get("opening_hours_display", ""),
+            "opening_hours_display": opening_hours_display,
             "opening_hours_is_24_7": bool(row.get("opening_hours_is_24_7", False)),
             "helpdesk_phone": row.get("helpdesk_phone", ""),
-            "payment_methods_display": row.get("payment_methods_display", ""),
+            "payment_methods_display": payment_methods_display,
             "auth_methods_display": row.get("auth_methods_display", ""),
-            "connector_types_display": row.get("connector_types_display", ""),
+            "connector_types_display": connector_types_display,
             "current_types_display": row.get("current_types_display", ""),
-            "connector_count": int(row.get("connector_count", 0) or 0),
+            "connector_count": connector_count,
             "green_energy": green_energy if isinstance(green_energy, bool) else row.get("green_energy", ""),
             "service_types_display": row.get("service_types_display", ""),
             "details_json": row.get("details_json", ""),
@@ -5454,6 +5515,7 @@ def update_readme_status(readme_path: Path, summary: dict[str, Any]) -> None:
             "- `data/chargers_full.csv`",
             "- `data/chargers_fast.csv`",
             "- `data/chargers_fast.geojson`",
+            "- `data/chargers_under_50.geojson`",
             "- `data/operators.json`",
             "- `data/summary.json`",
             README_END,
@@ -5546,8 +5608,13 @@ def main() -> None:
         full_df,
         min_power_kw=args.min_power_kw,
     )
+    under_50_df = build_under_power_projection_from_full_registry(
+        full_df,
+        max_power_kw=args.min_power_kw,
+    )
     log_info(f"Full registry stations: {len(full_df)}")
     log_info(f"Fast chargers after filter: {len(fast_df)}")
+    log_info(f"Active chargers under {args.min_power_kw:g} kW: {len(under_50_df)}")
 
     if args.max_stations and args.max_stations > 0:
         fast_df = fast_df.head(args.max_stations).reset_index(drop=True)
@@ -5641,6 +5708,17 @@ def main() -> None:
         encoding="utf-8",
     )
 
+    under_50_geojson = finalize_bundle_geojson(
+        dataframe_to_geojson(
+            attach_empty_amenity_columns(under_50_df, source="not_enriched"),
+            source_meta,
+        )
+    )
+    UNDER_50_GEOJSON_PATH.write_text(
+        dumps_minified_json(under_50_geojson),
+        encoding="utf-8",
+    )
+
     operators_payload = build_operator_list(
         export_df,
         min_stations=args.operator_min_stations,
@@ -5678,6 +5756,8 @@ def main() -> None:
                 full_df["has_active_record"].fillna(False).astype(bool).sum()
             ),
             "fast_chargers_total": int(len(export_df)),
+            "chargers_under_50_total": int(len(under_50_df)),
+            "chargers_all_active_total": int(len(export_df) + len(under_50_df)),
             "stations_with_live_occupancy": stations_with_live_occupancy,
             "stations_with_static_details": stations_with_static_details,
             "stations_with_price": int(

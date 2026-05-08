@@ -635,6 +635,36 @@ def test_build_full_registry_station_frame_reuses_legacy_fast_station_ids_and_ke
     assert int(fast_projection_df.iloc[0]["charging_points_count"]) == 5
 
 
+def test_build_under_power_projection_from_full_registry_keeps_active_sub_threshold_stations():
+    full_df = pd.DataFrame(
+        [
+            {
+                "station_id": "slow-active",
+                "has_active_record": True,
+                "max_power_kw": 22.0,
+            },
+            {
+                "station_id": "fast-active",
+                "has_active_record": True,
+                "max_power_kw": 50.0,
+            },
+            {
+                "station_id": "slow-inactive",
+                "has_active_record": False,
+                "max_power_kw": 11.0,
+            },
+        ]
+    )
+
+    projected = build_data.build_under_power_projection_from_full_registry(
+        full_df,
+        max_power_kw=50.0,
+    )
+
+    assert projected["station_id"].tolist() == ["slow-active"]
+    assert "has_active_record" not in projected.columns
+
+
 def test_filter_fast_chargers_with_amenities_keeps_only_rows_with_positive_amenity_count():
     df = pd.DataFrame(
         [

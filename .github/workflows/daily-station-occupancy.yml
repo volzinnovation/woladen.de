@@ -1,0 +1,254 @@
+name: Daily Station Occupancy Chart
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: End date in YYYY-MM-DD. Defaults to the prior day in Europe/Berlin when empty.
+        required: false
+        type: string
+      station_id:
+        description: Internal station id.
+        required: false
+        default: 2d6cff515ceed554
+        type: string
+      days:
+        description: Number of trailing days to include.
+        required: false
+        default: "7"
+        type: string
+  schedule:
+    - cron: "30 23 * * *"
+    - cron: "30 0 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: station-occupancy-data-writer
+  cancel-in-progress: false
+
+jobs:
+  update-station-occupancy:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Berlin
+      WOLADEN_LIVE_HF_ARCHIVE_REPO_ID: loffenauer/AFIR
+      WOLADEN_LIVE_HF_ARCHIVE_PATH_PREFIX: provider-response-archives
+      WOLADEN_LIVE_HF_ARCHIVE_TOKEN_FILE: ${{ github.workspace }}/tmp/hf_private
+
+    steps:
+      - name: Gate Berlin 01:30 schedule
+        id: berlin_gate
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          SCHEDULE="${{ github.event.schedule }}"
+          BERLIN_OFFSET=$(TZ=Europe/Berlin date +%z)
+          if { [ "$BERLIN_OFFSET" = "+0200" ] && [ "$SCHEDULE" = "30 23 * * *" ]; } || \
+             { [ "$BERLIN_OFFSET" = "+0100" ] && [ "$SCHEDULE" = "30 0 * * *" ]; }; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping inactive DST companion schedule ($SCHEDULE, Berlin offset: $BERLIN_OFFSET)."
+          fi
+
+      - name: Resolve chart inputs
+        id: chart
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        shell: bash
+        env:
+          REQUESTED_DATE: ${{ github.event.inputs.date }}
+          REQUESTED_STATION_ID: ${{ github.event.inputs.station_id }}
+          REQUESTED_DAYS: ${{ github.event.inputs.days }}
+        run: |
+          python - <<'PY'
+          import os
+          from datetime import date, datetime, timedelta
+          from zoneinfo import ZoneInfo
+
+          requested_date = os.environ.get("REQUESTED_DATE", "").strip()
+          requested_station_id = os.environ.get("REQUESTED_STATION_ID", "").strip()
+          requested_days = os.environ.get("REQUESTED_DAYS", "").strip()
+
+          if requested_date:
+              target_date = date.fromisoformat(requested_date)
+              is_default_target = "false"
+          else:
+              target_date = datetime.now(ZoneInfo("Europe/Berlin")).date() - timedelta(days=1)
+              is_default_target = "true"
+
+          station_id = requested_station_id or "2d6cff515ceed554"
+          days = int(requested_days or "7")
+          if days < 1:
+              raise SystemExit("days must be at least 1")
+
+          start_date = target_date - timedelta(days=days - 1)
+          output_dir = "data/station_occupancy"
+          output_stem = f"{station_id}-hourly-occupancy-{start_date.isoformat()}-to-{target_date.isoformat()}"
+          latest_stem = f"{station_id}-hourly-occupancy-latest"
+
+          env_values = {
+              "TARGET_DATE": target_date.isoformat(),
+              "START_DATE": start_date.isoformat(),
+              "STATION_ID": station_id,
+              "DAYS": str(days),
+              "OUTPUT_DIR": output_dir,
+              "OUTPUT_STEM": output_stem,
+              "LATEST_STEM": latest_stem,
+          }
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+              for key, value in env_values.items():
+                  env_file.write(f"{key}={value}\n")
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output_file:
+              output_file.write(f"target_date={target_date.isoformat()}\n")
+              output_file.write(f"is_default_target={is_default_target}\n")
+          PY
+
+      - name: Checkout
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: pip install -r requirements.txt -r requirements-live.txt
+
+      - name: Prepare Hugging Face token
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        shell: bash
+        env:
+          HF_PRIVATE: ${{ secrets.HF_PRIVATE }}
+        run: |
+          if [ -z "$HF_PRIVATE" ]; then
+            echo "Missing HF_PRIVATE secret" >&2
+            exit 1
+          fi
+          mkdir -p tmp
+          printf '%s' "$HF_PRIVATE" > tmp/hf_private
+          chmod 600 tmp/hf_private
+
+      - name: Wait for target archive
+        if: steps.berlin_gate.outputs.should_run == 'true' && steps.chart.outputs.is_default_target == 'true'
+        run: |
+          python - <<'PY'
+          import time
+
+          from backend.archive import DailyResponseArchiveDownloader
+          from backend.config import AppConfig
+
+          target_date = "${{ steps.chart.outputs.target_date }}"
+          wait_minutes = 240
+          interval_seconds = 300
+          attempts = max(1, wait_minutes * 60 // interval_seconds)
+          downloader = DailyResponseArchiveDownloader(AppConfig())
+
+          for attempt in range(1, attempts + 1):
+              available_dates = {
+                  str(row.get("target_date") or "")
+                  for row in downloader.list_available_archives()
+              }
+              if target_date in available_dates:
+                  print(f"{target_date} archive is available.")
+                  break
+              if attempt == attempts:
+                  raise SystemExit(
+                      f"{target_date} archive still unavailable after {wait_minutes} minutes."
+                  )
+              print(
+                  f"{target_date} archive not published yet "
+                  f"(attempt {attempt}/{attempts}); retrying in {interval_seconds // 60} minutes."
+              )
+              time.sleep(interval_seconds)
+          PY
+
+      - name: Download archive window
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: |
+          python - <<'PY'
+          import os
+          import shutil
+          import subprocess
+          import sys
+          from datetime import date, timedelta
+          from pathlib import Path
+
+          start_date = date.fromisoformat(os.environ["START_DATE"])
+          target_date = date.fromisoformat(os.environ["TARGET_DATE"])
+          current = start_date
+
+          cache_roots = [
+              Path.home() / ".cache" / "huggingface" / "hub",
+              Path(os.environ["GITHUB_WORKSPACE"]) / "tmp" / "hf-cache",
+          ]
+
+          while current <= target_date:
+              subprocess.run(
+                  [
+                      sys.executable,
+                      "analysis/download_hf_archives.py",
+                      "--date",
+                      current.isoformat(),
+                      "--days",
+                      "1",
+                      "--require-complete",
+                  ],
+                  check=True,
+              )
+              for cache_root in cache_roots:
+                  shutil.rmtree(cache_root, ignore_errors=True)
+              current += timedelta(days=1)
+          PY
+
+      - name: Generate station occupancy chart
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: |
+          python analysis/hourly_station_occupancy.py \
+            --date "$TARGET_DATE" \
+            --days "$DAYS" \
+            --station "$STATION_ID" \
+            --require-complete \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Update latest chart copies
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: |
+          cp "$OUTPUT_DIR/$OUTPUT_STEM.json" "$OUTPUT_DIR/$LATEST_STEM.json"
+          cp "$OUTPUT_DIR/$OUTPUT_STEM.svg" "$OUTPUT_DIR/$LATEST_STEM.svg"
+
+      - name: Publish web occupancy data
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: |
+          python scripts/publish_station_occupancy_web.py \
+            --station "$STATION_ID" \
+            --input "$OUTPUT_DIR/$LATEST_STEM.json"
+
+      - name: Configure git
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit generated station occupancy chart
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: |
+          git add "$OUTPUT_DIR"
+          git add web/data/station-occupancy site/data/station-occupancy
+          if git diff --cached --quiet; then
+            echo "No station occupancy chart changes"
+            exit 0
+          fi
+          git commit -m "chore(analysis): refresh station occupancy chart"
+          git fetch origin main
+          git rebase origin/main
+          git push origin main
