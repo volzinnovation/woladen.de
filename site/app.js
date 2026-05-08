@@ -163,23 +163,20 @@ function formatAmenityCount(count) {
   return `${rounded} ${rounded === 1 ? "Angebot vor Ort" : "Angebote vor Ort"}`;
 }
 
-<<<<<<< feature/-categories
 function getAmenityGroupLabel(category) {
   return AMENITY_GROUP_BY_CATEGORY.get(category || "") || "Sonstiges";
 }
-
 function getAmenityDistance(item) {
   const distance = Number(item?.distance_m);
   return Number.isFinite(distance) ? distance : Number.POSITIVE_INFINITY;
 }
-
 function compareAmenityExamples(a, b) {
   const distanceDiff = getAmenityDistance(a) - getAmenityDistance(b);
   if (distanceDiff !== 0) return distanceDiff;
   const categoryDiff = String(a?.category || "").localeCompare(String(b?.category || ""));
   if (categoryDiff !== 0) return categoryDiff;
   return String(a?.name || "").localeCompare(String(b?.name || ""));
-=======
+}
 function formatAmenityOpenStatus(item, date = new Date()) {
   const status = getAmenityOpenStatus(item, date).state;
   if (status === "open") {
@@ -190,13 +187,11 @@ function formatAmenityOpenStatus(item, date = new Date()) {
   }
   return { label: "Öffnungszeiten unbekannt", className: "unknown" };
 }
-
 function formatAmenityDistance(item) {
   const distance = Number(item?.distance_m);
   if (!Number.isFinite(distance)) return "";
   return `${Math.round(distance)} m`;
 }
-
 function openAmenityDetailSheet(item, categoryLabel, now = new Date()) {
   const name = item.name || categoryLabel || "Angebot vor Ort";
   const openStatus = formatAmenityOpenStatus(item, now);
@@ -208,7 +203,6 @@ function openAmenityDetailSheet(item, categoryLabel, now = new Date()) {
   els.amenitySheet.status.className = `amenity-sheet-status ${openStatus.className}`;
   els.amenitySheet.hours.textContent = openingHoursText || "Öffnungszeiten unbekannt";
   openModal("amenityDetail");
->>>>>>> main
 }
 
 function resolveLiveApiBaseUrl() {
@@ -2207,75 +2201,39 @@ function renderDetailAmenities(props) {
     return;
   }
 
-<<<<<<< feature/-categories
+  const now = new Date();
   const groupedExamples = new Map(AMENITY_GROUPS.map((group) => [group.label, []]));
   examples.slice(0, 15).forEach((item) => {
     const groupLabel = getAmenityGroupLabel(item?.category);
     groupedExamples.get(groupLabel).push(item);
   });
-
   AMENITY_GROUPS.forEach((group) => {
     const groupItems = groupedExamples.get(group.label).sort(compareAmenityExamples);
     if (groupItems.length === 0) return;
-
     const groupElement = document.createElement("div");
     groupElement.className = "amenity-group";
-
     const title = document.createElement("h4");
     title.className = "amenity-group-title";
     title.textContent = group.label;
     groupElement.appendChild(title);
-
     const itemsElement = document.createElement("div");
     itemsElement.className = "amenity-group-items";
-
     groupItems.forEach((item) => {
-      // item: { category, name, opening_hours, distance_m, lat, lon }
       const catConfig = AMENITY_MAPPING[`amenity_${item.category}`] || {
         label: item.category || "Angebot vor Ort",
       };
       const iconPath = getAmenityIconPath(`amenity_${item.category}`);
-
-      // Helper to format text
       const name = item.name || catConfig.label;
-      const meta = [
-        item.distance_m ? `~${Math.round(item.distance_m)}m` : null,
-        item.opening_hours,
-      ]
-        .filter(Boolean)
-        .join(" • ");
-
-      const div = document.createElement("div");
-      div.className = "amenity-item";
-
-      const iconHtml = iconPath
-        ? `<img src="${iconPath}" alt="${catConfig.label}">`
-        : `<div style="width:24px;height:24px;background:#eee;border-radius:4px"></div>`;
-
-      div.innerHTML = `
-      ${iconHtml}
-=======
-  const now = new Date();
-  examples.slice(0, 15).forEach((item) => {
-    const catConfig = AMENITY_MAPPING[`amenity_${item.category}`] || {
-      label: item.category || "Angebot vor Ort",
-    };
-
-    const name = item.name || catConfig.label;
-    const iconPath = getAmenityIconPath(`amenity_${item.category}`);
-    const openStatus = formatAmenityOpenStatus(item, now);
-    const distance = formatAmenityDistance(item);
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "amenity-item";
-    button.addEventListener("click", () => openAmenityDetailSheet(item, catConfig.label, now));
-
-    button.innerHTML = `
+      const openStatus = formatAmenityOpenStatus(item, now);
+      const distance = formatAmenityDistance(item);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "amenity-item";
+      button.addEventListener("click", () => openAmenityDetailSheet(item, catConfig.label, now));
+      button.innerHTML = `
       ${iconPath
         ? `<img src="${iconPath}" alt="${escapeHtml(catConfig.label)}" loading="lazy">`
         : `<span class="amenity-item-icon-fallback" aria-hidden="true"></span>`}
->>>>>>> main
       <div class="amenity-detail">
         <span class="amenity-detail-name">${escapeHtml(name)}</span>
         <span class="amenity-detail-meta ${openStatus.className}">${escapeHtml(openStatus.label)}</span>
@@ -2284,15 +2242,10 @@ function renderDetailAmenities(props) {
       ${distance ? `<span class="amenity-distance">${escapeHtml(distance)}</span>` : ""}
       <span class="amenity-chevron" aria-hidden="true"></span>
     `;
-<<<<<<< feature/-categories
-      itemsElement.appendChild(div);
+      itemsElement.appendChild(button);
     });
-
     groupElement.appendChild(itemsElement);
     els.detail.amenityList.appendChild(groupElement);
-=======
-    els.detail.amenityList.appendChild(button);
->>>>>>> main
   });
 }
 

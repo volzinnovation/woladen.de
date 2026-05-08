@@ -194,6 +194,15 @@ function formatAmenityDistance(item) {
 }
 function openAmenityDetailSheet(item, categoryLabel, now = new Date()) {
   const name = item.name || categoryLabel || "Angebot vor Ort";
+  const openStatus = formatAmenityOpenStatus(item, now);
+  const openingHoursText = formatOpeningHoursForGermanDisplay(item.opening_hours);
+
+  els.amenitySheet.category.textContent = categoryLabel || "Angebot vor Ort";
+  els.amenitySheet.title.textContent = name;
+  els.amenitySheet.status.textContent = openStatus.label;
+  els.amenitySheet.status.className = `amenity-sheet-status ${openStatus.className}`;
+  els.amenitySheet.hours.textContent = openingHoursText || "Öffnungszeiten unbekannt";
+  openModal("amenityDetail");
 }
 
 function resolveLiveApiBaseUrl() {
@@ -2192,7 +2201,7 @@ function renderDetailAmenities(props) {
     return;
   }
 
-const now = new Date();
+  const now = new Date();
   const groupedExamples = new Map(AMENITY_GROUPS.map((group) => [group.label, []]));
   examples.slice(0, 15).forEach((item) => {
     const groupLabel = getAmenityGroupLabel(item?.category);
@@ -2233,7 +2242,7 @@ const now = new Date();
       ${distance ? `<span class="amenity-distance">${escapeHtml(distance)}</span>` : ""}
       <span class="amenity-chevron" aria-hidden="true"></span>
     `;
-itemsElement.appendChild(button);
+      itemsElement.appendChild(button);
     });
     groupElement.appendChild(itemsElement);
     els.detail.amenityList.appendChild(groupElement);
