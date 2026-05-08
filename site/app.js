@@ -119,6 +119,35 @@ const AMENITY_MAPPING = {
   shop_electronics: { label: "Elektronik", icon: "shop_electronics.png" },
 };
 
+const AMENITY_GROUPS = [
+  {
+    label: "Essen & Trinken",
+    categories: ["restaurant", "cafe", "fast_food", "ice_cream", "bakery"],
+  },
+  {
+    label: "Einkaufsmöglichkeiten",
+    categories: ["supermarket", "convenience", "pharmacy"],
+  },
+  {
+    label: "Freizeit & Natur",
+    categories: ["museum", "playground", "park"],
+  },
+  {
+    label: "Unterkunft",
+    categories: ["hotel"],
+  },
+  {
+    label: "Sonstiges",
+    categories: [],
+  },
+];
+
+const AMENITY_GROUP_BY_CATEGORY = new Map(
+  AMENITY_GROUPS.flatMap((group) =>
+    group.categories.map((category) => [category, group.label]),
+  ),
+);
+
 // Fallback for missing icons or just generic usage
 function getAmenityIconPath(key) {
   const config = AMENITY_MAPPING[key];
@@ -134,6 +163,23 @@ function formatAmenityCount(count) {
   return `${rounded} ${rounded === 1 ? "Angebot vor Ort" : "Angebote vor Ort"}`;
 }
 
+<<<<<<< feature/-categories
+function getAmenityGroupLabel(category) {
+  return AMENITY_GROUP_BY_CATEGORY.get(category || "") || "Sonstiges";
+}
+
+function getAmenityDistance(item) {
+  const distance = Number(item?.distance_m);
+  return Number.isFinite(distance) ? distance : Number.POSITIVE_INFINITY;
+}
+
+function compareAmenityExamples(a, b) {
+  const distanceDiff = getAmenityDistance(a) - getAmenityDistance(b);
+  if (distanceDiff !== 0) return distanceDiff;
+  const categoryDiff = String(a?.category || "").localeCompare(String(b?.category || ""));
+  if (categoryDiff !== 0) return categoryDiff;
+  return String(a?.name || "").localeCompare(String(b?.name || ""));
+=======
 function formatAmenityOpenStatus(item, date = new Date()) {
   const status = getAmenityOpenStatus(item, date).state;
   if (status === "open") {
@@ -162,6 +208,7 @@ function openAmenityDetailSheet(item, categoryLabel, now = new Date()) {
   els.amenitySheet.status.className = `amenity-sheet-status ${openStatus.className}`;
   els.amenitySheet.hours.textContent = openingHoursText || "Öffnungszeiten unbekannt";
   openModal("amenityDetail");
+>>>>>>> main
 }
 
 function resolveLiveApiBaseUrl() {
@@ -2160,6 +2207,54 @@ function renderDetailAmenities(props) {
     return;
   }
 
+<<<<<<< feature/-categories
+  const groupedExamples = new Map(AMENITY_GROUPS.map((group) => [group.label, []]));
+  examples.slice(0, 15).forEach((item) => {
+    const groupLabel = getAmenityGroupLabel(item?.category);
+    groupedExamples.get(groupLabel).push(item);
+  });
+
+  AMENITY_GROUPS.forEach((group) => {
+    const groupItems = groupedExamples.get(group.label).sort(compareAmenityExamples);
+    if (groupItems.length === 0) return;
+
+    const groupElement = document.createElement("div");
+    groupElement.className = "amenity-group";
+
+    const title = document.createElement("h4");
+    title.className = "amenity-group-title";
+    title.textContent = group.label;
+    groupElement.appendChild(title);
+
+    const itemsElement = document.createElement("div");
+    itemsElement.className = "amenity-group-items";
+
+    groupItems.forEach((item) => {
+      // item: { category, name, opening_hours, distance_m, lat, lon }
+      const catConfig = AMENITY_MAPPING[`amenity_${item.category}`] || {
+        label: item.category || "Angebot vor Ort",
+      };
+      const iconPath = getAmenityIconPath(`amenity_${item.category}`);
+
+      // Helper to format text
+      const name = item.name || catConfig.label;
+      const meta = [
+        item.distance_m ? `~${Math.round(item.distance_m)}m` : null,
+        item.opening_hours,
+      ]
+        .filter(Boolean)
+        .join(" • ");
+
+      const div = document.createElement("div");
+      div.className = "amenity-item";
+
+      const iconHtml = iconPath
+        ? `<img src="${iconPath}" alt="${catConfig.label}">`
+        : `<div style="width:24px;height:24px;background:#eee;border-radius:4px"></div>`;
+
+      div.innerHTML = `
+      ${iconHtml}
+=======
   const now = new Date();
   examples.slice(0, 15).forEach((item) => {
     const catConfig = AMENITY_MAPPING[`amenity_${item.category}`] || {
@@ -2180,6 +2275,7 @@ function renderDetailAmenities(props) {
       ${iconPath
         ? `<img src="${iconPath}" alt="${escapeHtml(catConfig.label)}" loading="lazy">`
         : `<span class="amenity-item-icon-fallback" aria-hidden="true"></span>`}
+>>>>>>> main
       <div class="amenity-detail">
         <span class="amenity-detail-name">${escapeHtml(name)}</span>
         <span class="amenity-detail-meta ${openStatus.className}">${escapeHtml(openStatus.label)}</span>
@@ -2188,7 +2284,15 @@ function renderDetailAmenities(props) {
       ${distance ? `<span class="amenity-distance">${escapeHtml(distance)}</span>` : ""}
       <span class="amenity-chevron" aria-hidden="true"></span>
     `;
+<<<<<<< feature/-categories
+      itemsElement.appendChild(div);
+    });
+
+    groupElement.appendChild(itemsElement);
+    els.detail.amenityList.appendChild(groupElement);
+=======
     els.detail.amenityList.appendChild(button);
+>>>>>>> main
   });
 }
 
