@@ -19,6 +19,7 @@ DEFAULT_MANAGEMENT_OUTPUT_ROOT = REPO_ROOT / "data" / "management"
 DEFAULT_PUBLIC_SITE_ORIGIN = "https://woladen.de"
 HF_DATASET_URL = "https://huggingface.co/datasets/loffenauer/AFIR"
 SNAPSHOT_TOP_LIMIT = 10
+SNAPSHOT_PROVIDER_LIMIT = 30
 
 
 def _utc_now_iso() -> str:
@@ -45,6 +46,7 @@ def _public_snapshot_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "summary": dict(payload.get("summary") or {}),
         "busiest_stations": list(payload.get("busiest_stations") or [])[:SNAPSHOT_TOP_LIMIT],
         "broken_stations": list(payload.get("broken_stations") or [])[:SNAPSHOT_TOP_LIMIT],
+        "provider_reports": list(payload.get("provider_reports") or [])[:SNAPSHOT_PROVIDER_LIMIT],
     }
 
 
@@ -284,6 +286,82 @@ def _build_status_rollups(
     }
 
 
+def _build_provider_reports(*, target_date: date, analysis_output_dir: Path) -> list[dict[str, Any]]:
+    target_date_text = target_date.isoformat()
+    provider_summary_path = analysis_output_dir / "provider_daily_summary.csv"
+    provider_meta: dict[str, dict[str, str]] = {}
+    if provider_summary_path.exists():
+        provider_meta = {
+            str(row.get("provider_uid") or ""): row
+            for row in _read_csv_rows(provider_summary_path)
+            if str(row.get("archive_date") or "") == target_date_text
+        }
+
+    archive_messages_path = analysis_output_dir / "archive_messages.csv"
+    if not archive_messages_path.exists():
+        return []
+
+    grouped: dict[str, dict[str, Any]] = {}
+    for row in _read_csv_rows(archive_messages_path):
+        if str(row.get("archive_date") or "") != target_date_text:
+            continue
+        provider_uid = str(row.get("provider_uid") or "").strip()
+        if not provider_uid:
+            continue
+        meta = provider_meta.get(provider_uid, {})
+        report = grouped.setdefault(
+            provider_uid,
+            {
+                "provider_uid": provider_uid,
+                "display_name": str(meta.get("display_name") or provider_uid),
+                "publisher": str(meta.get("publisher") or ""),
+                "messages_total": 0,
+                "push_messages_total": 0,
+                "http_response_messages_total": 0,
+                "fetch_failure_messages_total": 0,
+                "http_error_messages_total": 0,
+                "payload_byte_length_total": 0,
+                "parseable_messages_total": _int_value(meta.get("parseable_messages_total")),
+                "observations_total": _int_value(meta.get("extracted_observation_count_total")),
+                "mapped_observations_total": _int_value(meta.get("extracted_mapped_observation_count_total")),
+                "mapped_observation_ratio": _float_value(meta.get("mapped_observation_ratio")),
+                "mapped_stations_observed": _int_value(meta.get("mapped_stations_observed")),
+                "mapped_stations_observed_in_bundle": _int_value(meta.get("mapped_stations_observed_in_bundle")),
+                "first_message_timestamp": "",
+                "latest_message_timestamp": "",
+            },
+        )
+        record_kind = str(row.get("record_kind") or "")
+        message_timestamp = _timestamp_sort_value(row.get("message_timestamp"))
+        http_status = _int_value(row.get("http_status"))
+        report["messages_total"] += 1
+        report["payload_byte_length_total"] += _int_value(row.get("payload_byte_length"))
+        if record_kind == "push_request":
+            report["push_messages_total"] += 1
+        elif record_kind == "http_response":
+            report["http_response_messages_total"] += 1
+        elif record_kind == "fetch_failure":
+            report["fetch_failure_messages_total"] += 1
+        if http_status >= 400:
+            report["http_error_messages_total"] += 1
+        if message_timestamp:
+            if not report["first_message_timestamp"] or message_timestamp < report["first_message_timestamp"]:
+                report["first_message_timestamp"] = message_timestamp
+            if not report["latest_message_timestamp"] or message_timestamp > report["latest_message_timestamp"]:
+                report["latest_message_timestamp"] = message_timestamp
+
+    provider_reports = list(grouped.values())
+    provider_reports.sort(
+        key=lambda row: (
+            -_int_value(row.get("messages_total")),
+            -_int_value(row.get("push_messages_total")),
+            -_int_value(row.get("payload_byte_length_total")),
+            str(row.get("display_name") or row.get("provider_uid") or ""),
+        ),
+    )
+    return provider_reports[:SNAPSHOT_PROVIDER_LIMIT]
+
+
 def build_management_snapshot_from_analysis_outputs(
     *,
     target_date: date,
@@ -314,6 +392,10 @@ def build_management_snapshot_from_analysis_outputs(
         station_metadata=station_metadata,
         bundle_station_metadata=bundle_station_metadata,
         primary_station_rows=primary_station_rows,
+    )
+    provider_reports = _build_provider_reports(
+        target_date=target_date,
+        analysis_output_dir=analysis_output_dir,
     )
 
     summary = {
@@ -349,6 +431,7 @@ def build_management_snapshot_from_analysis_outputs(
         "summary": summary,
         "busiest_stations": status_rollups["busiest_stations"],
         "broken_stations": status_rollups["broken_stations"],
+        "provider_reports": provider_reports,
         }
     )
 

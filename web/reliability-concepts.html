@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Konzeptstudie: Analytische Signale fuer Ausfall und Auslastung</title>
+    <meta
+      name="description"
+      content="Konzeptstudie fuer woladen.de: Wie historische Hinweise zu Auslastung und Stoerungen in Listen- und Kartenansicht vermittelt werden koennen."
+    />
+    <link rel="stylesheet" href="./reliability-concepts.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="hero">
+        <div class="hero-copy">
+          <span class="eyebrow">woladen.de Konzeptstudie</span>
+          <h1>Wie wir “oft belegt” und “haeufig gestoert” sichtbar machen koennen.</h1>
+          <p>
+            Die neue Information ist keine Live-Aussage, sondern ein analytischer Hinweis aus
+            wiederkehrenden Beobachtungen. Deshalb sollte sie in der Oberflaeche klar von
+            “jetzt frei / jetzt belegt / jetzt defekt” getrennt sein und eher wie ein
+            Beratungs-Signal wirken als wie ein Alarm.
+          </p>
+          <div class="hero-note">
+            <span class="micro-chip"><span class="dot live"></span>Live: aktueller Status</span>
+            <span class="micro-chip"><span class="dot analytics"></span>Analytik: typisches Verhalten</span>
+          </div>
+        </div>
+
+        <aside class="hero-panel">
+          <div class="panel-title">
+            <strong>Empfohlene Sprachlogik</strong>
+            <span>
+              Nutzer sollten sofort verstehen, ob etwas gerade jetzt gilt oder ob es sich um ein
+              Muster ueber Zeit handelt.
+            </span>
+          </div>
+          <div class="preview-card">
+            <div class="preview-head">
+              <div class="preview-title">
+                <strong>EnBW Schnellladepark</strong>
+                <span>Ulm • 300 kW max • 8 Ladepunkte</span>
+              </div>
+              <span class="preview-distance">1,3 km</span>
+            </div>
+            <div class="pill-row">
+              <span class="pill live">Jetzt 2 frei</span>
+              <span class="pill busy">Oft belegt</span>
+              <span class="pill broken">Wiederholt Stoerungen</span>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section>
+        <div class="section-title">
+          <h2>Leitplanken</h2>
+          <p>
+            Die Produktlogik sollte die neue Ebene nuetzlich machen, ohne die ruhige Lesbarkeit
+            der bestehenden Listen- und Kartenansichten zu verlieren.
+          </p>
+        </div>
+        <div class="principles">
+          <article class="principle">
+            <span class="principle-index">1</span>
+            <strong>Jetzt und oft niemals vermischen</strong>
+            <p>
+              Live bleibt die erste Aussage. Analytik sitzt daneben oder darunter. Gute Paare sind
+              “Jetzt 2 frei” plus “Oft belegt” oder “Alle belegt” plus “abends meist voll”.
+            </p>
+          </article>
+          <article class="principle">
+            <span class="principle-index">2</span>
+            <strong>Stationsebene zuerst, Ladepunktdetail spaeter</strong>
+            <p>
+              In Liste und Karte reicht ein Stationensignal. Die Aufschluesselung fuer einzelne
+              Ladepunkte gehoert in die Detailansicht oder in eine aufgeklappte Kartenkarte.
+            </p>
+          </article>
+          <article class="principle">
+            <span class="principle-index">3</span>
+            <strong>Warnen nur mit Kontext</strong>
+            <p>
+              Historische Hinweise wirken glaubwuerdiger mit einem kurzen Kontext wie “30 Tage”
+              oder “werktags 17-20 Uhr”. Ohne Zeitfenster klingt “oft” schnell absolut.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-title">
+          <h2>Drei visuelle Richtungen</h2>
+          <p>
+            Alle Konzepte halten am bestehenden Amenity-Farbcode der Marker fest und fuehren
+            Analytik als zweite Ebene ein. Der Unterschied liegt in Informationsdichte und
+            Deutlichkeit.
+          </p>
+        </div>
+
+        <div class="concept-stack">
+          <article class="concept-card recommended">
+            <div class="concept-copy">
+              <span class="concept-label">Konzept A · empfohlen</span>
+              <h3>Signal-Chips</h3>
+              <p>
+                Die einfachste Erweiterung: Live bleibt eine starke gruen/orange/rote Pill, die
+                historischen Muster kommen als kleinere Hinweis-Chips dazu. In der Karte bleiben
+                die Marker vertraut und bekommen nur einen Halo oder ein kleines Badge.
+              </p>
+              <div class="copy-list">
+                <strong>Geeignete Nutzertexte</strong>
+                <ul>
+                  <li>“Oft belegt” statt “schlecht verfuegbar”</li>
+                  <li>“Wiederholt Stoerungen” statt “oft defekt”</li>
+                  <li>Optional mit Zeitbezug: “Feierabend oft belegt”</li>
+                </ul>
+              </div>
+              <div class="copy-list">
+                <strong>Warum es gut passt</strong>
+                <ul>
+                  <li>Fast kein Bruch mit der heutigen Listenkarte</li>
+                  <li>Hohe Scanbarkeit auf kleinen Displays</li>
+                  <li>Leicht in Karte, Liste und Favoriten wiederverwendbar</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="concept-stage">
+              <section class="mock-panel">
+                <div class="mock-panel-header">
+                  <div>
+                    <strong>Listenansicht</strong><br />
+                    <span>Analytik als zweite Badge-Zeile</span>
+                  </div>
+                </div>
+                <div class="mock-list">
+                  <article class="station">
+                    <div class="station-head">
+                      <div class="station-title">
+                        <strong>EnBW Schnellladepark</strong>
+                        <span>Ulm • 300 kW max • 8 Ladepunkte • 11 Angebote vor Ort</span>
+                      </div>
+                      <span class="station-distance">1,3 km</span>
+                    </div>
+                    <div class="pill-row">
+                      <span class="pill live">Jetzt 2 frei</span>
+                      <span class="pill busy">Oft belegt</span>
+                      <span class="pill broken">Wiederholt Stoerungen</span>
+                    </div>
+                    <span class="support-note">Muster aus den letzten 30 Tagen</span>
+                  </article>
+
+                  <article class="station">
+                    <div class="station-head">
+                      <div class="station-title">
+                        <strong>Aral pulse Hub</strong>
+                        <span>Neu-Ulm • 150 kW max • 6 Ladepunkte • 4 Angebote vor Ort</span>
+                      </div>
+                      <span class="station-distance">2,0 km</span>
+                    </div>
+                    <div class="pill-row">
+                      <span class="pill live">Jetzt alle belegt</span>
+                      <span class="pill busy">Feierabend oft voll</span>
+                    </div>
+                  </article>
+                </div>
+              </section>
+
+              <section class="mock-panel">
+                <div class="mock-panel-header">
+                  <div>
+                    <strong>Kartenansicht</strong><br />
+                    <span>Amenity-Farbe innen, Risiko aussen</span>
+                  </div>
+                </div>
+                <div class="map-surface">
+                  <div class="map-toolbar">
+                    <span class="toolbar-pill">Alle Filter</span>
+                    <span class="toolbar-pill active">Historische Hinweise</span>
+                  </div>
+
+                  <span class="map-marker gold busy broken" style="left: 22%; top: 31%;"><span></span></span>
+                  <span class="map-marker silver busy" style="left: 58%; top: 24%;"><span></span></span>
+                  <span class="map-marker bronze" style="left: 34%; top: 55%;"><span></span></span>
+                  <span class="map-marker grey broken" style="left: 69%; top: 63%;"><span></span></span>
+
+                  <div class="map-sheet">
+                    <div class="map-sheet-head">
+                      <div>
+                        <strong>EnBW Schnellladepark</strong><br />
+                        <span>1,3 km entfernt</span>
+                      </div>
+                      <span class="pill live">Jetzt 2 frei</span>
+                    </div>
+                    <div class="map-legend">
+                      <span class="pill busy">Oft belegt</span>
+                      <span class="pill broken">Wiederholt Stoerungen</span>
+                    </div>
+                    <div class="map-sheet-note">
+                      Der Marker bleibt schnell lesbar: Amenity-Wert im Kern, Analytik als
+                      Halo oder kleines Warn-Badge.
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </article>
+
+          <article class="concept-card">
+            <div class="concept-copy">
+              <span class="concept-label">Konzept B</span>
+              <h3>Zwei Risiko-Meter</h3>
+              <p>
+                Die Liste bekommt fuer Auslastung und Stoerungen je einen kleinen Meter mit
+                numerischer Intensitaet. Das eignet sich gut fuer Vergleiche zwischen Stationen,
+                ist aber deutlich datenlastiger als das heutige UI.
+              </p>
+              <div class="copy-list">
+                <strong>Geeignete Nutzertexte</strong>
+                <ul>
+                  <li>“Auslastungsrisiko hoch”</li>
+                  <li>“Stoerungsrisiko mittel”</li>
+                  <li>Mit Kontext: “30 Tage · 214 Beobachtungen”</li>
+                </ul>
+              </div>
+              <div class="copy-list">
+                <strong>Trade-off</strong>
+                <ul>
+                  <li>Praeziser und gut vergleichbar</li>
+                  <li>Abstrakter, braucht Legende oder Tooltips</li>
+                  <li>Kann auf der Karte schnell zu technisch wirken</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="concept-stage">
+              <section class="mock-panel">
+                <div class="mock-panel-header">
+                  <div>
+                    <strong>Listenansicht</strong><br />
+                    <span>Verdichtete Scores fuer schnelle Vergleiche</span>
+                  </div>
+                </div>
+                <div class="mock-list">
+                  <article class="station">
+                    <div class="station-head">
+                      <div class="station-title">
+                        <strong>Ionity Langenau</strong>
+                        <span>280 kW max • 12 Ladepunkte • 7 Angebote vor Ort</span>
+                      </div>
+                      <span class="station-distance">4,8 km</span>
+                    </div>
+                    <div class="pill-row">
+                      <span class="pill live">Jetzt 5 frei</span>
+                    </div>
+                    <div class="metric-grid">
+                      <div class="metric-row">
+                        <div class="metric-head">
+                          <span>Auslastung</span>
+                          <span>78 / 100</span>
+                        </div>
+                        <div class="meter busy"><span style="width: 78%;"></span></div>
+                      </div>
+                      <div class="metric-row">
+                        <div class="metric-head">
+                          <span>Stoerungen</span>
+                          <span>34 / 100</span>
+                        </div>
+                        <div class="meter broken"><span style="width: 34%;"></span></div>
+                      </div>
+                    </div>
+                    <span class="support-note">30 Tage · 214 Beobachtungen</span>
+                  </article>
+
+                  <article class="station">
+                    <div class="station-head">
+                      <div class="station-title">
+                        <strong>Fastned Elchingen</strong>
+                        <span>300 kW max • 8 Ladepunkte • 5 Angebote vor Ort</span>
+                      </div>
+                      <span class="station-distance">6,1 km</span>
+                    </div>
+                    <div class="pill-row">
+                      <span class="pill live">Jetzt 1 frei</span>
+                    </div>
+                    <div class="metric-grid">
+                      <div class="metric-row">
+                        <div class="metric-head">
+                          <span>Auslastung</span>
+                          <span>62 / 100</span>
+                        </div>
+                        <div class="meter busy"><span style="width: 62%;"></span></div>
+                      </div>
+                      <div class="metric-row">
+                        <div class="metric-head">
+                          <span>Stoerungen</span>
+                          <span>11 / 100</span>
+                        </div>
+                        <div class="meter broken"><span style="width: 11%;"></span></div>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+              </section>
+
+              <section class="mock-panel">
+                <div class="mock-panel-header">
+                  <div>
+                    <strong>Kartenansicht</strong><br />
+                    <span>Ring um den Marker als Doppelsignal</span>
+                  </div>
+                </div>
+                <div class="map-surface">
+                  <div class="map-toolbar">
+                    <span class="toolbar-pill">Vergleich</span>
+                    <span class="toolbar-pill active">Risiko-Skala</span>
+                  </div>
+
+                  <span class="map-marker gold split" style="left: 24%; top: 30%;"><span></span></span>
+                  <span class="map-marker silver split" style="left: 61%; top: 26%;"><span></span></span>
+                  <span class="map-marker bronze split" style="left: 44%; top: 55%;"><span></span></span>
+                  <span class="map-marker grey split" style="left: 74%; top: 60%;"><span></span></span>
+
+                  <div class="map-sheet">
+                    <div class="map-sheet-head">
+                      <div>
+                        <strong>Ring-Lesart</strong><br />
+                        <span>Amber = Auslastung, Rot = Stoerung</span>
+                      </div>
+                      <span class="pill neutral">Legende noetig</span>
+                    </div>
+                    <div class="map-sheet-note">
+                      Fuer Datenmenschen stark, fuer spontane Karten-Scans grenzwertig. Der Ring
+                      gibt viel her, macht die Marker aber abstrakter.
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </article>
+
+          <article class="concept-card">
+            <div class="concept-copy">
+              <span class="concept-label">Konzept C</span>
+              <h3>Zeitfenster-Linse</h3>
+              <p>
+                Dieses Konzept macht den Zeitbezug explizit. Statt eines generischen Warnsignals
+                wird gezeigt, wann die Station typischerweise voll oder gestoert ist. Das ist
+                ehrlicher, verlangt aber eine zusaetzliche UI-Linse.
+              </p>
+              <div class="copy-list">
+                <strong>Geeignete Nutzertexte</strong>
+                <ul>
+                  <li>“Werktags 17-20 Uhr oft voll”</li>
+                  <li>“Am Wochenende wiederholt Stoerungen”</li>
+                  <li>“Jetzt ruhig, ab 18 Uhr meist belegt”</li>
+                </ul>
+              </div>
+              <div class="copy-list">
+                <strong>Trade-off</strong>
+                <ul>
+                  <li>Am ehrlichsten fuer historische Daten</li>
+                  <li>Ideal fuer Detail oder optionalen Kartenlayer</li>
+                  <li>Zu komplex als Standardmuster fuer jede Liste</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="concept-stage">
+              <section class="mock-panel">
+                <div class="mock-panel-header">
+                  <div>
+                    <strong>Listenansicht</strong><br />
+                    <span>Zeitfenster statt allgemeinem Risiko-Label</span>
+                  </div>
+                </div>
+                <div class="mock-list">
+                  <article class="station">
+                    <div class="station-head">
+                      <div class="station-title">
+                        <strong>EnBW Schnellladepark</strong>
+                        <span>300 kW max • 8 Ladepunkte • 11 Angebote vor Ort</span>
+                      </div>
+                      <span class="station-distance">1,3 km</span>
+                    </div>
+                    <div class="pill-row">
+                      <span class="pill live">Jetzt 3 frei</span>
+                      <span class="pill busy">Ab 18 Uhr oft voll</span>
+                    </div>
+                    <div class="time-strip">
+                      <div class="time-cell">
+                        <strong>Morgen</strong>
+                        <span>meist ruhig</span>
+                      </div>
+                      <div class="time-cell">
+                        <strong>Mittag</strong>
+                        <span>moderat</span>
+                      </div>
+                      <div class="time-cell high">
+                        <strong>Abend</strong>
+                        <span>oft belegt</span>
+                      </div>
+                      <div class="time-cell alert">
+                        <strong>Wochenende</strong>
+                        <span>mehr Stoerungen</span>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+              </section>
+
+              <section class="mock-panel">
+                <div class="mock-panel-header">
+                  <div>
+                    <strong>Kartenansicht</strong><br />
+                    <span>Marker werden erst mit aktiver Zeitlinse aufgeladen</span>
+                  </div>
+                </div>
+                <div class="map-surface">
+                  <div class="map-toolbar">
+                    <span class="toolbar-pill active">Werktags 17-20 Uhr</span>
+                    <span class="toolbar-pill">Jetzt</span>
+                  </div>
+
+                  <span class="map-marker gold busy clock" style="left: 20%; top: 31%;"><span></span></span>
+                  <span class="map-marker silver clock" style="left: 61%; top: 22%;"><span></span></span>
+                  <span class="map-marker bronze busy clock" style="left: 42%; top: 57%;"><span></span></span>
+                  <span class="map-marker grey broken clock" style="left: 76%; top: 59%;"><span></span></span>
+
+                  <div class="map-sheet">
+                    <div class="map-sheet-head">
+                      <div>
+                        <strong>Zeitlinse aktiv</strong><br />
+                        <span>Werktags 17-20 Uhr</span>
+                      </div>
+                      <span class="pill busy">oft belegt</span>
+                    </div>
+                    <div class="map-sheet-note">
+                      Stark fuer Planung. Als Default aber nur sinnvoll, wenn die App explizit
+                      zwischen “Jetzt” und “typische Verfuegbarkeit” umschalten kann.
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="recommendation">
+        <h3>Empfohlene Richtung fuer woladen.de</h3>
+        <p>
+          Als Standard fuer Liste und Karte wuerde ich Konzept A einsetzen: Live-Status als
+          primaere Aussage, analytische Chips als ruhige zweite Ebene. Konzept C passt sehr gut
+          als spaetere Erweiterung in Detailansicht oder als optionaler Kartenmodus
+          “typische Verfuegbarkeit”. Konzept B wuerde ich nur einsetzen, wenn das Produkt sich
+          bewusst in Richtung datenreiches Power-User-Tool entwickeln soll.
+        </p>
+        <div class="recommendation-grid">
+          <article class="principle">
+            <strong>Liste</strong>
+            <p>
+              Direkt unter dem Live-Badge eine zweite, kleinere Badge-Zeile mit maximal zwei
+              analytischen Hinweisen: “Oft belegt” und “Wiederholt Stoerungen”.
+            </p>
+          </article>
+          <article class="principle">
+            <strong>Karte</strong>
+            <p>
+              Marker nicht komplett umfaerben. Amenity-Farbe bleibt der Kern. Historische Hinweise
+              nur als Halo, Eckbadge oder per aktivierbarem Kartenlayer.
+            </p>
+          </article>
+          <article class="principle">
+            <strong>Sprache</strong>
+            <p>
+              Historische Daten als Wahrscheinlichkeit formulieren, nie als absolute Wahrheit.
+              Wenn moeglich mit Zeitfenster oder Beobachtungszeitraum absichern.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <p class="footer-note">
+        Diese Seite ist eine Konzeptstudie fuer interne Bewertung. Sie fuehrt keine Produktlogik
+        aus, sondern zeigt drei moegliche Darstellungsrichtungen fuer die neuen analytischen
+        Signale in Listen- und Kartenansicht.
+      </p>
+    </main>
+  </body>
+</html>

@@ -38,6 +38,13 @@ def _env_csv(name: str) -> tuple[str, ...]:
     return tuple(part.strip() for part in value.split(",") if part.strip())
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    value = str(os.environ.get(name, "")).strip().lower()
+    if not value:
+        return default
+    return value in {"1", "true", "yes", "on"}
+
+
 def load_env_file(path: Path, *, allowed_keys: Collection[str] | None = None) -> None:
     """Load simple KEY=value assignments from a runtime env file.
 
@@ -139,6 +146,7 @@ class AppConfig:
             )
         ).strip()
     )
+    api_push_enabled: bool = field(default_factory=lambda: _env_bool("WOLADEN_LIVE_API_PUSH_ENABLED", True))
     poll_timeout_seconds: int = field(
         default_factory=lambda: int(os.environ.get("WOLADEN_LIVE_POLL_TIMEOUT_SECONDS", "10"))
     )

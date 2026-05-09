@@ -14,6 +14,8 @@ on:
       - scripts/live_archive_logs.py
       - scripts/live_deploy_plan.py
       - scripts/live_ingester.py
+      - scripts/live_queue_maintenance.py
+      - scripts/live_queue_worker.py
       - scripts/live_subscription_registry.py
       - scripts/sync_mobilithek_subscriptions.py
       - .github/workflows/live-deploy.yml

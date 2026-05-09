@@ -40,6 +40,7 @@ PROFILE_FLAG_VALUES = {"1", "true", "yes", "on"}
 PROFILE_HEADER_NAMES = ("Server-Timing", "Timing-Allow-Origin", "Content-Length")
 MAX_STATION_LOOKUP_IDS = 20
 MAX_RATING_LOOKUP_IDS = 50
+STATION_ID_NAMESPACE = "DE:"
 
 
 class StationLookupRequest(BaseModel):
@@ -54,6 +55,56 @@ class StationRatingRequest(BaseModel):
     station_id: str = Field(min_length=1, max_length=128)
     rating: int = Field(ge=1, le=5)
     client_id: str = Field(min_length=16, max_length=128)
+
+
+def _public_station_id(value: str) -> str:
+    station_id = str(value or "").strip()
+    if not station_id:
+        return ""
+    if station_id.lower().startswith(STATION_ID_NAMESPACE.lower()):
+        return f"{STATION_ID_NAMESPACE}{station_id[len(STATION_ID_NAMESPACE):]}"
+    return f"{STATION_ID_NAMESPACE}{station_id}"
+
+
+def _request_station_id(value: str) -> str:
+    station_id = str(value or "").strip()
+    if station_id.lower().startswith(STATION_ID_NAMESPACE.lower()):
+        return f"{STATION_ID_NAMESPACE}{station_id[len(STATION_ID_NAMESPACE):]}"
+    return station_id
+
+
+def _internal_station_id(value: str) -> str:
+    station_id = str(value or "").strip()
+    if station_id.lower().startswith(STATION_ID_NAMESPACE.lower()):
+        return station_id[len(STATION_ID_NAMESPACE):]
+    return station_id
+
+
+def _rewrite_station_id(payload: dict, station_id: str | None = None) -> dict:
+    rewritten = dict(payload)
+    response_id = (
+        _request_station_id(station_id)
+        if station_id is not None
+        else _public_station_id(rewritten.get("station_id", ""))
+    )
+    if response_id:
+        rewritten["station_id"] = response_id
+    return rewritten
+
+
+def _rewrite_station_detail_station_id(payload: dict, station_id: str | None = None) -> dict:
+    rewritten = dict(payload)
+    response_id = (
+        _request_station_id(station_id)
+        if station_id is not None
+        else _public_station_id(payload["station"].get("station_id", ""))
+    )
+    rewritten["station"] = _rewrite_station_id(dict(payload["station"]), response_id)
+    rewritten["evses"] = [_rewrite_station_id(dict(item), response_id) for item in payload["evses"]]
+    rewritten["recent_observations"] = [
+        _rewrite_station_id(dict(item), response_id) for item in payload["recent_observations"]
+    ]
+    return rewritten
 
 
 def _strip_fields(payload: dict, excluded_fields: set[str]) -> dict:
@@ -219,11 +270,15 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.head("/v1/push")
     @app.head("/v1/push/{provider_uid}")
     def push_healthcheck(provider_uid: str = "") -> Response:
+        if not effective_config.api_push_enabled:
+            return Response(status_code=404)
         return Response(status_code=200)
 
     @app.get("/v1/push")
     @app.get("/v1/push/{provider_uid}")
     def push_probe(provider_uid: str = "") -> dict[str, bool | str | None]:
+        if not effective_config.api_push_enabled:
+            raise HTTPException(status_code=404, detail="push_endpoint_disabled")
         return {
             "ok": True,
             "provider_uid": provider_uid or None,
@@ -232,6 +287,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.post("/v1/push")
     @app.post("/v1/push/{provider_uid}")
     async def push_ingest(request: Request, provider_uid: str = "") -> Response:
+        if not effective_config.api_push_enabled:
+            raise HTTPException(status_code=404, detail="push_endpoint_disabled")
         payload_bytes = await request.body()
         resolved_provider_uid = provider_uid or _request_lookup_value(request, PROVIDER_LOOKUP_KEYS)
         subscription_id = _request_lookup_value(request, SUBSCRIPTION_LOOKUP_KEYS)
@@ -295,16 +352,28 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
     @app.post("/v1/stations/lookup")
     def lookup_stations(request: Request, payload: StationLookupRequest) -> JSONResponse:
-        station_ids = [str(station_id or "").strip() for station_id in payload.station_ids]
-        station_ids = [station_id for station_id in station_ids if station_id]
+        station_ids = [_request_station_id(station_id) for station_id in payload.station_ids]
+        station_ids = list(dict.fromkeys(station_id for station_id in station_ids if station_id))
+        internal_station_ids = [_internal_station_id(station_id) for station_id in station_ids]
+        public_by_internal_station_id = {
+            _internal_station_id(station_id): station_id for station_id in station_ids
+        }
         timings: dict[str, float] | None = {} if request.state.profiling_enabled else None
-        stations = app.state.store.list_station_summaries_by_ids(station_ids, timings=timings)
+        stations = app.state.store.list_station_summaries_by_ids(internal_station_ids, timings=timings)
         _record_store_timings(request, timings)
         payload_started_at = time.perf_counter()
-        found_station_ids = {str(station["station_id"]) for station in stations}
-        missing_station_ids = [station_id for station_id in station_ids if station_id not in found_station_ids]
+        found_by_station_id: dict[str, dict] = {}
+        for station in stations:
+            matched_station_id = public_by_internal_station_id.get(_internal_station_id(station["station_id"]))
+            if matched_station_id and matched_station_id not in found_by_station_id:
+                found_by_station_id[matched_station_id] = _rewrite_station_id(station, matched_station_id)
+        missing_station_ids = [station_id for station_id in station_ids if station_id not in found_by_station_id]
         response_payload = {
-            "stations": [_serialize_station_summary(station) for station in stations],
+            "stations": [
+                _serialize_station_summary(found_by_station_id[station_id])
+                for station_id in station_ids
+                if station_id in found_by_station_id
+            ],
             "missing_station_ids": missing_station_ids,
         }
         _record_profile_metric(
@@ -355,8 +424,11 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
     @app.get("/v1/stations/{station_id}")
     def station_detail(request: Request, station_id: str) -> JSONResponse:
+        response_station_id = _request_station_id(station_id)
         timings: dict[str, float] | None = {} if request.state.profiling_enabled else None
-        payload = app.state.store.get_station_detail(station_id, timings=timings)
+        payload = app.state.store.get_station_detail(_internal_station_id(station_id), timings=timings)
+        if payload is not None:
+            payload = _rewrite_station_detail_station_id(payload, response_station_id)
         _record_store_timings(request, timings)
         if payload is None:
             raise HTTPException(status_code=404, detail="station_not_found")

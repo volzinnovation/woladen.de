@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import threading
 from collections.abc import Mapping
-from pathlib import Path
 from typing import Any
 
 from .archive import ResponseLogWriter
@@ -722,13 +720,10 @@ class IngestionService:
             raise
 
     def _payload_from_receipt_log(self, task: ReceiptTask) -> tuple[bytes, str]:
-        record_path = Path(task.receipt_log_path)
-        payload = json.loads(record_path.read_text(encoding="utf-8"))
-        if not isinstance(payload, dict):
-            raise ValueError(f"invalid_receipt_log:{record_path}")
+        payload = self.response_log_writer.read_record(task.receipt_log_path)
         body_text = payload.get("body_text")
         if not isinstance(body_text, str):
-            raise ValueError(f"missing_body_text:{record_path}")
+            raise ValueError(f"missing_body_text:{task.receipt_log_path}")
         content_type = str(payload.get("content_type") or task.content_type or "").strip()
         return body_text.encode("utf-8"), content_type
 

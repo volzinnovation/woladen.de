@@ -20,7 +20,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.api import create_app
-from backend.archive import DailyResponseArchiveDownloader, DailyResponseArchiver
+from backend.archive import DailyResponseArchiveDownloader, DailyResponseArchiver, ResponseLogWriter
 from backend.config import AppConfig, load_env_file
 from backend.datex import decode_json_payload, extract_dynamic_facts
 from backend.fetcher import CurlFetcher
@@ -34,6 +34,12 @@ from backend.subscriptions import (
     SubscriptionOffer,
     build_subscription_registry,
     load_active_dyn_datex_subscription_offers,
+)
+from scripts.live_queue_maintenance import (
+    backup_legacy_files,
+    delete_stale_uploaded_items,
+    iter_legacy_queue_items,
+    migrate_active_items,
 )
 
 
@@ -681,9 +687,13 @@ def test_load_provider_targets_adds_synthetic_disabled_provider(app_config):
 
 def test_real_monta_subscription_registry_entry_enables_mtls_target():
     repo_root = Path(__file__).resolve().parent.parent
+    subscription_registry_path = repo_root / "secret" / "mobilithek_subscriptions.json"
+    if not subscription_registry_path.exists():
+        pytest.skip("requires local Mobilithek subscription registry secret")
+
     providers = load_provider_targets(
         repo_root / "data" / "mobilithek_afir_provider_configs.json",
-        subscription_registry_path=repo_root / "secret" / "mobilithek_subscriptions.json",
+        subscription_registry_path=subscription_registry_path,
     )
 
     monta = [provider for provider in providers if provider.provider_uid == "monta"][0]
@@ -2361,6 +2371,27 @@ def test_api_push_endpoint_accepts_get_post_and_head(app_config):
     assert evse["current"]["price_display"] == "0,81 €/kWh"
 
 
+def test_api_push_endpoint_can_be_disabled(app_config):
+    _write_provider_fixture(app_config.provider_config_path)
+    _write_matches_fixture(app_config.site_match_path)
+    _write_chargers_fixture(app_config.chargers_csv_path)
+    client = TestClient(create_app(replace(app_config, api_push_enabled=False)))
+
+    assert client.head("/v1/push/ampeco").status_code == 404
+
+    get_response = client.get("/v1/push/ampeco")
+    assert get_response.status_code == 404
+    assert get_response.json()["detail"] == "push_endpoint_disabled"
+
+    post_response = client.post(
+        "/v1/push/ampeco",
+        content=json.dumps(_dynamic_payload()).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+    )
+    assert post_response.status_code == 404
+    assert post_response.json()["detail"] == "push_endpoint_disabled"
+
+
 def test_receive_push_skips_recent_duplicate_payload_queueing(app_config):
     payload = json.dumps(_dynamic_payload(status="AVAILABLE")).encode("utf-8")
     payload_sha256 = hashlib.sha256(payload).hexdigest()
@@ -2384,7 +2415,7 @@ def test_receive_push_skips_recent_duplicate_payload_queueing(app_config):
     assert duplicate_result["provider_uid"] == "qwello"
     assert duplicate_result["payload_sha256"] == payload_sha256
     assert duplicate_result["duplicate_of_push_run_id"] == 1
-    assert len(list((app_config.queue_dir / "pending").glob("*.json"))) == 1
+    assert ReceiptQueue(app_config).stats()["pending_count"] == 1
 
     with service.store.connection() as conn:
         rows = conn.execute(
@@ -2443,63 +2474,132 @@ def test_receipt_queue_prunes_old_done_and_failed_files(app_config):
     queue = ReceiptQueue(config)
     queue.initialize()
 
-    old_done = queue.done_dir / "old-done.json"
-    fresh_done = queue.done_dir / "fresh-done.json"
-    old_failed = queue.failed_dir / "old-failed.json"
-    fresh_failed = queue.failed_dir / "fresh-failed.json"
+    tasks = []
+    for index in range(4):
+        task = replace(
+            queue.build_task(
+                task_kind="push",
+                provider_uid="ampeco",
+                run_id=index + 1,
+                receipt_log_path=queue.root_dir / f"receipt-{index}.log",
+                receipt_at="2026-04-19T17:59:40+00:00",
+            ),
+            task_id=f"task-{index}",
+        )
+        queue.enqueue(task)
+        claimed = queue.claim_next()
+        assert claimed is not None
+        tasks.append(claimed)
 
-    for path in (old_done, fresh_done, old_failed, fresh_failed):
-        path.write_text("{}\n", encoding="utf-8")
+    queue.mark_done(tasks[0])
+    queue.mark_done(tasks[1])
+    queue.mark_failed(tasks[2], error_text="old failure")
+    queue.mark_failed(tasks[3], error_text="fresh failure")
 
-    stale_timestamp = time.time() - 3600
-    os.utime(old_done, (stale_timestamp, stale_timestamp))
-    os.utime(old_failed, (stale_timestamp, stale_timestamp))
+    stale_completed_at = datetime.fromtimestamp(time.time() - 3600, tz=timezone.utc).replace(microsecond=0).isoformat()
+    with sqlite3.connect(queue.db_path) as conn:
+        conn.execute("UPDATE receipt_tasks SET completed_at = ? WHERE task_id IN (?, ?)", (stale_completed_at, "task-0", "task-2"))
 
     result = queue.cleanup_completed(force=True)
 
     assert result == {"done_deleted": 1, "failed_deleted": 1}
-    assert old_done.exists() is False
-    assert old_failed.exists() is False
-    assert fresh_done.exists() is True
-    assert fresh_failed.exists() is True
+    with sqlite3.connect(queue.db_path) as conn:
+        rows = conn.execute("SELECT task_id, state FROM receipt_tasks ORDER BY task_id").fetchall()
+    assert rows == [("task-1", "done"), ("task-3", "failed")]
 
 
-def test_receipt_queue_stats_ignores_pending_file_races(app_config, monkeypatch):
+def test_receipt_queue_uses_sqlite_for_pending_stats(app_config):
     queue = ReceiptQueue(app_config)
     queue.initialize()
 
-    first_task = queue.build_task(
-        task_kind="push",
-        provider_uid="ampeco",
-        run_id=1,
-        receipt_log_path=queue.root_dir / "receipt-1.log",
-        receipt_at="2026-04-19T17:59:40+00:00",
+    first_task = replace(
+        queue.build_task(
+            task_kind="push",
+            provider_uid="ampeco",
+            run_id=1,
+            receipt_log_path=queue.root_dir / "receipt-1.log",
+            receipt_at="2026-04-19T17:59:40+00:00",
+        ),
+        task_id="task-1",
+        enqueued_at="2026-04-19T17:59:40+00:00",
     )
-    second_task = queue.build_task(
-        task_kind="push",
-        provider_uid="ampeco",
-        run_id=2,
-        receipt_log_path=queue.root_dir / "receipt-2.log",
-        receipt_at="2026-04-19T17:59:41+00:00",
+    second_task = replace(
+        queue.build_task(
+            task_kind="push",
+            provider_uid="ampeco",
+            run_id=2,
+            receipt_log_path=queue.root_dir / "receipt-2.log",
+            receipt_at="2026-04-19T17:59:41+00:00",
+        ),
+        task_id="task-2",
+        enqueued_at="2026-04-19T17:59:41+00:00",
     )
     first_path = queue.enqueue(first_task)
     second_path = queue.enqueue(second_task)
 
-    real_read_task = queue._read_task
-
-    def flaky_read(path):
-        if path == first_path:
-            raise FileNotFoundError(path)
-        return real_read_task(path)
-
-    monkeypatch.setattr(queue, "_read_task", flaky_read)
-
     stats = queue.stats()
 
     assert stats["pending_count"] == 2
-    assert stats["oldest_pending_enqueued_at"] == second_task.enqueued_at
+    assert stats["oldest_pending_enqueued_at"] == first_task.enqueued_at
     assert stats["oldest_pending_age_seconds"] is not None
-    assert second_path.exists() is True
+    assert first_path.exists() is False
+    assert second_path.exists() is False
+    assert queue.db_path.exists() is True
+
+
+def test_live_queue_maintenance_migrates_and_deletes_legacy_items(app_config):
+    queue = ReceiptQueue(app_config)
+    queue.initialize()
+    uploaded_date = "2026-04-19"
+    raw_dir = app_config.raw_payload_dir / "ampeco" / uploaded_date
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    present_raw = raw_dir / "present.json"
+    present_raw.write_text("{}", encoding="utf-8")
+    missing_raw = raw_dir / "missing.json"
+
+    active_task = replace(
+        queue.build_task(
+            task_kind="push",
+            provider_uid="ampeco",
+            run_id=1,
+            receipt_log_path=present_raw,
+            receipt_at="2026-04-19T17:59:40+00:00",
+        ),
+        task_id="active-present",
+    )
+    stale_task = replace(
+        queue.build_task(
+            task_kind="push",
+            provider_uid="ampeco",
+            run_id=2,
+            receipt_log_path=missing_raw,
+            receipt_at="2026-04-19T17:59:41+00:00",
+        ),
+        task_id="active-stale",
+    )
+    legacy_pending = app_config.queue_dir / "pending"
+    legacy_pending.mkdir(parents=True, exist_ok=True)
+    (legacy_pending / "active-present.json").write_text(json.dumps(active_task.to_dict()), encoding="utf-8")
+    (legacy_pending / "active-stale.json").write_text(json.dumps(stale_task.to_dict()), encoding="utf-8")
+
+    items = list(iter_legacy_queue_items(app_config, uploaded_dates={uploaded_date}))
+    assert [item.classification for item in items] == [
+        "active_raw_present",
+        "active_raw_missing_hf_uploaded",
+    ]
+
+    backup_result = backup_legacy_files(app_config, app_config.queue_dir / "legacy-backup.tgz", items)
+    assert backup_result["backup_file_count"] == 2
+
+    assert migrate_active_items(queue, items, apply=True) == {
+        "legacy_active_migrated": 1,
+        "legacy_active_migration_skipped": 0,
+    }
+    assert delete_stale_uploaded_items(items, apply=True) == {"legacy_stale_uploaded_deleted": 1}
+
+    assert ReceiptQueue(app_config).stats()["pending_count"] == 1
+    assert not (legacy_pending / "active-present.json").exists()
+    assert not (legacy_pending / "active-stale.json").exists()
 
 
 def test_push_ingestion_writes_timestamped_request_logs(app_config):
@@ -2517,12 +2617,16 @@ def test_push_ingestion_writes_timestamped_request_logs(app_config):
     )
     archive_date = _parse_dt(result["received_at"]).date().isoformat()
 
-    request_logs = sorted(app_config.raw_payload_dir.glob(f"qwello/{archive_date}/*-push-*.json"))
-    assert len(request_logs) == 1
+    request_log = app_config.raw_payload_dir / "qwello" / archive_date / "records.jsonl"
+    assert request_log.exists()
 
-    record = json.loads(request_logs[0].read_text(encoding="utf-8"))
+    records = [json.loads(line) for line in request_log.read_text(encoding="utf-8").splitlines()]
+    assert len(records) == 1
+    record = records[0]
     assert record["kind"] == "push_request"
     assert record["provider_uid"] == "qwello"
+    assert record["archive_filename"].endswith(".json")
+    assert "-push-" in record["archive_filename"]
     assert record["subscription_id"] == "sub-1"
     assert record["publication_id"] == "pub-1"
     assert record["request_path"] == "/v1/push/qwello"
@@ -2550,12 +2654,15 @@ def test_ingestion_writes_timestamped_provider_response_logs(app_config):
     result = service.ingest_provider("qwello")
     archive_date = _parse_dt(result["fetched_at"]).date().isoformat()
 
-    response_logs = sorted(app_config.raw_payload_dir.glob(f"qwello/{archive_date}/*.json"))
-    assert len(response_logs) == 1
+    response_log = app_config.raw_payload_dir / "qwello" / archive_date / "records.jsonl"
+    assert response_log.exists()
 
-    record = json.loads(response_logs[0].read_text(encoding="utf-8"))
+    records = [json.loads(line) for line in response_log.read_text(encoding="utf-8").splitlines()]
+    assert len(records) == 1
+    record = records[0]
     assert record["kind"] == "http_response"
     assert record["provider_uid"] == "qwello"
+    assert record["archive_filename"].endswith(".json")
     assert record["http_status"] == 200
     assert record["payload_byte_length"] == len(payload)
     assert "SITE-1" in record["body_text"]
@@ -2581,11 +2688,87 @@ def test_ingestion_keeps_http_error_body_in_response_logs(app_config):
     assert result["result"] == "error"
     assert result["http_status"] == 503
 
-    response_logs = sorted(app_config.raw_payload_dir.glob(f"qwello/{archive_date}/*.json"))
-    assert len(response_logs) == 1
-    record = json.loads(response_logs[0].read_text(encoding="utf-8"))
+    response_log = app_config.raw_payload_dir / "qwello" / archive_date / "records.jsonl"
+    records = [json.loads(line) for line in response_log.read_text(encoding="utf-8").splitlines()]
+    assert len(records) == 1
+    record = records[0]
     assert record["http_status"] == 503
     assert "provider unavailable" in record["body_text"]
+
+
+def test_daily_response_archiver_preserves_journal_as_jsonl_member(app_config):
+    target_date = date(2026, 4, 14)
+    writer = ResponseLogWriter(app_config)
+    writer.write_http_response(
+        provider_uid="qwello",
+        fetched_at="2026-04-14T00:00:00+00:00",
+        response=FetchResponse(b'{"ok":true}', "application/json", 200),
+    )
+    writer.write_push_request(
+        provider_uid="qwello",
+        received_at="2026-04-14T00:01:00+00:00",
+        payload_bytes=b'{"push":true}',
+        content_type="application/json",
+        content_encoding="",
+    )
+
+    result = DailyResponseArchiver(app_config).archive_date(target_date, upload=False)
+
+    assert result["file_count"] == 1
+    archive_path = Path(result["archive_path"])
+    with tarfile.open(archive_path, "r:gz") as archive_handle:
+        names = sorted(archive_handle.getnames())
+        payload_names = [name for name in names if name != "manifest.json"]
+        assert payload_names == ["qwello/2026-04-14/records.jsonl"]
+        journal_file = archive_handle.extractfile("qwello/2026-04-14/records.jsonl")
+        assert journal_file is not None
+        journal_records = [
+            json.loads(line)
+            for line in journal_file.read().decode("utf-8").splitlines()
+            if line.strip()
+        ]
+        assert [record["kind"] for record in journal_records] == ["http_response", "push_request"]
+
+
+def test_daily_response_archiver_streams_source_files_without_read_bytes(app_config, monkeypatch):
+    target_date = date(2026, 4, 14)
+    journal_dir = app_config.raw_payload_dir / "qwello" / target_date.isoformat()
+    legacy_dir = app_config.raw_payload_dir / "wirelane" / target_date.isoformat()
+    journal_dir.mkdir(parents=True, exist_ok=True)
+    legacy_dir.mkdir(parents=True, exist_ok=True)
+    journal_path = journal_dir / "records.jsonl"
+    legacy_path = legacy_dir / "20260414T010000000000Z-200-bbbb.json"
+    journal_bytes = (json.dumps({"provider_uid": "qwello", "kind": "http_response"}, ensure_ascii=False) + "\n").encode(
+        "utf-8"
+    )
+    legacy_bytes = json.dumps({"provider_uid": "wirelane", "body_text": "legacy"}, ensure_ascii=False).encode("utf-8")
+    journal_path.write_bytes(journal_bytes)
+    legacy_path.write_bytes(legacy_bytes)
+
+    original_read_bytes = Path.read_bytes
+
+    def fail_for_raw_payloads(path: Path) -> bytes:
+        if path in {journal_path, legacy_path}:
+            raise AssertionError(f"archiver buffered source payload with read_bytes: {path}")
+        return original_read_bytes(path)
+
+    monkeypatch.setattr(Path, "read_bytes", fail_for_raw_payloads)
+
+    result = DailyResponseArchiver(app_config).archive_date(target_date, upload=False)
+
+    assert result["result"] == "archived_local_only"
+    assert result["file_count"] == 2
+    archive_path = Path(result["archive_path"])
+    with tarfile.open(archive_path, "r:gz") as archive_handle:
+        assert sorted(archive_handle.getnames()) == [
+            "manifest.json",
+            "qwello/2026-04-14/records.jsonl",
+            "wirelane/2026-04-14/20260414T010000000000Z-200-bbbb.json",
+        ]
+        assert archive_handle.extractfile("qwello/2026-04-14/records.jsonl").read() == journal_bytes
+        assert archive_handle.extractfile(
+            "wirelane/2026-04-14/20260414T010000000000Z-200-bbbb.json"
+        ).read() == legacy_bytes
 
 
 def test_daily_response_archiver_creates_tgz_uploads_and_cleans_up_sources(app_config):
@@ -3011,7 +3194,72 @@ def test_daily_response_archiver_cleanup_skips_dates_with_active_queue_reference
             "target_date": "2026-04-13",
             "remote_path": "provider-response-archives/2026/04/live-provider-responses-2026-04-13.tgz",
             "queue_reference": {
-                "queue_dir": "pending",
+                "queue_store": "legacy_files",
+                "queue_state": "pending",
+                "task_id": "20260413T010203000000Z-edri",
+                "receipt_at": "",
+                "receipt_log_path": "",
+            },
+        }
+    ]
+    assert uploaded_dir.exists()
+    assert source_file.exists()
+    assert uploaded_archive.exists()
+    assert uploaded_temp_archive.exists()
+
+
+def test_daily_response_archiver_cleanup_skips_dates_with_sqlite_queue_reference(app_config):
+    uploaded_date = date(2026, 4, 13)
+    uploaded_dir = app_config.raw_payload_dir / "qwello" / uploaded_date.isoformat()
+    uploaded_dir.mkdir(parents=True, exist_ok=True)
+    source_file = uploaded_dir / "20260413T000000000000Z-200-aaaa.json"
+    source_file.write_text("{}", encoding="utf-8")
+
+    token_file = app_config.archive_dir / "huggingface.token"
+    token_file.parent.mkdir(parents=True, exist_ok=True)
+    token_file.write_text("secret-token\n", encoding="utf-8")
+
+    class StubHfApi:
+        def list_repo_files(self, **kwargs):
+            return [
+                "provider-response-archives/2026/04/live-provider-responses-2026-04-13.tgz",
+            ]
+
+    configured = replace(
+        app_config,
+        hf_archive_repo_id="raphaelvolz/woladen-live-archives",
+        hf_archive_token_file=token_file,
+        hf_archive_path_prefix="provider-response-archives",
+    )
+    queue = ReceiptQueue(configured)
+    task = replace(
+        queue.build_task(
+            task_kind="poll",
+            provider_uid="qwello",
+            run_id=1,
+            receipt_log_path=source_file,
+            receipt_at="2026-04-13T00:00:00+00:00",
+        ),
+        task_id="20260413T010203000000Z-edri",
+    )
+    queue.enqueue(task)
+
+    uploaded_archive = configured.archive_dir / "live-provider-responses-2026-04-13.tgz"
+    uploaded_archive.parent.mkdir(parents=True, exist_ok=True)
+    uploaded_archive.write_bytes(b"uploaded")
+
+    cleanup_results = DailyResponseArchiver(configured, hf_api=StubHfApi()).cleanup_uploaded_artifacts(
+        cutoff_date=uploaded_date
+    )
+
+    assert cleanup_results == [
+        {
+            "result": "skipped_queue_references",
+            "target_date": "2026-04-13",
+            "remote_path": "provider-response-archives/2026/04/live-provider-responses-2026-04-13.tgz",
+            "queue_reference": {
+                "queue_store": "sqlite",
+                "queue_state": "pending",
                 "task_id": "20260413T010203000000Z-edri",
                 "receipt_at": "2026-04-13T00:00:00+00:00",
                 "receipt_log_path": str(source_file),
@@ -3020,8 +3268,6 @@ def test_daily_response_archiver_cleanup_skips_dates_with_active_queue_reference
     ]
     assert uploaded_dir.exists()
     assert source_file.exists()
-    assert uploaded_archive.exists()
-    assert uploaded_temp_archive.exists()
 
 
 def test_daily_response_archive_downloader_fetches_expected_remote_tgz(app_config):

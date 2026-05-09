@@ -5,6 +5,8 @@ It ingests DATEX II v3 payloads from Mobilithek subscriptions, persists normaliz
 state in SQLite, exposes a read API via FastAPI, and stores raw payload logs for audit and archiving.
 
 For deployment-specific instructions, see [deploy/ionos/README.md](/Users/raphaelvolz/Github/woladen.de/deploy/ionos/README.md).
+For local VPS-like disk and inode testing, see
+[deploy/local-live-constrained/README.md](/Users/raphaelvolz/Github/woladen.de/deploy/local-live-constrained/README.md).
 For the higher-level product note, see [docs/live-api-mvp.md](/Users/raphaelvolz/Github/woladen.de/docs/live-api-mvp.md).
 For the version history and rollout evidence, see [docs/live-backend-evolution.md](/Users/raphaelvolz/Github/woladen.de/docs/live-backend-evolution.md).
 
@@ -157,7 +159,7 @@ This is the point where many smaller servers start to make sense.
 The backend uses `AppConfig` in [config.py](/Users/raphaelvolz/Github/woladen.de/backend/config.py). Important variables:
 
 - `WOLADEN_LIVE_DB_PATH`: SQLite database path. Default: `data/live_state.sqlite3`
-- `WOLADEN_LIVE_RAW_PAYLOAD_DIR`: raw push/poll log directory. Default: `data/live_raw`
+- `WOLADEN_LIVE_RAW_PAYLOAD_DIR`: raw push/poll provider/day JSONL journal directory. Default: `data/live_raw`
 - `WOLADEN_LIVE_ARCHIVE_DIR`: archive output directory. Default: `data/live_archives`
 - `WOLADEN_LIVE_PROVIDER_CONFIG_PATH`: provider metadata JSON. Default: `data/mobilithek_afir_provider_configs.json`
 - `WOLADEN_LIVE_SITE_MATCH_PATH`: site-to-station match CSV. Default: `data/mobilithek_afir_static_matches.csv`
@@ -170,6 +172,7 @@ The backend uses `AppConfig` in [config.py](/Users/raphaelvolz/Github/woladen.de
 - `WOLADEN_MACHINE_CERT_PASSWORD_FILE`: password file for the PKCS#12 certificate
 - `WOLADEN_LIVE_API_HOST`: FastAPI bind host. Default: `127.0.0.1`
 - `WOLADEN_LIVE_API_PORT`: FastAPI bind port. Default: `8001`
+- `WOLADEN_LIVE_API_PUSH_ENABLED`: enable Mobilithek push routes. Default: `1`
 - `WOLADEN_LIVE_API_CORS_ALLOWED_ORIGINS`: comma-separated explicit CORS allowlist
 - `WOLADEN_LIVE_API_CORS_ALLOW_ORIGIN_REGEX`: regex fallback for local development (`localhost`, `127.0.0.1`, `0.0.0.0`, `[::1]` by default)
 - `WOLADEN_LIVE_POLL_TIMEOUT_SECONDS`: fetch timeout
@@ -181,9 +184,9 @@ The backend uses `AppConfig` in [config.py](/Users/raphaelvolz/Github/woladen.de
 - `WOLADEN_LIVE_POLL_IDLE_SLEEP_MAX_SECONDS`: max sleep while no provider is due
 - `WOLADEN_LIVE_SQLITE_BUSY_TIMEOUT_MS`: SQLite busy timeout
 - `WOLADEN_LIVE_SQLITE_LOCK_RETRY_SECONDS`: additional retry budget for transient SQLite lock contention on receipt-path writes
-- `WOLADEN_LIVE_QUEUE_CLEANUP_INTERVAL_SECONDS`: how often the queue worker prunes completed task files
-- `WOLADEN_LIVE_QUEUE_DONE_RETENTION_SECONDS`: retention window for processed queue task files
-- `WOLADEN_LIVE_QUEUE_FAILED_RETENTION_SECONDS`: retention window for failed queue task files
+- `WOLADEN_LIVE_QUEUE_CLEANUP_INTERVAL_SECONDS`: how often the queue worker prunes completed SQLite queue rows
+- `WOLADEN_LIVE_QUEUE_DONE_RETENTION_SECONDS`: retention window for processed queue rows
+- `WOLADEN_LIVE_QUEUE_FAILED_RETENTION_SECONDS`: retention window for failed queue rows
 - `WOLADEN_LIVE_ARCHIVE_TIMEZONE`: timezone for archive day grouping
 - `WOLADEN_LIVE_HF_ARCHIVE_REPO_ID`, `WOLADEN_LIVE_HF_ARCHIVE_REPO_TYPE`, `WOLADEN_LIVE_HF_ARCHIVE_PATH_PREFIX`, `WOLADEN_LIVE_HF_ARCHIVE_TOKEN_FILE`: optional Hugging Face archive upload config
 
@@ -218,6 +221,14 @@ Run the API server:
 ```bash
 python3 /Users/raphaelvolz/Github/woladen.de/scripts/live_api.py
 ```
+
+Audit legacy flat-file receipt queue state without changing it:
+
+```bash
+python3 /Users/raphaelvolz/Github/woladen.de/scripts/live_queue_maintenance.py --env-file /etc/woladen/woladen-live.env
+```
+
+Any legacy queue mutation requires `--apply` and a `--backup-path`. For example, after confirming the report, active legacy tasks whose raw payload still exists can be migrated into the SQLite queue with `--migrate-active`; stale active references whose raw payload is already gone can be deleted with `--delete-stale-uploaded` only when the archive date is confirmed on Hugging Face.
 
 Local end-to-end smoke test against the local API instead of `https://live.woladen.de`:
 

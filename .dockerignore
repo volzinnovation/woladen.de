@@ -1,0 +1,26 @@
+# Keep local-only and generated state out of Docker build contexts.
+.git/
+.DS_Store
+Library/
+.npm/
+.playwright-cli/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Local secrets must be mounted at runtime, never sent in build context.
+secret/
+
+# Generated or bulky local outputs.
+analysis/output/
+data/live_archives/
+data/live_queue/
+data/live_raw/
+data/live_state.sqlite3
+data/live_state.sqlite3-shm
+data/live_state.sqlite3-wal
+data/germany-latest.osm.pbf
+output/
+site/
+test-results/
+tmp/

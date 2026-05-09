@@ -71,7 +71,7 @@ To build a target-station EVSE timeline and a nearby-stations timeline from the 
 
 ```bash
 python3 -m analysis.station_timeseries \
-  --station 'https://woladen.de/?station=cf43ec02e883007d' \
+  --station 'https://woladen.de/?station=DE:cf43ec02e883007d' \
   --analysis-output-dir /Users/raphaelvolz/Github/woladen.de/analysis/output \
   --output-dir /Users/raphaelvolz/Github/woladen.de/analysis/output/stations \
   --radius-meters 12000 \

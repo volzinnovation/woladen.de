@@ -10,7 +10,7 @@
 - Classified the first real day with a conservative rule: `eligible` at `mapped_observation_ratio >= 0.5`, `review` at `0.2-0.5`, otherwise `exclude`.
 - Added `analysis.station_timeseries` to materialize EVSE and nearby-station interval series from the generated archive CSVs.
 - Extended `analysis.station_timeseries` with duration summaries per EVSE and per selected station.
-- Generated the first neighborhood report for `https://woladen.de/?station=cf43ec02e883007d`.
+- Generated the first neighborhood report for `https://woladen.de/?station=DE:cf43ec02e883007d`.
 - Updated neighborhood reports so `review` stations remain visible but are separated from the primary nearby comparison set in both CSV outputs and `summary.md`.
 - Kept station reports provider-selected per station for now, but added `nearby_station_candidates.csv` and a provider-candidate audit section so ambiguous cross-provider choices are explicit.
 - Added `analysis.provider_quality_report` and generated the first provider-quality report for `2026-04-16`.
