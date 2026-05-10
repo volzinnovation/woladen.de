@@ -35,6 +35,7 @@ site/data/summary.json
 site/app.js
 !/site/
 site/*
+!/site/note.mjs
 !/site/data/
 site/data/*
 !/site/data/station-occupancy/

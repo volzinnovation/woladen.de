@@ -30,6 +30,12 @@ import {
   parseStoredRatings,
   serializeStoredRatings,
 } from "./rating.mjs";
+import {
+  getUserNote,
+  normalizeNote,
+  parseStoredNotes,
+  serializeStoredNotes,
+} from "./note.mjs";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -40,9 +46,12 @@ const MAX_DISPLAY_POWER_KW = 400;
 const DEFAULT_MIN_POWER_KW = 50;
 const RATINGS_STORAGE_KEY = "woladen_ratings_v1";
 const RATING_CLIENT_STORAGE_KEY = "woladen_rating_client_v1";
+const NOTES_STORAGE_KEY = "woladen_notes_v1";
 const RATING_SUMMARY_REFRESH_MS = 60000;
 const RATING_API_TIMEOUT_MS = 3500;
 const LIST_VIEW_MAX_STATIONS = 20;
+const FAVORITE_SORT_DISTANCE = "distance";
+const FAVORITE_SORT_RATING = "rating";
 const LIVE_SUMMARY_REFRESH_MS = 15000;
 const LIVE_API_TIMEOUT_MS = 3500;
 const LIVE_DETAIL_TIMEOUT_MS = 4000;
@@ -657,6 +666,8 @@ const state = {
   filtered: [], // Currently filtered features
   favorites: new Set(), // Set of station_ids
   ratings: new Map(), // station_id -> 1-5 rating stored locally
+  notes: new Map(), // station_id -> personal note stored locally
+  favoriteSort: FAVORITE_SORT_DISTANCE,
   ratingClientId: "",
   ratingSummariesByStationId: new Map(),
   ratingSummaryFetchedAtByStationId: new Map(),
@@ -724,6 +735,9 @@ const els = {
     chargers: document.getElementById("charger-list"),
     favorites: document.getElementById("favorites-list"),
   },
+  favorites: {
+    sort: document.getElementById("favorites-sort"),
+  },
   filter: {
     trigger: document.getElementById("filter-trigger"),
     label: document.getElementById("filter-label"),
@@ -752,6 +766,8 @@ const els = {
     ratingBadge: document.getElementById("detail-rating-badge"),
     ratingStatus: document.getElementById("detail-rating-status"),
     ratingStars: document.getElementById("detail-rating-stars"),
+    noteInput: document.getElementById("detail-note-input"),
+    noteStatus: document.getElementById("detail-note-status"),
     amenityTitle: document.getElementById("detail-amenities-title"),
     amenityList: document.getElementById("detail-amenities-list"),
     detailsSection: document.getElementById("detail-details-section"),
@@ -791,6 +807,7 @@ const VIEW_IDS = new Set(["view-list", "view-map", "view-favorites", "view-info"
 async function init() {
   loadFavorites();
   loadRatings();
+  loadNotes();
   initMap();
   initNavigation();
   syncViewWithRequestedHash();
@@ -817,6 +834,8 @@ async function init() {
 
   els.detail.favBtn.addEventListener("click", toggleDetailFavorite);
   els.detail.ratingStars.addEventListener("click", handleRatingClick);
+  els.detail.noteInput.addEventListener("input", handleDetailNoteInput);
+  els.favorites.sort.addEventListener("change", handleFavoriteSortChange);
 
   // Load Data
   await loadData();
@@ -1542,6 +1561,10 @@ function getRatingForProps(props) {
   return getUserRating(state.ratings, getStationIdFromProps(props));
 }
 
+function getNoteForProps(props) {
+  return getUserNote(state.notes, getStationIdFromProps(props));
+}
+
 function getRatingSummaryForProps(props) {
   const stationId = getStationIdFromProps(props);
   if (!stationId) {
@@ -1614,6 +1637,9 @@ function applyFilters() {
   if (els.views.list.classList.contains("active")) {
     renderList();
   }
+  if (els.views.favorites.classList.contains("active")) {
+    renderFavorites();
+  }
 }
 
 /* --- LIST RENDERING --- */
@@ -1678,19 +1704,17 @@ function renderFavorites() {
     state.favorites.has(f.properties.station_id),
   );
 
-  if (state.userPos) {
-    favFeatures.sort((a, b) => getDistance(a) - getDistance(b));
-  }
+  favFeatures.sort(compareFavoriteFeatures);
 
   favFeatures.forEach((feature) => {
-    const card = createStationCard(feature);
+    const card = createStationCard(feature, { showNote: true });
     container.appendChild(card);
   });
   requestLiveSummariesForFeatures(favFeatures);
   requestRatingSummariesForFeatures(favFeatures);
 }
 
-function createStationCard(feature) {
+function createStationCard(feature, options = {}) {
   const p = feature.properties;
   const div = document.createElement("div");
   div.className = "station-card";
@@ -1721,6 +1745,14 @@ function createStationCard(feature) {
     ? `<div class="card-badge-line card-badge-line-amenities">${amenityBadges}</div>`
     : "";
   const ratingBadge = renderRatingBadge(getRatingDisplayForProps(p));
+  const metrics = `${ratingBadge}${distance ? `<span class="card-distance">${distance}</span>` : ""}`;
+  const metricsMarkup = metrics
+    ? `<div class="card-metrics">${metrics}</div>`
+    : "";
+  const note = options.showNote ? getNoteForProps(p) : "";
+  const noteMarkup = note
+    ? `<div class="card-note"><span class="card-note-label">Anmerkung</span><p>${escapeHtml(note)}</p></div>`
+    : "";
 
   const markerColor = getMarkerColor(p);
   
@@ -1729,9 +1761,8 @@ function createStationCard(feature) {
       <div class="card-title-row">
         <span class="amenity-dot" style="background-color: ${markerColor}"></span>
         <h3 class="card-title">${escapeHtml(p.operator || "Unbekannt")}</h3>
-        ${ratingBadge}
       </div>
-      ${distance ? `<span class="card-distance">${distance}</span>` : ""}
+      ${metricsMarkup}
     </div>
     <div class="card-meta">
       ${escapeHtml(p.city || "")}<br>
@@ -1740,10 +1771,59 @@ function createStationCard(feature) {
     <div class="card-badges">
       ${dynamicLine}${amenityLine}
     </div>
+    ${noteMarkup}
   `;
 
   div.addEventListener("click", () => openDetail(feature));
   return div;
+}
+
+function compareFavoriteFeatures(a, b) {
+  if (state.favoriteSort === FAVORITE_SORT_RATING) {
+    return compareFavoriteFeaturesByRating(a, b);
+  }
+
+  return compareFavoriteFeaturesByDistance(a, b);
+}
+
+function compareFavoriteFeaturesByRating(a, b) {
+  const ratingDiff = getFavoriteSortRating(b.properties) - getFavoriteSortRating(a.properties);
+  if (ratingDiff !== 0) {
+    return ratingDiff;
+  }
+  return compareFavoriteFeaturesByName(a, b);
+}
+
+function compareFavoriteFeaturesByDistance(a, b) {
+  if (state.userPos) {
+    const distanceDiff = getDistance(a) - getDistance(b);
+    if (distanceDiff !== 0) {
+      return distanceDiff;
+    }
+  }
+  return compareFavoriteFeaturesByName(a, b);
+}
+
+function compareFavoriteFeaturesByName(a, b) {
+  const leftName = String(a.properties?.operator || "");
+  const rightName = String(b.properties?.operator || "");
+  const nameDiff = leftName.localeCompare(rightName, "de");
+  if (nameDiff !== 0) {
+    return nameDiff;
+  }
+  const leftId = getStationIdFromProps(a.properties);
+  const rightId = getStationIdFromProps(b.properties);
+  return leftId.localeCompare(rightId);
+}
+
+function getFavoriteSortRating(props) {
+  const userRating = getRatingForProps(props);
+  if (userRating > 0) {
+    return userRating;
+  }
+  const displayRating = getRatingDisplayForProps(props);
+  const rating = Number(displayRating?.value || 0);
+  return Number.isFinite(rating) ? rating : 0;
 }
 
 function getDisplayedMaxPowerKw(props) {
@@ -2017,6 +2097,16 @@ function updateDetailRating(props) {
   });
 }
 
+function updateDetailNote(props) {
+  const stationId = getStationIdFromProps(props);
+  const note = getNoteForProps(props);
+  els.detail.noteInput.value = note;
+  els.detail.noteInput.disabled = !stationId;
+  els.detail.noteStatus.textContent = note
+    ? "Anmerkung lokal gespeichert"
+    : "Nur auf diesem Gerät gespeichert";
+}
+
 function populateDetailContent(feature, liveDetail = null) {
   const p = feature.properties;
   const powerDisplay = `${Math.round(getDisplayedMaxPowerKw(p))} kW max / ${formatChargingPointCount(p)}`;
@@ -2052,6 +2142,7 @@ function populateDetailContent(feature, liveDetail = null) {
   els.detail.amenityTitle.textContent = formatAmenityCount(p.amenities_total);
 
   updateDetailRating(p);
+  updateDetailNote(p);
   renderDetailAmenities(p);
   renderDetailStaticInfo(p);
   renderDetailLiveState(feature, liveDetail);
@@ -2373,6 +2464,38 @@ async function handleRatingClick(event) {
   }
 }
 
+function handleDetailNoteInput(event) {
+  if (!currentDetailFeature) {
+    return;
+  }
+  const stationId = getStationIdFromProps(currentDetailFeature.properties);
+  if (!stationId) {
+    return;
+  }
+
+  const note = normalizeNote(event.target.value);
+  if (note) {
+    state.notes.set(stationId, note);
+    els.detail.noteStatus.textContent = "Anmerkung lokal gespeichert";
+  } else {
+    state.notes.delete(stationId);
+    els.detail.noteStatus.textContent = "Nur auf diesem Gerät gespeichert";
+  }
+  saveNotes();
+
+  if (els.views.favorites.classList.contains("active")) {
+    renderFavorites();
+  }
+}
+
+function handleFavoriteSortChange(event) {
+  state.favoriteSort = event.target.value === FAVORITE_SORT_RATING
+    ? FAVORITE_SORT_RATING
+    : FAVORITE_SORT_DISTANCE;
+  els.favorites.sort.value = state.favoriteSort;
+  renderFavorites();
+}
+
 /* --- UTILS --- */
 function escapeHtml(str) {
   if (!str) return "";
@@ -2674,6 +2797,15 @@ function loadRatings() {
   }
 }
 
+function loadNotes() {
+  try {
+    state.notes = parseStoredNotes(localStorage.getItem(NOTES_STORAGE_KEY));
+  } catch (e) {
+    console.error("Error loading notes", e);
+    state.notes = new Map();
+  }
+}
+
 function createRatingClientId() {
   if (window.crypto?.randomUUID) {
     return window.crypto.randomUUID();
@@ -2717,6 +2849,14 @@ function saveRatings() {
     localStorage.setItem(RATINGS_STORAGE_KEY, serializeStoredRatings(state.ratings));
   } catch (e) {
     console.error("Error saving ratings", e);
+  }
+}
+
+function saveNotes() {
+  try {
+    localStorage.setItem(NOTES_STORAGE_KEY, serializeStoredNotes(state.notes));
+  } catch (e) {
+    console.error("Error saving notes", e);
   }
 }
 
