@@ -114,6 +114,28 @@ body {
   font-weight: 600;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sort-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.sort-control select {
+  width: auto;
+  min-width: 8.5rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.9rem;
+}
+
 /* APP INSTALL PROMO */
 .app-install-promo {
   margin: 0 0 16px;
@@ -449,13 +471,15 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 0.85rem;
   margin-bottom: 0.5rem;
 }
 
 .card-title-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -471,6 +495,7 @@ body {
   font-size: 1.05rem;
   margin: 0;
   min-width: 0;
+  line-height: 1.22;
 }
 
 .rating-badge {
@@ -489,12 +514,21 @@ body {
   flex-shrink: 0;
 }
 
+.card-metrics {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
 .card-distance {
   background: var(--color-primary-light);
   color: var(--color-primary-dark);
-  padding: 2px 8px;
+  padding: 0.15rem 0.45rem;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
+  line-height: 1.2;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -513,6 +547,30 @@ body {
 
 .card-badges:empty {
   display: none;
+}
+
+.card-note {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.8rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.card-note-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.card-note p {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .card-badge-line {
@@ -660,7 +718,8 @@ body {
 }
 
 select,
-input[type="search"] {
+input[type="search"],
+textarea {
   width: 100%;
   padding: 0.75rem;
   border: 1px solid var(--color-border);
@@ -669,6 +728,12 @@ input[type="search"] {
   font-size: 1rem;
   background: var(--color-bg);
   color: var(--color-text-main);
+}
+
+textarea {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.45;
 }
 
 input[type="range"] {
@@ -933,6 +998,22 @@ input[type="search"]::placeholder {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-dim);
+}
+
+.detail-note {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.detail-note-label {
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.detail-note-status {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
 }
 
 .detail-rating-copy {
@@ -1530,6 +1611,14 @@ input[type="search"]::placeholder {
 }
 
 @media (max-width: 420px) {
+  .sort-control > span {
+    display: none;
+  }
+
+  .sort-control select {
+    min-width: 7.5rem;
+  }
+
   .occupancy-history-chart {
     padding-inline: 0.65rem;
     overflow-x: auto;
