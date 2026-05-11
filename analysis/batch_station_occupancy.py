@@ -67,6 +67,21 @@ class OccupancyEvent:
     source_observed_at: str
 
 
+@dataclass(frozen=True)
+class NormalizedStatusEvent:
+    archive_member: str
+    record_index: int
+    event_index: int
+    provider_uid: str
+    station_id: str
+    provider_evse_id: str
+    source_observed_at: str
+    availability_status: str
+    operational_status: str
+    message_timestamp: str
+    payload_sha256: str
+
+
 @dataclass
 class ProviderStationDayAggregate:
     hourly_occupied_seconds: list[int] = field(default_factory=lambda: [0] * 24)
@@ -133,9 +148,10 @@ class ArchiveStats:
 
 
 class DayAccumulator:
-    def __init__(self, target_date: date, *, archive_tz: Any):
+    def __init__(self, target_date: date, *, archive_tz: Any, collect_status_events: bool = False):
         self.target_date = target_date
         self.archive_tz = archive_tz
+        self.collect_status_events = collect_status_events
         local_midnight = datetime.combine(target_date, time.min, tzinfo=archive_tz)
         self.window_start = local_midnight.astimezone(timezone.utc)
         self.window_end = (local_midnight + timedelta(days=1)).astimezone(timezone.utc)
@@ -143,6 +159,7 @@ class DayAccumulator:
         self.provider_station: dict[tuple[str, str], ProviderStationDayAggregate] = defaultdict(
             ProviderStationDayAggregate
         )
+        self.status_events: list[NormalizedStatusEvent] = []
         self.stats = ArchiveStats()
 
     def observe(
@@ -555,8 +572,13 @@ def process_archive(
     provider_scopes: dict[str, ProviderScope],
     provider_prefilters: dict[str, re.Pattern[bytes]],
     quiet: bool,
+    collect_status_events: bool = False,
 ) -> DayAccumulator:
-    accumulator = DayAccumulator(target_date, archive_tz=config.archive_timezone())
+    accumulator = DayAccumulator(
+        target_date,
+        archive_tz=config.archive_timezone(),
+        collect_status_events=collect_status_events,
+    )
     fallback_archive_date = parse_archive_date(archive_path)
 
     for member_name, member_provider_uid, raw_record in iter_member_records(archive_path):
@@ -610,7 +632,8 @@ def process_archive(
             continue
 
         message_timestamp = record_timestamp(record)
-        for event in events:
+        payload_sha256 = str(record.get("payload_sha256") or "").strip() if collect_status_events else ""
+        for event_index, event in enumerate(events):
             accumulator.stats.facts_seen += 1
             station_id = event.station_id.strip()
             if station_id:
@@ -626,6 +649,23 @@ def process_archive(
             if observed_at is None:
                 accumulator.stats.facts_skipped_timestamp += 1
                 continue
+            if accumulator.collect_status_events:
+                normalized_observed_at = observed_at.astimezone(timezone.utc).replace(microsecond=0).isoformat()
+                accumulator.status_events.append(
+                    NormalizedStatusEvent(
+                        archive_member=member_name,
+                        record_index=accumulator.stats.records_seen,
+                        event_index=event_index,
+                        provider_uid=provider_uid,
+                        station_id=station_id,
+                        provider_evse_id=evse_id,
+                        source_observed_at=normalized_observed_at,
+                        availability_status=str(event.availability_status or "unknown"),
+                        operational_status=str(event.operational_status or ""),
+                        message_timestamp=message_timestamp,
+                        payload_sha256=payload_sha256,
+                    )
+                )
             accumulator.observe(
                 provider_uid=provider_uid,
                 station_id=station_id,

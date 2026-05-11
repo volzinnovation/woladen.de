@@ -43,6 +43,9 @@ site/data/*
 data/live_state.sqlite3
 data/live_state.sqlite3-shm
 data/live_state.sqlite3-wal
+data/occupancy.sqlite3
+data/occupancy.sqlite3-shm
+data/occupancy.sqlite3-wal
 data/live_raw/
 .npm/
 .playwright-cli/

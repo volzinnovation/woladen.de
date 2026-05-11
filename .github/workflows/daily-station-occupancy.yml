@@ -1,4 +1,4 @@
-name: Daily Station Occupancy Chart
+name: Daily Station Occupancy Charts
 
 on:
   workflow_dispatch:
@@ -6,11 +6,6 @@ on:
       date:
         description: End date in YYYY-MM-DD. Defaults to the prior day in Europe/Berlin when empty.
         required: false
-        type: string
-      station_id:
-        description: Internal station id.
-        required: false
-        default: 2d6cff515ceed554
         type: string
       days:
         description: Number of trailing days to include.
@@ -62,7 +57,6 @@ jobs:
         shell: bash
         env:
           REQUESTED_DATE: ${{ github.event.inputs.date }}
-          REQUESTED_STATION_ID: ${{ github.event.inputs.station_id }}
           REQUESTED_DAYS: ${{ github.event.inputs.days }}
         run: |
           python - <<'PY'
@@ -71,7 +65,6 @@ jobs:
           from zoneinfo import ZoneInfo
 
           requested_date = os.environ.get("REQUESTED_DATE", "").strip()
-          requested_station_id = os.environ.get("REQUESTED_STATION_ID", "").strip()
           requested_days = os.environ.get("REQUESTED_DAYS", "").strip()
 
           if requested_date:
@@ -81,30 +74,25 @@ jobs:
               target_date = datetime.now(ZoneInfo("Europe/Berlin")).date() - timedelta(days=1)
               is_default_target = "true"
 
-          station_id = requested_station_id or "2d6cff515ceed554"
           days = int(requested_days or "7")
           if days < 1:
               raise SystemExit("days must be at least 1")
 
           start_date = target_date - timedelta(days=days - 1)
-          output_dir = "data/station_occupancy"
-          output_stem = f"{station_id}-hourly-occupancy-{start_date.isoformat()}-to-{target_date.isoformat()}"
-          latest_stem = f"{station_id}-hourly-occupancy-latest"
 
           env_values = {
               "TARGET_DATE": target_date.isoformat(),
               "START_DATE": start_date.isoformat(),
-              "STATION_ID": station_id,
               "DAYS": str(days),
-              "OUTPUT_DIR": output_dir,
-              "OUTPUT_STEM": output_stem,
-              "LATEST_STEM": latest_stem,
+              "OCCUPANCY_DB": "data/occupancy.sqlite3",
+              "WEB_OCCUPANCY_OUTPUT_DIR": "web/data/station-occupancy",
           }
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
               for key, value in env_values.items():
                   env_file.write(f"{key}={value}\n")
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output_file:
               output_file.write(f"target_date={target_date.isoformat()}\n")
+              output_file.write(f"days={days}\n")
               output_file.write(f"is_default_target={is_default_target}\n")
           PY
 
@@ -123,6 +111,20 @@ jobs:
       - name: Install dependencies
         if: steps.berlin_gate.outputs.should_run == 'true'
         run: pip install -r requirements.txt -r requirements-live.txt
+
+      - name: Prepare occupancy DB cache path
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: mkdir -p "$(dirname "$OCCUPANCY_DB")"
+
+      - name: Restore occupancy DB cache
+        id: occupancy_db_cache
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: data/occupancy.sqlite3
+          key: station-occupancy-db-v1-${{ steps.chart.outputs.days }}-${{ steps.chart.outputs.target_date }}
+          restore-keys: |
+            station-occupancy-db-v1-${{ steps.chart.outputs.days }}-
 
       - name: Prepare Hugging Face token
         if: steps.berlin_gate.outputs.should_run == 'true'
@@ -172,7 +174,7 @@ jobs:
               time.sleep(interval_seconds)
           PY
 
-      - name: Download archive window
+      - name: Download missing archive days
         if: steps.berlin_gate.outputs.should_run == 'true'
         run: |
           python - <<'PY'
@@ -185,14 +187,41 @@ jobs:
 
           start_date = date.fromisoformat(os.environ["START_DATE"])
           target_date = date.fromisoformat(os.environ["TARGET_DATE"])
+          occupancy_db = Path(os.environ["OCCUPANCY_DB"])
+          window_dates = []
           current = start_date
+          while current <= target_date:
+              window_dates.append(current)
+              current += timedelta(days=1)
+
+          existing_dates = set()
+          if occupancy_db.exists():
+              from analysis.occupancy_store import OccupancyStore
+
+              store = OccupancyStore(occupancy_db)
+              store.initialize()
+              existing_dates = set(
+                  store.available_dates(
+                      start_date=start_date.isoformat(),
+                      end_date=target_date.isoformat(),
+                  )
+              )
+
+          missing_dates = [
+              current
+              for current in window_dates
+              if current.isoformat() not in existing_dates
+          ]
+          if not missing_dates:
+              print("Occupancy DB already has all requested days; no archive download needed.")
+              raise SystemExit(0)
 
           cache_roots = [
               Path.home() / ".cache" / "huggingface" / "hub",
               Path(os.environ["GITHUB_WORKSPACE"]) / "tmp" / "hf-cache",
           ]
 
-          while current <= target_date:
+          for current in missing_dates:
               subprocess.run(
                   [
                       sys.executable,
@@ -207,31 +236,40 @@ jobs:
               )
               for cache_root in cache_roots:
                   shutil.rmtree(cache_root, ignore_errors=True)
-              current += timedelta(days=1)
           PY
 
-      - name: Generate station occupancy chart
+      - name: Update occupancy analytics database
         if: steps.berlin_gate.outputs.should_run == 'true'
         run: |
-          python analysis/hourly_station_occupancy.py \
+          python analysis/build_occupancy_db.py \
+            --start-date "$START_DATE" \
+            --end-date "$TARGET_DATE" \
+            --days "$DAYS" \
+            --db "$OCCUPANCY_DB" \
+            --require-complete \
+            --retain-days "$DAYS" \
+            --quiet
+
+      - name: Save occupancy DB cache
+        if: steps.berlin_gate.outputs.should_run == 'true' && steps.occupancy_db_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: data/occupancy.sqlite3
+          key: station-occupancy-db-v1-${{ steps.chart.outputs.days }}-${{ steps.chart.outputs.target_date }}
+
+      - name: Export web occupancy data
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: |
+          python analysis/export_station_occupancy_from_db.py \
             --date "$TARGET_DATE" \
             --days "$DAYS" \
-            --station "$STATION_ID" \
-            --require-complete \
-            --output-dir "$OUTPUT_DIR"
+            --db "$OCCUPANCY_DB" \
+            --output-dir "$WEB_OCCUPANCY_OUTPUT_DIR" \
+            --require-complete
 
-      - name: Update latest chart copies
+      - name: Build static site bundle
         if: steps.berlin_gate.outputs.should_run == 'true'
-        run: |
-          cp "$OUTPUT_DIR/$OUTPUT_STEM.json" "$OUTPUT_DIR/$LATEST_STEM.json"
-          cp "$OUTPUT_DIR/$OUTPUT_STEM.svg" "$OUTPUT_DIR/$LATEST_STEM.svg"
-
-      - name: Publish web occupancy data
-        if: steps.berlin_gate.outputs.should_run == 'true'
-        run: |
-          python scripts/publish_station_occupancy_web.py \
-            --station "$STATION_ID" \
-            --input "$OUTPUT_DIR/$LATEST_STEM.json"
+        run: python scripts/build_site.py
 
       - name: Configure git
         if: steps.berlin_gate.outputs.should_run == 'true'
@@ -239,16 +277,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Commit generated station occupancy chart
+      - name: Commit generated station occupancy charts
         if: steps.berlin_gate.outputs.should_run == 'true'
         run: |
-          git add "$OUTPUT_DIR"
           git add web/data/station-occupancy site/data/station-occupancy
           if git diff --cached --quiet; then
             echo "No station occupancy chart changes"
             exit 0
           fi
-          git commit -m "chore(analysis): refresh station occupancy chart"
+          git commit -m "chore(analysis): refresh station occupancy charts"
           git fetch origin main
           git rebase origin/main
           git push origin main

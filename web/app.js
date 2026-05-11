@@ -58,7 +58,9 @@ const LIVE_DETAIL_TIMEOUT_MS = 4000;
 const STATION_ID_NAMESPACE = "DE:";
 const LEGACY_STATION_ID_RE = /^[0-9a-f]{16}$/i;
 const NAMESPACED_STATION_ID_RE = /^DE:([0-9a-f]{16})$/i;
-const OCCUPANCY_HISTORY_FILES = new Map([
+const OCCUPANCY_HISTORY_INDEX_PATH = "./data/station-occupancy/index.json";
+const FALLBACK_OCCUPANCY_HISTORY_FILES = new Map([
+  ["2d6cff515ceed554", "./data/station-occupancy/2d6cff515ceed554.json"],
   [`${STATION_ID_NAMESPACE}2d6cff515ceed554`, "./data/station-occupancy/2d6cff515ceed554.json"],
 ]);
 const LIVE_STATION_FIELDS = [
@@ -699,6 +701,8 @@ const state = {
   occupancyHistory: {
     byStationId: new Map(),
     pendingStationIds: new Set(),
+    indexByStationId: null,
+    indexPromise: null,
   },
   under50: {
     loaded: false,
@@ -1975,6 +1979,86 @@ function normalizeOccupancyHistory(history) {
   return { ...history, hourly };
 }
 
+function occupancyHistoryLookupKeys(stationId) {
+  const raw = String(stationId || "").trim();
+  const normalized = normalizeStationId(raw);
+  return [
+    raw,
+    normalized,
+    normalized ? `${STATION_ID_NAMESPACE}${normalized}` : "",
+  ].filter(Boolean);
+}
+
+function normalizeOccupancyHistoryIndex(payload) {
+  const files = new Map(FALLBACK_OCCUPANCY_HISTORY_FILES);
+  const stations = payload?.stations;
+  if (stations && typeof stations === "object" && !Array.isArray(stations)) {
+    Object.entries(stations).forEach(([stationId, path]) => {
+      const pathText = String(path || "").trim();
+      if (!pathText) return;
+      occupancyHistoryLookupKeys(stationId).forEach((key) => {
+        files.set(key, pathText);
+      });
+    });
+  } else if (Array.isArray(stations)) {
+    stations.forEach((station) => {
+      const stationId = String(station?.station_id || station?.id || "").trim();
+      const pathText = String(station?.path || station?.href || "").trim();
+      if (!stationId || !pathText) return;
+      occupancyHistoryLookupKeys(stationId).forEach((key) => {
+        files.set(key, pathText);
+      });
+    });
+  }
+  return files;
+}
+
+function occupancyHistoryUrl(path) {
+  const pathText = String(path || "").trim();
+  if (!pathText) return null;
+  if (/^(https?:)?\/\//i.test(pathText) || pathText.startsWith("./") || pathText.startsWith("../") || pathText.startsWith("/")) {
+    return new URL(pathText, import.meta.url);
+  }
+  return new URL(`./data/station-occupancy/${pathText}`, import.meta.url);
+}
+
+function loadOccupancyHistoryIndex() {
+  if (state.occupancyHistory.indexByStationId) {
+    return Promise.resolve(state.occupancyHistory.indexByStationId);
+  }
+  if (!state.occupancyHistory.indexPromise) {
+    const indexUrl = new URL(OCCUPANCY_HISTORY_INDEX_PATH, import.meta.url);
+    state.occupancyHistory.indexPromise = fetch(indexUrl)
+      .then((response) => {
+        if (response.status === 404) {
+          return null;
+        }
+        if (!response.ok) {
+          throw new Error(`Unexpected occupancy history index response ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((payload) => payload ? normalizeOccupancyHistoryIndex(payload) : new Map(FALLBACK_OCCUPANCY_HISTORY_FILES))
+      .catch((err) => {
+        console.warn("Failed to load occupancy history index", err);
+        return new Map(FALLBACK_OCCUPANCY_HISTORY_FILES);
+      })
+      .then((index) => {
+        state.occupancyHistory.indexByStationId = index;
+        return index;
+      });
+  }
+  return state.occupancyHistory.indexPromise;
+}
+
+function getOccupancyHistoryPath(index, stationId) {
+  for (const key of occupancyHistoryLookupKeys(stationId)) {
+    const path = index.get(key);
+    if (path) return path;
+  }
+  return "";
+}
+
 function renderOccupancyHistoryChart(history, feature) {
   const normalized = normalizeOccupancyHistory(history);
   if (!normalized) return false;
@@ -2004,16 +2088,7 @@ function renderOccupancyHistoryChart(history, feature) {
   return true;
 }
 
-function renderDetailOccupancyHistory(feature) {
-  const stationId = getStationIdFromProps(feature.properties);
-  els.detail.occupancyHistorySection.hidden = true;
-  els.detail.occupancyHistoryRange.textContent = "";
-  els.detail.occupancyHistoryChart.innerHTML = "";
-
-  if (!OCCUPANCY_HISTORY_FILES.has(stationId)) {
-    return;
-  }
-
+function loadDetailOccupancyHistoryFile(stationId, feature, historyPath) {
   const cached = state.occupancyHistory.byStationId.get(stationId);
   if (cached) {
     renderOccupancyHistoryChart(cached, feature);
@@ -2025,7 +2100,11 @@ function renderDetailOccupancyHistory(feature) {
   }
 
   state.occupancyHistory.pendingStationIds.add(stationId);
-  const historyUrl = new URL(OCCUPANCY_HISTORY_FILES.get(stationId), import.meta.url);
+  const historyUrl = occupancyHistoryUrl(historyPath);
+  if (!historyUrl) {
+    state.occupancyHistory.pendingStationIds.delete(stationId);
+    return;
+  }
   fetch(historyUrl)
     .then((response) => {
       if (!response.ok) {
@@ -2048,6 +2127,39 @@ function renderDetailOccupancyHistory(feature) {
     .finally(() => {
       state.occupancyHistory.pendingStationIds.delete(stationId);
     });
+}
+
+function renderDetailOccupancyHistory(feature) {
+  const stationId = getStationIdFromProps(feature.properties);
+  els.detail.occupancyHistorySection.hidden = true;
+  els.detail.occupancyHistoryRange.textContent = "";
+  els.detail.occupancyHistoryChart.innerHTML = "";
+
+  const cached = state.occupancyHistory.byStationId.get(stationId);
+  if (cached) {
+    renderOccupancyHistoryChart(cached, feature);
+    return;
+  }
+
+  const loadedIndex = state.occupancyHistory.indexByStationId;
+  if (loadedIndex) {
+    const historyPath = getOccupancyHistoryPath(loadedIndex, stationId);
+    if (historyPath) {
+      loadDetailOccupancyHistoryFile(stationId, feature, historyPath);
+    }
+    return;
+  }
+
+  loadOccupancyHistoryIndex().then((index) => {
+    const currentStationId = currentDetailFeature
+      ? getStationIdFromProps(currentDetailFeature.properties)
+      : "";
+    if (currentStationId !== stationId) return;
+    const historyPath = getOccupancyHistoryPath(index, stationId);
+    if (historyPath) {
+      loadDetailOccupancyHistoryFile(stationId, currentDetailFeature, historyPath);
+    }
+  });
 }
 
 function updateDetailRating(props) {
