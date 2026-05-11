@@ -477,3 +477,62 @@ def test_build_occupancy_db_accepts_existing_day_without_local_archive(tmp_path:
     )
     assert missing_completed.returncode != 0
     assert "Missing occupancy DB days after import: 2026-04-16" in missing_completed.stderr
+
+
+def test_update_occupancy_db_daily_imports_missing_local_archive(tmp_path: Path):
+    chargers_csv_path = tmp_path / "chargers.csv"
+    site_match_path = tmp_path / "site_matches.csv"
+    archive_dir = tmp_path / "archives"
+    db_path = tmp_path / "occupancy.sqlite3"
+    archive_dir.mkdir()
+    archive_path = archive_dir / "live-provider-responses-2026-04-15.tgz"
+
+    _write_chargers_csv(chargers_csv_path)
+    _write_site_matches_csv(site_match_path)
+    _write_archive(archive_path)
+
+    env = os.environ.copy()
+    env.update(
+        {
+            "WOLADEN_LIVE_CHARGERS_CSV_PATH": str(chargers_csv_path),
+            "WOLADEN_LIVE_FULL_CHARGERS_CSV_PATH": str(chargers_csv_path),
+            "WOLADEN_LIVE_SITE_MATCH_PATH": str(site_match_path),
+            "WOLADEN_LIVE_ARCHIVE_TIMEZONE": "UTC",
+        }
+    )
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "analysis" / "update_occupancy_db_daily.py"),
+            "--date",
+            "2026-04-15",
+            "--days",
+            "1",
+            "--archive-dir",
+            str(archive_dir),
+            "--db",
+            str(db_path),
+            "--no-download",
+            "--require-complete",
+            "--quiet",
+        ],
+        cwd=REPO_ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    summary = json.loads(completed.stdout)
+    assert summary["start_date"] == "2026-04-15"
+    assert summary["end_date"] == "2026-04-15"
+    assert summary["existing_dates_before_import"] == []
+    assert summary["dates_requiring_import"] == ["2026-04-15"]
+    assert summary["archive_downloads"][0]["result"] == "already_present_local"
+    assert summary["missing_archives"] == []
+    assert summary["build"]["imported"][0]["archive_date"] == "2026-04-15"
+    assert summary["build"]["retained_window"]["days"] == 1
+
+    store = OccupancyStore(db_path)
+    assert store.available_dates(start_date="2026-04-15", end_date="2026-04-15") == ["2026-04-15"]

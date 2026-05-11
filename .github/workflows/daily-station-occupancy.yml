@@ -174,80 +174,16 @@ jobs:
               time.sleep(interval_seconds)
           PY
 
-      - name: Download missing archive days
-        if: steps.berlin_gate.outputs.should_run == 'true'
-        run: |
-          python - <<'PY'
-          import os
-          import shutil
-          import subprocess
-          import sys
-          from datetime import date, timedelta
-          from pathlib import Path
-
-          start_date = date.fromisoformat(os.environ["START_DATE"])
-          target_date = date.fromisoformat(os.environ["TARGET_DATE"])
-          occupancy_db = Path(os.environ["OCCUPANCY_DB"])
-          window_dates = []
-          current = start_date
-          while current <= target_date:
-              window_dates.append(current)
-              current += timedelta(days=1)
-
-          existing_dates = set()
-          if occupancy_db.exists():
-              from analysis.occupancy_store import OccupancyStore
-
-              store = OccupancyStore(occupancy_db)
-              store.initialize()
-              existing_dates = set(
-                  store.available_dates(
-                      start_date=start_date.isoformat(),
-                      end_date=target_date.isoformat(),
-                  )
-              )
-
-          missing_dates = [
-              current
-              for current in window_dates
-              if current.isoformat() not in existing_dates
-          ]
-          if not missing_dates:
-              print("Occupancy DB already has all requested days; no archive download needed.")
-              raise SystemExit(0)
-
-          cache_roots = [
-              Path.home() / ".cache" / "huggingface" / "hub",
-              Path(os.environ["GITHUB_WORKSPACE"]) / "tmp" / "hf-cache",
-          ]
-
-          for current in missing_dates:
-              subprocess.run(
-                  [
-                      sys.executable,
-                      "analysis/download_hf_archives.py",
-                      "--date",
-                      current.isoformat(),
-                      "--days",
-                      "1",
-                      "--require-complete",
-                  ],
-                  check=True,
-              )
-              for cache_root in cache_roots:
-                  shutil.rmtree(cache_root, ignore_errors=True)
-          PY
-
       - name: Update occupancy analytics database
         if: steps.berlin_gate.outputs.should_run == 'true'
         run: |
-          python analysis/build_occupancy_db.py \
-            --start-date "$START_DATE" \
-            --end-date "$TARGET_DATE" \
+          python analysis/update_occupancy_db_daily.py \
+            --date "$TARGET_DATE" \
             --days "$DAYS" \
             --db "$OCCUPANCY_DB" \
             --require-complete \
             --retain-days "$DAYS" \
+            --clear-hf-cache \
             --quiet
 
       - name: Save occupancy DB cache
