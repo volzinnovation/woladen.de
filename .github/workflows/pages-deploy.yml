@@ -16,6 +16,7 @@ on:
       - Daily Data Generation
       - Daily Management Analysis
       - Backfill Management Analysis
+      - Daily Station Occupancy Charts
     types:
       - completed
 
