@@ -18,9 +18,63 @@ The first pass is intentionally narrow:
 
 ## Current Workflow
 
-The analysis CLI works on local `.tgz` archives. The expected source is the Hugging Face archive dataset, mirrored into `data/live_archives/` with the repo downloader script.
+The analysis CLIs work on daily `.tgz` archives named `live-provider-responses-YYYY-MM-DD.tgz`. The expected source is the Hugging Face archive dataset `loffenauer/AFIR`, under `provider-response-archives/`, mirrored into `data/live_archives/` as needed.
 
-For the hourly station occupancy chart, mirror the needed Hugging Face archives first:
+### Production station occupancy charts
+
+The app's `Typische Auslastung` charts are generated as static public JSON, not from live API history at request time. The production path is:
+
+1. The live backend logs provider poll and push payloads under `data/live_raw/<provider_uid>/<YYYY-MM-DD>/`.
+2. The VPS cron job runs `scripts/live_archive_logs.py` shortly after midnight Europe/Berlin, builds `live-provider-responses-YYYY-MM-DD.tgz`, uploads it to Hugging Face, and cleans up uploaded raw files.
+3. `.github/workflows/daily-station-occupancy.yml` runs daily for the previous Berlin day. It waits for the target archive, restores or creates `data/occupancy.sqlite3`, imports the trailing window, exports public chart JSON, rebuilds `site/`, and commits generated chart files back to `main`.
+4. `.github/workflows/pages-deploy.yml` is triggered by the successful chart workflow and deploys the rebuilt static site.
+
+The core local commands mirror the workflow:
+
+```bash
+python analysis/update_occupancy_db_daily.py \
+  --date 2026-04-20 \
+  --days 7 \
+  --db data/occupancy.sqlite3 \
+  --require-complete \
+  --retain-days 7 \
+  --clear-hf-cache
+```
+
+```bash
+python analysis/export_station_occupancy_from_db.py \
+  --date 2026-04-20 \
+  --days 7 \
+  --db data/occupancy.sqlite3 \
+  --output-dir web/data/station-occupancy \
+  --require-complete
+```
+
+```bash
+python scripts/build_site.py
+```
+
+The public chart artifacts are:
+
+- `web/data/station-occupancy/index.json`: station id to per-station JSON path.
+- `web/data/station-occupancy/<station_id>.json`: compact chart payload consumed by the app.
+- `site/data/station-occupancy/`: generated deployment copy after `scripts/build_site.py`.
+
+The chart metric is the mean number of occupied EVSEs per local Berlin hour over the included archive days. Unknown or missing status is not counted as occupied. When multiple providers map to the same internal station, the exporter selects one primary provider per station to avoid duplicate provider mappings.
+
+The import/export pipeline is split on purpose:
+
+- `analysis/update_occupancy_db_daily.py` downloads missing archives and delegates DB import.
+- `analysis/build_occupancy_db.py` parses archives, normalizes status events, computes daily/hourly aggregates, and writes SQLite.
+- `analysis/occupancy_store.py` owns the SQLite schema and replacement/pruning logic.
+- `analysis/export_station_occupancy_from_db.py` builds the compact public per-station JSON tree from SQLite.
+- `analysis/batch_station_occupancy.py` contains the shared archive parser, station/provider matching, hourly interval accounting, provider selection, and payload builder.
+
+### Manual one-station chart helper
+
+`analysis.hourly_station_occupancy` is still useful for ad-hoc debugging because it writes a JSON file plus an SVG for one station. It is not the production source for the app's current per-station chart bundle.
+
+Mirror the needed Hugging Face archives first:
 
 ```bash
 python3 -m analysis.download_hf_archives \
@@ -28,7 +82,7 @@ python3 -m analysis.download_hf_archives \
   --days 7
 ```
 
-Then build the chart from the local archives:
+Then build the manual chart from local archives:
 
 ```bash
 python3 -m analysis.hourly_station_occupancy \
