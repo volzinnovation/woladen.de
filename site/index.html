@@ -84,7 +84,7 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css?v=20260510-notes-sort" />
+    <link rel="stylesheet" href="./styles.css?v=20260512-live-placement" />
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -525,6 +525,18 @@
               Musterstraße 1, 12345 Berlin
             </p>
 
+            <div id="detail-live-section" class="details-list-section detail-live-primary" hidden>
+              <div class="detail-section-head">
+                <h3 id="detail-live-title">Live</h3>
+                <span id="detail-live-updated" class="detail-section-chip" hidden></span>
+              </div>
+              <div id="detail-live-list" class="live-evse-list"></div>
+            </div>
+
+            <p id="detail-occupancy-source" class="detail-subnote detail-live-source-note" hidden>
+              Live via MobiData BW
+            </p>
+
             <div id="detail-rating" class="detail-rating" data-nosnippet>
               <div class="detail-rating-copy">
                 <span class="detail-rating-label">Bewertung</span>
@@ -628,14 +640,6 @@
               </div>
             </div>
 
-            <div id="detail-live-section" class="details-list-section" hidden>
-              <div class="detail-section-head">
-                <h3 id="detail-live-title">Live</h3>
-                <span id="detail-live-updated" class="detail-section-chip" hidden></span>
-              </div>
-              <div id="detail-live-list" class="live-evse-list"></div>
-            </div>
-
             <div id="detail-occupancy-history-section" class="details-list-section" hidden>
               <div class="detail-section-head">
                 <h3>Typische Auslastung</h3>
@@ -654,10 +658,6 @@
                 Details via Mobilithek
               </p>
             </div>
-
-            <p id="detail-occupancy-source" class="detail-subnote detail-bottom-note" hidden>
-              Live via MobiData BW
-            </p>
           </div>
         </div>
       </div>
@@ -701,6 +701,6 @@
       crossorigin=""
     ></script>
     <script src="./app-install-promo.js"></script>
-    <script src="./app.js?v=20260510-notes-sort" type="module"></script>
+    <script src="./app.js?v=20260512-live-placement" type="module"></script>
   </body>
 </html>

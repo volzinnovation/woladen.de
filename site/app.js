@@ -2262,7 +2262,7 @@ function populateDetailContent(feature, liveDetail = null) {
 
   if (occupancySource) {
     els.detail.occupancySource.textContent = occupancySource;
-    els.detail.occupancySource.hidden = !els.detail.liveSection.hidden;
+    els.detail.occupancySource.hidden = els.detail.liveSection.hidden;
   } else {
     els.detail.occupancySource.textContent = "";
     els.detail.occupancySource.hidden = true;
