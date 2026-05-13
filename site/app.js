@@ -252,6 +252,11 @@ function hasLiveStationSummary(props) {
   return Boolean(fetchedAt) || (Number.isFinite(total) && total > 0);
 }
 
+function hasAggregateOccupancySummary(props) {
+  const counts = getAvailabilityCounts(props);
+  return Number.isFinite(counts.total) && counts.total > 0;
+}
+
 function getAvailabilityCounts(props) {
   if (hasLiveStationSummary(props)) {
     return {
@@ -341,6 +346,47 @@ function formatOccupancySummary(props) {
     parts.push(`${Math.round(unknown)} unbekannt`);
   }
   return parts.length ? parts.join(", ") : "Belegung unbekannt";
+}
+
+function getOccupancyObservedAt(props) {
+  if (hasLiveStationSummary(props)) {
+    return props.live_source_observed_at || props.live_fetched_at || props.live_ingested_at || "";
+  }
+  return props.occupancy_last_updated || "";
+}
+
+function buildAggregateLiveEvses(props) {
+  const counts = getAvailabilityCounts(props);
+  const liveTotal = Math.max(0, Math.round(Number(counts.total || 0)));
+  if (!Number.isFinite(liveTotal) || liveTotal <= 0) {
+    return [];
+  }
+
+  const available = Math.max(0, Math.round(Number(counts.available || 0)));
+  const occupied = Math.max(0, Math.round(Number(counts.occupied || 0)));
+  const outOfOrder = Math.max(0, Math.round(Number(counts.outOfOrder || 0)));
+  const explicitUnknown = Math.max(0, Math.round(Number(counts.unknown || 0)));
+  const knownWithoutUnknown = available + occupied + outOfOrder;
+  const observedUnknown = Math.max(explicitUnknown, liveTotal - knownWithoutUnknown);
+  const observedTotal = knownWithoutUnknown + observedUnknown;
+  const staticTotal = Math.max(0, Math.round(Number(props.charging_points_count || 0)));
+  const displayTotal = Math.max(liveTotal, observedTotal, staticTotal);
+  const staticMissing = Math.max(0, displayTotal - observedTotal);
+  const observedAt = getOccupancyObservedAt(props);
+
+  return [
+    ["free", available, ""],
+    ["occupied", occupied, ""],
+    ["out_of_order", outOfOrder, ""],
+    ["unknown", observedUnknown, ""],
+    ["unknown", staticMissing, "Nicht im Live-Feed enthalten"],
+  ].flatMap(([availabilityStatus, count, statusNote]) =>
+    Array.from({ length: Math.max(0, Number(count || 0)) }, () => ({
+      availability_status: availabilityStatus,
+      source_observed_at: statusNote ? "" : observedAt,
+      status_note: statusNote,
+    })),
+  ).slice(0, displayTotal);
 }
 
 function formatProviderLabel(value) {
@@ -1860,8 +1906,9 @@ let currentDetailFeature = null;
 
 function renderDetailLiveState(feature, liveDetail = null) {
   const props = feature.properties;
-  const evses = Array.isArray(liveDetail?.evses) ? liveDetail.evses : [];
-  const hasLiveData = hasLiveStationSummary(props) || evses.length > 0;
+  const liveEvses = Array.isArray(liveDetail?.evses) ? liveDetail.evses : [];
+  const evses = liveEvses.length > 0 ? liveEvses : buildAggregateLiveEvses(props);
+  const hasLiveData = hasLiveStationSummary(props) || hasAggregateOccupancySummary(props) || evses.length > 0;
   if (!hasLiveData) {
     els.detail.liveSection.hidden = true;
     els.detail.liveTitle.textContent = "Live";
@@ -1908,6 +1955,10 @@ function renderDetailLiveState(feature, liveDetail = null) {
     }
     if (observedText) {
       metaParts.push(`Stand ${observedText}`);
+    }
+    const statusNote = String(evse.status_note || "").trim();
+    if (statusNote) {
+      metaParts.push(statusNote);
     }
     const priceDisplay = String(evse.price_display || "").trim();
     const dynamicNotes = buildLiveDynamicNotes(evse);
@@ -2262,7 +2313,7 @@ function populateDetailContent(feature, liveDetail = null) {
 
   if (occupancySource) {
     els.detail.occupancySource.textContent = occupancySource;
-    els.detail.occupancySource.hidden = els.detail.liveSection.hidden;
+    els.detail.occupancySource.hidden = false;
   } else {
     els.detail.occupancySource.textContent = "";
     els.detail.occupancySource.hidden = true;
