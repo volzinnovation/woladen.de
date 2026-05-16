@@ -25,12 +25,13 @@ if str(REPO_ROOT) not in sys.path:
 
 from scripts.build_data import fetch_mobilithek_access_token
 from scripts.build_mobilithek_afir_configs import (
-    CHARGING_DATA_CATEGORY,
     SEARCH_PAGE_SIZE,
     classify_feed_kind,
     content_data_entry,
     fetch_offer_metadata,
     fetch_static_payload_with_probe,
+    is_charging_related_offer,
+    is_test_offer,
     offer_access_mode,
     probe_publication_file_access,
     search_mobilithek_offers,
@@ -309,21 +310,23 @@ def fetch_static_offers(session: requests.Session, *, access_token: str, search_
         search_term=search_term,
         page=0,
         size=SEARCH_PAGE_SIZE,
+        access_token=access_token,
     )
     all_offers = offers_page.get("content") or []
     static_offers: list[dict[str, Any]] = []
 
     for offer in all_offers:
-        if str(offer.get("dataCategory") or "") != CHARGING_DATA_CATEGORY:
-            continue
-
         publication_id = str(offer.get("publicationId") or "").strip()
         if not publication_id:
             continue
 
-        metadata = fetch_offer_metadata(session, publication_id)
+        metadata = fetch_offer_metadata(session, publication_id, access_token=access_token)
         content = content_data_entry(metadata)
         title = str(metadata.get("title") or offer.get("title") or "")
+        if is_test_offer(metadata, fallback_title=title):
+            continue
+        if not is_charging_related_offer(metadata, search_offer=offer):
+            continue
         publisher = str((((metadata.get("agents") or {}).get("publisher") or {}).get("name")) or "")
         feed_kind = classify_feed_kind(metadata, fallback_title=title)
         if feed_kind != "static":

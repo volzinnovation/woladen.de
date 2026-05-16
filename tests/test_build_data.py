@@ -446,6 +446,79 @@ def test_fetch_mobilithek_access_token_reads_secret_files_when_env_missing(tmp_p
     }
 
 
+def test_mobilithek_offer_discovery_uses_bearer_token(monkeypatch):
+    captured: list[dict[str, object]] = []
+
+    class DummyResponse:
+        def __init__(self, payload):
+            self._payload = payload
+
+        def json(self):
+            return self._payload
+
+    def fake_request_with_retries(method, url, session, **kwargs):
+        captured.append(
+            {
+                "method": method,
+                "url": url,
+                "headers": kwargs.get("headers"),
+            }
+        )
+        if method == "POST":
+            return DummyResponse({"dataOffers": {"content": []}})
+        return DummyResponse({"publicationId": "988137788909801472"})
+
+    monkeypatch.setattr(build_data, "request_with_retries", fake_request_with_retries)
+
+    offers = build_data.search_mobilithek_offers(
+        session=object(),
+        search_term="AFIR",
+        page=0,
+        size=200,
+        access_token="token-from-file",
+    )
+    metadata = build_data.fetch_mobilithek_offer_metadata(
+        session=object(),
+        publication_id="988137788909801472",
+        access_token="token-from-file",
+    )
+
+    assert offers == {"content": []}
+    assert metadata == {"publicationId": "988137788909801472"}
+    assert captured == [
+        {
+            "method": "POST",
+            "url": build_data.MOBILITHEK_METADATA_SEARCH_URL,
+            "headers": {"Authorization": "Bearer token-from-file"},
+        },
+        {
+            "method": "GET",
+            "url": build_data.MOBILITHEK_METADATA_OFFER_URL.format(
+                publication_id="988137788909801472"
+            ),
+            "headers": {"Authorization": "Bearer token-from-file"},
+        },
+    ]
+
+
+def test_mobilithek_offer_filters_test_feeds_and_accepts_schema_without_category():
+    assert build_data.is_mobilithek_test_offer(
+        {"title": "Test-AFIR-recharging-stat-VolkswagenChargingGroup"}
+    )
+    assert build_data.is_mobilithek_test_offer({"title": "AFIR-recharging-stat-SMATRICSTEST"})
+    assert not build_data.is_mobilithek_test_offer({"title": "AFIR-recharging-stat-Ladesonne GmbH & Co. KG"})
+    assert build_data.is_charging_related_offer(
+        {
+            "title": "AFIR-recharging-dyn-Eulektro",
+            "contentData": [
+                {
+                    "schemaProfileName": "AFIR-Recharging-Dynamic-01-00-00_Delta",
+                }
+            ],
+        }
+    )
+
+
 def test_should_attempt_static_payload_fetch_accepts_direct_access_url_without_subscription():
     assert build_data.should_attempt_static_payload_fetch(
         {"status": "ok", "is_accessible": False},

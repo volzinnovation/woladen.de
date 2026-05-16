@@ -22,6 +22,84 @@ def _load_configs_module():
 build_configs = _load_configs_module()
 
 
+def test_mobilithek_offer_search_uses_bearer_token():
+    captured: dict[str, object] = {}
+
+    class DummyResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"dataOffers": {"content": []}}
+
+    class DummySession:
+        def post(self, url, **kwargs):
+            captured["url"] = url
+            captured["headers"] = kwargs.get("headers")
+            return DummyResponse()
+
+    payload = build_configs.search_mobilithek_offers(
+        DummySession(),
+        search_term="AFIR",
+        page=0,
+        size=200,
+        access_token="token-123",
+    )
+
+    assert payload == {"content": []}
+    assert captured["url"] == build_configs.METADATA_SEARCH_URL
+    assert captured["headers"] == {"Authorization": "Bearer token-123"}
+
+
+def test_mobilithek_offer_metadata_uses_bearer_token():
+    captured: dict[str, object] = {}
+
+    class DummyResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"publicationId": "988133177339846656"}
+
+    class DummySession:
+        def get(self, url, **kwargs):
+            captured["url"] = url
+            captured["headers"] = kwargs.get("headers")
+            return DummyResponse()
+
+    payload = build_configs.fetch_offer_metadata(
+        DummySession(),
+        "988133177339846656",
+        access_token="token-123",
+    )
+
+    assert payload == {"publicationId": "988133177339846656"}
+    assert captured["url"] == build_configs.METADATA_OFFER_URL.format(
+        publication_id="988133177339846656"
+    )
+    assert captured["headers"] == {"Authorization": "Bearer token-123"}
+
+
+def test_charging_related_offer_accepts_schema_even_when_search_category_is_missing():
+    metadata = {
+        "title": "AFIR-recharging-dyn-Eulektro",
+        "contentData": [
+            {
+                "schemaProfileName": "AFIR-Recharging-Dynamic-01-00-00_Delta",
+                "dataModel": build_configs.DATEX_V3_DATA_MODEL,
+            }
+        ],
+    }
+
+    assert build_configs.is_charging_related_offer(metadata, search_offer={}) is True
+
+
+def test_is_test_offer_filters_obvious_mobilithek_test_feeds():
+    assert build_configs.is_test_offer({"title": "Test-AFIR-recharging-stat-VolkswagenChargingGroup"})
+    assert build_configs.is_test_offer({"title": "AFIR-recharging-stat-SMATRICSTEST"})
+    assert not build_configs.is_test_offer({"title": "AFIR-recharging-stat-Ladesonne GmbH & Co. KG"})
+
+
 def test_load_dynamic_subscription_ids_reads_registry(tmp_path: Path):
     registry_path = tmp_path / "mobilithek_subscriptions.json"
     registry_path.write_text(

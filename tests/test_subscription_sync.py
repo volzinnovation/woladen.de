@@ -505,6 +505,24 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
             feed_kind="static",
             access_mode="auth",
         ),
+        SubscriptionOffer(
+            provider_uid="ev_price",
+            display_name="ev price",
+            publisher="EW Pricing GmbH",
+            publication_id="989311073915731968",
+            offer_title="AFIR-recharging-dyn-EV Price",
+            feed_kind="dynamic",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
+            provider_uid="ev_price",
+            display_name="ev price",
+            publisher="EW Pricing GmbH",
+            publication_id="989311807176560640",
+            offer_title="AFIR-recharging-stat-EV Price",
+            feed_kind="static",
+            access_mode="auth",
+        ),
     ]
 
     registry = build_live_subscription_registry(
@@ -518,6 +536,8 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
             {"id": "983032272248377344", "dataOfferId": "982969565784539136", "contractStatus": "ACTIVE"},
             {"id": "986210555324723200", "dataOfferId": "962731482363617280", "contractStatus": "ACTIVE"},
             {"id": "986210552611008512", "dataOfferId": "962721207430316032", "contractStatus": "ACTIVE"},
+            {"id": "ev-price-dynamic-subscription", "dataOfferId": "989311073915731968", "contractStatus": "ACTIVE"},
+            {"id": "ev-price-static-subscription", "dataOfferId": "989311807176560640", "contractStatus": "ACTIVE"},
         ],
     )
 
@@ -544,6 +564,12 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
     assert registry["lichtblick_emobility"]["fetch_kind"] == "mtls_subscription"
     assert registry["lichtblick_emobility"]["enabled"] is True
     assert registry["lichtblick_emobility"]["delivery_mode"] == "push_with_poll_fallback"
+
+    assert registry["ev_price"]["subscription_id"] == "ev-price-dynamic-subscription"
+    assert registry["ev_price"]["static_subscription_id"] == "ev-price-static-subscription"
+    assert registry["ev_price"]["fetch_kind"] == "mtls_subscription"
+    assert registry["ev_price"]["enabled"] is True
+    assert registry["ev_price"]["delivery_mode"] == "push_with_poll_fallback"
 
 
 def test_resolve_credentials_reads_secret_files(tmp_path: Path, monkeypatch):

@@ -280,13 +280,59 @@ def offer_access_mode(metadata: dict[str, Any]) -> str:
     return "noauth" if anonymous else "auth"
 
 
+def is_test_offer(metadata: dict[str, Any], *, fallback_title: str = "") -> bool:
+    title = str(metadata.get("title") or fallback_title or "").strip().lower()
+    return bool(
+        re.search(r"(^|[^a-z0-9])test([^a-z0-9]|$)", title)
+        or title.endswith("test")
+        or "smatricstest" in title
+    )
+
+
+def _category_id(category: Any) -> str:
+    if isinstance(category, dict):
+        return str(category.get("id") or category.get("value") or category.get("uri") or "").strip()
+    return str(category or "").strip()
+
+
+def is_charging_related_offer(metadata: dict[str, Any], *, search_offer: dict[str, Any] | None = None) -> bool:
+    search_offer = search_offer or {}
+    if str(search_offer.get("dataCategory") or "").strip() == CHARGING_DATA_CATEGORY:
+        return True
+
+    for category in metadata.get("dataCategories") or []:
+        if _category_id(category) == CHARGING_DATA_CATEGORY:
+            return True
+
+    content = content_data_entry(metadata)
+    haystack = " ".join(
+        [
+            str(metadata.get("title") or search_offer.get("title") or ""),
+            str(metadata.get("description") or search_offer.get("description") or ""),
+            str((((metadata.get("agents") or {}).get("publisher") or {}).get("name")) or ""),
+            str(content.get("description") or ""),
+            str(content.get("schemaProfileName") or ""),
+            str(content.get("accessUrl") or ""),
+        ]
+    ).lower()
+    return any(token in haystack for token in ("recharging", "charging", "energy-infrastructure", "ladepunkt"))
+
+
+def auth_headers(access_token: str | None) -> dict[str, str] | None:
+    token = str(access_token or "").strip()
+    if not token:
+        return None
+    return {"Authorization": f"Bearer {token}"}
+
+
 def search_mobilithek_offers(
-    session: requests.Session, *, search_term: str, page: int, size: int
+    session: requests.Session, *, search_term: str, page: int, size: int, access_token: str | None = None
 ) -> dict[str, Any]:
     response = session.post(
         METADATA_SEARCH_URL,
         params={"page": page, "size": size, "sort": "latest,desc"},
         json={"searchString": search_term},
+        headers=auth_headers(access_token),
         timeout=60,
         verify=False,
     )
@@ -294,9 +340,12 @@ def search_mobilithek_offers(
     return response.json()["dataOffers"]
 
 
-def fetch_offer_metadata(session: requests.Session, publication_id: str) -> dict[str, Any]:
+def fetch_offer_metadata(
+    session: requests.Session, publication_id: str, *, access_token: str | None = None
+) -> dict[str, Any]:
     response = session.get(
         METADATA_OFFER_URL.format(publication_id=publication_id),
+        headers=auth_headers(access_token),
         timeout=60,
         verify=False,
     )
@@ -901,6 +950,12 @@ def main() -> None:
     args = parse_args()
 
     session = requests.Session()
+    access_token: str | None = None
+    try:
+        access_token = fetch_mobilithek_access_token(session)
+    except Exception:
+        access_token = None
+
     chargers_df = load_chargers(args.chargers_csv)
     bundle_chargers_df = load_chargers(args.bundle_chargers_csv)
     bundle_station_ids = set(bundle_chargers_df["station_id"].astype(str))
@@ -913,22 +968,20 @@ def main() -> None:
         password=machine_cert_password,
     )
 
-    offers_page = search_mobilithek_offers(
-        session,
-        search_term=args.search_term,
-        page=0,
-        size=SEARCH_PAGE_SIZE,
-    )
-    all_offers = offers_page.get("content") or []
-    charging_offers = [
-        offer for offer in all_offers if str(offer.get("dataCategory") or "") == CHARGING_DATA_CATEGORY
-    ]
-
-    access_token: str | None = None
-    try:
-        access_token = fetch_mobilithek_access_token(session)
-    except Exception:
-        access_token = None
+    all_offers: list[dict[str, Any]] = []
+    page = 0
+    total_pages = 1
+    while page < total_pages:
+        offers_page = search_mobilithek_offers(
+            session,
+            search_term=args.search_term,
+            page=page,
+            size=SEARCH_PAGE_SIZE,
+            access_token=access_token,
+        )
+        all_offers.extend(offers_page.get("content") or [])
+        total_pages = int(offers_page.get("totalPages") or 1)
+        page += 1
 
     try:
         dynamic_subscription_ids = load_dynamic_subscription_ids()
@@ -940,17 +993,22 @@ def main() -> None:
         static_subscription_ids = {}
 
     detailed_offers: list[dict[str, Any]] = []
-    for offer in charging_offers:
+    for offer in all_offers:
         publication_id = str(offer.get("publicationId") or "").strip()
         if not publication_id:
             continue
 
-        metadata = fetch_offer_metadata(session, publication_id)
+        metadata = fetch_offer_metadata(session, publication_id, access_token=access_token)
+        title = str(metadata.get("title") or offer.get("title") or "")
+        if is_test_offer(metadata, fallback_title=title):
+            continue
+        if not is_charging_related_offer(metadata, search_offer=offer):
+            continue
         content = content_data_entry(metadata)
         detailed_offers.append(
             {
                 "publication_id": publication_id,
-                "title": str(metadata.get("title") or offer.get("title") or ""),
+                "title": title,
                 "publisher": str((((metadata.get("agents") or {}).get("publisher") or {}).get("name")) or ""),
                 "metadata": metadata,
                 "mdp_brokering": bool(metadata.get("mdpBrokering")),

@@ -3220,10 +3220,22 @@ def mobilithek_offer_access_mode(metadata: dict[str, Any]) -> str:
     return "noauth" if anonymous else "auth"
 
 
+def is_mobilithek_test_offer(metadata: dict[str, Any], *, fallback_title: str = "") -> bool:
+    title = str(metadata.get("title") or fallback_title or "").strip().lower()
+    return bool(
+        re.search(r"(^|[^a-z0-9])test([^a-z0-9]|$)", title)
+        or title.endswith("test")
+        or "smatricstest" in title
+    )
+
+
 def is_charging_related_offer(metadata: dict[str, Any]) -> bool:
     categories = metadata.get("dataCategories") or []
     if CHARGING_DATA_CATEGORY in categories:
         return True
+    for category in categories:
+        if isinstance(category, dict) and str(category.get("id") or "").strip() == CHARGING_DATA_CATEGORY:
+            return True
 
     content_data = content_data_entry(metadata)
     haystack = " ".join(
@@ -3255,12 +3267,20 @@ def is_charging_related_offer(metadata: dict[str, Any]) -> bool:
     )
 
 
+def mobilithek_auth_headers(access_token: str | None) -> dict[str, str] | None:
+    token = str(access_token or "").strip()
+    if not token:
+        return None
+    return {"Authorization": f"Bearer {token}"}
+
+
 def search_mobilithek_offers(
     session: requests.Session,
     *,
     search_term: str,
     page: int,
     size: int,
+    access_token: str | None = None,
 ) -> dict[str, Any]:
     response = request_with_retries(
         "POST",
@@ -3268,6 +3288,7 @@ def search_mobilithek_offers(
         session,
         timeout=DATEX_REQUEST_TIMEOUT_SECONDS,
         verify=DATEX_TLS_VERIFY,
+        headers=mobilithek_auth_headers(access_token),
         params={"page": page, "size": size, "sort": "latest,desc"},
         json={"searchString": search_term},
     )
@@ -3278,6 +3299,7 @@ def fetch_mobilithek_offer_metadata(
     session: requests.Session,
     *,
     publication_id: str,
+    access_token: str | None = None,
 ) -> dict[str, Any]:
     response = request_with_retries(
         "GET",
@@ -3285,6 +3307,7 @@ def fetch_mobilithek_offer_metadata(
         session,
         timeout=DATEX_REQUEST_TIMEOUT_SECONDS,
         verify=DATEX_TLS_VERIFY,
+        headers=mobilithek_auth_headers(access_token),
     )
     return response.json()
 
@@ -4410,6 +4433,7 @@ def enrich_with_static_details(
                 search_term=MOBILITHEK_AFIR_SEARCH_TERM,
                 page=page,
                 size=MOBILITHEK_SEARCH_PAGE_SIZE,
+                access_token=access_token,
             )
         except (requests.RequestException, ValueError, RuntimeError) as exc:
             stats["errors"].append(f"offer_search_page_{page}: {exc}")
@@ -4424,9 +4448,16 @@ def enrich_with_static_details(
             stats["offers_discovered"] += 1
 
             try:
-                metadata = fetch_mobilithek_offer_metadata(session, publication_id=publication_id)
+                metadata = fetch_mobilithek_offer_metadata(
+                    session,
+                    publication_id=publication_id,
+                    access_token=access_token,
+                )
             except (requests.RequestException, ValueError, RuntimeError) as exc:
                 stats["errors"].append(f"{publication_id}: metadata_failed: {exc}")
+                continue
+
+            if is_mobilithek_test_offer(metadata, fallback_title=str(item.get("title") or "")):
                 continue
 
             if not is_charging_related_offer(metadata):
