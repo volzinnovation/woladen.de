@@ -216,7 +216,7 @@ jobs:
       - name: Commit generated station occupancy charts
         if: steps.berlin_gate.outputs.should_run == 'true'
         run: |
-          git add web/data/station-occupancy site/data/station-occupancy
+          git add web/data/station-occupancy site
           if git diff --cached --quiet; then
             echo "No station occupancy chart changes"
             exit 0
