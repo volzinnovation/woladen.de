@@ -60,11 +60,6 @@ const LIVE_DETAIL_TIMEOUT_MS = 4000;
 const STATION_ID_NAMESPACE = "DE:";
 const LEGACY_STATION_ID_RE = /^[0-9a-f]{16}$/i;
 const NAMESPACED_STATION_ID_RE = /^DE:([0-9a-f]{16})$/i;
-const OCCUPANCY_HISTORY_INDEX_PATH = "./data/station-occupancy/index.json";
-const FALLBACK_OCCUPANCY_HISTORY_FILES = new Map([
-  ["2d6cff515ceed554", "./data/station-occupancy/2d/6c/ff/2d6cff515ceed554.json"],
-  [`${STATION_ID_NAMESPACE}2d6cff515ceed554`, "./data/station-occupancy/2d/6c/ff/2d6cff515ceed554.json"],
-]);
 const LIVE_STATION_FIELDS = [
   "availability_status",
   "available_evses",
@@ -749,8 +744,7 @@ const state = {
   occupancyHistory: {
     byStationId: new Map(),
     pendingStationIds: new Set(),
-    indexByStationId: null,
-    indexPromise: null,
+    missingStationIds: new Set(),
   },
   under50: {
     loaded: false,
@@ -2060,84 +2054,29 @@ function normalizeOccupancyHistory(history) {
   return { ...history, hourly };
 }
 
-function occupancyHistoryLookupKeys(stationId) {
-  const raw = String(stationId || "").trim();
-  const normalized = normalizeStationId(raw);
-  return [
-    raw,
-    normalized,
-    normalized ? `${STATION_ID_NAMESPACE}${normalized}` : "",
-  ].filter(Boolean);
+function safeOccupancyHistoryStationId(stationId) {
+  const safeStationId = String(stationId || "")
+    .trim()
+    .replace(/[^A-Za-z0-9._-]+/g, "_")
+    .replace(/^[._-]+|[._-]+$/g, "");
+  return safeStationId || "station";
 }
 
-function normalizeOccupancyHistoryIndex(payload) {
-  const files = new Map(FALLBACK_OCCUPANCY_HISTORY_FILES);
-  const stations = payload?.stations;
-  if (stations && typeof stations === "object" && !Array.isArray(stations)) {
-    Object.entries(stations).forEach(([stationId, path]) => {
-      const pathText = String(path || "").trim();
-      if (!pathText) return;
-      occupancyHistoryLookupKeys(stationId).forEach((key) => {
-        files.set(key, pathText);
-      });
-    });
-  } else if (Array.isArray(stations)) {
-    stations.forEach((station) => {
-      const stationId = String(station?.station_id || station?.id || "").trim();
-      const pathText = String(station?.path || station?.href || "").trim();
-      if (!stationId || !pathText) return;
-      occupancyHistoryLookupKeys(stationId).forEach((key) => {
-        files.set(key, pathText);
-      });
-    });
+function occupancyHistoryPathForStationId(stationId) {
+  const safeStationId = safeOccupancyHistoryStationId(stationId);
+  const shardKey = safeStationId.replace(/[^A-Za-z0-9]+/g, "").toLowerCase();
+  const shardLength = Math.min(shardKey.length, 6);
+  const shards = [];
+  for (let index = 0; index < shardLength; index += 2) {
+    const shard = shardKey.slice(index, index + 2);
+    if (shard) shards.push(shard);
   }
-  return files;
+  return [...shards, `${safeStationId}.json`].join("/");
 }
 
-function occupancyHistoryUrl(path) {
-  const pathText = String(path || "").trim();
-  if (!pathText) return null;
-  if (/^(https?:)?\/\//i.test(pathText) || pathText.startsWith("./") || pathText.startsWith("../") || pathText.startsWith("/")) {
-    return new URL(pathText, import.meta.url);
-  }
-  return new URL(`./data/station-occupancy/${pathText}`, import.meta.url);
-}
-
-function loadOccupancyHistoryIndex() {
-  if (state.occupancyHistory.indexByStationId) {
-    return Promise.resolve(state.occupancyHistory.indexByStationId);
-  }
-  if (!state.occupancyHistory.indexPromise) {
-    const indexUrl = new URL(OCCUPANCY_HISTORY_INDEX_PATH, import.meta.url);
-    state.occupancyHistory.indexPromise = fetch(indexUrl)
-      .then((response) => {
-        if (response.status === 404) {
-          return null;
-        }
-        if (!response.ok) {
-          throw new Error(`Unexpected occupancy history index response ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((payload) => payload ? normalizeOccupancyHistoryIndex(payload) : new Map(FALLBACK_OCCUPANCY_HISTORY_FILES))
-      .catch((err) => {
-        console.warn("Failed to load occupancy history index", err);
-        return new Map(FALLBACK_OCCUPANCY_HISTORY_FILES);
-      })
-      .then((index) => {
-        state.occupancyHistory.indexByStationId = index;
-        return index;
-      });
-  }
-  return state.occupancyHistory.indexPromise;
-}
-
-function getOccupancyHistoryPath(index, stationId) {
-  for (const key of occupancyHistoryLookupKeys(stationId)) {
-    const path = index.get(key);
-    if (path) return path;
-  }
-  return "";
+function occupancyHistoryUrlForStationId(stationId) {
+  const historyPath = occupancyHistoryPathForStationId(stationId);
+  return new URL(`./data/station-occupancy/${historyPath}`, import.meta.url);
 }
 
 function renderOccupancyHistoryChart(history, feature) {
@@ -2169,31 +2108,32 @@ function renderOccupancyHistoryChart(history, feature) {
   return true;
 }
 
-function loadDetailOccupancyHistoryFile(stationId, feature, historyPath) {
+function loadDetailOccupancyHistoryFile(stationId, feature) {
   const cached = state.occupancyHistory.byStationId.get(stationId);
   if (cached) {
     renderOccupancyHistoryChart(cached, feature);
     return;
   }
 
-  if (state.occupancyHistory.pendingStationIds.has(stationId)) {
+  if (state.occupancyHistory.pendingStationIds.has(stationId) || state.occupancyHistory.missingStationIds.has(stationId)) {
     return;
   }
 
   state.occupancyHistory.pendingStationIds.add(stationId);
-  const historyUrl = occupancyHistoryUrl(historyPath);
-  if (!historyUrl) {
-    state.occupancyHistory.pendingStationIds.delete(stationId);
-    return;
-  }
+  const historyUrl = occupancyHistoryUrlForStationId(stationId);
   fetch(historyUrl)
     .then((response) => {
+      if (response.status === 404) {
+        state.occupancyHistory.missingStationIds.add(stationId);
+        return null;
+      }
       if (!response.ok) {
         throw new Error(`Unexpected occupancy history response ${response.status}`);
       }
       return response.json();
     })
     .then((history) => {
+      if (!history) return;
       state.occupancyHistory.byStationId.set(stationId, history);
       const currentStationId = currentDetailFeature
         ? getStationIdFromProps(currentDetailFeature.properties)
@@ -2203,7 +2143,7 @@ function loadDetailOccupancyHistoryFile(stationId, feature, historyPath) {
       }
     })
     .catch((err) => {
-      console.error(`Failed to load occupancy history for station ${stationId}`, err);
+      console.warn(`Failed to load occupancy history for station ${stationId}`, err);
     })
     .finally(() => {
       state.occupancyHistory.pendingStationIds.delete(stationId);
@@ -2222,25 +2162,7 @@ function renderDetailOccupancyHistory(feature) {
     return;
   }
 
-  const loadedIndex = state.occupancyHistory.indexByStationId;
-  if (loadedIndex) {
-    const historyPath = getOccupancyHistoryPath(loadedIndex, stationId);
-    if (historyPath) {
-      loadDetailOccupancyHistoryFile(stationId, feature, historyPath);
-    }
-    return;
-  }
-
-  loadOccupancyHistoryIndex().then((index) => {
-    const currentStationId = currentDetailFeature
-      ? getStationIdFromProps(currentDetailFeature.properties)
-      : "";
-    if (currentStationId !== stationId) return;
-    const historyPath = getOccupancyHistoryPath(index, stationId);
-    if (historyPath) {
-      loadDetailOccupancyHistoryFile(stationId, currentDetailFeature, historyPath);
-    }
-  });
+  loadDetailOccupancyHistoryFile(stationId, feature);
 }
 
 function updateDetailRating(props) {

@@ -206,7 +206,7 @@ def _write_public_files(
         if progress_interval > 0 and (index % progress_interval == 0 or index == total_stations):
             _log(f"Wrote {index}/{total_stations} station occupancy files", quiet=quiet)
 
-    index_payload = {
+    summary_payload = {
         "schema_version": 1,
         "generated_at": payload.get("generated_at"),
         "start_date": payload.get("start_date"),
@@ -216,8 +216,7 @@ def _write_public_files(
         "station_count": len(station_paths),
         "stations": station_paths,
     }
-    write_json(output_dir / "index.json", index_payload, pretty=pretty)
-    return index_payload
+    return summary_payload
 
 
 def _prune_stale_public_files(output_dir: Path, expected_paths: set[str]) -> None:
@@ -251,17 +250,17 @@ def write_public_files(
     progress_interval: int = 1000,
 ) -> dict[str, Any]:
     with _staged_output_directory(output_dir) as staged_dir:
-        index_payload = _write_public_files(
+        summary_payload = _write_public_files(
             payload,
             staged_dir,
             pretty=pretty,
             quiet=quiet,
             progress_interval=progress_interval,
         )
-        expected_paths = {"index.json", *index_payload["stations"].values()}
+        expected_paths = set(summary_payload["stations"].values())
         publish_staged_directory(staged_dir, output_dir)
     _prune_stale_public_files(output_dir, expected_paths)
-    return index_payload
+    return summary_payload
 
 
 def parse_args() -> argparse.Namespace:
@@ -337,7 +336,7 @@ def main() -> None:
     payload["minimum_matching_observations_per_day"] = max(0, int(args.min_matching_observations_per_day or 0))
     payload["summary"]["minimum_matching_observations_per_day"] = payload["minimum_matching_observations_per_day"]
     _log(f"Selected {len(payload.get('stations') or [])} station chart payloads", quiet=args.quiet)
-    index_payload = write_public_files(
+    summary_payload = write_public_files(
         payload,
         args.output_dir,
         pretty=args.pretty,
@@ -353,7 +352,7 @@ def main() -> None:
                 "end_date": payload["end_date"],
                 "included_days": payload["included_days"],
                 "missing_dates": missing_dates,
-                "station_count": index_payload["station_count"],
+                "station_count": summary_payload["station_count"],
             },
             ensure_ascii=False,
             indent=2,

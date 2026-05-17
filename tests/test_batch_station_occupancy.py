@@ -348,10 +348,11 @@ def test_occupancy_store_round_trips_hourly_chart_data(tmp_path: Path):
     stale_path.write_text("{}", encoding="utf-8")
     stale_nested_path.parent.mkdir(parents=True, exist_ok=True)
     stale_nested_path.write_text("{}", encoding="utf-8")
-    index = write_public_files(payload, output_dir, pretty=True, quiet=True)
+    summary = write_public_files(payload, output_dir, pretty=True, quiet=True)
 
-    assert index["station_count"] == 1
-    assert index["stations"]["station-1"] == "st/at/io/station-1.json"
+    assert summary["station_count"] == 1
+    assert summary["stations"]["station-1"] == "st/at/io/station-1.json"
+    assert not (output_dir / "index.json").exists()
     assert not stale_path.exists()
     assert not stale_nested_path.exists()
     station_payload = json.loads((output_dir / "st" / "at" / "io" / "station-1.json").read_text(encoding="utf-8"))
