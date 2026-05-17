@@ -57,9 +57,10 @@ python scripts/build_site.py
 
 The public chart artifacts are:
 
-- `web/data/station-occupancy/index.json`: station id to per-station JSON path.
-- `web/data/station-occupancy/<station_id>.json`: compact chart payload consumed by the app.
+- `web/data/station-occupancy/<aa>/<bb>/<cc>/<station_id>.json`: compact chart payload consumed by the app, sharded by the first six alphanumeric station-id characters.
 - `site/data/station-occupancy/`: generated deployment copy after `scripts/build_site.py`.
+
+There is deliberately no public index file. The app derives the station JSON URL from the selected station id in the details view and fetches only that one payload. Stations without enough matching updates per day have no JSON file; the resulting 404 is treated as "no historical occupancy chart available".
 
 The chart metric is the mean number of occupied EVSEs per local Berlin hour over the included archive days. Unknown or missing status is not counted as occupied. When multiple providers map to the same internal station, the exporter selects one primary provider per station to avoid duplicate provider mappings.
 
