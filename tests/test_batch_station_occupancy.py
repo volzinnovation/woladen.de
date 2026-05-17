@@ -343,14 +343,18 @@ def test_occupancy_store_round_trips_hourly_chart_data(tmp_path: Path):
         stats=EmptyArchiveStats(),
     )
     stale_path = output_dir / "stale-station.json"
+    stale_nested_path = output_dir / "zz" / "old-station.json"
     stale_path.parent.mkdir(parents=True, exist_ok=True)
     stale_path.write_text("{}", encoding="utf-8")
+    stale_nested_path.parent.mkdir(parents=True, exist_ok=True)
+    stale_nested_path.write_text("{}", encoding="utf-8")
     index = write_public_files(payload, output_dir, pretty=True, quiet=True)
 
     assert index["station_count"] == 1
-    assert index["stations"]["station-1"] == "station-1.json"
+    assert index["stations"]["station-1"] == "st/at/io/station-1.json"
     assert not stale_path.exists()
-    station_payload = json.loads((output_dir / "station-1.json").read_text(encoding="utf-8"))
+    assert not stale_nested_path.exists()
+    station_payload = json.loads((output_dir / "st" / "at" / "io" / "station-1.json").read_text(encoding="utf-8"))
     assert station_payload["hourly_average_occupied"]["08:00"] == 1.0
     assert station_payload["hourly_average_occupied"]["09:00"] == 1.75
     assert station_payload["hourly_average_occupied"]["10:00"] == 1.5

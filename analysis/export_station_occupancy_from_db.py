@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import tempfile
 import sys
 from contextlib import contextmanager
@@ -47,9 +48,17 @@ def _parse_date(value: str) -> date:
     return date.fromisoformat(value.strip())
 
 
-def _safe_station_filename(station_id: str) -> str:
-    safe_station_id = station_id.replace("/", "_").replace("\\", "_")
-    return f"{safe_station_id}.json"
+def _safe_station_id(station_id: str) -> str:
+    safe_station_id = re.sub(r"[^A-Za-z0-9._-]+", "_", station_id.strip())
+    return safe_station_id.strip("._-") or "station"
+
+
+def _station_relative_path(station_id: str) -> str:
+    safe_station_id = _safe_station_id(station_id)
+    shard_key = re.sub(r"[^A-Za-z0-9]+", "", safe_station_id).lower()
+    shards = [shard_key[index : index + 2] for index in range(0, min(len(shard_key), 6), 2)]
+    shards = [shard for shard in shards if shard]
+    return str(Path(*shards, f"{safe_station_id}.json").as_posix()) if shards else f"{safe_station_id}.json"
 
 
 def _load_aggregates(
@@ -190,7 +199,7 @@ def _write_public_files(
         station_id = str(station.get("station_id") or "").strip()
         if not station_id:
             continue
-        filename = _safe_station_filename(station_id)
+        filename = _station_relative_path(station_id)
         station_payload = _station_public_payload({**payload, **station})
         write_json(output_dir / filename, station_payload, pretty=pretty)
         station_paths[station_id] = filename

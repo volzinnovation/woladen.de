@@ -62,8 +62,8 @@ const LEGACY_STATION_ID_RE = /^[0-9a-f]{16}$/i;
 const NAMESPACED_STATION_ID_RE = /^DE:([0-9a-f]{16})$/i;
 const OCCUPANCY_HISTORY_INDEX_PATH = "./data/station-occupancy/index.json";
 const FALLBACK_OCCUPANCY_HISTORY_FILES = new Map([
-  ["2d6cff515ceed554", "./data/station-occupancy/2d6cff515ceed554.json"],
-  [`${STATION_ID_NAMESPACE}2d6cff515ceed554`, "./data/station-occupancy/2d6cff515ceed554.json"],
+  ["2d6cff515ceed554", "./data/station-occupancy/2d/6c/ff/2d6cff515ceed554.json"],
+  [`${STATION_ID_NAMESPACE}2d6cff515ceed554`, "./data/station-occupancy/2d/6c/ff/2d6cff515ceed554.json"],
 ]);
 const LIVE_STATION_FIELDS = [
   "availability_status",
