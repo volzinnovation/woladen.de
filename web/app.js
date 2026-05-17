@@ -16,7 +16,7 @@ import {
   getLocationLookupViewModel,
   normalizeLocationPermissionState,
   requestBrowserLocation,
-} from "./location.mjs";
+} from "./location.mjs?v=20260517-location-list-fix-2";
 import {
   normalizeLiveApiBaseUrl,
   resolveLiveApiBaseUrl as computeLiveApiBaseUrl,
@@ -1258,9 +1258,15 @@ function getLocationListViewModel() {
 
 function renderLocationGate(container, viewModel) {
   container.innerHTML = "";
+  container.appendChild(createLocationPanel(viewModel));
+}
 
+function createLocationPanel(viewModel) {
   const panel = document.createElement("section");
   panel.className = `location-gate location-gate-${viewModel.kind}`;
+  if (!viewModel.blocksStationList) {
+    panel.classList.add("location-gate-inline");
+  }
   panel.setAttribute("data-nosnippet", "");
 
   const title = document.createElement("h3");
@@ -1285,7 +1291,7 @@ function renderLocationGate(container, viewModel) {
     panel.appendChild(actions);
   }
 
-  container.appendChild(panel);
+  return panel;
 }
 
 async function loadLiveStationDetail(stationId) {
@@ -1722,6 +1728,9 @@ function renderList() {
   if (locationViewModel.blocksStationList) {
     renderLocationGate(container, locationViewModel);
     return;
+  }
+  if (!hasResolvedUserLocation() && (locationViewModel.title || locationViewModel.message)) {
+    container.appendChild(createLocationPanel(locationViewModel));
   }
 
   // Keep the web list aligned with the native apps.

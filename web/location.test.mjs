@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   LOCATION_ERROR_PERMISSION_DENIED,
+  LOCATION_ERROR_POSITION_UNAVAILABLE,
   LOCATION_PERMISSION_DENIED,
   getLocationLookupViewModel,
   mapGeolocationError,
@@ -15,8 +16,8 @@ test("browser location lookup resolves coordinates from geolocation", async () =
     getCurrentPosition(success) {
       success({
         coords: {
-          latitude: 52.52,
-          longitude: 13.405,
+            latitude: 53.551086,
+            longitude: 9.993682,
         },
       });
     },
@@ -24,18 +25,18 @@ test("browser location lookup resolves coordinates from geolocation", async () =
 
   const result = await requestBrowserLocation(geolocation);
   assert.deepEqual(result, {
-    lat: 52.52,
-    lon: 13.405,
+    lat: 53.551086,
+    lon: 9.993682,
     raw: {
       coords: {
-        latitude: 52.52,
-        longitude: 13.405,
+              latitude: 53.551086,
+            longitude: 9.993682,
       },
     },
   });
 });
 
-test("station list stays blocked until a location is available", () => {
+test("station list stays usable until a location is available", () => {
   const waiting = getLocationLookupViewModel({
     hasLocation: false,
     permissionState: "prompt",
@@ -47,7 +48,7 @@ test("station list stays blocked until a location is available", () => {
     geolocationSupported: true,
   });
 
-  assert.equal(waiting.blocksStationList, true);
+  assert.equal(waiting.blocksStationList, false);
   assert.equal(waiting.actionLabel, "Standort freigeben");
   assert.equal(ready.blocksStationList, false);
 });
@@ -62,8 +63,21 @@ test("missing location access shows the denied-permission message", () => {
   });
 
   assert.equal(error.code, LOCATION_ERROR_PERMISSION_DENIED);
+  assert.equal(viewModel.blocksStationList, false);
   assert.equal(viewModel.title, "Standortfreigabe benötigt");
   assert.match(viewModel.message, /Aktiviere den Standortzugriff/);
+});
+
+test("unavailable browser position does not block the station list", () => {
+  const viewModel = getLocationLookupViewModel({
+    hasLocation: false,
+    errorCode: LOCATION_ERROR_POSITION_UNAVAILABLE,
+    geolocationSupported: true,
+  });
+
+  assert.equal(viewModel.blocksStationList, false);
+  assert.equal(viewModel.actionLabel, "Erneut versuchen");
+  assert.match(viewModel.message, /ohne Entfernungssortierung/);
 });
 
 test("startup location request runs unless access is blocked or already resolved", () => {

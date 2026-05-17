@@ -406,6 +406,12 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+.location-gate-inline {
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  box-shadow: none;
+}
+
 .location-gate-pending {
   background:
     linear-gradient(135deg, rgba(15, 118, 110, 0.06), rgba(255, 255, 255, 0.96)),
@@ -425,10 +431,18 @@ body {
   line-height: 1.2;
 }
 
+.location-gate-inline .location-gate-title {
+  font-size: 0.95rem;
+}
+
 .location-gate-copy {
   margin: 0;
   color: var(--color-text-muted);
   line-height: 1.5;
+}
+
+.location-gate-inline .location-gate-copy {
+  font-size: 0.9rem;
 }
 
 .location-gate-actions {
@@ -440,6 +454,10 @@ body {
 .location-gate-actions .primary-btn {
   width: auto;
   min-width: 12rem;
+}
+
+.location-gate-inline .location-gate-actions .primary-btn {
+  min-width: 0;
 }
 
 .content-container {

@@ -128,9 +128,9 @@ export function getLocationLookupViewModel({
     return {
       kind: LOCATION_REQUEST_ERROR,
       title: "Standort nicht verfügbar",
-      message: "Dieser Browser unterstützt keine Standortabfrage.",
+      message: "Die Liste bleibt ohne Entfernungssortierung nutzbar.",
       actionLabel: "",
-      blocksStationList: true,
+      blocksStationList: false,
     };
   }
 
@@ -138,9 +138,9 @@ export function getLocationLookupViewModel({
     return {
       kind: LOCATION_REQUEST_PENDING,
       title: "Standort wird ermittelt",
-      message: "Die Liste lädt Ladepunkte, sobald der erste Standort bestimmt wurde.",
+      message: "Bis dahin bleibt die Liste ohne Entfernungssortierung nutzbar.",
       actionLabel: "",
-      blocksStationList: true,
+      blocksStationList: false,
     };
   }
 
@@ -148,9 +148,9 @@ export function getLocationLookupViewModel({
     return {
       kind: LOCATION_REQUEST_ERROR,
       title: "Standortfreigabe benötigt",
-      message: "Aktiviere den Standortzugriff, damit die Liste nahe Ladepunkte laden kann.",
+      message: "Aktiviere den Standortzugriff, um Ladepunkte nach Entfernung zu sortieren.",
       actionLabel: "Erneut versuchen",
-      blocksStationList: true,
+      blocksStationList: false,
     };
   }
 
@@ -158,9 +158,9 @@ export function getLocationLookupViewModel({
     return {
       kind: LOCATION_REQUEST_ERROR,
       title: "Standortsuche dauert zu lange",
-      message: "Bitte versuche es erneut oder prüfe, ob der Standortzugriff aktiviert ist.",
+      message: "Die Liste bleibt ohne Entfernungssortierung nutzbar. Versuche es bei Bedarf erneut.",
       actionLabel: "Erneut versuchen",
-      blocksStationList: true,
+      blocksStationList: false,
     };
   }
 
@@ -168,9 +168,9 @@ export function getLocationLookupViewModel({
     return {
       kind: LOCATION_REQUEST_ERROR,
       title: "Standort konnte nicht ermittelt werden",
-      message: "Bitte prüfe, ob dein Gerät gerade einen Standort liefern kann, und versuche es erneut.",
+      message: "Die Liste bleibt ohne Entfernungssortierung nutzbar. Versuche es erneut, wenn dein Browser einen Standort liefern kann.",
       actionLabel: "Erneut versuchen",
-      blocksStationList: true,
+      blocksStationList: false,
     };
   }
 
@@ -178,17 +178,17 @@ export function getLocationLookupViewModel({
     return {
       kind: LOCATION_REQUEST_ERROR,
       title: "Standort konnte nicht ermittelt werden",
-      message: "Bitte versuche es erneut.",
+      message: "Die Liste bleibt ohne Entfernungssortierung nutzbar. Bitte versuche es erneut.",
       actionLabel: "Erneut versuchen",
-      blocksStationList: true,
+      blocksStationList: false,
     };
   }
 
   return {
     kind: LOCATION_REQUEST_IDLE,
-    title: "Standort freigeben",
-    message: "Nahe Ladepunkte werden geladen, sobald dein Standort freigegeben ist.",
+    title: "Nach Entfernung sortieren",
+    message: "Gib deinen Standort frei, um Ladepunkte in deiner Nähe zuerst zu sehen.",
     actionLabel: "Standort freigeben",
-    blocksStationList: true,
+    blocksStationList: false,
   };
 }
