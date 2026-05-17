@@ -2055,7 +2055,12 @@ function normalizeOccupancyHistory(history) {
 }
 
 function safeOccupancyHistoryStationId(stationId) {
-  const safeStationId = String(stationId || "")
+  const rawStationId = String(stationId || "").trim();
+  const namespacedMatch = rawStationId.match(NAMESPACED_STATION_ID_RE);
+  const fileStationId = namespacedMatch
+    ? namespacedMatch[1].toLowerCase()
+    : (LEGACY_STATION_ID_RE.test(rawStationId) ? rawStationId.toLowerCase() : rawStationId);
+  const safeStationId = fileStationId
     .trim()
     .replace(/[^A-Za-z0-9._-]+/g, "_")
     .replace(/^[._-]+|[._-]+$/g, "");
