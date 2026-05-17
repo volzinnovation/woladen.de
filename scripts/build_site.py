@@ -633,6 +633,19 @@ def copy_management_data_tree() -> None:
             shutil.copy2(source_path, target_path)
 
 
+def copy_station_occupancy_tree() -> None:
+    source_root = DATA_DIR / "station-occupancy"
+    target_root = SITE_DATA_DIR / "station-occupancy"
+    if target_root.is_dir():
+        shutil.rmtree(target_root)
+    elif target_root.exists():
+        target_root.unlink()
+    if not source_root.exists():
+        return
+    target_root.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source_root, target_root)
+
+
 def main() -> None:
     if SITE_DIR.exists():
         shutil.rmtree(SITE_DIR)
@@ -655,6 +668,7 @@ def main() -> None:
                 encoding="utf-8",
             )
     copy_management_data_tree()
+    copy_station_occupancy_tree()
 
     station_page_paths = write_station_pages()
     write_sitemap(station_page_paths)

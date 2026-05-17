@@ -30,7 +30,7 @@ from analysis.occupancy_store import DEFAULT_OCCUPANCY_DB_PATH, OccupancyStore  
 from analysis.output_io import publish_staged_directory, write_json  # noqa: E402
 from backend.config import AppConfig, load_env_file  # noqa: E402
 
-DEFAULT_WEB_OUTPUT_DIR = REPO_ROOT / "web" / "data" / "station-occupancy"
+DEFAULT_OUTPUT_DIR = REPO_ROOT / "data" / "station-occupancy"
 HOUR_LABELS = [f"{hour:02d}:00" for hour in range(24)]
 LOCAL_ARCHIVE_ENV_FILE_KEYS = frozenset(
     {
@@ -268,7 +268,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--date", type=_parse_date, default=None, help="End date in YYYY-MM-DD")
     parser.add_argument("--days", type=int, default=DEFAULT_DAYS, help="Trailing days to average")
     parser.add_argument("--db", type=Path, default=DEFAULT_OCCUPANCY_DB_PATH, help="SQLite occupancy analytics DB")
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_WEB_OUTPUT_DIR, help="Output directory for public JSON")
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR, help="Output directory for public JSON")
     parser.add_argument("--scope", choices=["fast", "all"], default="fast", help="Station catalog scope")
     parser.add_argument(
         "--denominator",

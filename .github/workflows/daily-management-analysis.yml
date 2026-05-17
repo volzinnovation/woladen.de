@@ -28,7 +28,7 @@ jobs:
       WOLADEN_LIVE_HF_ARCHIVE_TOKEN_FILE: ${{ github.workspace }}/tmp/hf_private
       OCCUPANCY_DAYS: "7"
       OCCUPANCY_DB: data/occupancy.sqlite3
-      WEB_OCCUPANCY_OUTPUT_DIR: web/data/station-occupancy
+      OCCUPANCY_OUTPUT_DIR: data/station-occupancy
       MIN_OCCUPANCY_UPDATES_PER_DAY: "10"
 
     steps:
@@ -178,14 +178,14 @@ jobs:
           path: data/occupancy.sqlite3
           key: station-occupancy-db-v1-${{ env.OCCUPANCY_DAYS }}-${{ steps.target_date.outputs.target_date }}
 
-      - name: Export web occupancy data
+      - name: Export public occupancy data
         if: steps.berlin_gate.outputs.should_run == 'true'
         run: |
           python analysis/export_station_occupancy_from_db.py \
             --date "$TARGET_DATE" \
             --days "$OCCUPANCY_DAYS" \
             --db "$OCCUPANCY_DB" \
-            --output-dir "$WEB_OCCUPANCY_OUTPUT_DIR" \
+            --output-dir "$OCCUPANCY_OUTPUT_DIR" \
             --min-matching-observations-per-day "$MIN_OCCUPANCY_UPDATES_PER_DAY" \
             --require-complete \
             --quiet
@@ -203,7 +203,7 @@ jobs:
       - name: Commit generated management data
         if: steps.berlin_gate.outputs.should_run == 'true'
         run: |
-          git add data/management web/data/station-occupancy site
+          git add data/management data/station-occupancy site
           if git diff --cached --quiet; then
             echo "No management or occupancy changes"
             exit 0

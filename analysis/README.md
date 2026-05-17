@@ -46,7 +46,7 @@ python analysis/export_station_occupancy_from_db.py \
   --date 2026-04-20 \
   --days 7 \
   --db data/occupancy.sqlite3 \
-  --output-dir web/data/station-occupancy \
+  --output-dir data/station-occupancy \
   --min-matching-observations-per-day 10 \
   --require-complete
 ```
@@ -57,7 +57,7 @@ python scripts/build_site.py
 
 The public chart artifacts are:
 
-- `web/data/station-occupancy/<aa>/<bb>/<cc>/<station_id>.json`: compact chart payload consumed by the app, sharded by the first six alphanumeric station-id characters.
+- `data/station-occupancy/<aa>/<bb>/<cc>/<station_id>.json`: compact chart payload consumed by the app, sharded by the first six alphanumeric station-id characters.
 - `site/data/station-occupancy/`: generated deployment copy after `scripts/build_site.py`.
 
 There is deliberately no public index file. The app derives the station JSON URL from the selected station id in the details view and fetches only that one payload. Stations without enough matching updates per day have no JSON file; the resulting 404 is treated as "no historical occupancy chart available".

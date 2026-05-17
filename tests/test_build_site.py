@@ -43,3 +43,22 @@ def test_public_bundle_value_projects_station_ids_and_urls_only():
         "station_url": "https://woladen.de/?station=DE:47d719c1b62c750&date=2026-05-07",
         "datex_station_ids": ["47d719c1b62c750"],
     }
+
+
+def test_copy_station_occupancy_tree_uses_data_source(tmp_path: Path, monkeypatch):
+    source_file = tmp_path / "data" / "station-occupancy" / "aa" / "bb" / "station.json"
+    source_file.parent.mkdir(parents=True)
+    source_file.write_text('{"ok":true}', encoding="utf-8")
+    stale_file = tmp_path / "site" / "data" / "station-occupancy" / "stale.json"
+    stale_file.parent.mkdir(parents=True)
+    stale_file.write_text("{}", encoding="utf-8")
+
+    monkeypatch.setattr(build_site, "DATA_DIR", tmp_path / "data")
+    monkeypatch.setattr(build_site, "SITE_DATA_DIR", tmp_path / "site" / "data")
+
+    build_site.copy_station_occupancy_tree()
+
+    assert (tmp_path / "site" / "data" / "station-occupancy" / "aa" / "bb" / "station.json").read_text(
+        encoding="utf-8"
+    ) == '{"ok":true}'
+    assert not stale_file.exists()

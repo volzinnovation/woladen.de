@@ -241,7 +241,7 @@ def test_occupancy_store_round_trips_hourly_chart_data(tmp_path: Path):
     chargers_csv_path = tmp_path / "chargers.csv"
     site_match_path = tmp_path / "site_matches.csv"
     archive_dir = tmp_path / "archives"
-    output_dir = tmp_path / "web" / "station-occupancy"
+    output_dir = tmp_path / "data" / "station-occupancy"
     archive_dir.mkdir()
     archive_path = archive_dir / "live-provider-responses-2026-04-15.tgz"
 
