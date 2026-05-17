@@ -20,22 +20,22 @@ test-results/desktop_test.mp4
 test-results/mobile_test.mp4
 output/play-store/
 output/app-store/
-/site
-site/index.html
-/site
-/site/data
-site/data/chargers_fast.geojson
-site/data/operators.json
-site/data/summary.json
-site/app.js
-site/index.html
-site/data/chargers_fast.geojson
-site/data/operators.json
-site/data/summary.json
-site/app.js
+
+# Generated site bundle. Most files are generated, but the station occupancy
+# subtree must stay addable because the daily occupancy workflow publishes it.
+site/
+!/site/
+site/*
+!/site/data/
+site/data/*
+!/site/data/station-occupancy/
+!/site/data/station-occupancy/*.json
 data/live_state.sqlite3
 data/live_state.sqlite3-shm
 data/live_state.sqlite3-wal
+data/occupancy.sqlite3
+data/occupancy.sqlite3-shm
+data/occupancy.sqlite3-wal
 data/live_raw/
 .npm/
 .playwright-cli/

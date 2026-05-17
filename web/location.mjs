@@ -91,6 +91,19 @@ export function requestBrowserLocation(geolocation, options = {}) {
   });
 }
 
+export function shouldAttemptStartupLocation({
+  alreadyRequested = false,
+  hasLocation = false,
+  permissionState = LOCATION_PERMISSION_UNKNOWN,
+  geolocationSupported = true,
+} = {}) {
+  if (alreadyRequested || hasLocation || !geolocationSupported) {
+    return false;
+  }
+  const normalizedPermission = normalizeLocationPermissionState(permissionState);
+  return normalizedPermission === LOCATION_PERMISSION_GRANTED;
+}
+
 export function getLocationLookupViewModel({
   hasLocation = false,
   isRequesting = false,

@@ -84,7 +84,7 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=20260517-location-ratings-fix" />
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -136,7 +136,7 @@
         <!-- LIST VIEW -->
         <div id="view-list" class="view active">
           <div class="view-header" data-nosnippet>
-            <h2>Schnellladesäulen in der Nähe</h2>
+            <h2>Ladepunkte in der Nähe</h2>
             <div class="header-actions">
               <button id="btn-list-filter" class="text-btn">Filter</button>
             </div>
@@ -151,6 +151,15 @@
         <div id="view-favorites" class="view hidden">
           <div class="view-header" data-nosnippet>
             <h2>Favoriten</h2>
+            <div class="header-actions">
+              <label class="sort-control" for="favorites-sort">
+                <span>Sortieren</span>
+                <select id="favorites-sort">
+                  <option value="distance">Entfernung</option>
+                  <option value="rating">Sterne</option>
+                </select>
+              </label>
+            </div>
           </div>
           <div id="favorites-list" class="list-container">
             <div class="empty-state" data-nosnippet>
@@ -168,10 +177,12 @@
             <div class="info-card">
               <h3><span data-nosnippet>Über woladen.de</span></h3>
               <p>
-                Finde Schnellladesäulen mit der besten Aufenthaltsqualität.
-                Woladen zeigt dir die nächstgelegenen Stationen in Deutschland
-                übersichtlich in Liste und Karte und kennt Angebote vor Ort wie
-                Supermarkt, Bäckerei oder Restaurant in der direkten Umgebung.
+                Finde Ladepunkte mit der besten Aufenthaltsqualität. Woladen
+                zeigt dir standardmäßig Schnelllader ab 50 kW und kann über den
+                Leistungsfilter auch Normalladepunkte unter 50 kW einblenden.
+                Dazu siehst du Stationen in Deutschland übersichtlich in Liste
+                und Karte sowie Angebote vor Ort wie Supermarkt, Bäckerei oder
+                Restaurant in der direkten Umgebung.
                 Ohne Ladeweile.
               </p>
               <div id="app-meta" class="meta-block" data-nosnippet></div>
@@ -399,6 +410,16 @@
               />
             </label>
 
+            <label class="filter-switch">
+              <input type="checkbox" id="filter-currently-open" />
+              <span class="filter-switch-body">
+                <span class="filter-switch-title">Jetzt geöffnet</span>
+                <span class="filter-switch-note"
+                  >Nur Stationen mit mindestens einem aktuell geöffneten Angebot</span
+                >
+              </span>
+            </label>
+
             <label class="filter-group">
               <span class="label-text"
                 >Min. Leistung: <span id="filter-power-val">50</span> kW</span
@@ -406,13 +427,16 @@
               <input
                 type="range"
                 id="filter-power"
-                min="50"
+                min="0"
                 max="350"
-                step="50"
+                step="10"
                 value="50"
               />
               <div class="range-labels">
-                <span>50</span><span>150</span><span>300+</span>
+                <span style="--pos: 0%">0</span>
+                <span style="--pos: 14.2857%">50</span>
+                <span style="--pos: 42.8571%">150</span>
+                <span style="--pos: 85.7143%">300+</span>
               </div>
             </label>
 
@@ -452,7 +476,12 @@
 
           <div class="detail-body">
             <div class="detail-header">
-              <h2 id="detail-title">Operator Name</h2>
+              <div class="detail-title-block">
+                <div class="detail-title-line">
+                  <h2 id="detail-title">Operator Name</h2>
+                  <span id="detail-rating-badge" class="rating-badge" hidden></span>
+                </div>
+              </div>
               <button
                 id="btn-toggle-fav"
                 class="fav-btn-round"
@@ -495,6 +524,48 @@
             <p id="detail-address" class="detail-address">
               Musterstraße 1, 12345 Berlin
             </p>
+
+            <div id="detail-live-section" class="details-list-section detail-live-primary" hidden>
+              <div class="detail-section-head">
+                <h3 id="detail-live-title">Live</h3>
+                <span id="detail-live-updated" class="detail-section-chip" hidden></span>
+              </div>
+              <div id="detail-live-list" class="live-evse-list"></div>
+            </div>
+
+            <p id="detail-occupancy-source" class="detail-subnote detail-live-source-note" hidden>
+              Live via MobiData BW
+            </p>
+
+            <div id="detail-rating" class="detail-rating" data-nosnippet>
+              <div class="detail-rating-copy">
+                <span class="detail-rating-label">Bewertung</span>
+                <span id="detail-rating-status" class="detail-rating-status">Noch nicht bewertet</span>
+              </div>
+              <div
+                id="detail-rating-stars"
+                class="rating-stars"
+                role="radiogroup"
+                aria-label="Ladesäule bewerten"
+              >
+                <button type="button" class="rating-star-btn" data-rating="1" role="radio" aria-label="1 Stern" aria-checked="false">★</button>
+                <button type="button" class="rating-star-btn" data-rating="2" role="radio" aria-label="2 Sterne" aria-checked="false">★</button>
+                <button type="button" class="rating-star-btn" data-rating="3" role="radio" aria-label="3 Sterne" aria-checked="false">★</button>
+                <button type="button" class="rating-star-btn" data-rating="4" role="radio" aria-label="4 Sterne" aria-checked="false">★</button>
+                <button type="button" class="rating-star-btn" data-rating="5" role="radio" aria-label="5 Sterne" aria-checked="false">★</button>
+              </div>
+            </div>
+
+            <label class="detail-note" for="detail-note-input" data-nosnippet>
+              <span class="detail-note-label">Persönliche Anmerkung</span>
+              <textarea
+                id="detail-note-input"
+                rows="3"
+                maxlength="600"
+                placeholder="z. B. gut beleuchtet, enger Parkplatz, Bäckerei um die Ecke"
+              ></textarea>
+              <span id="detail-note-status" class="detail-note-status">Nur auf diesem Gerät gespeichert</span>
+            </label>
 
             <div class="detail-actions">
               <a
@@ -569,12 +640,15 @@
               </div>
             </div>
 
-            <div id="detail-live-section" class="details-list-section" hidden>
+            <div id="detail-occupancy-history-section" class="details-list-section" hidden>
               <div class="detail-section-head">
-                <h3 id="detail-live-title">Live</h3>
-                <span id="detail-live-updated" class="detail-section-chip" hidden></span>
+                <h3>Typische Auslastung</h3>
+                <span id="detail-occupancy-history-range" class="detail-section-chip"></span>
               </div>
-              <div id="detail-live-list" class="live-evse-list"></div>
+              <div id="detail-occupancy-history-chart" class="occupancy-history-chart"></div>
+              <p class="detail-subnote compact">
+                Durchschnitt der belegten Ladepunkte je Stunde; unbekannte Zustände zählen nicht als belegt.
+              </p>
             </div>
 
             <div id="detail-details-section" class="details-list-section" hidden>
@@ -584,10 +658,38 @@
                 Details via Mobilithek
               </p>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <p id="detail-occupancy-source" class="detail-subnote detail-bottom-note" hidden>
-              Live via MobiData BW
-            </p>
+      <div id="modal-amenity-detail" class="modal-overlay hidden">
+        <div class="modal-content amenity-detail-sheet" role="dialog" aria-modal="true" aria-labelledby="amenity-sheet-title">
+          <button class="close-btn-float" data-close="modal-amenity-detail" aria-label="Schließen">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          <div class="amenity-sheet-handle" aria-hidden="true"></div>
+          <div class="amenity-sheet-body">
+            <div class="amenity-sheet-heading">
+              <span id="amenity-sheet-category" class="amenity-sheet-category">Angebot vor Ort</span>
+              <h3 id="amenity-sheet-title">Angebot</h3>
+              <span id="amenity-sheet-status" class="amenity-sheet-status unknown">Öffnungszeiten unbekannt</span>
+            </div>
+            <dl class="amenity-sheet-facts">
+              <div>
+                <dt>Öffnungszeiten</dt>
+                <dd id="amenity-sheet-hours">Öffnungszeiten unbekannt</dd>
+              </div>
+            </dl>
           </div>
         </div>
       </div>
@@ -599,6 +701,6 @@
       crossorigin=""
     ></script>
     <script src="./app-install-promo.js"></script>
-    <script src="./app.js" type="module"></script>
+    <script src="./app.js?v=20260517-location-ratings-fix" type="module"></script>
   </body>
 </html>

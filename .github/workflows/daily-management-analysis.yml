@@ -26,6 +26,10 @@ jobs:
       WOLADEN_LIVE_HF_ARCHIVE_REPO_ID: loffenauer/AFIR
       WOLADEN_LIVE_HF_ARCHIVE_PATH_PREFIX: provider-response-archives
       WOLADEN_LIVE_HF_ARCHIVE_TOKEN_FILE: ${{ github.workspace }}/tmp/hf_private
+      OCCUPANCY_DAYS: "7"
+      OCCUPANCY_DB: data/occupancy.sqlite3
+      WEB_OCCUPANCY_OUTPUT_DIR: web/data/station-occupancy
+      MIN_OCCUPANCY_UPDATES_PER_DAY: "10"
 
     steps:
       - name: Gate Berlin 01:00 schedule
@@ -99,6 +103,20 @@ jobs:
           printf '%s' "$HF_PRIVATE" > tmp/hf_private
           chmod 600 tmp/hf_private
 
+      - name: Prepare occupancy DB cache path
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: mkdir -p "$(dirname "$OCCUPANCY_DB")"
+
+      - name: Restore occupancy DB cache
+        id: occupancy_db_cache
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: data/occupancy.sqlite3
+          key: station-occupancy-db-v1-${{ env.OCCUPANCY_DAYS }}-${{ steps.target_date.outputs.target_date }}
+          restore-keys: |
+            station-occupancy-db-v1-${{ env.OCCUPANCY_DAYS }}-
+
       - name: Wait for prior-day archive
         if: steps.berlin_gate.outputs.should_run == 'true' && steps.target_date.outputs.is_default_target == 'true'
         run: |
@@ -141,6 +159,41 @@ jobs:
         if: steps.berlin_gate.outputs.should_run == 'true'
         run: python scripts/generate_management_snapshot.py --date "$TARGET_DATE" --output-root data/management
 
+      - name: Update occupancy analytics database
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: |
+          python analysis/update_occupancy_db_daily.py \
+            --date "$TARGET_DATE" \
+            --days "$OCCUPANCY_DAYS" \
+            --db "$OCCUPANCY_DB" \
+            --require-complete \
+            --retain-days "$OCCUPANCY_DAYS" \
+            --clear-hf-cache \
+            --quiet
+
+      - name: Save occupancy DB cache
+        if: steps.berlin_gate.outputs.should_run == 'true' && steps.occupancy_db_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: data/occupancy.sqlite3
+          key: station-occupancy-db-v1-${{ env.OCCUPANCY_DAYS }}-${{ steps.target_date.outputs.target_date }}
+
+      - name: Export web occupancy data
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: |
+          python analysis/export_station_occupancy_from_db.py \
+            --date "$TARGET_DATE" \
+            --days "$OCCUPANCY_DAYS" \
+            --db "$OCCUPANCY_DB" \
+            --output-dir "$WEB_OCCUPANCY_OUTPUT_DIR" \
+            --min-matching-observations-per-day "$MIN_OCCUPANCY_UPDATES_PER_DAY" \
+            --require-complete \
+            --quiet
+
+      - name: Build static site bundle
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        run: python scripts/build_site.py
+
       - name: Configure git
         if: steps.berlin_gate.outputs.should_run == 'true'
         run: |
@@ -150,9 +203,9 @@ jobs:
       - name: Commit generated management data
         if: steps.berlin_gate.outputs.should_run == 'true'
         run: |
-          git add data/management
+          git add data/management web/data/station-occupancy site
           if git diff --cached --quiet; then
-            echo "No management snapshot changes"
+            echo "No management or occupancy changes"
             exit 0
           fi
           git commit -m "chore(management): refresh AFIR daily snapshot"

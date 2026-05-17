@@ -7,6 +7,7 @@ import {
   getLocationLookupViewModel,
   mapGeolocationError,
   requestBrowserLocation,
+  shouldAttemptStartupLocation,
 } from "./location.mjs";
 
 test("browser location lookup resolves coordinates from geolocation", async () => {
@@ -63,4 +64,14 @@ test("missing location access shows the denied-permission message", () => {
   assert.equal(error.code, LOCATION_ERROR_PERMISSION_DENIED);
   assert.equal(viewModel.title, "Standortfreigabe benötigt");
   assert.match(viewModel.message, /Aktiviere den Standortzugriff/);
+});
+
+test("startup location request only runs after permission is already granted", () => {
+  assert.equal(shouldAttemptStartupLocation({ permissionState: "prompt" }), false);
+  assert.equal(shouldAttemptStartupLocation({ permissionState: "unknown" }), false);
+  assert.equal(shouldAttemptStartupLocation({ permissionState: "granted" }), true);
+  assert.equal(shouldAttemptStartupLocation({ permissionState: "denied" }), false);
+  assert.equal(shouldAttemptStartupLocation({ geolocationSupported: false }), false);
+  assert.equal(shouldAttemptStartupLocation({ alreadyRequested: true }), false);
+  assert.equal(shouldAttemptStartupLocation({ hasLocation: true }), false);
 });

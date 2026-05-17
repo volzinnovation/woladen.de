@@ -46,7 +46,40 @@ test("active filter count includes amenity-name query", () => {
     minPower: 150,
     amenities: new Set(["amenity_restaurant", "amenity_toilets"]),
     amenityNameQuery: "McDonald",
+    currentlyOpenOnly: true,
   };
 
-  assert.equal(countActiveFilters(filters), 5);
+  assert.equal(countActiveFilters(filters), 6);
+});
+
+test("feature matcher filters for stations with a currently open amenity", () => {
+  const feature = {
+    properties: {
+      max_power_kw: 150,
+      amenity_examples: [
+        { name: "Closed shop", opening_hours: "Mo-Fr 08:00-12:00" },
+        { name: "Open cafe", opening_hours: "Mo-Su 08:00-20:00" },
+      ],
+    },
+  };
+  const filters = {
+    minPower: 50,
+    amenities: new Set(),
+    amenityNameQuery: "",
+    currentlyOpenOnly: true,
+  };
+
+  assert.equal(
+    matchesFeatureFilters(feature, filters, { now: new Date("2026-01-10T10:00:00Z") }),
+    true,
+  );
+  assert.equal(
+    matchesFeatureFilters(feature, filters, { now: new Date("2026-01-10T20:00:00Z") }),
+    false,
+  );
+});
+
+test("active filter count treats under-50 kW as an explicit filter change", () => {
+  assert.equal(countActiveFilters({ minPower: 50, amenities: new Set() }), 0);
+  assert.equal(countActiveFilters({ minPower: 0, amenities: new Set() }), 1);
 });

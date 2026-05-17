@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import fcntl
 import gzip
 import hashlib
 import io
@@ -18,6 +17,11 @@ from .config import AppConfig
 from .models import FetchResponse
 from .receipt_queue import ReceiptQueue
 
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - Windows fallback
+    fcntl = None
+
 ARCHIVE_NAME_RE = re.compile(r"live-provider-responses-(\d{4}-\d{2}-\d{2})\.tgz$")
 JOURNAL_REFERENCE_RE = re.compile(r"^journal:(?P<path>.+)#(?P<offset>\d+):(?P<length>\d+)$")
 JOURNAL_FILENAME = "records.jsonl"
@@ -29,6 +33,16 @@ def _utc_now() -> datetime:
 
 def _utc_now_iso() -> str:
     return _utc_now().replace(microsecond=0).isoformat()
+
+
+def _lock_file(handle: io.BufferedRandom) -> None:
+    if fcntl is not None:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+
+
+def _unlock_file(handle: io.BufferedRandom) -> None:
+    if fcntl is not None:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def _parse_iso_datetime(value: str | None) -> datetime | None:
@@ -171,7 +185,7 @@ class ResponseLogWriter:
         journal_path = self._journal_path(provider_uid, archive_date)
         record_bytes = (json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n").encode("utf-8")
         with journal_path.open("a+b") as handle:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            _lock_file(handle)
             try:
                 handle.seek(0, os.SEEK_END)
                 offset = handle.tell()
@@ -179,7 +193,7 @@ class ResponseLogWriter:
                 handle.flush()
                 os.fsync(handle.fileno())
             finally:
-                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                _unlock_file(handle)
         return f"journal:{journal_path}#{offset}:{len(record_bytes)}"
 
     def _write_json(self, target_path: Path, payload: dict[str, Any]) -> None:
@@ -425,7 +439,7 @@ class DailyResponseArchiver:
             for path in sorted(archive_dir.glob("*.json")):
                 if path.is_file():
                     yield ArchiveSourceRecord(
-                        arcname=str(path.relative_to(root_dir)),
+                        arcname=path.relative_to(root_dir).as_posix(),
                         provider_uid=provider_dir.name,
                         path=path,
                         byte_length=path.stat().st_size,
@@ -433,7 +447,7 @@ class DailyResponseArchiver:
             journal_path = archive_dir / JOURNAL_FILENAME
             if journal_path.is_file():
                 yield ArchiveSourceRecord(
-                    arcname=str(journal_path.relative_to(root_dir)),
+                    arcname=journal_path.relative_to(root_dir).as_posix(),
                     provider_uid=provider_dir.name,
                     path=journal_path,
                     byte_length=journal_path.stat().st_size,

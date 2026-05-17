@@ -27,6 +27,10 @@ def test_station_query_url_projects_internal_station_ids_to_public_namespace():
     assert build_site.station_query_url("47d719c1b62c750") == "/?station=DE:47d719c1b62c750"
 
 
+def test_station_page_path_uses_cross_platform_namespace_directory():
+    assert build_site.station_page_path("DE:47d719c1b62c750") == "station/DE/47d719c1b62c750.html"
+
+
 def test_public_bundle_value_projects_station_ids_and_urls_only():
     payload = {
         "station_id": "47d719c1b62c750",

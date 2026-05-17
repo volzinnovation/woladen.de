@@ -1,6 +1,12 @@
 import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs";
 import {
+  formatOpeningHoursForGermanDisplay,
+  getAmenityOpenStatus,
+} from "./opening-hours.mjs";
+import {
   LOCATION_ERROR_PERMISSION_DENIED,
+  LOCATION_ERROR_POSITION_UNAVAILABLE,
+  LOCATION_ERROR_TIMEOUT,
   LOCATION_PERMISSION_DENIED,
   LOCATION_PERMISSION_GRANTED,
   LOCATION_PERMISSION_UNKNOWN,
@@ -17,6 +23,21 @@ import {
   normalizeLiveApiBaseUrl,
   resolveLiveApiBaseUrl as computeLiveApiBaseUrl,
 } from "./live-api.mjs";
+import {
+  formatRatingCount,
+  formatRatingValue,
+  getUserRating,
+  normalizeRatingSummary,
+  normalizeRating,
+  parseStoredRatings,
+  serializeStoredRatings,
+} from "./rating.mjs";
+import {
+  getUserNote,
+  normalizeNote,
+  parseStoredNotes,
+  serializeStoredNotes,
+} from "./note.mjs";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -24,13 +45,28 @@ import {
 
 /* --- CONFIGURATION & CONSTANTS --- */
 const MAX_DISPLAY_POWER_KW = 400;
+const DEFAULT_MIN_POWER_KW = 50;
+const RATINGS_STORAGE_KEY = "woladen_ratings_v1";
+const RATING_CLIENT_STORAGE_KEY = "woladen_rating_client_v1";
+const NOTES_STORAGE_KEY = "woladen_notes_v1";
+const SHARED_RATINGS_ENABLED = window.WOLADEN_ENABLE_SHARED_RATINGS === true ||
+  window.WOLADEN_ENABLE_SHARED_RATINGS === "true";
+const RATING_SUMMARY_REFRESH_MS = 60000;
+const RATING_API_TIMEOUT_MS = 3500;
 const LIST_VIEW_MAX_STATIONS = 20;
+const FAVORITE_SORT_DISTANCE = "distance";
+const FAVORITE_SORT_RATING = "rating";
 const LIVE_SUMMARY_REFRESH_MS = 15000;
 const LIVE_API_TIMEOUT_MS = 3500;
 const LIVE_DETAIL_TIMEOUT_MS = 4000;
 const STATION_ID_NAMESPACE = "DE:";
 const LEGACY_STATION_ID_RE = /^[0-9a-f]{16}$/i;
 const NAMESPACED_STATION_ID_RE = /^DE:([0-9a-f]{16})$/i;
+const OCCUPANCY_HISTORY_INDEX_PATH = "./data/station-occupancy/index.json";
+const FALLBACK_OCCUPANCY_HISTORY_FILES = new Map([
+  ["2d6cff515ceed554", "./data/station-occupancy/2d6cff515ceed554.json"],
+  [`${STATION_ID_NAMESPACE}2d6cff515ceed554`, "./data/station-occupancy/2d6cff515ceed554.json"],
+]);
 const LIVE_STATION_FIELDS = [
   "availability_status",
   "available_evses",
@@ -101,6 +137,35 @@ const AMENITY_MAPPING = {
   shop_electronics: { label: "Elektronik", icon: "shop_electronics.png" },
 };
 
+const AMENITY_GROUPS = [
+  {
+    label: "Essen & Trinken",
+    categories: ["restaurant", "cafe", "fast_food", "ice_cream", "bakery"],
+  },
+  {
+    label: "Einkaufsmöglichkeiten",
+    categories: ["supermarket", "convenience", "pharmacy"],
+  },
+  {
+    label: "Freizeit & Natur",
+    categories: ["museum", "playground", "park"],
+  },
+  {
+    label: "Unterkunft",
+    categories: ["hotel"],
+  },
+  {
+    label: "Sonstiges",
+    categories: [],
+  },
+];
+
+const AMENITY_GROUP_BY_CATEGORY = new Map(
+  AMENITY_GROUPS.flatMap((group) =>
+    group.categories.map((category) => [category, group.label]),
+  ),
+);
+
 // Fallback for missing icons or just generic usage
 function getAmenityIconPath(key) {
   const config = AMENITY_MAPPING[key];
@@ -114,6 +179,48 @@ function formatAmenityCount(count) {
   const numeric = Number(count || 0);
   const rounded = Number.isFinite(numeric) ? Math.round(numeric) : 0;
   return `${rounded} ${rounded === 1 ? "Angebot vor Ort" : "Angebote vor Ort"}`;
+}
+
+function getAmenityGroupLabel(category) {
+  return AMENITY_GROUP_BY_CATEGORY.get(category || "") || "Sonstiges";
+}
+function getAmenityDistance(item) {
+  const distance = Number(item?.distance_m);
+  return Number.isFinite(distance) ? distance : Number.POSITIVE_INFINITY;
+}
+function compareAmenityExamples(a, b) {
+  const distanceDiff = getAmenityDistance(a) - getAmenityDistance(b);
+  if (distanceDiff !== 0) return distanceDiff;
+  const categoryDiff = String(a?.category || "").localeCompare(String(b?.category || ""));
+  if (categoryDiff !== 0) return categoryDiff;
+  return String(a?.name || "").localeCompare(String(b?.name || ""));
+}
+function formatAmenityOpenStatus(item, date = new Date()) {
+  const status = getAmenityOpenStatus(item, date).state;
+  if (status === "open") {
+    return { label: "Jetzt geöffnet", className: "open" };
+  }
+  if (status === "closed") {
+    return { label: "Geschlossen", className: "closed" };
+  }
+  return { label: "Öffnungszeiten unbekannt", className: "unknown" };
+}
+function formatAmenityDistance(item) {
+  const distance = Number(item?.distance_m);
+  if (!Number.isFinite(distance)) return "";
+  return `${Math.round(distance)} m`;
+}
+function openAmenityDetailSheet(item, categoryLabel, now = new Date()) {
+  const name = item.name || categoryLabel || "Angebot vor Ort";
+  const openStatus = formatAmenityOpenStatus(item, now);
+  const openingHoursText = formatOpeningHoursForGermanDisplay(item.opening_hours);
+
+  els.amenitySheet.category.textContent = categoryLabel || "Angebot vor Ort";
+  els.amenitySheet.title.textContent = name;
+  els.amenitySheet.status.textContent = openStatus.label;
+  els.amenitySheet.status.className = `amenity-sheet-status ${openStatus.className}`;
+  els.amenitySheet.hours.textContent = openingHoursText || "Öffnungszeiten unbekannt";
+  openModal("amenityDetail");
 }
 
 function resolveLiveApiBaseUrl() {
@@ -147,6 +254,11 @@ function hasLiveStationSummary(props) {
     props.live_source_observed_at || props.live_fetched_at || props.live_ingested_at || "",
   ).trim();
   return Boolean(fetchedAt) || (Number.isFinite(total) && total > 0);
+}
+
+function hasAggregateOccupancySummary(props) {
+  const counts = getAvailabilityCounts(props);
+  return Number.isFinite(counts.total) && counts.total > 0;
 }
 
 function getAvailabilityCounts(props) {
@@ -238,6 +350,47 @@ function formatOccupancySummary(props) {
     parts.push(`${Math.round(unknown)} unbekannt`);
   }
   return parts.length ? parts.join(", ") : "Belegung unbekannt";
+}
+
+function getOccupancyObservedAt(props) {
+  if (hasLiveStationSummary(props)) {
+    return props.live_source_observed_at || props.live_fetched_at || props.live_ingested_at || "";
+  }
+  return props.occupancy_last_updated || "";
+}
+
+function buildAggregateLiveEvses(props) {
+  const counts = getAvailabilityCounts(props);
+  const liveTotal = Math.max(0, Math.round(Number(counts.total || 0)));
+  if (!Number.isFinite(liveTotal) || liveTotal <= 0) {
+    return [];
+  }
+
+  const available = Math.max(0, Math.round(Number(counts.available || 0)));
+  const occupied = Math.max(0, Math.round(Number(counts.occupied || 0)));
+  const outOfOrder = Math.max(0, Math.round(Number(counts.outOfOrder || 0)));
+  const explicitUnknown = Math.max(0, Math.round(Number(counts.unknown || 0)));
+  const knownWithoutUnknown = available + occupied + outOfOrder;
+  const observedUnknown = Math.max(explicitUnknown, liveTotal - knownWithoutUnknown);
+  const observedTotal = knownWithoutUnknown + observedUnknown;
+  const staticTotal = Math.max(0, Math.round(Number(props.charging_points_count || 0)));
+  const displayTotal = Math.max(liveTotal, observedTotal, staticTotal);
+  const staticMissing = Math.max(0, displayTotal - observedTotal);
+  const observedAt = getOccupancyObservedAt(props);
+
+  return [
+    ["free", available, ""],
+    ["occupied", occupied, ""],
+    ["out_of_order", outOfOrder, ""],
+    ["unknown", observedUnknown, ""],
+    ["unknown", staticMissing, "Nicht im Live-Feed enthalten"],
+  ].flatMap(([availabilityStatus, count, statusNote]) =>
+    Array.from({ length: Math.max(0, Number(count || 0)) }, () => ({
+      availability_status: availabilityStatus,
+      source_observed_at: statusNote ? "" : observedAt,
+      status_note: statusNote,
+    })),
+  ).slice(0, displayTotal);
 }
 
 function formatProviderLabel(value) {
@@ -564,6 +717,15 @@ const state = {
   features: [], // All charger features
   filtered: [], // Currently filtered features
   favorites: new Set(), // Set of station_ids
+  ratings: new Map(), // station_id -> 1-5 rating stored locally
+  notes: new Map(), // station_id -> personal note stored locally
+  favoriteSort: FAVORITE_SORT_DISTANCE,
+  ratingClientId: "",
+  ratingSummariesByStationId: new Map(),
+  ratingSummaryFetchedAtByStationId: new Map(),
+  pendingRatingSummaryStationIds: new Set(),
+  pendingRatingSubmissions: new Set(),
+  ratingSubmissionErrors: new Map(),
   userPos: null, // { lat, lon }
   startupLocationRequested: false,
   location: {
@@ -573,9 +735,10 @@ const state = {
   },
   filters: {
     operator: "",
-    minPower: 50,
+    minPower: DEFAULT_MIN_POWER_KW,
     amenities: new Set(),
     amenityNameQuery: "",
+    currentlyOpenOnly: false,
   },
   live: {
     baseUrl: LIVE_API_BASE_URL,
@@ -584,6 +747,17 @@ const state = {
     pendingSummaryStationIds: new Set(),
     detailByStationId: new Map(),
     reachable: false,
+  },
+  occupancyHistory: {
+    byStationId: new Map(),
+    pendingStationIds: new Set(),
+    indexByStationId: null,
+    indexPromise: null,
+  },
+  under50: {
+    loaded: false,
+    loadingPromise: null,
+    error: null,
   },
   views: {
     map: null, // Leaflet map instance
@@ -609,16 +783,21 @@ const els = {
   modals: {
     filter: document.getElementById("modal-filter"),
     detail: document.getElementById("modal-detail"),
+    amenityDetail: document.getElementById("modal-amenity-detail"),
   },
   lists: {
     chargers: document.getElementById("charger-list"),
     favorites: document.getElementById("favorites-list"),
+  },
+  favorites: {
+    sort: document.getElementById("favorites-sort"),
   },
   filter: {
     trigger: document.getElementById("filter-trigger"),
     label: document.getElementById("filter-label"),
     operator: document.getElementById("filter-operator"),
     amenityName: document.getElementById("filter-amenity-name"),
+    currentlyOpen: document.getElementById("filter-currently-open"),
     power: document.getElementById("filter-power"),
     powerVal: document.getElementById("filter-power-val"),
     amenities: document.getElementById("filter-amenities"),
@@ -638,6 +817,11 @@ const els = {
     price: document.getElementById("detail-price"),
     hoursChip: document.getElementById("detail-hours-chip"),
     hours: document.getElementById("detail-hours"),
+    ratingBadge: document.getElementById("detail-rating-badge"),
+    ratingStatus: document.getElementById("detail-rating-status"),
+    ratingStars: document.getElementById("detail-rating-stars"),
+    noteInput: document.getElementById("detail-note-input"),
+    noteStatus: document.getElementById("detail-note-status"),
     amenityTitle: document.getElementById("detail-amenities-title"),
     amenityList: document.getElementById("detail-amenities-list"),
     detailsSection: document.getElementById("detail-details-section"),
@@ -647,16 +831,26 @@ const els = {
     liveTitle: document.getElementById("detail-live-title"),
     liveUpdated: document.getElementById("detail-live-updated"),
     liveList: document.getElementById("detail-live-list"),
+    occupancyHistorySection: document.getElementById("detail-occupancy-history-section"),
+    occupancyHistoryRange: document.getElementById("detail-occupancy-history-range"),
+    occupancyHistoryChart: document.getElementById("detail-occupancy-history-chart"),
     favBtn: document.getElementById("btn-toggle-fav"),
     googleBtn: document.getElementById("btn-nav-google"),
     appleBtn: document.getElementById("btn-nav-apple"),
     helpdeskPhoneBtn: document.getElementById("btn-helpdesk-phone"),
     mapContainer: document.getElementById("detail-map"),
   },
+  amenitySheet: {
+    category: document.getElementById("amenity-sheet-category"),
+    title: document.getElementById("amenity-sheet-title"),
+    status: document.getElementById("amenity-sheet-status"),
+    hours: document.getElementById("amenity-sheet-hours"),
+  },
   buttons: {
     locate: document.getElementById("btn-locate"),
     closeFilter: document.querySelector('[data-close="modal-filter"]'),
     closeDetail: document.querySelector('[data-close="modal-detail"]'),
+    closeAmenityDetail: document.querySelector('[data-close="modal-amenity-detail"]'),
   },
   meta: document.getElementById("app-meta"),
 };
@@ -666,6 +860,8 @@ const VIEW_IDS = new Set(["view-list", "view-map", "view-favorites", "view-info"
 /* --- INITIALIZATION --- */
 async function init() {
   loadFavorites();
+  loadRatings();
+  loadNotes();
   initMap();
   initNavigation();
   syncViewWithRequestedHash();
@@ -681,16 +877,19 @@ async function init() {
 
   els.buttons.closeFilter.addEventListener("click", () => closeModal("filter"));
   els.buttons.closeDetail.addEventListener("click", () => closeModal("detail"));
+  els.buttons.closeAmenityDetail.addEventListener("click", () => closeModal("amenityDetail"));
 
   // Close modals on backdrop click
-  Object.values(els.modals).forEach((modal) => {
+  Object.entries(els.modals).forEach(([name, modal]) => {
     modal.addEventListener("click", (e) => {
-      if (e.target === modal)
-        closeModal(modal.id === "modal-filter" ? "filter" : "detail");
+      if (e.target === modal) closeModal(name);
     });
   });
 
   els.detail.favBtn.addEventListener("click", toggleDetailFavorite);
+  els.detail.ratingStars.addEventListener("click", handleRatingClick);
+  els.detail.noteInput.addEventListener("input", handleDetailNoteInput);
+  els.favorites.sort.addEventListener("change", handleFavoriteSortChange);
 
   // Load Data
   await loadData();
@@ -699,26 +898,27 @@ async function init() {
 /* --- DATA LOADING --- */
 async function loadData() {
   try {
-    const [geoRes, opRes, summaryRes] = await Promise.all([
+    const [fastGeoRes, summaryRes] = await Promise.all([
       fetch("./data/chargers_fast.geojson"),
-      fetch("./data/operators.json"),
       fetch("./data/summary.json"),
     ]);
 
-    if (!geoRes.ok || !opRes.ok || !summaryRes.ok) throw new Error("Network response was not ok");
+    if (!fastGeoRes.ok || !summaryRes.ok) throw new Error("Network response was not ok");
 
-    const geoData = await geoRes.json();
-    const opData = await opRes.json();
+    const fastGeoData = await fastGeoRes.json();
     const summaryData = await summaryRes.json();
 
-    state.features = geoData.features || [];
+    state.features = (fastGeoData.features || []).map((feature) =>
+      prepareChargerFeature(feature, "fast"),
+    );
 
     // Sort features initially just to have a defined order, strictly standard
     // Real sorting happens when we have location
 
-    populateOperators(opData);
-    setAppMeta(geoData, summaryData);
+    populateOperators();
+    setAppMeta(fastGeoData, summaryData);
     renderAmenityFilters(); // Render dynamic amenity filters
+    await loadStaticRatingSummaries(summaryData);
     await syncLocationPermissionState();
 
     applyFilters(); // Initial render
@@ -730,6 +930,75 @@ async function loadData() {
   } catch (err) {
     console.error("Failed to load data", err);
     els.lists.chargers.innerHTML = `<div class="empty-state">Fehler beim Laden der Daten.<br>${err.message}</div>`;
+  }
+}
+
+async function loadStaticRatingSummaries(summaryData) {
+  const hasStaticRatings = Boolean(
+    summaryData?.ratings?.available ||
+    Number(summaryData?.records?.station_ratings_total || 0) > 0
+  );
+  if (!hasStaticRatings) {
+    return;
+  }
+
+  try {
+    const response = await fetch("./data/station_ratings.json");
+    if (!response.ok) {
+      return;
+    }
+    const payload = await response.json();
+    const ratings = Array.isArray(payload?.ratings) ? payload.ratings : [];
+    upsertRatingSummaries(ratings);
+  } catch (err) {
+    console.warn("Failed to load static station ratings", err);
+  }
+}
+
+function prepareChargerFeature(feature, powerClass) {
+  const prepared = feature || {};
+  prepared.properties = {
+    ...(prepared.properties || {}),
+    charger_power_class: powerClass,
+  };
+  return prepared;
+}
+
+function shouldIncludeUnder50Features() {
+  return Number(state.filters.minPower ?? DEFAULT_MIN_POWER_KW) < DEFAULT_MIN_POWER_KW;
+}
+
+async function ensureUnder50FeaturesLoaded() {
+  if (state.under50.loaded) {
+    return;
+  }
+  if (state.under50.loadingPromise) {
+    return state.under50.loadingPromise;
+  }
+
+  state.under50.error = null;
+  state.under50.loadingPromise = (async () => {
+    const response = await fetch("./data/chargers_under_50.geojson");
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const geoData = await response.json();
+    const under50Features = (geoData.features || []).map((feature) =>
+      prepareChargerFeature(feature, "normal"),
+    );
+    state.features.push(...under50Features);
+    state.under50.loaded = true;
+    populateOperators();
+    renderAmenityFilters();
+  })();
+
+  try {
+    await state.under50.loadingPromise;
+  } catch (err) {
+    state.under50.error = err;
+    console.error("Failed to load under-50 kW charger data", err);
+  } finally {
+    state.under50.loadingPromise = null;
   }
 }
 
@@ -800,7 +1069,10 @@ function requestLiveSummariesForFeatures(features) {
   }
 
   const stationIds = Array.from(new Set(
-    features.map((feature) => getStationIdFromProps(feature.properties)).filter(Boolean),
+    features
+      .filter((feature) => shouldRequestLiveDataForProps(feature?.properties))
+      .map((feature) => getStationIdFromProps(feature.properties))
+      .filter(Boolean),
   ));
   if (stationIds.length === 0) {
     return;
@@ -852,6 +1124,87 @@ function requestLiveSummariesForFeatures(features) {
   })();
 }
 
+function upsertRatingSummaries(summaries, missingStationIds = []) {
+  summaries.forEach((summary) => {
+    const normalized = normalizeRatingSummary(summary);
+    if (!normalized) {
+      return;
+    }
+    const stationId = normalized.station_id;
+    state.ratingSummariesByStationId.set(stationId, normalized);
+    state.ratingSummaryFetchedAtByStationId.set(stationId, Date.now());
+  });
+
+  missingStationIds.forEach((stationId) => {
+    const id = String(stationId || "").trim();
+    if (!id) {
+      return;
+    }
+    state.ratingSummariesByStationId.delete(id);
+    state.ratingSummaryFetchedAtByStationId.set(id, Date.now());
+  });
+}
+
+function requestRatingSummariesForFeatures(features) {
+  if (!SHARED_RATINGS_ENABLED || !state.live.baseUrl) {
+    return;
+  }
+
+  const stationIds = Array.from(new Set(
+    features
+      .map((feature) => getStationIdFromProps(feature?.properties))
+      .filter(Boolean),
+  ));
+  if (stationIds.length === 0) {
+    return;
+  }
+
+  const now = Date.now();
+  const pendingIds = stationIds.filter((stationId) => {
+    if (state.pendingRatingSummaryStationIds.has(stationId)) {
+      return false;
+    }
+    const fetchedAt = state.ratingSummaryFetchedAtByStationId.get(stationId) || 0;
+    return !fetchedAt || now - fetchedAt >= RATING_SUMMARY_REFRESH_MS;
+  });
+
+  if (pendingIds.length === 0) {
+    return;
+  }
+
+  pendingIds.forEach((stationId) => {
+    state.pendingRatingSummaryStationIds.add(stationId);
+  });
+
+  void (async () => {
+    try {
+      const payload = await fetchJsonWithTimeout(
+        buildLiveApiUrl("/v1/ratings/lookup"),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ station_ids: pendingIds }),
+        },
+        RATING_API_TIMEOUT_MS,
+      );
+      if (!payload || typeof payload !== "object" || !Array.isArray(payload.ratings)) {
+        throw new Error("Unexpected rating lookup payload");
+      }
+      state.live.reachable = true;
+      upsertRatingSummaries(payload.ratings, payload.missing_station_ids || []);
+      refreshRenderedViews();
+    } catch (err) {
+      console.error("Failed to load station ratings", err);
+    } finally {
+      pendingIds.forEach((stationId) => {
+        state.pendingRatingSummaryStationIds.delete(stationId);
+      });
+    }
+  })();
+}
+
 function refreshRenderedViews() {
   if (els.views.list.classList.contains("active")) {
     renderList();
@@ -871,6 +1224,13 @@ function hasResolvedUserLocation() {
     Number.isFinite(Number(state.userPos.lat)) &&
     Number.isFinite(Number(state.userPos.lon))
   );
+}
+
+function shouldAttemptStartupLocation() {
+  if (state.startupLocationRequested || hasResolvedUserLocation() || !navigator.geolocation) {
+    return false;
+  }
+  return normalizeLocationPermissionState(state.location.permissionState) === LOCATION_PERMISSION_GRANTED;
 }
 
 function updateLocationState(patch = {}) {
@@ -930,6 +1290,10 @@ async function loadLiveStationDetail(stationId) {
   if (!state.live.baseUrl || !stationId) {
     return null;
   }
+  const feature = findFeatureByStationId(stationId);
+  if (feature && !shouldRequestLiveDataForProps(feature.properties)) {
+    return null;
+  }
   if (state.live.detailByStationId.has(stationId)) {
     return state.live.detailByStationId.get(stationId);
   }
@@ -947,7 +1311,6 @@ async function loadLiveStationDetail(stationId) {
     }
     state.live.reachable = true;
     state.live.detailByStationId.set(stationId, payload);
-    const feature = findFeatureByStationId(stationId);
     if (feature && payload.station) {
       applyLiveStationSummaryToProps(feature.properties, payload.station);
       state.live.summaryByStationId.set(stationId, payload.station);
@@ -978,22 +1341,39 @@ function setAppMeta(geoData, summaryData) {
       hour: "2-digit",
       minute: "2-digit",
     });
-    els.meta.textContent = `Datenstand: ${date}`;
+    const fastTotal = Number(summaryData?.records?.fast_chargers_total || 0);
+    const under50Total = Number(summaryData?.records?.chargers_under_50_total || 0);
+    const countSuffix = fastTotal && under50Total
+      ? ` · ${fastTotal.toLocaleString("de-DE")} Schnelllader · ${under50Total.toLocaleString("de-DE")} unter 50 kW`
+      : "";
+    els.meta.textContent = `Datenstand: ${date}${countSuffix}`;
   }
 }
 
-function populateOperators(opData) {
-  const operators = opData.operators
-    .filter((o) => o.stations >= 100) // Only major ones
-    .map((o) => o.name)
+function populateOperators() {
+  const selectedOperator = state.filters.operator;
+  const operatorCounts = new Map();
+  state.features.forEach((feature) => {
+    const name = String(feature?.properties?.operator || "").trim();
+    if (!name) return;
+    operatorCounts.set(name, (operatorCounts.get(name) || 0) + 1);
+  });
+
+  const operators = Array.from(operatorCounts.entries())
+    .filter(([, stations]) => stations >= 100) // Only major ones
+    .map(([name]) => name)
     .sort();
 
+  els.filter.operator.querySelectorAll("option:not([value=''])").forEach((option) => {
+    option.remove();
+  });
   operators.forEach((op) => {
     const opt = document.createElement("option");
     opt.value = op;
     opt.textContent = op;
     els.filter.operator.appendChild(opt);
   });
+  els.filter.operator.value = selectedOperator;
 }
 
 /* --- MAP LOGIC --- */
@@ -1159,6 +1539,12 @@ function initFilters() {
     updateFilters();
   });
 
+  // Currently open offers
+  els.filter.currentlyOpen.addEventListener("change", (e) => {
+    state.filters.currentlyOpenOnly = e.target.checked;
+    updateFilters();
+  });
+
   // Power
   els.filter.power.addEventListener("input", (e) => {
     state.filters.minPower = Number(e.target.value);
@@ -1217,17 +1603,95 @@ function renderAmenityFilters() {
 }
 
 function updateFilters() {
-  applyFilters();
+  if (shouldIncludeUnder50Features() && !state.under50.loaded) {
+    if (els.views.list.classList.contains("active")) {
+      els.lists.chargers.innerHTML = `<div class="loading-state" data-nosnippet>Lade Normalladepunkte...</div>`;
+    }
+    void ensureUnder50FeaturesLoaded().then(() => {
+      applyFilters();
+      updateFilterLabel();
+    });
+    updateFilterLabel();
+    return;
+  }
 
+  applyFilters();
+  updateFilterLabel();
+}
+
+function updateFilterLabel() {
   const filterCount = countActiveFilters(state.filters);
 
   els.filter.label.textContent =
     filterCount > 0 ? `Filter (${filterCount})` : "Alle Filter";
 }
 
+function getRatingForProps(props) {
+  return getUserRating(state.ratings, getStationIdFromProps(props));
+}
+
+function getNoteForProps(props) {
+  return getUserNote(state.notes, getStationIdFromProps(props));
+}
+
+function getRatingSummaryForProps(props) {
+  const stationId = getStationIdFromProps(props);
+  if (!stationId) {
+    return null;
+  }
+  return state.ratingSummariesByStationId.get(stationId) || null;
+}
+
+function getRatingDisplayForProps(props) {
+  const summary = getRatingSummaryForProps(props);
+  if (summary) {
+    return {
+      value: summary.average_rating,
+      title: `Durchschnitt aus ${formatRatingCount(summary.rating_count)}`,
+      count: summary.rating_count,
+      localOnly: false,
+    };
+  }
+
+  const userRating = getRatingForProps(props);
+  if (userRating > 0) {
+    return {
+      value: userRating,
+      title: "Deine lokale Bewertung",
+      count: 0,
+      localOnly: true,
+    };
+  }
+  return null;
+}
+
+function renderRatingBadge(displayRating) {
+  if (!displayRating) {
+    return "";
+  }
+  const value = formatRatingValue(displayRating.value);
+  if (!value) {
+    return "";
+  }
+  return `<span class="rating-badge" title="${escapeHtml(displayRating.title)}"><span aria-hidden="true">★</span>${escapeHtml(value)}</span>`;
+}
+
+function updateRatingDependentViews() {
+  if (els.views.list.classList.contains("active")) {
+    renderList();
+  }
+  if (els.views.favorites.classList.contains("active")) {
+    renderFavorites();
+  }
+  if (currentDetailFeature && !els.modals.detail.classList.contains("hidden")) {
+    updateDetailRating(currentDetailFeature.properties);
+  }
+}
+
 function applyFilters() {
+  const now = new Date();
   state.filtered = state.features.filter((feature) =>
-    matchesFeatureFilters(feature, state.filters, { getDisplayedMaxPowerKw }),
+    matchesFeatureFilters(feature, state.filters, { getDisplayedMaxPowerKw, now }),
   );
 
   // Re-sort if we have location
@@ -1241,6 +1705,9 @@ function applyFilters() {
   // If list is active, re-render it
   if (els.views.list.classList.contains("active")) {
     renderList();
+  }
+  if (els.views.favorites.classList.contains("active")) {
+    renderFavorites();
   }
 }
 
@@ -1268,6 +1735,7 @@ function renderList() {
     container.appendChild(card);
   });
   requestLiveSummariesForFeatures(displayItems);
+  requestRatingSummariesForFeatures(displayItems);
 
   if (state.filtered.length > LIST_VIEW_MAX_STATIONS) {
     const more = document.createElement("div");
@@ -1291,23 +1759,31 @@ function renderFavorites() {
     return;
   }
 
+  const hasMissingFavorite = Array.from(state.favorites).some((stationId) =>
+    !findFeatureByStationId(stationId),
+  );
+  if (hasMissingFavorite && !state.under50.loaded && !state.under50.error) {
+    container.innerHTML = `<div class="loading-state" data-nosnippet>Lade Favoriten...</div>`;
+    void ensureUnder50FeaturesLoaded().then(renderFavorites);
+    return;
+  }
+
   // Find feature objects for favorites
   const favFeatures = state.features.filter((f) =>
     state.favorites.has(f.properties.station_id),
   );
 
-  if (state.userPos) {
-    favFeatures.sort((a, b) => getDistance(a) - getDistance(b));
-  }
+  favFeatures.sort(compareFavoriteFeatures);
 
   favFeatures.forEach((feature) => {
-    const card = createStationCard(feature);
+    const card = createStationCard(feature, { showNote: true });
     container.appendChild(card);
   });
   requestLiveSummariesForFeatures(favFeatures);
+  requestRatingSummariesForFeatures(favFeatures);
 }
 
-function createStationCard(feature) {
+function createStationCard(feature, options = {}) {
   const p = feature.properties;
   const div = document.createElement("div");
   div.className = "station-card";
@@ -1337,6 +1813,15 @@ function createStationCard(feature) {
   const amenityLine = amenityBadges
     ? `<div class="card-badge-line card-badge-line-amenities">${amenityBadges}</div>`
     : "";
+  const ratingBadge = renderRatingBadge(getRatingDisplayForProps(p));
+  const metrics = `${ratingBadge}${distance ? `<span class="card-distance">${distance}</span>` : ""}`;
+  const metricsMarkup = metrics
+    ? `<div class="card-metrics">${metrics}</div>`
+    : "";
+  const note = options.showNote ? getNoteForProps(p) : "";
+  const noteMarkup = note
+    ? `<div class="card-note"><span class="card-note-label">Anmerkung</span><p>${escapeHtml(note)}</p></div>`
+    : "";
 
   const markerColor = getMarkerColor(p);
   
@@ -1346,19 +1831,68 @@ function createStationCard(feature) {
         <span class="amenity-dot" style="background-color: ${markerColor}"></span>
         <h3 class="card-title">${escapeHtml(p.operator || "Unbekannt")}</h3>
       </div>
-      ${distance ? `<span class="card-distance">${distance}</span>` : ""}
+      ${metricsMarkup}
     </div>
     <div class="card-meta">
       ${escapeHtml(p.city || "")}<br>
-      ${Math.round(getDisplayedMaxPowerKw(p))} kW max • ${getChargingPointCount(p)} Ladepunkte • ${formatAmenityCount(p.amenities_total)}
+      ${Math.round(getDisplayedMaxPowerKw(p))} kW max • ${formatChargingPointCount(p)} • ${formatAmenityCount(p.amenities_total)}
     </div>
     <div class="card-badges">
       ${dynamicLine}${amenityLine}
     </div>
+    ${noteMarkup}
   `;
 
   div.addEventListener("click", () => openDetail(feature));
   return div;
+}
+
+function compareFavoriteFeatures(a, b) {
+  if (state.favoriteSort === FAVORITE_SORT_RATING) {
+    return compareFavoriteFeaturesByRating(a, b);
+  }
+
+  return compareFavoriteFeaturesByDistance(a, b);
+}
+
+function compareFavoriteFeaturesByRating(a, b) {
+  const ratingDiff = getFavoriteSortRating(b.properties) - getFavoriteSortRating(a.properties);
+  if (ratingDiff !== 0) {
+    return ratingDiff;
+  }
+  return compareFavoriteFeaturesByName(a, b);
+}
+
+function compareFavoriteFeaturesByDistance(a, b) {
+  if (state.userPos) {
+    const distanceDiff = getDistance(a) - getDistance(b);
+    if (distanceDiff !== 0) {
+      return distanceDiff;
+    }
+  }
+  return compareFavoriteFeaturesByName(a, b);
+}
+
+function compareFavoriteFeaturesByName(a, b) {
+  const leftName = String(a.properties?.operator || "");
+  const rightName = String(b.properties?.operator || "");
+  const nameDiff = leftName.localeCompare(rightName, "de");
+  if (nameDiff !== 0) {
+    return nameDiff;
+  }
+  const leftId = getStationIdFromProps(a.properties);
+  const rightId = getStationIdFromProps(b.properties);
+  return leftId.localeCompare(rightId);
+}
+
+function getFavoriteSortRating(props) {
+  const userRating = getRatingForProps(props);
+  if (userRating > 0) {
+    return userRating;
+  }
+  const displayRating = getRatingDisplayForProps(props);
+  const rating = Number(displayRating?.value || 0);
+  return Number.isFinite(rating) ? rating : 0;
 }
 
 function getDisplayedMaxPowerKw(props) {
@@ -1369,6 +1903,10 @@ function getDisplayedMaxPowerKw(props) {
   return sanitizeDisplayedPowerKw(props.max_power_kw);
 }
 
+function shouldRequestLiveDataForProps(props) {
+  return getDisplayedMaxPowerKw(props) >= DEFAULT_MIN_POWER_KW;
+}
+
 function getChargingPointCount(props) {
   const count = Number(props.charging_points_count || 0);
   if (Number.isFinite(count) && count > 0) {
@@ -1377,13 +1915,19 @@ function getChargingPointCount(props) {
   return 1;
 }
 
+function formatChargingPointCount(props) {
+  const count = getChargingPointCount(props);
+  return `${count} ${count === 1 ? "Ladepunkt" : "Ladepunkte"}`;
+}
+
 /* --- DETAIL MODAL --- */
 let currentDetailFeature = null;
 
 function renderDetailLiveState(feature, liveDetail = null) {
   const props = feature.properties;
-  const evses = Array.isArray(liveDetail?.evses) ? liveDetail.evses : [];
-  const hasLiveData = hasLiveStationSummary(props) || evses.length > 0;
+  const liveEvses = Array.isArray(liveDetail?.evses) ? liveDetail.evses : [];
+  const evses = liveEvses.length > 0 ? liveEvses : buildAggregateLiveEvses(props);
+  const hasLiveData = hasLiveStationSummary(props) || hasAggregateOccupancySummary(props) || evses.length > 0;
   if (!hasLiveData) {
     els.detail.liveSection.hidden = true;
     els.detail.liveTitle.textContent = "Live";
@@ -1431,6 +1975,10 @@ function renderDetailLiveState(feature, liveDetail = null) {
     if (observedText) {
       metaParts.push(`Stand ${observedText}`);
     }
+    const statusNote = String(evse.status_note || "").trim();
+    if (statusNote) {
+      metaParts.push(statusNote);
+    }
     const priceDisplay = String(evse.price_display || "").trim();
     const dynamicNotes = buildLiveDynamicNotes(evse);
     const notesMarkup = dynamicNotes.length
@@ -1463,9 +2011,287 @@ function renderDetailLiveState(feature, liveDetail = null) {
   els.detail.liveSection.hidden = false;
 }
 
+function formatHistoryDate(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const parsed = new Date(`${raw}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return raw;
+  return new Intl.DateTimeFormat("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(parsed);
+}
+
+function formatOccupancyHistoryRange(history) {
+  const start = formatHistoryDate(history?.start_date);
+  const end = formatHistoryDate(history?.end_date);
+  const days = Number(history?.included_days || 0);
+  const dayLabel = days > 0 ? `${days} Tage` : "";
+  if (start && end && start !== end) {
+    return dayLabel ? `${start} - ${end} · ${dayLabel}` : `${start} - ${end}`;
+  }
+  return end || start || dayLabel;
+}
+
+function normalizeOccupancyHistory(history) {
+  const values = history?.hourly_average_occupied;
+  if (!values || typeof values !== "object") return null;
+  const hourly = Array.from({ length: 24 }, (_, hour) => {
+    const key = `${String(hour).padStart(2, "0")}:00`;
+    const value = Number(values[key]);
+    return {
+      hour,
+      key,
+      value: Number.isFinite(value) && value > 0 ? value : 0,
+    };
+  });
+  return { ...history, hourly };
+}
+
+function occupancyHistoryLookupKeys(stationId) {
+  const raw = String(stationId || "").trim();
+  const normalized = normalizeStationId(raw);
+  return [
+    raw,
+    normalized,
+    normalized ? `${STATION_ID_NAMESPACE}${normalized}` : "",
+  ].filter(Boolean);
+}
+
+function normalizeOccupancyHistoryIndex(payload) {
+  const files = new Map(FALLBACK_OCCUPANCY_HISTORY_FILES);
+  const stations = payload?.stations;
+  if (stations && typeof stations === "object" && !Array.isArray(stations)) {
+    Object.entries(stations).forEach(([stationId, path]) => {
+      const pathText = String(path || "").trim();
+      if (!pathText) return;
+      occupancyHistoryLookupKeys(stationId).forEach((key) => {
+        files.set(key, pathText);
+      });
+    });
+  } else if (Array.isArray(stations)) {
+    stations.forEach((station) => {
+      const stationId = String(station?.station_id || station?.id || "").trim();
+      const pathText = String(station?.path || station?.href || "").trim();
+      if (!stationId || !pathText) return;
+      occupancyHistoryLookupKeys(stationId).forEach((key) => {
+        files.set(key, pathText);
+      });
+    });
+  }
+  return files;
+}
+
+function occupancyHistoryUrl(path) {
+  const pathText = String(path || "").trim();
+  if (!pathText) return null;
+  if (/^(https?:)?\/\//i.test(pathText) || pathText.startsWith("./") || pathText.startsWith("../") || pathText.startsWith("/")) {
+    return new URL(pathText, import.meta.url);
+  }
+  return new URL(`./data/station-occupancy/${pathText}`, import.meta.url);
+}
+
+function loadOccupancyHistoryIndex() {
+  if (state.occupancyHistory.indexByStationId) {
+    return Promise.resolve(state.occupancyHistory.indexByStationId);
+  }
+  if (!state.occupancyHistory.indexPromise) {
+    const indexUrl = new URL(OCCUPANCY_HISTORY_INDEX_PATH, import.meta.url);
+    state.occupancyHistory.indexPromise = fetch(indexUrl)
+      .then((response) => {
+        if (response.status === 404) {
+          return null;
+        }
+        if (!response.ok) {
+          throw new Error(`Unexpected occupancy history index response ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((payload) => payload ? normalizeOccupancyHistoryIndex(payload) : new Map(FALLBACK_OCCUPANCY_HISTORY_FILES))
+      .catch((err) => {
+        console.warn("Failed to load occupancy history index", err);
+        return new Map(FALLBACK_OCCUPANCY_HISTORY_FILES);
+      })
+      .then((index) => {
+        state.occupancyHistory.indexByStationId = index;
+        return index;
+      });
+  }
+  return state.occupancyHistory.indexPromise;
+}
+
+function getOccupancyHistoryPath(index, stationId) {
+  for (const key of occupancyHistoryLookupKeys(stationId)) {
+    const path = index.get(key);
+    if (path) return path;
+  }
+  return "";
+}
+
+function renderOccupancyHistoryChart(history, feature) {
+  const normalized = normalizeOccupancyHistory(history);
+  if (!normalized) return false;
+  const maxObserved = Math.max(...normalized.hourly.map((item) => item.value), 0);
+  const scale = Math.max(maxObserved, getChargingPointCount(feature.properties), 1);
+  const bars = normalized.hourly.map((item) => {
+    const percent = Math.max(0, Math.min(100, (item.value / scale) * 100));
+    const visiblePercent = item.value > 0 ? Math.max(percent, 3) : 0;
+    const hourLabel = `${String(item.hour).padStart(2, "0")} Uhr`;
+    return `
+      <div class="occupancy-history-hour" title="${escapeHtml(hourLabel)}: ${item.value.toFixed(1)} belegt">
+        <div class="occupancy-history-track" aria-hidden="true">
+          <div class="occupancy-history-bar" style="height: ${visiblePercent.toFixed(1)}%"></div>
+        </div>
+        <span>${String(item.hour).padStart(2, "0")}</span>
+      </div>
+    `;
+  }).join("");
+
+  els.detail.occupancyHistoryRange.textContent = formatOccupancyHistoryRange(normalized);
+  els.detail.occupancyHistoryChart.innerHTML = `
+    <div class="occupancy-history-bars" role="img" aria-label="Typische Auslastung nach Uhrzeit">
+      ${bars}
+    </div>
+  `;
+  els.detail.occupancyHistorySection.hidden = false;
+  return true;
+}
+
+function loadDetailOccupancyHistoryFile(stationId, feature, historyPath) {
+  const cached = state.occupancyHistory.byStationId.get(stationId);
+  if (cached) {
+    renderOccupancyHistoryChart(cached, feature);
+    return;
+  }
+
+  if (state.occupancyHistory.pendingStationIds.has(stationId)) {
+    return;
+  }
+
+  state.occupancyHistory.pendingStationIds.add(stationId);
+  const historyUrl = occupancyHistoryUrl(historyPath);
+  if (!historyUrl) {
+    state.occupancyHistory.pendingStationIds.delete(stationId);
+    return;
+  }
+  fetch(historyUrl)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Unexpected occupancy history response ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((history) => {
+      state.occupancyHistory.byStationId.set(stationId, history);
+      const currentStationId = currentDetailFeature
+        ? getStationIdFromProps(currentDetailFeature.properties)
+        : "";
+      if (currentStationId === stationId) {
+        renderOccupancyHistoryChart(history, currentDetailFeature);
+      }
+    })
+    .catch((err) => {
+      console.error(`Failed to load occupancy history for station ${stationId}`, err);
+    })
+    .finally(() => {
+      state.occupancyHistory.pendingStationIds.delete(stationId);
+    });
+}
+
+function renderDetailOccupancyHistory(feature) {
+  const stationId = getStationIdFromProps(feature.properties);
+  els.detail.occupancyHistorySection.hidden = true;
+  els.detail.occupancyHistoryRange.textContent = "";
+  els.detail.occupancyHistoryChart.innerHTML = "";
+
+  const cached = state.occupancyHistory.byStationId.get(stationId);
+  if (cached) {
+    renderOccupancyHistoryChart(cached, feature);
+    return;
+  }
+
+  const loadedIndex = state.occupancyHistory.indexByStationId;
+  if (loadedIndex) {
+    const historyPath = getOccupancyHistoryPath(loadedIndex, stationId);
+    if (historyPath) {
+      loadDetailOccupancyHistoryFile(stationId, feature, historyPath);
+    }
+    return;
+  }
+
+  loadOccupancyHistoryIndex().then((index) => {
+    const currentStationId = currentDetailFeature
+      ? getStationIdFromProps(currentDetailFeature.properties)
+      : "";
+    if (currentStationId !== stationId) return;
+    const historyPath = getOccupancyHistoryPath(index, stationId);
+    if (historyPath) {
+      loadDetailOccupancyHistoryFile(stationId, currentDetailFeature, historyPath);
+    }
+  });
+}
+
+function updateDetailRating(props) {
+  const stationId = getStationIdFromProps(props);
+  const rating = getRatingForProps(props);
+  const summary = getRatingSummaryForProps(props);
+  const displayRating = getRatingDisplayForProps(props);
+  const ratingValue = formatRatingValue(displayRating?.value);
+
+  if (ratingValue) {
+    els.detail.ratingBadge.innerHTML = `<span aria-hidden="true">★</span>${escapeHtml(ratingValue)}`;
+    els.detail.ratingBadge.hidden = false;
+  } else {
+    els.detail.ratingBadge.textContent = "";
+    els.detail.ratingBadge.hidden = true;
+  }
+
+  const summaryText = summary
+    ? `Ø ${formatRatingValue(summary.average_rating)} aus ${formatRatingCount(summary.rating_count)}`
+    : "";
+  const userText = rating > 0 ? `Deine Bewertung: ${rating} von 5` : "";
+  const isSubmitting = stationId && state.pendingRatingSubmissions.has(stationId);
+  const submissionError = stationId ? state.ratingSubmissionErrors.get(stationId) : "";
+
+  if (isSubmitting) {
+    els.detail.ratingStatus.textContent = "Speichere Bewertung...";
+  } else if (submissionError) {
+    els.detail.ratingStatus.textContent = "Bewertung lokal gespeichert. Server gerade nicht erreichbar.";
+  } else if (userText && summaryText) {
+    els.detail.ratingStatus.textContent = `${userText} · ${summaryText}`;
+  } else if (userText) {
+    els.detail.ratingStatus.textContent = SHARED_RATINGS_ENABLED && state.live.baseUrl
+      ? userText
+      : `${userText} · nur auf diesem Gerät`;
+  } else if (summaryText) {
+    els.detail.ratingStatus.textContent = summaryText;
+  } else {
+    els.detail.ratingStatus.textContent = "Noch nicht bewertet";
+  }
+
+  els.detail.ratingStars.querySelectorAll(".rating-star-btn").forEach((button) => {
+    const buttonRating = normalizeRating(button.dataset.rating);
+    const isActive = rating > 0 && buttonRating <= rating;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-checked", buttonRating === rating ? "true" : "false");
+    button.disabled = Boolean(isSubmitting);
+  });
+}
+
+function updateDetailNote(props) {
+  const stationId = getStationIdFromProps(props);
+  const note = getNoteForProps(props);
+  els.detail.noteInput.value = note;
+  els.detail.noteInput.disabled = !stationId;
+  els.detail.noteStatus.textContent = note
+    ? "Anmerkung lokal gespeichert"
+    : "Nur auf diesem Gerät gespeichert";
+}
+
 function populateDetailContent(feature, liveDetail = null) {
   const p = feature.properties;
-  const powerDisplay = `${Math.round(getDisplayedMaxPowerKw(p))} kW max / ${getChargingPointCount(p)} Ladepunkte`;
+  const powerDisplay = `${Math.round(getDisplayedMaxPowerKw(p))} kW max / ${formatChargingPointCount(p)}`;
 
   els.detail.title.textContent = p.operator || "Unbekannt";
   els.detail.address.textContent = `${p.address || ""}, ${p.postcode || ""} ${p.city || ""}`;
@@ -1485,7 +2311,7 @@ function populateDetailContent(feature, liveDetail = null) {
   }
 
   const priceDisplay = getDisplayPrice(p, liveDetail);
-  const openingHoursDisplay = String(p.opening_hours_display || "").trim();
+  const openingHoursDisplay = formatOpeningHoursForGermanDisplay(p.opening_hours_display);
   const showPower = Boolean(powerDisplay);
   const showOccupancy = Boolean(occupancySummary);
   const showPrice = Boolean(priceDisplay);
@@ -1497,13 +2323,16 @@ function populateDetailContent(feature, liveDetail = null) {
   els.detail.hours.textContent = openingHoursDisplay;
   els.detail.amenityTitle.textContent = formatAmenityCount(p.amenities_total);
 
+  updateDetailRating(p);
+  updateDetailNote(p);
   renderDetailAmenities(p);
   renderDetailStaticInfo(p);
   renderDetailLiveState(feature, liveDetail);
+  renderDetailOccupancyHistory(feature);
 
   if (occupancySource) {
     els.detail.occupancySource.textContent = occupancySource;
-    els.detail.occupancySource.hidden = !els.detail.liveSection.hidden;
+    els.detail.occupancySource.hidden = false;
   } else {
     els.detail.occupancySource.textContent = "";
     els.detail.occupancySource.hidden = true;
@@ -1594,6 +2423,7 @@ function openDetail(feature, options = {}) {
   const stationId = getStationIdFromProps(p);
   if (stationId) {
     void loadLiveStationDetail(stationId);
+    requestRatingSummariesForFeatures([feature]);
   }
 }
 
@@ -1647,37 +2477,51 @@ function renderDetailAmenities(props) {
     return;
   }
 
+  const now = new Date();
+  const groupedExamples = new Map(AMENITY_GROUPS.map((group) => [group.label, []]));
   examples.slice(0, 15).forEach((item) => {
-    // item: { category, name, opening_hours, distance_m, lat, lon }
-    const catConfig = AMENITY_MAPPING[`amenity_${item.category}`] || {
-      label: item.category || "Angebot vor Ort",
-    };
-    const iconPath = getAmenityIconPath(`amenity_${item.category}`);
-
-    // Helper to format text
-    const name = item.name || catConfig.label;
-    const meta = [
-      item.distance_m ? `~${Math.round(item.distance_m)}m` : null,
-      item.opening_hours,
-    ]
-      .filter(Boolean)
-      .join(" • ");
-
-    const div = document.createElement("div");
-    div.className = "amenity-item";
-
-    let iconHtml = iconPath
-      ? `<img src="${iconPath}" alt="${catConfig.label}">`
-      : `<div style="width:24px;height:24px;background:#eee;border-radius:4px"></div>`;
-
-    div.innerHTML = `
-      ${iconHtml}
+    const groupLabel = getAmenityGroupLabel(item?.category);
+    groupedExamples.get(groupLabel).push(item);
+  });
+  AMENITY_GROUPS.forEach((group) => {
+    const groupItems = groupedExamples.get(group.label).sort(compareAmenityExamples);
+    if (groupItems.length === 0) return;
+    const groupElement = document.createElement("div");
+    groupElement.className = "amenity-group";
+    const title = document.createElement("h4");
+    title.className = "amenity-group-title";
+    title.textContent = group.label;
+    groupElement.appendChild(title);
+    const itemsElement = document.createElement("div");
+    itemsElement.className = "amenity-group-items";
+    groupItems.forEach((item) => {
+      const catConfig = AMENITY_MAPPING[`amenity_${item.category}`] || {
+        label: item.category || "Angebot vor Ort",
+      };
+      const iconPath = getAmenityIconPath(`amenity_${item.category}`);
+      const name = item.name || catConfig.label;
+      const openStatus = formatAmenityOpenStatus(item, now);
+      const distance = formatAmenityDistance(item);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "amenity-item";
+      button.addEventListener("click", () => openAmenityDetailSheet(item, catConfig.label, now));
+      button.innerHTML = `
+      ${iconPath
+        ? `<img src="${iconPath}" alt="${escapeHtml(catConfig.label)}" loading="lazy">`
+        : `<span class="amenity-item-icon-fallback" aria-hidden="true"></span>`}
       <div class="amenity-detail">
         <span class="amenity-detail-name">${escapeHtml(name)}</span>
-        <span class="amenity-detail-meta">${escapeHtml(meta)}</span>
+        <span class="amenity-detail-meta ${openStatus.className}">${escapeHtml(openStatus.label)}</span>
       </div>
+      <span class="amenity-item-spacer"></span>
+      ${distance ? `<span class="amenity-distance">${escapeHtml(distance)}</span>` : ""}
+      <span class="amenity-chevron" aria-hidden="true"></span>
     `;
-    els.detail.amenityList.appendChild(div);
+      itemsElement.appendChild(button);
+    });
+    groupElement.appendChild(itemsElement);
+    els.detail.amenityList.appendChild(groupElement);
   });
 }
 
@@ -1748,6 +2592,92 @@ function updateFavBtnState() {
   }
 }
 
+async function handleRatingClick(event) {
+  const button = event.target.closest(".rating-star-btn");
+  if (!button || !currentDetailFeature) {
+    return;
+  }
+  const rating = normalizeRating(button.dataset.rating);
+  const stationId = getStationIdFromProps(currentDetailFeature.properties);
+  if (!stationId || rating <= 0) {
+    return;
+  }
+
+  state.ratings.set(stationId, rating);
+  state.ratingSubmissionErrors.delete(stationId);
+  saveRatings();
+  updateRatingDependentViews();
+
+  if (!SHARED_RATINGS_ENABLED || !state.live.baseUrl) {
+    return;
+  }
+
+  state.pendingRatingSubmissions.add(stationId);
+  updateRatingDependentViews();
+
+  try {
+    const payload = await fetchJsonWithTimeout(
+      buildLiveApiUrl("/v1/ratings"),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          station_id: stationId,
+          rating,
+          client_id: getOrCreateRatingClientId(),
+        }),
+      },
+      RATING_API_TIMEOUT_MS,
+    );
+    const summary = normalizeRatingSummary(payload?.rating);
+    if (!summary) {
+      throw new Error("Unexpected rating submission payload");
+    }
+    state.live.reachable = true;
+    upsertRatingSummaries([summary]);
+  } catch (err) {
+    state.ratingSubmissionErrors.set(stationId, String(err?.message || err || "Fehler"));
+    console.error(`Failed to submit rating for station ${stationId}`, err);
+  } finally {
+    state.pendingRatingSubmissions.delete(stationId);
+    updateRatingDependentViews();
+  }
+}
+
+function handleDetailNoteInput(event) {
+  if (!currentDetailFeature) {
+    return;
+  }
+  const stationId = getStationIdFromProps(currentDetailFeature.properties);
+  if (!stationId) {
+    return;
+  }
+
+  const note = normalizeNote(event.target.value);
+  if (note) {
+    state.notes.set(stationId, note);
+    els.detail.noteStatus.textContent = "Anmerkung lokal gespeichert";
+  } else {
+    state.notes.delete(stationId);
+    els.detail.noteStatus.textContent = "Nur auf diesem Gerät gespeichert";
+  }
+  saveNotes();
+
+  if (els.views.favorites.classList.contains("active")) {
+    renderFavorites();
+  }
+}
+
+function handleFavoriteSortChange(event) {
+  state.favoriteSort = event.target.value === FAVORITE_SORT_RATING
+    ? FAVORITE_SORT_RATING
+    : FAVORITE_SORT_DISTANCE;
+  els.favorites.sort.value = state.favoriteSort;
+  renderFavorites();
+}
+
 /* --- UTILS --- */
 function escapeHtml(str) {
   if (!str) return "";
@@ -1771,11 +2701,22 @@ function getStationPagePath(props) {
   if (!stationId) {
     return "./";
   }
-  return `./station/${encodeStationIdValue(stationId)}.html`;
+  return `./station/${encodeStationPageId(stationId)}.html`;
 }
 
 function encodeStationIdValue(value) {
   return encodeURIComponent(String(value || "").trim()).replace(/%3A/gi, ":");
+}
+
+function encodeStationPageId(value) {
+  const stationId = normalizeStationId(value);
+  const separatorIndex = stationId.indexOf(":");
+  if (separatorIndex > 0) {
+    const namespace = stationId.slice(0, separatorIndex);
+    const localId = stationId.slice(separatorIndex + 1);
+    return `${encodeURIComponent(namespace)}/${encodeURIComponent(localId)}`;
+  }
+  return encodeURIComponent(stationId);
 }
 
 function normalizeStationId(value) {
@@ -1838,6 +2779,10 @@ function syncDetailModalWithUrl() {
 
   const feature = findFeatureByStationId(stationId);
   if (!feature) {
+    if (!state.under50.loaded && !state.under50.error) {
+      void ensureUnder50FeaturesLoaded().then(syncDetailModalWithUrl);
+      return;
+    }
     console.warn("Unknown station requested", stationId);
     return;
   }
@@ -1875,10 +2820,7 @@ function getDistanceFormatted(feature) {
 }
 
 async function queueStartupLocationRequest() {
-  if (state.startupLocationRequested || state.userPos || !navigator.geolocation) {
-    return;
-  }
-  if (state.location.permissionState !== LOCATION_PERMISSION_GRANTED) {
+  if (!shouldAttemptStartupLocation()) {
     return;
   }
 
@@ -1977,10 +2919,23 @@ async function requestUserLocation(silent = false) {
   });
 
   try {
-    const position = await requestBrowserLocation(navigator.geolocation, {
-      enableHighAccuracy: true,
-      timeout: 5000,
-    });
+    let position;
+    try {
+      position = await requestBrowserLocation(navigator.geolocation, {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 60000,
+      });
+    } catch (err) {
+      if (![LOCATION_ERROR_POSITION_UNAVAILABLE, LOCATION_ERROR_TIMEOUT].includes(err?.code)) {
+        throw err;
+      }
+      position = await requestBrowserLocation(navigator.geolocation, {
+        enableHighAccuracy: false,
+        timeout: 20000,
+        maximumAge: 300000,
+      });
+    }
 
     state.userPos = {
       lat: position.lat,
@@ -1998,7 +2953,9 @@ async function requestUserLocation(silent = false) {
       state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
     }
   } catch (err) {
-    console.warn("Location error", err);
+    if (!silentMode) {
+      console.warn("Location error", err);
+    }
     updateLocationState({
       permissionState: err.code === LOCATION_ERROR_PERMISSION_DENIED
         ? LOCATION_PERMISSION_DENIED
@@ -2022,6 +2979,78 @@ function loadFavorites() {
     }
   } catch (e) {
     console.error("Error loading favorites", e);
+  }
+}
+
+function loadRatings() {
+  try {
+    state.ratings = parseStoredRatings(localStorage.getItem(RATINGS_STORAGE_KEY));
+  } catch (e) {
+    console.error("Error loading ratings", e);
+    state.ratings = new Map();
+  }
+}
+
+function loadNotes() {
+  try {
+    state.notes = parseStoredNotes(localStorage.getItem(NOTES_STORAGE_KEY));
+  } catch (e) {
+    console.error("Error loading notes", e);
+    state.notes = new Map();
+  }
+}
+
+function createRatingClientId() {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  if (window.crypto?.getRandomValues) {
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 18)}`;
+}
+
+function getOrCreateRatingClientId() {
+  const current = String(state.ratingClientId || "").trim();
+  if (current.length >= 16) {
+    return current;
+  }
+
+  try {
+    const stored = String(localStorage.getItem(RATING_CLIENT_STORAGE_KEY) || "").trim();
+    if (stored.length >= 16) {
+      state.ratingClientId = stored;
+      return stored;
+    }
+  } catch (e) {
+    console.error("Error loading rating client id", e);
+  }
+
+  const created = createRatingClientId();
+  state.ratingClientId = created;
+  try {
+    localStorage.setItem(RATING_CLIENT_STORAGE_KEY, created);
+  } catch (e) {
+    console.error("Error saving rating client id", e);
+  }
+  return created;
+}
+
+function saveRatings() {
+  try {
+    localStorage.setItem(RATINGS_STORAGE_KEY, serializeStoredRatings(state.ratings));
+  } catch (e) {
+    console.error("Error saving ratings", e);
+  }
+}
+
+function saveNotes() {
+  try {
+    localStorage.setItem(NOTES_STORAGE_KEY, serializeStoredNotes(state.notes));
+  } catch (e) {
+    console.error("Error saving notes", e);
   }
 }
 

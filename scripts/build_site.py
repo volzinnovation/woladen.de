@@ -6,6 +6,7 @@ from __future__ import annotations
 import html
 import json
 import math
+import re
 import shutil
 from pathlib import Path
 from urllib.parse import parse_qsl, quote, urlsplit, urlunsplit
@@ -28,7 +29,9 @@ STATION_ID_NAMESPACE = "DE:"
 
 REQUIRED_DATA = [
     "chargers_fast.geojson",
+    "chargers_under_50.geojson",
     "operators.json",
+    "station_ratings.json",
     "summary.json",
 ]
 
@@ -55,9 +58,143 @@ AMENITY_LABELS = {
     "toilets": "Toiletten",
 }
 
+AMENITY_GROUPS = (
+    ("Essen & Trinken", ("restaurant", "cafe", "fast_food", "ice_cream", "bakery")),
+    ("Einkaufsmöglichkeiten", ("supermarket", "convenience", "pharmacy")),
+    ("Freizeit & Natur", ("museum", "playground", "park")),
+    ("Unterkunft", ("hotel",)),
+    ("Sonstiges", ()),
+)
+AMENITY_GROUP_BY_CATEGORY = {
+    category: label
+    for label, categories in AMENITY_GROUPS
+    for category in categories
+}
+
 
 def format_text(value: object) -> str:
     return html.escape(str(value or "").strip())
+
+
+def format_opening_hours_display(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    day_keys = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+    replacements = {
+        "Mo": "Mo",
+        "Tu": "Di",
+        "We": "Mi",
+        "Th": "Do",
+        "Fr": "Fr",
+        "Sa": "Sa",
+        "Su": "So",
+    }
+    holiday_states: set[str] = set()
+    fallback_clauses: list[str] = []
+    day_clauses_by_body: dict[str, set[str]] = {}
+    day_token = r"(?:Mo|Tu|We|Th|Fr|Sa|Su|PH)"
+    day_selector_re = re.compile(
+        rf"^({day_token}(?:\s*-\s*(?:Mo|Tu|We|Th|Fr|Sa|Su))?(?:\s*,\s*{day_token}(?:\s*-\s*(?:Mo|Tu|We|Th|Fr|Sa|Su))?)*)\s+(.+)$"
+    )
+
+    def expand_day_range(start: str, end: str) -> list[str]:
+        if start not in day_keys or end not in day_keys:
+            return []
+        days: list[str] = []
+        start_index = day_keys.index(start)
+        end_index = day_keys.index(end)
+        for offset in range(len(day_keys)):
+            index = (start_index + offset) % len(day_keys)
+            days.append(day_keys[index])
+            if index == end_index:
+                break
+        return days
+
+    def parse_day_selector(selector: str) -> tuple[set[str], bool]:
+        selected_days: set[str] = set()
+        matches_public_holiday = False
+        for part in selector.split(","):
+            token = part.strip()
+            if not token:
+                continue
+            if token == "PH":
+                matches_public_holiday = True
+                continue
+            range_match = re.match(r"^([A-Z][a-z])\s*-\s*([A-Z][a-z])$", token)
+            if range_match:
+                selected_days.update(expand_day_range(range_match.group(1), range_match.group(2)))
+            elif token in day_keys:
+                selected_days.add(token)
+        return selected_days, matches_public_holiday
+
+    def first_day_index(days: set[str]) -> int:
+        indexes = [index for index, day in enumerate(day_keys) if day in days]
+        return min(indexes) if indexes else len(day_keys)
+
+    def format_days(days: set[str]) -> str:
+        ordered = [day for day in day_keys if day in days]
+        ranges: list[str] = []
+        index = 0
+        while index < len(ordered):
+            start = ordered[index]
+            end = start
+            while index + 1 < len(ordered) and day_keys.index(ordered[index + 1]) == day_keys.index(end) + 1:
+                index += 1
+                end = ordered[index]
+            if start == end:
+                ranges.append(replacements[start])
+            else:
+                ranges.append(f"{replacements[start]}-{replacements[end]}")
+            index += 1
+        return ", ".join(ranges)
+
+    def format_clause(clause: str) -> str:
+        clause = re.sub(r"\b(\d{1,2}:\d{2})\s*-\s*\d{1,2}:\d{2}\+", r"ab \1", clause.strip())
+        clause = re.sub(r"\b(\d{1,2}:\d{2})\+", r"ab \1", clause)
+        formatted = re.sub(
+            r"\b(Mo|Tu|We|Th|Fr|Sa|Su)\b",
+            lambda match: replacements[match.group(1)],
+            clause,
+        )
+        formatted = re.sub(r"\boff\b", "geschlossen", formatted, flags=re.IGNORECASE)
+        formatted = re.sub(r"\bclosed\b", "geschlossen", formatted, flags=re.IGNORECASE)
+        formatted = re.sub(r"\bopen\b", "geöffnet", formatted, flags=re.IGNORECASE)
+        return re.sub(r",\s*", ", ", formatted)
+
+    for clause in text.split(";"):
+        trimmed = clause.strip()
+        match = day_selector_re.match(trimmed)
+        if not match:
+            formatted = format_clause(trimmed)
+            if formatted:
+                fallback_clauses.append(formatted)
+            continue
+
+        body = match.group(2).strip()
+        is_closed_clause = re.match(r"^(?:off|closed)$", body, flags=re.IGNORECASE) is not None
+        selected_days, matches_public_holiday = parse_day_selector(match.group(1))
+        if matches_public_holiday and not is_closed_clause:
+            holiday_states.add("open")
+        if not selected_days or is_closed_clause:
+            continue
+
+        body_display = format_clause(body)
+        day_clauses_by_body.setdefault(body_display, set()).update(selected_days)
+
+    clauses = [
+        f"{format_days(days)} {body_display}"
+        for body_display, days in sorted(
+            day_clauses_by_body.items(),
+            key=lambda item: first_day_index(item[1]),
+        )
+    ]
+    clauses.extend(clause for clause in fallback_clauses if clause)
+
+    if "open" in holiday_states:
+        clauses.append("an Feiertagen geöffnet")
+
+    return "; ".join(clauses)
 
 
 def format_power_kw(value: object) -> str:
@@ -145,7 +282,11 @@ def public_bundle_value(value: object, key: str = "") -> object:
 
 
 def station_page_path(station_id: str) -> str:
-    return f"station/{quote(public_station_id(station_id), safe=':')}.html"
+    public_id = public_station_id(station_id)
+    if ":" in public_id:
+        namespace, local_id = public_id.split(":", 1)
+        return f"station/{quote(namespace, safe='')}/{quote(local_id, safe='')}.html"
+    return f"station/{quote(public_id, safe='')}.html"
 
 
 def station_query_url(station_id: str) -> str:
@@ -174,31 +315,66 @@ def amenity_summary(properties: dict[str, object]) -> list[str]:
     return [label for _, label in counts[:6]]
 
 
+def amenity_group_label(category: str) -> str:
+    return AMENITY_GROUP_BY_CATEGORY.get(category, "Sonstiges")
+
+
+def amenity_example_sort_key(example: dict[str, object]) -> tuple[float, str, str]:
+    distance = example.get("distance_m")
+    try:
+        distance_value = float(distance)
+    except (TypeError, ValueError):
+        distance_value = math.inf
+    category = str(example.get("category") or "")
+    name = str(example.get("name") or "").lower()
+    return distance_value, category, name
+
+
+def render_amenity_example_item(example: dict[str, object]) -> str:
+    category = str(example.get("category") or "").strip()
+    label = AMENITY_LABELS.get(category, category.replace("_", " ").title() or "Angebot vor Ort")
+    name = str(example.get("name") or "").strip() or label
+    meta_parts = [label]
+    distance = example.get("distance_m")
+    if distance not in (None, ""):
+        try:
+            meta_parts.append(f"{round(float(distance))} m entfernt")
+        except (TypeError, ValueError):
+            pass
+    return (
+        '<div class="station-amenity-item">'
+        f"<strong>{html.escape(name)}</strong>"
+        f"{html.escape(' • '.join(meta_parts))}"
+        "</div>"
+    )
+
+
 def render_amenity_items(properties: dict[str, object]) -> str:
     examples = properties.get("amenity_examples")
     if isinstance(examples, list):
-        items: list[str] = []
+        grouped_examples: dict[str, list[dict[str, object]]] = {
+            label: [] for label, _ in AMENITY_GROUPS
+        }
         for example in examples[:8]:
             if not isinstance(example, dict):
                 continue
             category = str(example.get("category") or "").strip()
-            label = AMENITY_LABELS.get(category, category.replace("_", " ").title() or "Angebot vor Ort")
-            name = str(example.get("name") or "").strip() or label
-            meta_parts = [label]
-            distance = example.get("distance_m")
-            if distance not in (None, ""):
-                try:
-                    meta_parts.append(f"{round(float(distance))} m entfernt")
-                except (TypeError, ValueError):
-                    pass
-            items.append(
-                "<li>"
-                f"<strong>{html.escape(name)}</strong>"
-                f"{html.escape(' • '.join(meta_parts))}"
+            grouped_examples[amenity_group_label(category)].append(example)
+
+        groups: list[str] = []
+        for label, _ in AMENITY_GROUPS:
+            group_items = sorted(grouped_examples[label], key=amenity_example_sort_key)
+            if not group_items:
+                continue
+            rendered_items = "".join(render_amenity_example_item(example) for example in group_items)
+            groups.append(
+                '<li class="station-amenity-group">'
+                f'<strong class="station-amenity-group-title">{html.escape(label)}</strong>'
+                f'<div class="station-amenity-group-items">{rendered_items}</div>'
                 "</li>"
             )
-        if items:
-            return "".join(items)
+        if groups:
+            return "".join(groups)
 
     summary = amenity_summary(properties)
     if not summary:
@@ -318,7 +494,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
         else "Diese Station ist als Direktlink in der woladen.de Web-App hinterlegt."
     )
     price_chip = str(properties.get("price_display") or "").strip()
-    opening_hours_chip = str(properties.get("opening_hours_display") or "").strip()
+    opening_hours_chip = format_opening_hours_display(properties.get("opening_hours_display"))
 
     page_html = f"""<!doctype html>
 <html lang="de">
