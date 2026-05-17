@@ -101,7 +101,10 @@ export function shouldAttemptStartupLocation({
     return false;
   }
   const normalizedPermission = normalizeLocationPermissionState(permissionState);
-  return normalizedPermission === LOCATION_PERMISSION_GRANTED;
+  return ![
+    LOCATION_PERMISSION_DENIED,
+    LOCATION_PERMISSION_UNSUPPORTED,
+  ].includes(normalizedPermission);
 }
 
 export function getLocationLookupViewModel({

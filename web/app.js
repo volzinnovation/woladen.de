@@ -5,8 +5,6 @@ import {
 } from "./opening-hours.mjs";
 import {
   LOCATION_ERROR_PERMISSION_DENIED,
-  LOCATION_ERROR_POSITION_UNAVAILABLE,
-  LOCATION_ERROR_TIMEOUT,
   LOCATION_PERMISSION_DENIED,
   LOCATION_PERMISSION_GRANTED,
   LOCATION_PERMISSION_UNKNOWN,
@@ -870,7 +868,7 @@ async function init() {
   window.addEventListener("hashchange", syncViewWithRequestedHash);
 
   // Event Listeners
-  els.buttons.locate.addEventListener("click", () => requestUserLocation(false));
+  els.buttons.locate.addEventListener("click", requestUserLocation);
   els.filter.trigger.addEventListener("click", () => openModal("filter"));
   els.filter.listFilterBtn.addEventListener("click", () => openModal("filter"));
   els.filter.applyBtn.addEventListener("click", () => closeModal("filter"));
@@ -1230,7 +1228,11 @@ function shouldAttemptStartupLocation() {
   if (state.startupLocationRequested || hasResolvedUserLocation() || !navigator.geolocation) {
     return false;
   }
-  return normalizeLocationPermissionState(state.location.permissionState) === LOCATION_PERMISSION_GRANTED;
+  const permissionState = normalizeLocationPermissionState(state.location.permissionState);
+  return ![
+    LOCATION_PERMISSION_DENIED,
+    LOCATION_PERMISSION_UNSUPPORTED,
+  ].includes(permissionState);
 }
 
 function updateLocationState(patch = {}) {
@@ -1278,7 +1280,7 @@ function renderLocationGate(container, viewModel) {
     button.type = "button";
     button.className = "primary-btn";
     button.textContent = viewModel.actionLabel;
-    button.addEventListener("click", () => requestUserLocation(false));
+    button.addEventListener("click", requestUserLocation);
     actions.appendChild(button);
     panel.appendChild(actions);
   }
@@ -2841,7 +2843,7 @@ async function queueStartupLocationRequest() {
     state.startupLocationRequested = true;
     detach();
     window.requestAnimationFrame(() => {
-      window.setTimeout(() => requestUserLocation(true), 0);
+      window.setTimeout(requestUserLocation, 0);
     });
   };
 
@@ -2899,15 +2901,14 @@ async function syncLocationPermissionState() {
   }
 }
 
-async function requestUserLocation(silent = false) {
-  const silentMode = silent === true;
+async function requestUserLocation() {
   if (!navigator.geolocation) {
     updateLocationState({
       permissionState: LOCATION_PERMISSION_UNSUPPORTED,
       requestState: LOCATION_REQUEST_ERROR,
       errorCode: "unsupported",
     });
-    if (!silentMode && els.views.map.classList.contains("active")) {
+    if (els.views.map.classList.contains("active")) {
       switchView("view-list");
     }
     return;
@@ -2919,23 +2920,11 @@ async function requestUserLocation(silent = false) {
   });
 
   try {
-    let position;
-    try {
-      position = await requestBrowserLocation(navigator.geolocation, {
-        enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 60000,
-      });
-    } catch (err) {
-      if (![LOCATION_ERROR_POSITION_UNAVAILABLE, LOCATION_ERROR_TIMEOUT].includes(err?.code)) {
-        throw err;
-      }
-      position = await requestBrowserLocation(navigator.geolocation, {
-        enableHighAccuracy: false,
-        timeout: 20000,
-        maximumAge: 300000,
-      });
-    }
+    const position = await requestBrowserLocation(navigator.geolocation, {
+      enableHighAccuracy: false,
+      timeout: 5000,
+      maximumAge: 300000,
+    });
 
     state.userPos = {
       lat: position.lat,
@@ -2949,13 +2938,11 @@ async function requestUserLocation(silent = false) {
     updateUserMarker();
     applyFilters();
 
-    if (!silentMode && state.views.map) {
+    if (state.views.map) {
       state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
     }
   } catch (err) {
-    if (!silentMode) {
-      console.warn("Location error", err);
-    }
+    console.warn("Location error", err);
     updateLocationState({
       permissionState: err.code === LOCATION_ERROR_PERMISSION_DENIED
         ? LOCATION_PERMISSION_DENIED
@@ -2963,7 +2950,7 @@ async function requestUserLocation(silent = false) {
       requestState: LOCATION_REQUEST_ERROR,
       errorCode: err.code || "unknown",
     });
-    if (!silentMode && els.views.map.classList.contains("active")) {
+    if (els.views.map.classList.contains("active")) {
       switchView("view-list");
     }
   }
