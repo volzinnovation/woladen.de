@@ -107,15 +107,15 @@ Then open `http://localhost:4173/`.
 <!-- DATA_STATUS_START -->
 ## Data Build Status
 
-- Last build (UTC): `2026-05-17T01:38:57+00:00`
+- Last build (UTC): `2026-05-18T01:44:54+00:00`
 - Source: `https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-04-22.csv`
 - Full registry stations: `72155`
-- Fast chargers (>= 50.0 kW): `15211`
-- Fast chargers with live occupancy: `404`
-- Fast chargers with static AFIR details: `9467` (price: `7588`, opening hours: `10973`)
-- Chargers with >=1 nearby amenity: `15211`
-- Occupancy sources scanned: `30` (matched EVSEs: `2755`)
-- Static AFIR sources used: `20` (helpdesk phones: `5571`)
+- Fast chargers (>= 50.0 kW): `15212`
+- Fast chargers with live occupancy: `407`
+- Fast chargers with static AFIR details: `9468` (price: `7617`, opening hours: `10974`)
+- Chargers with >=1 nearby amenity: `15212`
+- Occupancy sources scanned: `30` (matched EVSEs: `2760`)
+- Static AFIR sources used: `20` (helpdesk phones: `5572`)
 - Amenity backend: `osm-pbf`
 - Live amenity lookups this run: `0` (cache hits: `0`, deferred: `0`)
 
@@ -124,6 +124,7 @@ Generated files:
 - `data/chargers_full.csv`
 - `data/chargers_fast.csv`
 - `data/chargers_fast.geojson`
+- `data/chargers_under_50.geojson`
 - `data/operators.json`
 - `data/summary.json`
 <!-- DATA_STATUS_END -->
