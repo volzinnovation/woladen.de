@@ -32,11 +32,12 @@
     "2026-05-15",
     "2026-05-16",
     "2026-05-17",
-    "2026-05-18"
+    "2026-05-18",
+    "2026-05-19"
   ],
-  "day_count": 33,
-  "generated_at": "2026-05-18T23:50:53+00:00",
-  "latest_date": "2026-05-18",
+  "day_count": 34,
+  "generated_at": "2026-05-20T00:01:49+00:00",
+  "latest_date": "2026-05-19",
   "snapshot_paths": {
     "2026-04-16": "days/2026/04/16/snapshot.json",
     "2026-04-17": "days/2026/04/17/snapshot.json",
@@ -70,7 +71,8 @@
     "2026-05-15": "days/2026/05/15/snapshot.json",
     "2026-05-16": "days/2026/05/16/snapshot.json",
     "2026-05-17": "days/2026/05/17/snapshot.json",
-    "2026-05-18": "days/2026/05/18/snapshot.json"
+    "2026-05-18": "days/2026/05/18/snapshot.json",
+    "2026-05-19": "days/2026/05/19/snapshot.json"
   },
   "trends_path": "trends.json"
 }
