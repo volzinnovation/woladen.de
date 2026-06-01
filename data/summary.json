@@ -1,17 +1,17 @@
 {
   "run": {
-    "started_at": "2026-05-31T01:46:10+00:00",
-    "finished_at": "2026-05-31T03:19:35+00:00"
+    "started_at": "2026-06-01T01:51:13+00:00",
+    "finished_at": "2026-06-01T03:45:38+00:00"
   },
   "source": {
     "source_url": "https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-04-22.csv",
-    "fetched_at": "2026-05-31T01:46:57.563457+00:00",
+    "fetched_at": "2026-06-01T01:51:53.849713+00:00",
     "bytes": 49684448,
     "content_type": "application/octet-stream",
     "bnetza_api_ladestation_source": {
       "source_url": "https://d1269bxe5ubfat.cloudfront.net/bnetza-api/data/bnetza_api_ladestation000.csv?v=1",
       "label": "bnetza_api_ladestation",
-      "fetched_at": "2026-05-31T01:47:04.906795+00:00",
+      "fetched_at": "2026-06-01T01:52:01.222149+00:00",
       "error": "403 Client Error: Forbidden for url: https://d1269bxe5ubfat.cloudfront.net/bnetza-api/data/bnetza_api_ladestation000.csv?v=1",
       "unavailable": true
     }
@@ -33,19 +33,19 @@
     "chargers_under_50_total": 55500,
     "chargers_all_active_total": 70714,
     "stations_with_live_occupancy": 551,
-    "stations_with_static_details": 9727,
-    "stations_with_price": 7999,
-    "stations_with_opening_hours": 11037,
-    "stations_with_helpdesk": 5574,
+    "stations_with_static_details": 9724,
+    "stations_with_price": 7996,
+    "stations_with_opening_hours": 11035,
+    "stations_with_helpdesk": 5573,
     "stations_with_amenities": 15214
   },
   "occupancy_lookup": {
-    "sources_discovered": 32,
-    "sources_used": 30,
-    "locations_scanned": 58843,
+    "sources_discovered": 31,
+    "sources_used": 29,
+    "locations_scanned": 58815,
     "matched_locations": 570,
     "matched_stations": 586,
-    "matched_evses": 2383,
+    "matched_evses": 2403,
     "errors": [
       "stadtwerke_erft: mtls_subscription: Expecting value: line 1 column 1 (char 0)",
       "volkswagencharginggroup: mtls_subscription: Expecting value: line 1 column 1 (char 0)"
@@ -116,14 +116,6 @@
         "matched_evses": 0
       },
       {
-        "uid": "heilbronn_neckarbogen",
-        "name": "Heilbronn Neckarbogen",
-        "locations_scanned": 24,
-        "matched_locations": 0,
-        "matched_stations": 0,
-        "matched_evses": 0
-      },
-      {
         "uid": "ochp_albwerk",
         "name": "Albwerk",
         "locations_scanned": 199,
@@ -142,7 +134,7 @@
       {
         "uid": "eco_movement",
         "name": "eco movement",
-        "locations_scanned": 14260,
+        "locations_scanned": 14264,
         "matched_locations": 0,
         "matched_stations": 0,
         "matched_evses": 0
@@ -169,7 +161,7 @@
         "locations_scanned": 2386,
         "matched_locations": 1,
         "matched_stations": 1,
-        "matched_evses": 4
+        "matched_evses": 24
       },
       {
         "uid": "enio",
@@ -230,7 +222,7 @@
       {
         "uid": "lichtblick_emobility",
         "name": "lichtblick emobility",
-        "locations_scanned": 1223,
+        "locations_scanned": 1218,
         "matched_locations": 0,
         "matched_stations": 0,
         "matched_evses": 0
@@ -238,7 +230,7 @@
       {
         "uid": "m8mit",
         "name": "m8mit",
-        "locations_scanned": 140,
+        "locations_scanned": 137,
         "matched_locations": 0,
         "matched_stations": 0,
         "matched_evses": 0
@@ -295,13 +287,13 @@
   },
   "static_detail_lookup": {
     "offers_discovered": 85,
-    "static_offers_considered": 41,
+    "static_offers_considered": 42,
     "sources_used": 20,
-    "matched_sites": 10684,
-    "matched_stations": 10316,
-    "stations_with_price": 8487,
-    "stations_with_opening_hours": 11883,
-    "stations_with_helpdesk": 5884,
+    "matched_sites": 10683,
+    "matched_stations": 10314,
+    "stations_with_price": 8484,
+    "stations_with_opening_hours": 11881,
+    "stations_with_helpdesk": 5883,
     "errors": [
       "993456841874440192: direct_access_url: not well-formed (invalid token): line 233, column 46",
       "993455203751264256: direct_access_url: not well-formed (invalid token): line 233, column 46",
@@ -605,9 +597,9 @@
         "access_mode": "auth",
         "status": "ok",
         "payload_kind": "datex",
-        "sites_scanned": 140,
-        "matched_sites": 15,
-        "matched_stations": 15
+        "sites_scanned": 137,
+        "matched_sites": 14,
+        "matched_stations": 14
       },
       {
         "uid": "mobilithek_pump_static",
@@ -630,8 +622,8 @@
         "status": "ok",
         "payload_kind": "datex",
         "sites_scanned": 609,
-        "matched_sites": 178,
-        "matched_stations": 178
+        "matched_sites": 179,
+        "matched_stations": 179
       },
       {
         "uid": "mobilithek_enio_static",
@@ -653,9 +645,9 @@
         "access_mode": "auth",
         "status": "ok",
         "payload_kind": "datex",
-        "sites_scanned": 1223,
-        "matched_sites": 165,
-        "matched_stations": 165
+        "sites_scanned": 1218,
+        "matched_sites": 164,
+        "matched_stations": 164
       },
       {
         "uid": "mobilithek_eround_static",
@@ -677,7 +669,7 @@
         "access_mode": "auth",
         "status": "ok",
         "payload_kind": "datex",
-        "sites_scanned": 14260,
+        "sites_scanned": 14264,
         "matched_sites": 4082,
         "matched_stations": 4025
       },
@@ -769,6 +761,17 @@
         "access_mode": "auth",
         "status": "fetch_failed",
         "error": "direct_access_url: 403 Client Error: Forbidden for url: https://d1269bxe5ubfat.cloudfront.net/bnetza-lsr/data/ladepunktFactTable.csv?v=1",
+        "matched_sites": 0,
+        "matched_stations": 0
+      },
+      {
+        "uid": "mobilithek_geb_ndelte_daten_e_lades_ulen_baden_w_rttemberg_static",
+        "publication_id": "-2035239451501556619",
+        "title": "Gebündelte Daten E-Ladesäulen Baden-Württemberg",
+        "publisher": "MobiData BW",
+        "access_mode": "direct_access_url",
+        "status": "unsupported_payload",
+        "payload_kind": "datex",
         "matched_sites": 0,
         "matched_stations": 0
       }
