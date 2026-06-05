@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-05-16T10:50:27+00:00",
+  "generated_at": "2026-06-05T16:41:01+00:00",
   "search_term": "AFIR",
-  "search_total_elements": 74,
-  "charging_offer_count": 69,
-  "provider_config_count": 38,
+  "search_total_elements": 87,
+  "charging_offer_count": 81,
+  "provider_config_count": 46,
   "source_chargers_csv": "/Users/raphaelvolz/Github/woladen.de/data/chargers_full.csv",
   "source_bundle_chargers_csv": "/Users/raphaelvolz/Github/woladen.de/data/chargers_fast.csv",
   "machine_certificate_probe": {
@@ -18,10 +18,531 @@
   "totals": {
     "stations": 72155,
     "charging_points": 197527,
-    "bundle_stations": 15211,
-    "bundle_charging_points": 51927
+    "bundle_stations": 15214,
+    "bundle_charging_points": 51959
   },
   "providers": [
+    {
+      "uid": "ah_beteiligungsgesellschaft",
+      "display_name": "ah beteiligungsgesellschaft",
+      "publisher": "Eulektro GmbH",
+      "feeds": {
+        "static": {
+          "publication_id": "993495185148837888",
+          "title": "AFIR-recharging-stat-AH Beteiligungsgesellschaft mbH",
+          "publisher": "Eulektro GmbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Static-01-00-00",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": false,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": true,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": false,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_D2Payload.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationReferencing.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Static-01-00-00"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": false,
+            "response_excerpt": "{\"isAccessible\":false}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:42.504569889Z\"}",
+            "status": "already_exists"
+          }
+        },
+        "dynamic": {
+          "publication_id": "993494022504546304",
+          "title": "AFIR-recharging-dyn-AH Beteiligungsgesellschaft mbH",
+          "publisher": "Eulektro GmbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Dynamic-01-00-00_Delta",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": true,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": true,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": true,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_MessageContainer.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_D2Payload.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_ExchangeInformation.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Dynamic-01-00-00_Delta"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": false,
+            "response_excerpt": "{\"isAccessible\":false}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:42.634891915Z\"}",
+            "status": "already_exists"
+          }
+        },
+        "other": []
+      },
+      "subscription": {
+        "static": {
+          "attempted": true,
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:42.504569889Z\"}",
+          "status": "already_exists"
+        },
+        "dynamic": {
+          "attempted": true,
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:42.634891915Z\"}",
+          "status": "already_exists"
+        },
+        "other": []
+      },
+      "coverage": {
+        "static": {
+          "fetch_status": "noauth: 403 Client Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/993495185148837888/file/noauth",
+          "access_mode": "auth",
+          "locations_scanned": 0,
+          "matched_locations": 0,
+          "matched_stations": 0,
+          "matched_charging_points": 0,
+          "station_coverage_ratio": 0.0,
+          "charging_point_coverage_ratio": 0.0,
+          "bundle_matched_stations": 0,
+          "bundle_matched_charging_points": 0,
+          "bundle_station_coverage_ratio": 0.0,
+          "bundle_charging_point_coverage_ratio": 0.0,
+          "site_operator_samples": []
+        },
+        "dynamic": {
+          "fetch_status": "noauth: 403 Client Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/993494022504546304/file/noauth",
+          "access_mode": "auth",
+          "delta_delivery": true,
+          "site_status_count": 0,
+          "station_status_count": 0,
+          "evse_status_count": 0,
+          "available_evses": 0,
+          "occupied_evses": 0,
+          "out_of_order_evses": 0,
+          "unknown_evses": 0,
+          "latest_last_updated": null
+        }
+      }
+    },
+    {
+      "uid": "analysis_missing_prices",
+      "display_name": "analysis missing prices",
+      "publisher": "Hocsy.eu",
+      "feeds": {
+        "static": {
+          "publication_id": "993455203751264256",
+          "title": "AFIR-recharging-analysis-missing-prices",
+          "publisher": "Hocsy.eu",
+          "access_mode": "auth",
+          "mdp_brokering": false,
+          "schema_profile_name": "",
+          "data_model": "https://w3id.org/mdp/schema/data_model#MODEL_OTHER",
+          "delta_delivery": false,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": false,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": "https://hocsy.eu/de/auswertungen/cpo_afir_fehlende_preise.html",
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://w3id.org/mdp/schema/media_type#MEDIA_OTHER",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#MODEL_OTHER",
+            "dataFormatAdditionalDescription": "",
+            "description": "",
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": "2026-05-19T06:26:09.558Z",
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": null,
+            "masterSchema": null,
+            "schema": [],
+            "schemaProfileName": null
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": false,
+            "response_excerpt": "{\"isAccessible\":false}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 400,
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:42.926355255Z\"}",
+            "status": "error"
+          }
+        },
+        "dynamic": null,
+        "other": []
+      },
+      "subscription": {
+        "static": {
+          "attempted": true,
+          "status_code": 400,
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:42.926355255Z\"}",
+          "status": "error"
+        },
+        "dynamic": null,
+        "other": []
+      },
+      "coverage": {
+        "static": {
+          "fetch_status": "unsupported_static_format: https://w3id.org/mdp/schema/media_type#MEDIA_OTHER",
+          "access_mode": "auth",
+          "locations_scanned": 0,
+          "matched_locations": 0,
+          "matched_stations": 0,
+          "matched_charging_points": 0,
+          "station_coverage_ratio": 0.0,
+          "charging_point_coverage_ratio": 0.0,
+          "bundle_matched_stations": 0,
+          "bundle_matched_charging_points": 0,
+          "bundle_station_coverage_ratio": 0.0,
+          "bundle_charging_point_coverage_ratio": 0.0,
+          "site_operator_samples": []
+        },
+        "dynamic": {
+          "fetch_status": "no_dynamic_feed",
+          "access_mode": "",
+          "delta_delivery": false,
+          "site_status_count": 0,
+          "station_status_count": 0,
+          "evse_status_count": 0,
+          "available_evses": 0,
+          "occupied_evses": 0,
+          "out_of_order_evses": 0,
+          "unknown_evses": 0,
+          "latest_last_updated": null
+        }
+      }
+    },
+    {
+      "uid": "analysis_reporting_status",
+      "display_name": "analysis reporting status",
+      "publisher": "Hocsy.eu",
+      "feeds": {
+        "static": {
+          "publication_id": "993456841874440192",
+          "title": "AFIR-recharging-analysis-reporting-status",
+          "publisher": "Hocsy.eu",
+          "access_mode": "auth",
+          "mdp_brokering": false,
+          "schema_profile_name": "",
+          "data_model": "https://w3id.org/mdp/schema/data_model#MODEL_OTHER",
+          "delta_delivery": false,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": false,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": "https://hocsy.eu/de/auswertungen/cpo_afir_meldestatus.html",
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://w3id.org/mdp/schema/media_type#MEDIA_OTHER",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#MODEL_OTHER",
+            "dataFormatAdditionalDescription": "",
+            "description": "",
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": "2026-05-19T06:28:57.85Z",
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": null,
+            "masterSchema": null,
+            "schema": [],
+            "schemaProfileName": null
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": false,
+            "response_excerpt": "{\"isAccessible\":false}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 400,
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:42.788004194Z\"}",
+            "status": "error"
+          }
+        },
+        "dynamic": null,
+        "other": []
+      },
+      "subscription": {
+        "static": {
+          "attempted": true,
+          "status_code": 400,
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:42.788004194Z\"}",
+          "status": "error"
+        },
+        "dynamic": null,
+        "other": []
+      },
+      "coverage": {
+        "static": {
+          "fetch_status": "unsupported_static_format: https://w3id.org/mdp/schema/media_type#MEDIA_OTHER",
+          "access_mode": "auth",
+          "locations_scanned": 0,
+          "matched_locations": 0,
+          "matched_stations": 0,
+          "matched_charging_points": 0,
+          "station_coverage_ratio": 0.0,
+          "charging_point_coverage_ratio": 0.0,
+          "bundle_matched_stations": 0,
+          "bundle_matched_charging_points": 0,
+          "bundle_station_coverage_ratio": 0.0,
+          "bundle_charging_point_coverage_ratio": 0.0,
+          "site_operator_samples": []
+        },
+        "dynamic": {
+          "fetch_status": "no_dynamic_feed",
+          "access_mode": "",
+          "delta_delivery": false,
+          "site_status_count": 0,
+          "station_status_count": 0,
+          "evse_status_count": 0,
+          "available_evses": 0,
+          "occupied_evses": 0,
+          "out_of_order_evses": 0,
+          "unknown_evses": 0,
+          "latest_last_updated": null
+        }
+      }
+    },
     {
       "uid": "audi_hub_energy_statuses",
       "display_name": "audi hub energy statuses",
@@ -71,7 +592,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-05-16T10:42:53.590706305Z\"}",
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:45.18070026Z\"}",
             "status": "error"
           }
         },
@@ -82,7 +603,7 @@
         "dynamic": {
           "attempted": true,
           "status_code": 400,
-          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-05-16T10:42:53.590706305Z\"}",
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:45.18070026Z\"}",
           "status": "error"
         },
         "other": []
@@ -166,7 +687,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-05-16T10:42:53.76317998Z\"}",
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:45.348763536Z\"}",
             "status": "error"
           }
         },
@@ -177,7 +698,7 @@
         "static": {
           "attempted": true,
           "status_code": 400,
-          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-05-16T10:42:53.76317998Z\"}",
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:45.348763536Z\"}",
           "status": "error"
         },
         "dynamic": null,
@@ -203,6 +724,380 @@
           "fetch_status": "no_dynamic_feed",
           "access_mode": "",
           "delta_delivery": false,
+          "site_status_count": 0,
+          "station_status_count": 0,
+          "evse_status_count": 0,
+          "available_evses": 0,
+          "occupied_evses": 0,
+          "out_of_order_evses": 0,
+          "unknown_evses": 0,
+          "latest_last_updated": null
+        }
+      }
+    },
+    {
+      "uid": "broker_audi_hub_energy_statuses",
+      "display_name": "broker audi hub energy statuses",
+      "publisher": "Audi AG",
+      "feeds": {
+        "static": null,
+        "dynamic": {
+          "publication_id": "998567365272563712",
+          "title": "Broker_Audi charging hub_Dynamic data _energy-infrastructure-statuses",
+          "publisher": "Audi AG",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Dynamic-01-00-00_Delta",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": true,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": false,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": true,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_MessageContainer.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_D2Payload.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_ExchangeInformation.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Dynamic-01-00-00_Delta"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:41.535401545Z\"}",
+            "status": "already_exists"
+          }
+        },
+        "other": []
+      },
+      "subscription": {
+        "static": null,
+        "dynamic": {
+          "attempted": true,
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:41.535401545Z\"}",
+          "status": "already_exists"
+        },
+        "other": []
+      },
+      "coverage": {
+        "static": {
+          "fetch_status": "no_static_feed",
+          "access_mode": "",
+          "locations_scanned": 0,
+          "matched_locations": 0,
+          "matched_stations": 0,
+          "matched_charging_points": 0,
+          "station_coverage_ratio": 0.0,
+          "charging_point_coverage_ratio": 0.0,
+          "bundle_matched_stations": 0,
+          "bundle_matched_charging_points": 0,
+          "bundle_station_coverage_ratio": 0.0,
+          "bundle_charging_point_coverage_ratio": 0.0,
+          "site_operator_samples": []
+        },
+        "dynamic": {
+          "fetch_status": "mtls_subscription: Expecting value: line 1 column 1 (char 0)",
+          "access_mode": "mtls_subscription",
+          "delta_delivery": true,
+          "site_status_count": 0,
+          "station_status_count": 0,
+          "evse_status_count": 0,
+          "available_evses": 0,
+          "occupied_evses": 0,
+          "out_of_order_evses": 0,
+          "unknown_evses": 0,
+          "latest_last_updated": null
+        }
+      }
+    },
+    {
+      "uid": "broker_audi_hub_energy_tables",
+      "display_name": "broker audi hub energy tables",
+      "publisher": "Audi AG",
+      "feeds": {
+        "static": null,
+        "dynamic": {
+          "publication_id": "998571342932365312",
+          "title": "Broker_Audi charging hub_ Static data _energy-infrastructure-tables",
+          "publisher": "Audi AG",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Dynamic-01-00-00_Delta",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": true,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": false,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": true,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_MessageContainer.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_D2Payload.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_ExchangeInformation.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Dynamic-01-00-00_Delta"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:41.359470127Z\"}",
+            "status": "already_exists"
+          }
+        },
+        "other": []
+      },
+      "subscription": {
+        "static": null,
+        "dynamic": {
+          "attempted": true,
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:41.359470127Z\"}",
+          "status": "already_exists"
+        },
+        "other": []
+      },
+      "coverage": {
+        "static": {
+          "fetch_status": "no_static_feed",
+          "access_mode": "",
+          "locations_scanned": 0,
+          "matched_locations": 0,
+          "matched_stations": 0,
+          "matched_charging_points": 0,
+          "station_coverage_ratio": 0.0,
+          "charging_point_coverage_ratio": 0.0,
+          "bundle_matched_stations": 0,
+          "bundle_matched_charging_points": 0,
+          "bundle_station_coverage_ratio": 0.0,
+          "bundle_charging_point_coverage_ratio": 0.0,
+          "site_operator_samples": []
+        },
+        "dynamic": {
+          "fetch_status": "mtls_subscription: Expecting value: line 1 column 1 (char 0)",
+          "access_mode": "mtls_subscription",
+          "delta_delivery": true,
           "site_status_count": 0,
           "station_status_count": 0,
           "evse_status_count": 0,
@@ -262,7 +1157,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-05-16T10:43:01.605048391Z\"}",
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:52.192856013Z\"}",
             "status": "error"
           }
         },
@@ -273,7 +1168,7 @@
         "static": {
           "attempted": true,
           "status_code": 400,
-          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-05-16T10:43:01.605048391Z\"}",
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:52.192856013Z\"}",
           "status": "error"
         },
         "dynamic": null,
@@ -358,7 +1253,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-05-16T10:42:59.223738433Z\"}",
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:50.325087027Z\"}",
             "status": "error"
           }
         },
@@ -369,7 +1264,7 @@
         "static": {
           "attempted": true,
           "status_code": 400,
-          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-05-16T10:42:59.223738433Z\"}",
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:50.325087027Z\"}",
           "status": "error"
         },
         "dynamic": null,
@@ -545,7 +1440,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.646799983Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.132161152Z\"}",
             "status": "already_exists"
           }
         },
@@ -683,7 +1578,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:53.438635373Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:45.021842205Z\"}",
             "status": "already_exists"
           }
         },
@@ -693,13 +1588,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.646799983Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.132161152Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:53.438635373Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:45.021842205Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -708,41 +1603,41 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
-          "locations_scanned": 6559,
-          "matched_locations": 5686,
-          "matched_stations": 5686,
-          "matched_charging_points": 17717,
-          "station_coverage_ratio": 0.078803,
-          "charging_point_coverage_ratio": 0.089694,
-          "bundle_matched_stations": 599,
-          "bundle_matched_charging_points": 1867,
-          "bundle_station_coverage_ratio": 0.039379,
-          "bundle_charging_point_coverage_ratio": 0.035954,
+          "locations_scanned": 6990,
+          "matched_locations": 6001,
+          "matched_stations": 6001,
+          "matched_charging_points": 18798,
+          "station_coverage_ratio": 0.083168,
+          "charging_point_coverage_ratio": 0.095167,
+          "bundle_matched_stations": 619,
+          "bundle_matched_charging_points": 2017,
+          "bundle_station_coverage_ratio": 0.040686,
+          "bundle_charging_point_coverage_ratio": 0.038819,
           "site_operator_samples": [
             "Stadtwerke Göttingen Aktiengesellschaft",
             "Stadtwerke Ettlingen GmbH",
             "MVV Energie AG",
             "TankE GmbH",
+            "Chargemaker GmbH",
             "alpha plus com GmbH",
             "ib company GmbH",
             "BERGER Stromversorgungen GmbH & Co. KG",
             "Stadtwerke Schkeuditz GmbH",
-            "SWLB Mobilität GmbH",
-            "Flughafen Stuttgart Gesellschaft mit beschränkter Haftung"
+            "SWLB Mobilität GmbH"
           ]
         },
         "dynamic": {
           "fetch_status": "ok",
           "access_mode": "noauth",
           "delta_delivery": true,
-          "site_status_count": 15,
-          "station_status_count": 15,
-          "evse_status_count": 15,
-          "available_evses": 5,
-          "occupied_evses": 10,
+          "site_status_count": 21,
+          "station_status_count": 22,
+          "evse_status_count": 23,
+          "available_evses": 4,
+          "occupied_evses": 19,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T10:43:31.380Z"
+          "latest_last_updated": "2026-06-05T16:33:42.004Z"
         }
       }
     },
@@ -911,7 +1806,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"Data offer is expired\",\"code\":400,\"occurred\":\"2026-05-16T10:43:01.132271654Z\"}",
+            "response_excerpt": "{\"message\":\"Data offer is expired\",\"code\":400,\"occurred\":\"2026-06-05T16:31:51.798944868Z\"}",
             "status": "error"
           }
         },
@@ -922,7 +1817,7 @@
         "static": {
           "attempted": true,
           "status_code": 400,
-          "response_excerpt": "{\"message\":\"Data offer is expired\",\"code\":400,\"occurred\":\"2026-05-16T10:43:01.132271654Z\"}",
+          "response_excerpt": "{\"message\":\"Data offer is expired\",\"code\":400,\"occurred\":\"2026-06-05T16:31:51.798944868Z\"}",
           "status": "error"
         },
         "dynamic": null,
@@ -956,6 +1851,338 @@
           "out_of_order_evses": 0,
           "unknown_evses": 0,
           "latest_last_updated": null
+        }
+      }
+    },
+    {
+      "uid": "e_clearing_net",
+      "display_name": "e clearing net",
+      "publisher": "smartlab Innovationsgesellschaft mbH",
+      "feeds": {
+        "static": {
+          "publication_id": "996825300704600064",
+          "title": "e-clearing.net AFIR Data Static",
+          "publisher": "smartlab Innovationsgesellschaft mbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Static-01-00-00",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": false,
+          "contract_offer": {
+            "contractStart": "2026-06-01",
+            "contractEnd": null,
+            "providerApprovalRequired": false,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": false,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_D2Payload.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationReferencing.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Static-01-00-00"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:41.976312971Z\"}",
+            "status": "already_exists"
+          }
+        },
+        "dynamic": {
+          "publication_id": "996823601386508288",
+          "title": "e-clearing.net AFIR Data Dynamic",
+          "publisher": "smartlab Innovationsgesellschaft mbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Dynamic-01-00-00_Delta",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": true,
+          "contract_offer": {
+            "contractStart": "2026-06-01",
+            "contractEnd": null,
+            "providerApprovalRequired": false,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": true,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_MessageContainer.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_D2Payload.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_ExchangeInformation.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Dynamic-01-00-00_Delta"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:42.106315082Z\"}",
+            "status": "already_exists"
+          }
+        },
+        "other": []
+      },
+      "subscription": {
+        "static": {
+          "attempted": true,
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:41.976312971Z\"}",
+          "status": "already_exists"
+        },
+        "dynamic": {
+          "attempted": true,
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:42.106315082Z\"}",
+          "status": "already_exists"
+        },
+        "other": []
+      },
+      "coverage": {
+        "static": {
+          "fetch_status": "ok",
+          "access_mode": "auth",
+          "locations_scanned": 845,
+          "matched_locations": 0,
+          "matched_stations": 0,
+          "matched_charging_points": 0,
+          "station_coverage_ratio": 0.0,
+          "charging_point_coverage_ratio": 0.0,
+          "bundle_matched_stations": 0,
+          "bundle_matched_charging_points": 0,
+          "bundle_station_coverage_ratio": 0.0,
+          "bundle_charging_point_coverage_ratio": 0.0,
+          "site_operator_samples": [
+            "Ladebusiness",
+            "Ladenetz"
+          ]
+        },
+        "dynamic": {
+          "fetch_status": "ok",
+          "access_mode": "auth",
+          "delta_delivery": true,
+          "site_status_count": 1,
+          "station_status_count": 1,
+          "evse_status_count": 1,
+          "available_evses": 1,
+          "occupied_evses": 0,
+          "out_of_order_evses": 0,
+          "unknown_evses": 0,
+          "latest_last_updated": "2026-06-05T16:33:01Z"
         }
       }
     },
@@ -1098,7 +2325,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:54.409064648Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:45.85508934Z\"}",
             "status": "already_exists"
           }
         },
@@ -1236,7 +2463,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:54.546188999Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.021703414Z\"}",
             "status": "already_exists"
           }
         },
@@ -1246,13 +2473,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:54.409064648Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:45.85508934Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:54.546188999Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.021703414Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -1427,7 +2654,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:59.075872373Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.194204106Z\"}",
             "status": "already_exists"
           }
         },
@@ -1565,7 +2792,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.912343775Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.074521873Z\"}",
             "status": "already_exists"
           }
         },
@@ -1575,13 +2802,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:59.075872373Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.194204106Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.912343775Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.074521873Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -1590,41 +2817,41 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 13695,
-          "matched_locations": 6564,
-          "matched_stations": 6564,
-          "matched_charging_points": 18040,
-          "station_coverage_ratio": 0.090971,
-          "charging_point_coverage_ratio": 0.091329,
-          "bundle_matched_stations": 2877,
-          "bundle_matched_charging_points": 9627,
-          "bundle_station_coverage_ratio": 0.189139,
-          "bundle_charging_point_coverage_ratio": 0.185395,
+          "locations_scanned": 14273,
+          "matched_locations": 6857,
+          "matched_stations": 6857,
+          "matched_charging_points": 18794,
+          "station_coverage_ratio": 0.095032,
+          "charging_point_coverage_ratio": 0.095146,
+          "bundle_matched_stations": 3144,
+          "bundle_matched_charging_points": 10284,
+          "bundle_station_coverage_ratio": 0.206652,
+          "bundle_charging_point_coverage_ratio": 0.197925,
           "site_operator_samples": [
-            "Glinicke",
-            "Techem Energy Services GmbH",
-            "Virta",
             "Ubitricity",
+            "naturenergie holding AG",
             "ChargePoint",
-            "Stadtwerke Dachau",
-            "Aral pulse",
+            "Allego",
+            "Kaufland",
             "Hochtief Ladepartner GmbH",
-            "eCarUp AG",
-            "TotalEnergies"
+            "Techem Energy Services GmbH",
+            "JOLT Energy",
+            "Aral pulse",
+            "HFH Betriebs GmbH & Co. KG"
           ]
         },
         "dynamic": {
           "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 1,
-          "station_status_count": 1,
-          "evse_status_count": 1,
-          "available_evses": 1,
-          "occupied_evses": 0,
-          "out_of_order_evses": 0,
-          "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T10:44:36Z"
+          "site_status_count": 265,
+          "station_status_count": 264,
+          "evse_status_count": 318,
+          "available_evses": 160,
+          "occupied_evses": 121,
+          "out_of_order_evses": 36,
+          "unknown_evses": 1,
+          "latest_last_updated": "2026-06-05T16:33:48Z"
         }
       }
     },
@@ -1767,7 +2994,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.775048358Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.196771064Z\"}",
             "status": "already_exists"
           }
         },
@@ -1905,7 +3132,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.64153367Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.052607404Z\"}",
             "status": "already_exists"
           }
         },
@@ -1915,13 +3142,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.775048358Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.196771064Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.64153367Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.052607404Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -1930,16 +3157,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 458,
-          "matched_locations": 445,
-          "matched_stations": 445,
-          "matched_charging_points": 1244,
-          "station_coverage_ratio": 0.006167,
-          "charging_point_coverage_ratio": 0.006298,
+          "locations_scanned": 463,
+          "matched_locations": 443,
+          "matched_stations": 443,
+          "matched_charging_points": 1240,
+          "station_coverage_ratio": 0.00614,
+          "charging_point_coverage_ratio": 0.006278,
           "bundle_matched_stations": 262,
           "bundle_matched_charging_points": 835,
-          "bundle_station_coverage_ratio": 0.017224,
-          "bundle_charging_point_coverage_ratio": 0.01608,
+          "bundle_station_coverage_ratio": 0.017221,
+          "bundle_charging_point_coverage_ratio": 0.01607,
           "site_operator_samples": [
             "E.ON Drive Infrastructure GmbH"
           ]
@@ -1948,14 +3175,14 @@
           "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 458,
-          "station_status_count": 687,
-          "evse_status_count": 1373,
-          "available_evses": 1038,
-          "occupied_evses": 332,
-          "out_of_order_evses": 3,
+          "site_status_count": 463,
+          "station_status_count": 702,
+          "evse_status_count": 1402,
+          "available_evses": 1120,
+          "occupied_evses": 278,
+          "out_of_order_evses": 4,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T10:40:43+00:00"
+          "latest_last_updated": "2026-06-05T16:30:25+00:00"
         }
       }
     },
@@ -2007,7 +3234,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:43:01.419196948Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:52.049023588Z\"}",
             "status": "already_exists"
           }
         },
@@ -2054,7 +3281,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:43:01.266202177Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:51.928925454Z\"}",
             "status": "already_exists"
           }
         },
@@ -2064,13 +3291,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:43:01.419196948Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:52.049023588Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:43:01.266202177Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:51.928925454Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -2079,16 +3306,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 53,
-          "matched_locations": 40,
-          "matched_stations": 40,
-          "matched_charging_points": 180,
-          "station_coverage_ratio": 0.000554,
-          "charging_point_coverage_ratio": 0.000911,
-          "bundle_matched_stations": 32,
-          "bundle_matched_charging_points": 146,
-          "bundle_station_coverage_ratio": 0.002104,
-          "bundle_charging_point_coverage_ratio": 0.002812,
+          "locations_scanned": 57,
+          "matched_locations": 41,
+          "matched_stations": 41,
+          "matched_charging_points": 182,
+          "station_coverage_ratio": 0.000568,
+          "charging_point_coverage_ratio": 0.000921,
+          "bundle_matched_stations": 33,
+          "bundle_matched_charging_points": 148,
+          "bundle_station_coverage_ratio": 0.002169,
+          "bundle_charging_point_coverage_ratio": 0.002848,
           "site_operator_samples": [
             "eliso GmbH"
           ]
@@ -2099,12 +3326,12 @@
           "delta_delivery": false,
           "site_status_count": 0,
           "station_status_count": 0,
-          "evse_status_count": 294,
-          "available_evses": 261,
-          "occupied_evses": 27,
-          "out_of_order_evses": 6,
+          "evse_status_count": 328,
+          "available_evses": 310,
+          "occupied_evses": 3,
+          "out_of_order_evses": 15,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T10:38:46.751492+00:00"
+          "latest_last_updated": "2026-06-05T16:30:53.233212+00:00"
         }
       }
     },
@@ -2247,7 +3474,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:59.614261982Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.705574526Z\"}",
             "status": "already_exists"
           }
         },
@@ -2385,7 +3612,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.907357653Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.3476124Z\"}",
             "status": "already_exists"
           }
         },
@@ -2395,13 +3622,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:59.614261982Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.705574526Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.907357653Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.3476124Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -2429,11 +3656,11 @@
           "site_status_count": 1,
           "station_status_count": 2,
           "evse_status_count": 18,
-          "available_evses": 7,
-          "occupied_evses": 11,
+          "available_evses": 12,
+          "occupied_evses": 6,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T10:38:57.311704Z"
+          "latest_last_updated": "2026-06-05T16:34:24.880559Z"
         }
       }
     },
@@ -2576,7 +3803,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:59.896435442Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.97380951Z\"}",
             "status": "already_exists"
           }
         },
@@ -2714,7 +3941,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:59.760729444Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.839705029Z\"}",
             "status": "already_exists"
           }
         },
@@ -2724,13 +3951,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:59.896435442Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.97380951Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:59.760729444Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.839705029Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -2739,16 +3966,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 2385,
-          "matched_locations": 2302,
-          "matched_stations": 2302,
-          "matched_charging_points": 9728,
-          "station_coverage_ratio": 0.031904,
-          "charging_point_coverage_ratio": 0.049249,
-          "bundle_matched_stations": 1640,
-          "bundle_matched_charging_points": 8085,
-          "bundle_station_coverage_ratio": 0.107817,
-          "bundle_charging_point_coverage_ratio": 0.155699,
+          "locations_scanned": 2384,
+          "matched_locations": 2292,
+          "matched_stations": 2292,
+          "matched_charging_points": 9707,
+          "station_coverage_ratio": 0.031765,
+          "charging_point_coverage_ratio": 0.049143,
+          "bundle_matched_stations": 1636,
+          "bundle_matched_charging_points": 8102,
+          "bundle_station_coverage_ratio": 0.107533,
+          "bundle_charging_point_coverage_ratio": 0.155931,
           "site_operator_samples": [
             "ENBW"
           ]
@@ -2761,10 +3988,10 @@
           "station_status_count": 2,
           "evse_status_count": 4,
           "available_evses": 1,
-          "occupied_evses": 2,
-          "out_of_order_evses": 1,
+          "occupied_evses": 3,
+          "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T12:44:40.059+02:00"
+          "latest_last_updated": "2026-06-05T18:34:44.800+02:00"
         }
       }
     },
@@ -2907,7 +4134,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.036441188Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.303421717Z\"}",
             "status": "already_exists"
           }
         },
@@ -3045,7 +4272,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:57.478932882Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.901574302Z\"}",
             "status": "already_exists"
           }
         },
@@ -3055,13 +4282,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.036441188Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.303421717Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:57.478932882Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.901574302Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -3086,14 +4313,14 @@
           "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 2,
-          "station_status_count": 19,
-          "evse_status_count": 35,
-          "available_evses": 34,
-          "occupied_evses": 0,
-          "out_of_order_evses": 1,
+          "site_status_count": 1,
+          "station_status_count": 1,
+          "evse_status_count": 1,
+          "available_evses": 0,
+          "occupied_evses": 1,
+          "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T03:00:00+02:00"
+          "latest_last_updated": "2026-06-05T15:47:45+02:00"
         }
       }
     },
@@ -3236,7 +4463,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.613806297Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.831002358Z\"}",
             "status": "already_exists"
           }
         },
@@ -3374,7 +4601,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.464647738Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.703675283Z\"}",
             "status": "already_exists"
           }
         },
@@ -3384,13 +4611,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.613806297Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.831002358Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.464647738Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.703675283Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -3399,16 +4626,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
-          "locations_scanned": 4906,
-          "matched_locations": 3293,
-          "matched_stations": 3293,
-          "matched_charging_points": 8918,
-          "station_coverage_ratio": 0.045638,
-          "charging_point_coverage_ratio": 0.045148,
-          "bundle_matched_stations": 1415,
-          "bundle_matched_charging_points": 3736,
-          "bundle_station_coverage_ratio": 0.093025,
-          "bundle_charging_point_coverage_ratio": 0.071947,
+          "locations_scanned": 4825,
+          "matched_locations": 3253,
+          "matched_stations": 3253,
+          "matched_charging_points": 8809,
+          "station_coverage_ratio": 0.045084,
+          "charging_point_coverage_ratio": 0.044596,
+          "bundle_matched_stations": 1375,
+          "bundle_matched_charging_points": 3628,
+          "bundle_station_coverage_ratio": 0.090377,
+          "bundle_charging_point_coverage_ratio": 0.069824,
           "site_operator_samples": [
             "EWE Go GmbH",
             "Westfalen Weser Ladeservice GmbH",
@@ -3416,22 +4643,22 @@
             "SachsenNetze HS.HD GmbH",
             "Pfalzwerke AG",
             "Hamburger Energiewerke Mobil GmbH",
+            "enercity AG",
             "Stadtwerke Elmshorn",
             "GLS Mobility GmbH",
-            "nonoxx pro GmbH",
-            "WEMAG AG"
+            "nonoxx pro GmbH"
           ]
         },
         "dynamic": {
           "fetch_status": "ok",
           "access_mode": "noauth",
           "delta_delivery": true,
-          "site_status_count": 13,
-          "station_status_count": 13,
-          "evse_status_count": 26,
-          "available_evses": 6,
-          "occupied_evses": 17,
-          "out_of_order_evses": 3,
+          "site_status_count": 7,
+          "station_status_count": 7,
+          "evse_status_count": 14,
+          "available_evses": 3,
+          "occupied_evses": 11,
+          "out_of_order_evses": 0,
           "unknown_evses": 0,
           "latest_last_updated": null
         }
@@ -3576,7 +4803,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.217363815Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.660729727Z\"}",
             "status": "already_exists"
           }
         },
@@ -3714,7 +4941,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.784614386Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.278755133Z\"}",
             "status": "already_exists"
           }
         },
@@ -3724,13 +4951,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.217363815Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.660729727Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.784614386Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.278755133Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -3905,7 +5132,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:50.958136388Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.054439235Z\"}",
             "status": "already_exists"
           }
         },
@@ -4043,7 +5270,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:51.127107534Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.185751731Z\"}",
             "status": "already_exists"
           }
         },
@@ -4053,13 +5280,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:50.958136388Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.054439235Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:51.127107534Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.185751731Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -4092,11 +5319,11 @@
           "site_status_count": 1,
           "station_status_count": 2,
           "evse_status_count": 1,
-          "available_evses": 0,
-          "occupied_evses": 1,
+          "available_evses": 1,
+          "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T10:37:24.382492Z"
+          "latest_last_updated": "2026-06-05T15:56:43.493809Z"
         }
       }
     },
@@ -4105,70 +5332,74 @@
       "display_name": "geb ndelte daten e lades ulen baden w rttemberg",
       "publisher": "MobiData BW",
       "feeds": {
-        "static": {
-          "publication_id": "-2035239451501556619",
-          "title": "Gebündelte Daten E-Ladesäulen Baden-Württemberg",
-          "publisher": "MobiData BW",
-          "access_mode": "auth",
-          "mdp_brokering": false,
-          "schema_profile_name": "",
-          "data_model": "https://w3id.org/mdp/schema/data_model#MODEL_OTHER",
-          "delta_delivery": false,
-          "contract_offer": {
-            "contractStart": null,
-            "contractEnd": null,
-            "providerApprovalRequired": null,
-            "napApprovalRequired": null,
-            "providerApprovalAnonymousAccessRequired": null
-          },
-          "content_data": {
-            "accessUrl": "https://api.mobidata-bw.de/geoserver/MobiData-BW/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=MobiData-BW%3Acharge_points&outputFormat=csv",
-            "endpointDocumentation": "https://api.mobidata-bw.de/geoserver/MobiData-BW/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=MobiData-BW%3Acharge_points&outputFormat=csv",
-            "accessProtocol": null,
-            "mediaType": "http://publications.europa.eu/resource/authority/file-type/CSV",
-            "dataModel": "https://w3id.org/mdp/schema/data_model#MODEL_OTHER",
-            "dataFormatAdditionalDescription": null,
-            "description": "Abzug aller der in der OCPDB-API enthaltenen Ladesäulen aus dem Geoserver",
-            "byteSize": null,
-            "fileName": "Ladesäulen (CSV)",
-            "creationDate": "2025-01-15T12:46:47.65Z",
-            "commMethod": null,
-            "retentionPeriod": null,
-            "deltaDelivery": null,
-            "masterSchema": null,
-            "schema": [],
-            "schemaProfileName": null
-          },
-          "file_access_probe": {
-            "status": "ok",
-            "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
-          },
-          "subscription_status": {
-            "attempted": true,
-            "status_code": 400,
-            "response_excerpt": "{\"message\":\"Offer should not be harvested\",\"code\":400,\"occurred\":\"2026-05-16T10:43:01.776132355Z\"}",
-            "status": "error"
-          }
-        },
+        "static": null,
         "dynamic": null,
-        "other": []
+        "other": [
+          {
+            "publication_id": "-2035239451501556619",
+            "title": "Gebündelte Daten E-Ladesäulen Baden-Württemberg",
+            "publisher": "MobiData BW",
+            "access_mode": "auth",
+            "mdp_brokering": false,
+            "schema_profile_name": "",
+            "data_model": "https://w3id.org/mdp/schema/data_model#MODEL_OTHER",
+            "delta_delivery": false,
+            "contract_offer": {
+              "contractStart": null,
+              "contractEnd": null,
+              "providerApprovalRequired": null,
+              "napApprovalRequired": null,
+              "providerApprovalAnonymousAccessRequired": null
+            },
+            "content_data": {
+              "accessUrl": null,
+              "endpointDocumentation": null,
+              "accessProtocol": null,
+              "mediaType": "https://w3id.org/mdp/schema/media_type#MEDIA_OTHER",
+              "dataModel": "https://w3id.org/mdp/schema/data_model#MODEL_OTHER",
+              "dataFormatAdditionalDescription": null,
+              "description": "<p>Work in Progress: die Historisierung ist am 28. Januar 2026 gestartet:\r\n<ul>\r\n<li><strong>dynamische </strong> Daten alle <strong>fünf Minuten</strong>\r\n<li><strong>statischen</strong> Daten <strong>monatlich</strong> (dazu gehören auch die Daten der Bundesnetzagentur (source=bnetza_api)).  \r\n</ul></p>\r\n<p>Der Zeitpunkt der Datenspeicherung kann in der Spalte <strong>\"datastore_updated_at\"</strong> abgelesen werden.\r\n\r\n<p>Die <strong>CKAN Datastore-API</strong> ermöglicht den gezielten Abruf von historisierten Daten von Ladesäulen. Der Link auf <strong>\"Daten-API\" (oben rechts)</strong> führt zu weiterführenden Erläuterungen rund um den Abruf historischer Stundenwerte. Die Dokumentation zeigt verschiedene Abfragebeispiele. Hier sind auch die Dokumentation der CKAN API und des zugehörigen Datastore verlinkt. Nutzende können sich ihre Abfragen nach verschiedenen Kriterien selbst und individuell zusammenstellen. Dazu können die Queries flexibel miteinander in der URL kombiniert werden.\r\n\r\n<p>Neben der API-Abfrage können die historisierten Daten <strong>per Download</strong> heruntergeladen und dann genutzt werden. Dabei kann die nachfolgende URL um <strong> einen Tag oder eine Woche</strong> gezielt angepasst und so die Abfrage gesteuert werden: \r\n<p><strong>Abfrage einzelner Tage, Datum kann in der URL angepasst werden:</strong>\r\n<p>https://mobidata-bw.de/daten/historisierung/tag/2026/20260415_89fb3a0b-cc42-48a6-b17a-8f1b46abccf1.csv.gz\r\n\r\n<p><strong>Abfrage einzelner Wochen, Kalenderwoche kann in der URL angepasst werden:</strong>\r\n<p>https://mobidata-bw.de/daten/historisierung/woche/2026/202615_89fb3a0b-cc42-48a6-b17a-8f1b46abccf1.csv.gz\r\n\r\n<p><strong>Der letzte Teil der URL setzt sich zusammen aus dem gewählten Datum (entweder YYYYMMTT oder YYYYKW) und der ID der historisierten Ressource. Diese Parameter können angepasst werden.</strong></p>\r\n\r\n",
+              "byteSize": null,
+              "fileName": "Historische Daten E-Ladesäulen ",
+              "creationDate": "2026-01-26T15:29:45.844Z",
+              "commMethod": null,
+              "retentionPeriod": null,
+              "deltaDelivery": null,
+              "masterSchema": null,
+              "schema": [],
+              "schemaProfileName": null
+            },
+            "file_access_probe": {
+              "status": "ok",
+              "status_code": 200,
+              "is_accessible": false,
+              "response_excerpt": "{\"isAccessible\":false}"
+            },
+            "subscription_status": {
+              "attempted": true,
+              "status_code": 400,
+              "response_excerpt": "{\"message\":\"Offer should not be harvested\",\"code\":400,\"occurred\":\"2026-06-05T16:31:52.355541312Z\"}",
+              "status": "error"
+            }
+          }
+        ]
       },
       "subscription": {
-        "static": {
-          "attempted": true,
-          "status_code": 400,
-          "response_excerpt": "{\"message\":\"Offer should not be harvested\",\"code\":400,\"occurred\":\"2026-05-16T10:43:01.776132355Z\"}",
-          "status": "error"
-        },
+        "static": null,
         "dynamic": null,
-        "other": []
+        "other": [
+          {
+            "attempted": true,
+            "status_code": 400,
+            "response_excerpt": "{\"message\":\"Offer should not be harvested\",\"code\":400,\"occurred\":\"2026-06-05T16:31:52.355541312Z\"}",
+            "status": "error"
+          }
+        ]
       },
       "coverage": {
         "static": {
-          "fetch_status": "unsupported_static_format: http://publications.europa.eu/resource/authority/file-type/CSV",
-          "access_mode": "auth",
+          "fetch_status": "no_static_feed",
+          "access_mode": "",
           "locations_scanned": 0,
           "matched_locations": 0,
           "matched_stations": 0,
@@ -4335,7 +5566,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:54.128578907Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:45.604915335Z\"}",
             "status": "already_exists"
           }
         },
@@ -4473,7 +5704,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:54.267741759Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:45.734436608Z\"}",
             "status": "already_exists"
           }
         },
@@ -4483,13 +5714,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:54.128578907Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:45.604915335Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:54.267741759Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:45.734436608Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -4507,7 +5738,7 @@
           "bundle_matched_stations": 1,
           "bundle_matched_charging_points": 2,
           "bundle_station_coverage_ratio": 6.6e-05,
-          "bundle_charging_point_coverage_ratio": 3.9e-05,
+          "bundle_charging_point_coverage_ratio": 3.8e-05,
           "site_operator_samples": [
             "GLS Mobility GmbH"
           ]
@@ -4524,6 +5755,337 @@
           "out_of_order_evses": 0,
           "unknown_evses": 0,
           "latest_last_updated": null
+        }
+      }
+    },
+    {
+      "uid": "gp_joule_connect",
+      "display_name": "gp joule connect",
+      "publisher": "GP JOULE Connect GmbH",
+      "feeds": {
+        "static": {
+          "publication_id": "997111469996658688",
+          "title": "AFIR-recharging-stat-GP JOULE Connect GmbH",
+          "publisher": "GP JOULE Connect GmbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Static-01-00-00",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": false,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": false,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": false,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_D2Payload.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationReferencing.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Static-01-00-00"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:41.845618385Z\"}",
+            "status": "already_exists"
+          }
+        },
+        "dynamic": {
+          "publication_id": "997190851637440512",
+          "title": "AFIR-recharging-dyn-GP JOULE Connect GmbH",
+          "publisher": "GP JOULE Connect GmbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": false,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": false,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": false,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/997190851637440512/DATEXII_3_D2Payload.json",
+              "description": "",
+              "modified": "2026-05-29T13:55:39Z",
+              "instance": {
+                "fileName": "DATEXII_3_D2Payload.json",
+                "mediaType": null,
+                "byteSize": 264
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/997190851637440512/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": "2026-05-29T13:55:47Z",
+                "instance": {
+                  "fileName": "DATEXII_3_AfirFacilities.json",
+                  "mediaType": null,
+                  "byteSize": 23617
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/997190851637440512/DATEXII_3_Common.json",
+                "description": "",
+                "modified": "2026-05-29T13:55:47Z",
+                "instance": {
+                  "fileName": "DATEXII_3_Common.json",
+                  "mediaType": null,
+                  "byteSize": 34955
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/997190851637440512/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": "2026-05-29T13:55:47Z",
+                "instance": {
+                  "fileName": "DATEXII_3_CommonExtension.json",
+                  "mediaType": null,
+                  "byteSize": 918
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/997190851637440512/DATEXII_3_ExchangeInformation.json",
+                "description": "",
+                "modified": "2026-05-29T13:55:47Z",
+                "instance": {
+                  "fileName": "DATEXII_3_ExchangeInformation.json",
+                  "mediaType": null,
+                  "byteSize": 6483
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/997190851637440512/DATEXII_3_MessageContainer.json",
+                "description": "",
+                "modified": "2026-05-29T13:55:47Z",
+                "instance": {
+                  "fileName": "DATEXII_3_MessageContainer.json",
+                  "mediaType": null,
+                  "byteSize": 1382
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/997190851637440512/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": "2026-05-29T13:55:47Z",
+                "instance": {
+                  "fileName": "DATEXII_3_AfirEnergyInfrastructure.json",
+                  "mediaType": null,
+                  "byteSize": 33463
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": null
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:41.691705584Z\"}",
+            "status": "already_exists"
+          }
+        },
+        "other": []
+      },
+      "subscription": {
+        "static": {
+          "attempted": true,
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:41.845618385Z\"}",
+          "status": "already_exists"
+        },
+        "dynamic": {
+          "attempted": true,
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:41.691705584Z\"}",
+          "status": "already_exists"
+        },
+        "other": []
+      },
+      "coverage": {
+        "static": {
+          "fetch_status": "ok",
+          "access_mode": "auth",
+          "locations_scanned": 200,
+          "matched_locations": 177,
+          "matched_stations": 177,
+          "matched_charging_points": 676,
+          "station_coverage_ratio": 0.002453,
+          "charging_point_coverage_ratio": 0.003422,
+          "bundle_matched_stations": 42,
+          "bundle_matched_charging_points": 138,
+          "bundle_station_coverage_ratio": 0.002761,
+          "bundle_charging_point_coverage_ratio": 0.002656,
+          "site_operator_samples": [
+            "GP JOULE CONNECT"
+          ]
+        },
+        "dynamic": {
+          "fetch_status": "ok",
+          "access_mode": "auth",
+          "delta_delivery": false,
+          "site_status_count": 199,
+          "station_status_count": 421,
+          "evse_status_count": 799,
+          "available_evses": 664,
+          "occupied_evses": 79,
+          "out_of_order_evses": 56,
+          "unknown_evses": 0,
+          "latest_last_updated": "2026-06-05T16:35:01.000Z"
         }
       }
     },
@@ -4666,7 +6228,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:51.912644804Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.826702956Z\"}",
             "status": "already_exists"
           }
         },
@@ -4804,7 +6366,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:52.084522188Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.957063952Z\"}",
             "status": "already_exists"
           }
         },
@@ -4814,13 +6376,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:51.912644804Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.826702956Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:52.084522188Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.957063952Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -4829,41 +6391,41 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
-          "locations_scanned": 979,
-          "matched_locations": 522,
-          "matched_stations": 522,
-          "matched_charging_points": 1553,
-          "station_coverage_ratio": 0.007234,
-          "charging_point_coverage_ratio": 0.007862,
+          "locations_scanned": 984,
+          "matched_locations": 523,
+          "matched_stations": 523,
+          "matched_charging_points": 1555,
+          "station_coverage_ratio": 0.007248,
+          "charging_point_coverage_ratio": 0.007872,
           "bundle_matched_stations": 122,
           "bundle_matched_charging_points": 384,
-          "bundle_station_coverage_ratio": 0.008021,
-          "bundle_charging_point_coverage_ratio": 0.007395,
+          "bundle_station_coverage_ratio": 0.008019,
+          "bundle_charging_point_coverage_ratio": 0.00739,
           "site_operator_samples": [
-            "Continental AG",
-            "Gemeinde Immenhausen",
-            "Vitesco Technologies GmbH",
-            "EAM Natur Energie GmbH",
-            "Stadtwerke Straubing GmbH",
             "Stadtwerke Hemau",
-            "Gemeinde Frielendorf",
-            "Gemeinde Fuldabrück",
+            "Stadt Sontra",
+            "EAM Natur Energie GmbH",
+            "TELIS Unternehmensgruppe AG",
+            "Stadtwerke Bogen GmbH",
+            "Charge Green OnSite GmbH",
+            "Landkreis Kassel",
+            "Stadtwerke Straubing GmbH",
             "EW Eichsfeldgas GmbH",
-            "becharged GmbH"
+            "EGT Energy Solutions GmbH (CPO)"
           ]
         },
         "dynamic": {
           "fetch_status": "ok",
           "access_mode": "noauth",
           "delta_delivery": false,
-          "site_status_count": 979,
-          "station_status_count": 979,
-          "evse_status_count": 1663,
-          "available_evses": 1541,
-          "occupied_evses": 79,
-          "out_of_order_evses": 16,
-          "unknown_evses": 27,
-          "latest_last_updated": "2026-05-16T10:45:08.298Z"
+          "site_status_count": 984,
+          "station_status_count": 984,
+          "evse_status_count": 1673,
+          "available_evses": 1537,
+          "occupied_evses": 75,
+          "out_of_order_evses": 23,
+          "unknown_evses": 38,
+          "latest_last_updated": "2026-06-05T16:35:08.618Z"
         }
       }
     },
@@ -5006,7 +6568,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:53.14337484Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.738587687Z\"}",
             "status": "already_exists"
           }
         },
@@ -5144,7 +6706,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:53.281135912Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.882286924Z\"}",
             "status": "already_exists"
           }
         },
@@ -5154,13 +6716,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:53.14337484Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.738587687Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:53.281135912Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.882286924Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -5335,7 +6897,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:52.232960399Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.084572781Z\"}",
             "status": "already_exists"
           }
         },
@@ -5346,7 +6908,7 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:52.232960399Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.084572781Z\"}",
           "status": "already_exists"
         },
         "dynamic": null,
@@ -5522,7 +7084,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:51.580560025Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.578857968Z\"}",
             "status": "already_exists"
           }
         },
@@ -5660,7 +7222,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:51.730518858Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.705198172Z\"}",
             "status": "already_exists"
           }
         },
@@ -5670,13 +7232,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:51.580560025Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.578857968Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:51.730518858Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.705198172Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -5685,16 +7247,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 967,
-          "matched_locations": 601,
-          "matched_stations": 601,
-          "matched_charging_points": 1875,
-          "station_coverage_ratio": 0.008329,
-          "charging_point_coverage_ratio": 0.009492,
-          "bundle_matched_stations": 174,
-          "bundle_matched_charging_points": 547,
-          "bundle_station_coverage_ratio": 0.011439,
-          "bundle_charging_point_coverage_ratio": 0.010534,
+          "locations_scanned": 959,
+          "matched_locations": 594,
+          "matched_stations": 594,
+          "matched_charging_points": 1863,
+          "station_coverage_ratio": 0.008232,
+          "charging_point_coverage_ratio": 0.009432,
+          "bundle_matched_stations": 168,
+          "bundle_matched_charging_points": 537,
+          "bundle_station_coverage_ratio": 0.011042,
+          "bundle_charging_point_coverage_ratio": 0.010335,
           "site_operator_samples": [
             "DEAHF",
             "DENB1",
@@ -5712,14 +7274,14 @@
           "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": false,
-          "site_status_count": 162,
-          "station_status_count": 967,
-          "evse_status_count": 2872,
-          "available_evses": 2231,
-          "occupied_evses": 406,
-          "out_of_order_evses": 232,
-          "unknown_evses": 3,
-          "latest_last_updated": "2026-05-16T10:45:01Z"
+          "site_status_count": 161,
+          "station_status_count": 959,
+          "evse_status_count": 2859,
+          "available_evses": 2328,
+          "occupied_evses": 283,
+          "out_of_order_evses": 237,
+          "unknown_evses": 11,
+          "latest_last_updated": "2026-06-05T16:35:00Z"
         }
       }
     },
@@ -5862,7 +7424,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:43:00.36950257Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:51.222775544Z\"}",
             "status": "already_exists"
           }
         },
@@ -6000,7 +7562,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:43:00.026779943Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:51.098874772Z\"}",
             "status": "already_exists"
           }
         },
@@ -6010,13 +7572,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:43:00.36950257Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:51.222775544Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:43:00.026779943Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:51.098874772Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -6025,16 +7587,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 2226,
-          "matched_locations": 1873,
-          "matched_stations": 1873,
-          "matched_charging_points": 5657,
-          "station_coverage_ratio": 0.025958,
-          "charging_point_coverage_ratio": 0.028639,
-          "bundle_matched_stations": 201,
-          "bundle_matched_charging_points": 744,
-          "bundle_station_coverage_ratio": 0.013214,
-          "bundle_charging_point_coverage_ratio": 0.014328,
+          "locations_scanned": 2207,
+          "matched_locations": 1851,
+          "matched_stations": 1851,
+          "matched_charging_points": 5407,
+          "station_coverage_ratio": 0.025653,
+          "charging_point_coverage_ratio": 0.027373,
+          "bundle_matched_stations": 215,
+          "bundle_matched_charging_points": 798,
+          "bundle_station_coverage_ratio": 0.014132,
+          "bundle_charging_point_coverage_ratio": 0.015358,
           "site_operator_samples": [
             "DESTA",
             "DEERM",
@@ -6042,24 +7604,24 @@
             "DEVEL",
             "DEERK",
             "DEWSW",
+            "DEGRE",
             "DEJEN",
             "DEFER",
-            "DEREF",
-            "DEMOS"
+            "DESOP"
           ]
         },
         "dynamic": {
           "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": false,
-          "site_status_count": 29,
-          "station_status_count": 2226,
-          "evse_status_count": 7693,
-          "available_evses": 6394,
-          "occupied_evses": 1115,
-          "out_of_order_evses": 176,
-          "unknown_evses": 8,
-          "latest_last_updated": "2026-05-16T10:45:02Z"
+          "site_status_count": 32,
+          "station_status_count": 2208,
+          "evse_status_count": 7483,
+          "available_evses": 6423,
+          "occupied_evses": 848,
+          "out_of_order_evses": 200,
+          "unknown_evses": 12,
+          "latest_last_updated": "2026-06-05T16:35:02Z"
         }
       }
     },
@@ -6202,7 +7764,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:51.428154871Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.45207587Z\"}",
             "status": "already_exists"
           }
         },
@@ -6340,7 +7902,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:51.2686024Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.326787495Z\"}",
             "status": "already_exists"
           }
         },
@@ -6350,13 +7912,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:51.428154871Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.45207587Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:51.2686024Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:43.326787495Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -6531,7 +8093,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.320332304Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.576348892Z\"}",
             "status": "already_exists"
           }
         },
@@ -6669,7 +8231,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.183945245Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.434357854Z\"}",
             "status": "already_exists"
           }
         },
@@ -6679,13 +8241,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.320332304Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.576348892Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.183945245Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.434357854Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -6694,16 +8256,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 1187,
-          "matched_locations": 946,
-          "matched_stations": 946,
-          "matched_charging_points": 3816,
-          "station_coverage_ratio": 0.013111,
-          "charging_point_coverage_ratio": 0.019319,
-          "bundle_matched_stations": 124,
-          "bundle_matched_charging_points": 476,
-          "bundle_station_coverage_ratio": 0.008152,
-          "bundle_charging_point_coverage_ratio": 0.009167,
+          "locations_scanned": 1229,
+          "matched_locations": 971,
+          "matched_stations": 971,
+          "matched_charging_points": 3897,
+          "station_coverage_ratio": 0.013457,
+          "charging_point_coverage_ratio": 0.019729,
+          "bundle_matched_stations": 126,
+          "bundle_matched_charging_points": 481,
+          "bundle_station_coverage_ratio": 0.008282,
+          "bundle_charging_point_coverage_ratio": 0.009257,
           "site_operator_samples": []
         },
         "dynamic": {
@@ -6713,11 +8275,11 @@
           "site_status_count": 1,
           "station_status_count": 1,
           "evse_status_count": 1,
-          "available_evses": 1,
-          "occupied_evses": 0,
+          "available_evses": 0,
+          "occupied_evses": 1,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T10:46:46.314402+00:00"
+          "latest_last_updated": "2026-06-05T16:36:41.913358+00:00"
         }
       }
     },
@@ -6860,7 +8422,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:57.19703317Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.619597271Z\"}",
             "status": "already_exists"
           }
         },
@@ -6998,7 +8560,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:57.047416584Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.491480958Z\"}",
             "status": "already_exists"
           }
         },
@@ -7008,13 +8570,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:57.19703317Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.619597271Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:57.047416584Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.491480958Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -7023,16 +8585,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 139,
-          "matched_locations": 103,
-          "matched_stations": 103,
-          "matched_charging_points": 255,
-          "station_coverage_ratio": 0.001427,
-          "charging_point_coverage_ratio": 0.001291,
+          "locations_scanned": 140,
+          "matched_locations": 105,
+          "matched_stations": 105,
+          "matched_charging_points": 259,
+          "station_coverage_ratio": 0.001455,
+          "charging_point_coverage_ratio": 0.001311,
           "bundle_matched_stations": 4,
           "bundle_matched_charging_points": 10,
           "bundle_station_coverage_ratio": 0.000263,
-          "bundle_charging_point_coverage_ratio": 0.000193,
+          "bundle_charging_point_coverage_ratio": 0.000192,
           "site_operator_samples": [
             "Autohaus Albrecht",
             "Stadtwerke Bad Saulgau",
@@ -7041,9 +8603,9 @@
             "Braun Energiedienstleistungen GmbH & Co. KG",
             "Energieversorgung Guben GmbH",
             "ELTPLAN",
+            "Autocenter Giraud GmbH",
             "Hyatt Place Frankfurt Airport",
-            "KSV Koblenzer GmbH",
-            "e-HET GmbH"
+            "KSV Koblenzer GmbH"
           ]
         },
         "dynamic": {
@@ -7057,7 +8619,7 @@
           "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T10:46:30.5884321+00:00"
+          "latest_last_updated": "2026-06-05T16:36:35.5541443+00:00"
         }
       }
     },
@@ -7200,7 +8762,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:54.698672545Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.280262172Z\"}",
             "status": "already_exists"
           }
         },
@@ -7338,7 +8900,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:54.850337853Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.477901109Z\"}",
             "status": "already_exists"
           }
         },
@@ -7348,13 +8910,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:54.698672545Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.280262172Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:54.850337853Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.477901109Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -7529,7 +9091,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:57.836586579Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.175802309Z\"}",
             "status": "already_exists"
           }
         },
@@ -7667,7 +9229,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:57.647888816Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.043987961Z\"}",
             "status": "already_exists"
           }
         },
@@ -7715,7 +9277,7 @@
             "subscription_status": {
               "attempted": true,
               "status_code": 400,
-              "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-05-16T10:43:00.983355427Z\"}",
+              "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:51.635052278Z\"}",
               "status": "error"
             }
           }
@@ -7725,20 +9287,20 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:57.836586579Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.175802309Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:57.647888816Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.043987961Z\"}",
           "status": "already_exists"
         },
         "other": [
           {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-05-16T10:43:00.983355427Z\"}",
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-05T16:31:51.635052278Z\"}",
             "status": "error"
           }
         ]
@@ -7747,16 +9309,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 596,
-          "matched_locations": 374,
-          "matched_stations": 374,
-          "matched_charging_points": 1433,
-          "station_coverage_ratio": 0.005183,
-          "charging_point_coverage_ratio": 0.007255,
+          "locations_scanned": 645,
+          "matched_locations": 373,
+          "matched_stations": 373,
+          "matched_charging_points": 1422,
+          "station_coverage_ratio": 0.005169,
+          "charging_point_coverage_ratio": 0.007199,
           "bundle_matched_stations": 134,
-          "bundle_matched_charging_points": 478,
-          "bundle_station_coverage_ratio": 0.008809,
-          "bundle_charging_point_coverage_ratio": 0.009205,
+          "bundle_matched_charging_points": 480,
+          "bundle_station_coverage_ratio": 0.008808,
+          "bundle_charging_point_coverage_ratio": 0.009238,
           "site_operator_samples": [
             "Mangels-Elektro U. Sanitär GmbH",
             "Service4Charger",
@@ -7777,11 +9339,11 @@
           "site_status_count": 1,
           "station_status_count": 1,
           "evse_status_count": 1,
-          "available_evses": 0,
-          "occupied_evses": 1,
+          "available_evses": 1,
+          "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T10:47:05.528000Z"
+          "latest_last_updated": "2026-06-05T16:37:20.086000Z"
         }
       }
     },
@@ -7924,7 +9486,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:57.334067337Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.749662829Z\"}",
             "status": "already_exists"
           }
         },
@@ -7935,7 +9497,7 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:57.334067337Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:48.749662829Z\"}",
           "status": "already_exists"
         },
         "dynamic": null,
@@ -7945,20 +9507,24 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 24,
-          "matched_locations": 22,
-          "matched_stations": 22,
-          "matched_charging_points": 50,
-          "station_coverage_ratio": 0.000305,
-          "charging_point_coverage_ratio": 0.000253,
-          "bundle_matched_stations": 16,
-          "bundle_matched_charging_points": 34,
-          "bundle_station_coverage_ratio": 0.001052,
-          "bundle_charging_point_coverage_ratio": 0.000655,
+          "locations_scanned": 104,
+          "matched_locations": 65,
+          "matched_stations": 65,
+          "matched_charging_points": 145,
+          "station_coverage_ratio": 0.000901,
+          "charging_point_coverage_ratio": 0.000734,
+          "bundle_matched_stations": 22,
+          "bundle_matched_charging_points": 67,
+          "bundle_station_coverage_ratio": 0.001446,
+          "bundle_charging_point_coverage_ratio": 0.001289,
           "site_operator_samples": [
+            "Scherenberg e-Mobility e.K.",
+            "800 Volt Technologies GmbH",
+            "Ladepark AM",
+            "Lade.ZEIT GmbH",
             "SolarLoader+ GmbH",
             "Olycharge",
-            "800 Volt Technologies GmbH"
+            "Brand-E Mobility & Power GmbH"
           ]
         },
         "dynamic": {
@@ -8115,7 +9681,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.48881684Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.916265958Z\"}",
             "status": "already_exists"
           }
         },
@@ -8253,7 +9819,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.356460312Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.789288623Z\"}",
             "status": "already_exists"
           }
         },
@@ -8263,13 +9829,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.48881684Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.916265958Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.356460312Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.789288623Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -8278,7 +9844,7 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
-          "locations_scanned": 658,
+          "locations_scanned": 672,
           "matched_locations": 603,
           "matched_stations": 603,
           "matched_charging_points": 1425,
@@ -8296,14 +9862,343 @@
           "fetch_status": "ok",
           "access_mode": "noauth",
           "delta_delivery": false,
-          "site_status_count": 658,
-          "station_status_count": 1489,
-          "evse_status_count": 1702,
-          "available_evses": 1178,
-          "occupied_evses": 487,
-          "out_of_order_evses": 37,
+          "site_status_count": 674,
+          "station_status_count": 1519,
+          "evse_status_count": 1748,
+          "available_evses": 1236,
+          "occupied_evses": 498,
+          "out_of_order_evses": 14,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T10:09:59+00:00"
+          "latest_last_updated": "2026-06-05T16:22:21+00:00"
+        }
+      }
+    },
+    {
+      "uid": "r_m_beteiligungsgesellschaft",
+      "display_name": "r m beteiligungsgesellschaft",
+      "publisher": "Eulektro GmbH",
+      "feeds": {
+        "static": {
+          "publication_id": "993499364131065856",
+          "title": "AFIR-recharging-stat-R & M Beteiligungsgesellschaft mbH",
+          "publisher": "Eulektro GmbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Static-01-00-00",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": false,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": true,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": false,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_D2Payload.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Static-01-00-00/DATEXII_3_LocationReferencing.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Static-01-00-00"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": false,
+            "response_excerpt": "{\"isAccessible\":false}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:42.249066845Z\"}",
+            "status": "already_exists"
+          }
+        },
+        "dynamic": {
+          "publication_id": "993498817080557568",
+          "title": "AFIR-recharging-dyn-R & M Beteiligungsgesellschaft mbH",
+          "publisher": "Eulektro GmbH",
+          "access_mode": "auth",
+          "mdp_brokering": true,
+          "schema_profile_name": "AFIR-Recharging-Dynamic-01-00-00_Delta",
+          "data_model": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+          "delta_delivery": true,
+          "contract_offer": {
+            "contractStart": null,
+            "contractEnd": null,
+            "providerApprovalRequired": true,
+            "napApprovalRequired": null,
+            "providerApprovalAnonymousAccessRequired": false
+          },
+          "content_data": {
+            "accessUrl": null,
+            "endpointDocumentation": null,
+            "accessProtocol": null,
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
+            "dataModel": "https://w3id.org/mdp/schema/data_model#DATEX_2_V3",
+            "dataFormatAdditionalDescription": null,
+            "description": null,
+            "byteSize": null,
+            "fileName": null,
+            "creationDate": null,
+            "commMethod": null,
+            "retentionPeriod": null,
+            "deltaDelivery": true,
+            "masterSchema": {
+              "title": "",
+              "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_MessageContainer.json",
+              "description": "",
+              "modified": null,
+              "instance": {
+                "fileName": null,
+                "mediaType": null,
+                "byteSize": 0
+              },
+              "validFrom": null,
+              "validTo": null
+            },
+            "schema": [
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirEnergyInfrastructure.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_AfirFacilities.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_Common.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_CommonExtension.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_D2Payload.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              },
+              {
+                "title": "",
+                "accessURL": "/schemas/DATEX_2_V3/AFIR-Recharging-Dynamic-01-00-00_Delta/DATEXII_3_ExchangeInformation.json",
+                "description": "",
+                "modified": null,
+                "instance": {
+                  "fileName": null,
+                  "mediaType": null,
+                  "byteSize": 0
+                },
+                "validFrom": null,
+                "validTo": null
+              }
+            ],
+            "schemaProfileName": "AFIR-Recharging-Dynamic-01-00-00_Delta"
+          },
+          "file_access_probe": {
+            "status": "ok",
+            "status_code": 200,
+            "is_accessible": false,
+            "response_excerpt": "{\"isAccessible\":false}"
+          },
+          "subscription_status": {
+            "attempted": true,
+            "status_code": 409,
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:42.379539067Z\"}",
+            "status": "already_exists"
+          }
+        },
+        "other": []
+      },
+      "subscription": {
+        "static": {
+          "attempted": true,
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:42.249066845Z\"}",
+          "status": "already_exists"
+        },
+        "dynamic": {
+          "attempted": true,
+          "status_code": 409,
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:42.379539067Z\"}",
+          "status": "already_exists"
+        },
+        "other": []
+      },
+      "coverage": {
+        "static": {
+          "fetch_status": "noauth: 403 Client Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/993499364131065856/file/noauth",
+          "access_mode": "auth",
+          "locations_scanned": 0,
+          "matched_locations": 0,
+          "matched_stations": 0,
+          "matched_charging_points": 0,
+          "station_coverage_ratio": 0.0,
+          "charging_point_coverage_ratio": 0.0,
+          "bundle_matched_stations": 0,
+          "bundle_matched_charging_points": 0,
+          "bundle_station_coverage_ratio": 0.0,
+          "bundle_charging_point_coverage_ratio": 0.0,
+          "site_operator_samples": []
+        },
+        "dynamic": {
+          "fetch_status": "noauth: 403 Client Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/993498817080557568/file/noauth",
+          "access_mode": "auth",
+          "delta_delivery": true,
+          "site_status_count": 0,
+          "station_status_count": 0,
+          "evse_status_count": 0,
+          "available_evses": 0,
+          "occupied_evses": 0,
+          "out_of_order_evses": 0,
+          "unknown_evses": 0,
+          "latest_last_updated": null
         }
       }
     },
@@ -8446,7 +10341,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:53.978926695Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:45.478820095Z\"}",
             "status": "already_exists"
           }
         },
@@ -8584,7 +10479,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.766857046Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.950205479Z\"}",
             "status": "already_exists"
           }
         },
@@ -8594,13 +10489,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:53.978926695Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:45.478820095Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:58.766857046Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:49.950205479Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -8627,14 +10522,14 @@
           "fetch_status": "ok",
           "access_mode": "noauth",
           "delta_delivery": true,
-          "site_status_count": 2,
-          "station_status_count": 0,
-          "evse_status_count": 0,
+          "site_status_count": 3,
+          "station_status_count": 3,
+          "evse_status_count": 3,
           "available_evses": 0,
-          "occupied_evses": 0,
+          "occupied_evses": 3,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T10:46:00Z"
+          "latest_last_updated": "2026-06-05T16:37:00Z"
         }
       }
     },
@@ -8777,7 +10672,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.20156158Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.731371763Z\"}",
             "status": "already_exists"
           }
         },
@@ -8915,7 +10810,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.060808562Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.599579436Z\"}",
             "status": "already_exists"
           }
         },
@@ -8925,13 +10820,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.20156158Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.731371763Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.060808562Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.599579436Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -9106,7 +11001,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:52.54956569Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.338370658Z\"}",
             "status": "already_exists"
           }
         },
@@ -9244,7 +11139,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:52.385006193Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.21301894Z\"}",
             "status": "already_exists"
           }
         },
@@ -9254,13 +11149,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:52.54956569Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.338370658Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:52.385006193Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.21301894Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -9435,7 +11330,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:52.980919752Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.616680929Z\"}",
             "status": "already_exists"
           }
         },
@@ -9573,7 +11468,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:52.823197957Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.473956245Z\"}",
             "status": "already_exists"
           }
         },
@@ -9583,13 +11478,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:52.980919752Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.616680929Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:52.823197957Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:44.473956245Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -9764,7 +11659,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:59.474851565Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.573995337Z\"}",
             "status": "already_exists"
           }
         },
@@ -9902,7 +11797,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:59.348020827Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.450218971Z\"}",
             "status": "already_exists"
           }
         },
@@ -9912,13 +11807,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:59.474851565Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.573995337Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:59.348020827Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:50.450218971Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -9927,16 +11822,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
-          "locations_scanned": 320,
-          "matched_locations": 301,
-          "matched_stations": 301,
-          "matched_charging_points": 3616,
-          "station_coverage_ratio": 0.004172,
-          "charging_point_coverage_ratio": 0.018306,
-          "bundle_matched_stations": 287,
-          "bundle_matched_charging_points": 3489,
-          "bundle_station_coverage_ratio": 0.018868,
-          "bundle_charging_point_coverage_ratio": 0.06719,
+          "locations_scanned": 322,
+          "matched_locations": 302,
+          "matched_stations": 302,
+          "matched_charging_points": 3622,
+          "station_coverage_ratio": 0.004185,
+          "charging_point_coverage_ratio": 0.018337,
+          "bundle_matched_stations": 288,
+          "bundle_matched_charging_points": 3495,
+          "bundle_station_coverage_ratio": 0.01893,
+          "bundle_charging_point_coverage_ratio": 0.067265,
           "site_operator_samples": [
             "Tesla, Inc."
           ]
@@ -9948,11 +11843,11 @@
           "site_status_count": 1,
           "station_status_count": 1,
           "evse_status_count": 1,
-          "available_evses": 0,
-          "occupied_evses": 1,
+          "available_evses": 1,
+          "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T10:49:01Z"
+          "latest_last_updated": "2026-06-05T16:39:17Z"
         }
       }
     },
@@ -10095,7 +11990,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.502594762Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.988320139Z\"}",
             "status": "already_exists"
           }
         },
@@ -10233,7 +12128,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.352987773Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.861598558Z\"}",
             "status": "already_exists"
           }
         },
@@ -10243,13 +12138,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.502594762Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.988320139Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.352987773Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:46.861598558Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -10258,21 +12153,21 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 10310,
-          "matched_locations": 6951,
-          "matched_stations": 6951,
-          "matched_charging_points": 14535,
-          "station_coverage_ratio": 0.096334,
-          "charging_point_coverage_ratio": 0.073585,
-          "bundle_matched_stations": 805,
+          "locations_scanned": 10345,
+          "matched_locations": 6941,
+          "matched_stations": 6941,
+          "matched_charging_points": 14515,
+          "station_coverage_ratio": 0.096196,
+          "charging_point_coverage_ratio": 0.073484,
+          "bundle_matched_stations": 804,
           "bundle_matched_charging_points": 2055,
-          "bundle_station_coverage_ratio": 0.052922,
-          "bundle_charging_point_coverage_ratio": 0.039575,
+          "bundle_station_coverage_ratio": 0.052846,
+          "bundle_charging_point_coverage_ratio": 0.03955,
           "site_operator_samples": [
             "enercity AG",
             "Envia  GmbH",
             "energis GmbH",
-            "Flächenentwicklungsgesellschaft Haltern am See mbH",
+            "Stadtwerke Neustadt a. Rbge. GmbH",
             "Westenergie Metering GmbH",
             "Energieversorgung Oberhausen AG",
             "Süwag Vertrieb AG & Co. KG",
@@ -10292,7 +12187,7 @@
           "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-05-16T10:49:36Z"
+          "latest_last_updated": "2026-06-05T16:40:15.768790362Z"
         }
       }
     },
@@ -10435,7 +12330,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.933188753Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.410117081Z\"}",
             "status": "already_exists"
           }
         },
@@ -10573,7 +12468,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.08015436Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.53322677Z\"}",
             "status": "already_exists"
           }
         },
@@ -10583,13 +12478,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:55.933188753Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.410117081Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:42:56.08015436Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:47.53322677Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -10764,7 +12659,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:43:00.837623466Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:51.496199793Z\"}",
             "status": "already_exists"
           }
         },
@@ -10889,7 +12784,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:43:00.576866735Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:51.357751326Z\"}",
             "status": "already_exists"
           }
         },
@@ -10899,13 +12794,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:43:00.837623466Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:51.496199793Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-05-16T10:43:00.576866735Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-05T16:31:51.357751326Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -10914,16 +12809,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 1780,
-          "matched_locations": 978,
-          "matched_stations": 978,
-          "matched_charging_points": 2327,
-          "station_coverage_ratio": 0.013554,
-          "charging_point_coverage_ratio": 0.011781,
-          "bundle_matched_stations": 48,
-          "bundle_matched_charging_points": 115,
-          "bundle_station_coverage_ratio": 0.003156,
-          "bundle_charging_point_coverage_ratio": 0.002215,
+          "locations_scanned": 1844,
+          "matched_locations": 984,
+          "matched_stations": 984,
+          "matched_charging_points": 2340,
+          "station_coverage_ratio": 0.013637,
+          "charging_point_coverage_ratio": 0.011846,
+          "bundle_matched_stations": 49,
+          "bundle_matched_charging_points": 117,
+          "bundle_station_coverage_ratio": 0.003221,
+          "bundle_charging_point_coverage_ratio": 0.002252,
           "site_operator_samples": [
             "Wirelane GmbH"
           ]
@@ -10932,14 +12827,14 @@
           "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 1,
-          "station_status_count": 1,
-          "evse_status_count": 2,
-          "available_evses": 2,
-          "occupied_evses": 0,
-          "out_of_order_evses": 0,
-          "unknown_evses": 0,
-          "latest_last_updated": "2026-05-14T00:30:38+00:00"
+          "site_status_count": 1844,
+          "station_status_count": 1844,
+          "evse_status_count": 3545,
+          "available_evses": 3197,
+          "occupied_evses": 246,
+          "out_of_order_evses": 26,
+          "unknown_evses": 76,
+          "latest_last_updated": "2026-06-04T02:33:25+00:00"
         }
       }
     }

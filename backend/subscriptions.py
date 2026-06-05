@@ -20,6 +20,7 @@ ACTIVE_DYN_DATEX_SUBSCRIPTION_PROVIDER_UIDS = (
     "enbwmobility",
     "eround",
     "ev_price",
+    "gp_joule_connect",
     "lichtblick_emobility",
     "ladenetz_de_ladestationsdaten",
     "m8mit",

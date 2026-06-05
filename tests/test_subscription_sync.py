@@ -523,6 +523,42 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
             feed_kind="static",
             access_mode="auth",
         ),
+        SubscriptionOffer(
+            provider_uid="gp_joule_connect",
+            display_name="gp joule connect",
+            publisher="GP JOULE Connect GmbH",
+            publication_id="997190851637440512",
+            offer_title="AFIR-recharging-dyn-GP JOULE Connect GmbH",
+            feed_kind="dynamic",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
+            provider_uid="gp_joule_connect",
+            display_name="gp joule connect",
+            publisher="GP JOULE Connect GmbH",
+            publication_id="997111469996658688",
+            offer_title="AFIR-recharging-stat-GP JOULE Connect GmbH",
+            feed_kind="static",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
+            provider_uid="e_clearing_net",
+            display_name="e clearing net",
+            publisher="smartlab Innovationsgesellschaft mbH",
+            publication_id="996823601386508288",
+            offer_title="e-clearing.net AFIR Data Dynamic",
+            feed_kind="dynamic",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
+            provider_uid="e_clearing_net",
+            display_name="e clearing net",
+            publisher="smartlab Innovationsgesellschaft mbH",
+            publication_id="996825300704600064",
+            offer_title="e-clearing.net AFIR Data Static",
+            feed_kind="static",
+            access_mode="auth",
+        ),
     ]
 
     registry = build_live_subscription_registry(
@@ -538,6 +574,10 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
             {"id": "986210552611008512", "dataOfferId": "962721207430316032", "contractStatus": "ACTIVE"},
             {"id": "ev-price-dynamic-subscription", "dataOfferId": "989311073915731968", "contractStatus": "ACTIVE"},
             {"id": "ev-price-static-subscription", "dataOfferId": "989311807176560640", "contractStatus": "ACTIVE"},
+            {"id": "gp-joule-dynamic-subscription", "dataOfferId": "997190851637440512", "contractStatus": "ACTIVE"},
+            {"id": "gp-joule-static-subscription", "dataOfferId": "997111469996658688", "contractStatus": "ACTIVE"},
+            {"id": "e-clearing-dynamic-subscription", "dataOfferId": "996823601386508288", "contractStatus": "ACTIVE"},
+            {"id": "e-clearing-static-subscription", "dataOfferId": "996825300704600064", "contractStatus": "ACTIVE"},
         ],
     )
 
@@ -570,6 +610,16 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
     assert registry["ev_price"]["fetch_kind"] == "mtls_subscription"
     assert registry["ev_price"]["enabled"] is True
     assert registry["ev_price"]["delivery_mode"] == "push_with_poll_fallback"
+
+    assert registry["gp_joule_connect"]["subscription_id"] == "gp-joule-dynamic-subscription"
+    assert registry["gp_joule_connect"]["static_subscription_id"] == "gp-joule-static-subscription"
+    assert registry["gp_joule_connect"]["fetch_kind"] == "mtls_subscription"
+    assert registry["gp_joule_connect"]["enabled"] is True
+
+    assert registry["e_clearing_net"]["subscription_id"] == "e-clearing-dynamic-subscription"
+    assert registry["e_clearing_net"]["static_subscription_id"] == "e-clearing-static-subscription"
+    assert "fetch_kind" not in registry["e_clearing_net"]
+    assert "enabled" not in registry["e_clearing_net"]
 
 
 def test_resolve_credentials_reads_secret_files(tmp_path: Path, monkeypatch):
