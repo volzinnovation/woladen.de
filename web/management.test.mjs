@@ -5,9 +5,11 @@ import {
   OVERVIEW_METRICS,
   buildManagementSubtitle,
   buildOverviewSeries,
+  buildProviderReportMetrics,
   buildProviderRows,
   buildStationRows,
   buildSummaryCards,
+  compareTableSortValues,
   normalizeManagementDate,
   snapshotPathForDate,
 } from "./management.mjs";
@@ -127,4 +129,22 @@ test("buildProviderRows sorts provider reporting by daily message volume", () =>
     rows.map((row) => row.provider_uid),
     ["large", "medium", "small"],
   );
+});
+
+test("buildProviderReportMetrics derives messages per referenced charger and missing bundle chargers", () => {
+  const metrics = buildProviderReportMetrics({
+    received_messages_total: 120,
+    unique_chargers_referenced_total: 6,
+    unique_bundle_chargers_referenced_total: 4,
+    bundle_mapped_chargers_total: 7,
+  });
+
+  assert.equal(metrics.receivedMessagesTotal, 120);
+  assert.equal(metrics.messagesPerCharger, 20);
+  assert.equal(metrics.bundleChargersWithoutUpdatesTotal, 3);
+});
+
+test("compareTableSortValues handles numeric and text sorting", () => {
+  assert.equal(compareTableSortValues("2", "10", "number"), -8);
+  assert.equal(compareTableSortValues("Anbieter 2", "Anbieter 10", "text") < 0, true);
 });

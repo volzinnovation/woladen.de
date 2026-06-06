@@ -71,6 +71,17 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
                 "charging_points_count": "2",
                 "max_power_kw": "150",
             },
+            {
+                "station_id": "station-4",
+                "operator": "Fourth Operator",
+                "address": "Example Street 4",
+                "postcode": "50667",
+                "city": "Köln",
+                "lat": "50.9",
+                "lon": "6.9",
+                "charging_points_count": "2",
+                "max_power_kw": "150",
+            },
         ],
     )
     _write_station_csv(
@@ -108,6 +119,17 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
                 "lon": "10.0",
                 "charging_points_count": "1",
                 "max_power_kw": "50",
+            },
+            {
+                "station_id": "station-4",
+                "operator": "Fourth Operator",
+                "address": "Example Street 4",
+                "postcode": "50667",
+                "city": "Köln",
+                "lat": "50.9",
+                "lon": "6.9",
+                "charging_points_count": "2",
+                "max_power_kw": "150",
             },
         ],
     )
@@ -311,6 +333,7 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
             "publisher",
             "messages_total",
             "parseable_messages_total",
+            "static_matched_station_count_in_bundle",
             "extracted_observation_count_total",
             "extracted_mapped_observation_count_total",
             "mapped_observation_ratio",
@@ -333,6 +356,7 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
                 "publisher": "Publisher A",
                 "messages_total": "12",
                 "parseable_messages_total": "11",
+                "static_matched_station_count_in_bundle": "3",
                 "extracted_observation_count_total": "120",
                 "extracted_mapped_observation_count_total": "100",
                 "mapped_observation_ratio": "0.833333",
@@ -354,6 +378,7 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
                 "publisher": "Publisher B",
                 "messages_total": "3",
                 "parseable_messages_total": "3",
+                "static_matched_station_count_in_bundle": "1",
                 "extracted_observation_count_total": "20",
                 "extracted_mapped_observation_count_total": "10",
                 "mapped_observation_ratio": "0.5",
@@ -421,6 +446,47 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
             ],
         ],
     )
+    _write_csv(
+        analysis_output_dir / "evse_observations.csv",
+        [
+            "archive_date",
+            "provider_uid",
+            "station_id",
+            "provider_evse_id",
+        ],
+        [
+            {
+                "archive_date": "2026-04-17",
+                "provider_uid": "provider-a",
+                "station_id": "station-1",
+                "provider_evse_id": "EVSE-1",
+            },
+            {
+                "archive_date": "2026-04-17",
+                "provider_uid": "provider-a",
+                "station_id": "station-1",
+                "provider_evse_id": "EVSE-2",
+            },
+            {
+                "archive_date": "2026-04-17",
+                "provider_uid": "provider-a",
+                "station_id": "station-2",
+                "provider_evse_id": "EVSE-4",
+            },
+            {
+                "archive_date": "2026-04-17",
+                "provider_uid": "provider-a",
+                "station_id": "station-3",
+                "provider_evse_id": "EVSE-5",
+            },
+            {
+                "archive_date": "2026-04-17",
+                "provider_uid": "provider-b",
+                "station_id": "station-1",
+                "provider_evse_id": "EVSE-6",
+            },
+        ],
+    )
 
     result = build_management_snapshot_from_analysis_outputs(
         target_date=date(2026, 4, 17),
@@ -453,6 +519,12 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
     assert result["busiest_stations"][0]["busy_transition_count"] == 2
     assert result["provider_reports"][0]["provider_uid"] == "provider-a"
     assert result["provider_reports"][0]["messages_total"] == 12
+    assert result["provider_reports"][0]["received_messages_total"] == 12
+    assert result["provider_reports"][0]["unique_chargers_referenced_total"] == 3
+    assert result["provider_reports"][0]["unique_bundle_chargers_referenced_total"] == 2
+    assert result["provider_reports"][0]["bundle_mapped_chargers_total"] == 3
+    assert result["provider_reports"][0]["bundle_chargers_without_updates_total"] == 1
+    assert result["provider_reports"][0]["messages_per_charger"] == 4.0
     assert result["provider_reports"][0]["push_messages_total"] == 10
     assert result["provider_reports"][0]["http_response_messages_total"] == 1
     assert result["provider_reports"][0]["fetch_failure_messages_total"] == 1

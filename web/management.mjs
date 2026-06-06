@@ -48,6 +48,10 @@ const TIMESTAMP_LABEL_FORMAT = new Intl.DateTimeFormat("de-DE", {
   hour: "2-digit",
   minute: "2-digit",
 });
+const TABLE_SORT_COLLATOR = new Intl.Collator("de-DE", {
+  numeric: true,
+  sensitivity: "base",
+});
 
 function numberFormat(value) {
   return new Intl.NumberFormat("de-DE").format(Number(value || 0));
@@ -69,6 +73,52 @@ function megabytesFormat(bytes) {
   return `${decimalFormat(Number(bytes || 0) / 1_000_000, 1)} MB`;
 }
 
+function optionalNumber(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const text = String(value).trim();
+  if (!text) {
+    return null;
+  }
+  const number = Number(text);
+  return Number.isFinite(number) ? number : null;
+}
+
+function firstNumber(...values) {
+  for (const value of values) {
+    const number = optionalNumber(value);
+    if (number !== null) {
+      return number;
+    }
+  }
+  return null;
+}
+
+function optionalNumberFormat(value) {
+  const number = optionalNumber(value);
+  return number === null ? "" : numberFormat(number);
+}
+
+function optionalDecimalFormat(value, digits = 1) {
+  const number = optionalNumber(value);
+  return number === null ? "" : decimalFormat(number, digits);
+}
+
+function numericSortValue(value) {
+  const number = optionalNumber(value);
+  return number === null ? "" : String(number);
+}
+
+function timestampSortValue(value) {
+  const text = String(value || "").trim();
+  if (!text) {
+    return "";
+  }
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? text : String(parsed.getTime());
+}
+
 function timestampFormat(value) {
   const text = String(value || "").trim();
   if (!text) {
@@ -79,6 +129,43 @@ function timestampFormat(value) {
     return text;
   }
   return TIMESTAMP_LABEL_FORMAT.format(parsed);
+}
+
+export function buildProviderReportMetrics(row) {
+  const receivedMessagesTotal = firstNumber(row?.received_messages_total, row?.messages_total) ?? 0;
+  const uniqueChargersReferencedTotal = firstNumber(
+    row?.unique_chargers_referenced_total,
+    row?.mapped_stations_observed,
+  );
+  const uniqueBundleChargersReferencedTotal = firstNumber(
+    row?.unique_bundle_chargers_referenced_total,
+    row?.mapped_stations_observed_in_bundle,
+  );
+  const bundleMappedChargersTotal = firstNumber(
+    row?.bundle_mapped_chargers_total,
+    row?.static_matched_station_count_in_bundle,
+  );
+  const explicitMessagesPerCharger = firstNumber(row?.messages_per_charger);
+  const explicitBundleWithoutUpdates = firstNumber(row?.bundle_chargers_without_updates_total);
+  const messagesPerCharger =
+    explicitMessagesPerCharger ??
+    (uniqueChargersReferencedTotal && uniqueChargersReferencedTotal > 0
+      ? receivedMessagesTotal / uniqueChargersReferencedTotal
+      : null);
+  const bundleChargersWithoutUpdatesTotal =
+    explicitBundleWithoutUpdates ??
+    (bundleMappedChargersTotal !== null && uniqueBundleChargersReferencedTotal !== null
+      ? Math.max(0, bundleMappedChargersTotal - uniqueBundleChargersReferencedTotal)
+      : null);
+
+  return {
+    receivedMessagesTotal,
+    uniqueChargersReferencedTotal,
+    uniqueBundleChargersReferencedTotal,
+    bundleMappedChargersTotal,
+    bundleChargersWithoutUpdatesTotal,
+    messagesPerCharger,
+  };
 }
 
 export function normalizeManagementDate(value) {
@@ -319,6 +406,151 @@ function escapeAttribute(value) {
   return escapeHtml(value);
 }
 
+export function compareTableSortValues(leftValue, rightValue, type = "text") {
+  if (type === "number") {
+    return Number(leftValue) - Number(rightValue);
+  }
+  if (type === "date") {
+    const leftDate = Number(leftValue);
+    const rightDate = Number(rightValue);
+    if (Number.isFinite(leftDate) && Number.isFinite(rightDate)) {
+      return leftDate - rightDate;
+    }
+  }
+  return TABLE_SORT_COLLATOR.compare(String(leftValue || ""), String(rightValue || ""));
+}
+
+function sortableHeaderRow(table) {
+  const rows = Array.from(table.tHead?.rows || []);
+  return (
+    rows.find((row) => row.classList.contains("sorttop") || row.classList.contains("sortTop")) ||
+    rows.at(-1) ||
+    null
+  );
+}
+
+function tableBodyRows(table) {
+  return Array.from(table.tBodies?.[0]?.rows || []);
+}
+
+function markTableOriginalOrder(table) {
+  tableBodyRows(table).forEach((row, index) => {
+    row.dataset.sortOriginalIndex = String(index);
+  });
+}
+
+function setSortableHeaderState(table, activeColumnIndex, direction) {
+  const headerRow = sortableHeaderRow(table);
+  if (!headerRow) {
+    return;
+  }
+  for (const th of Array.from(headerRow.cells)) {
+    const columnIndex = Number(th.dataset.sortColumn || th.cellIndex);
+    const isActive = columnIndex === activeColumnIndex && direction !== "none";
+    th.setAttribute("aria-sort", isActive ? direction : "none");
+    const button = th.querySelector(".management-sort-button");
+    if (button) {
+      button.dataset.sortDirection = isActive ? direction : "none";
+    }
+  }
+}
+
+function sortTableRows(table, columnIndex, type, direction) {
+  const tbody = table.tBodies?.[0];
+  if (!tbody) {
+    return;
+  }
+  const rows = tableBodyRows(table);
+  const sign = direction === "descending" ? -1 : 1;
+  rows.sort((leftRow, rightRow) => {
+    const leftOriginal = Number(leftRow.dataset.sortOriginalIndex || 0);
+    const rightOriginal = Number(rightRow.dataset.sortOriginalIndex || 0);
+    if (direction === "none") {
+      return leftOriginal - rightOriginal;
+    }
+    const leftValue = String(leftRow.cells[columnIndex]?.dataset.sortValue ?? leftRow.cells[columnIndex]?.textContent ?? "").trim();
+    const rightValue = String(rightRow.cells[columnIndex]?.dataset.sortValue ?? rightRow.cells[columnIndex]?.textContent ?? "").trim();
+    const leftBlank = leftValue === "";
+    const rightBlank = rightValue === "";
+    if (leftBlank || rightBlank) {
+      if (leftBlank === rightBlank) {
+        return leftOriginal - rightOriginal;
+      }
+      return leftBlank ? 1 : -1;
+    }
+    const valueDelta = compareTableSortValues(leftValue, rightValue, type);
+    return valueDelta === 0 ? leftOriginal - rightOriginal : valueDelta * sign;
+  });
+  rows.forEach((row) => tbody.appendChild(row));
+}
+
+function toggleTableSort(table, columnIndex, type) {
+  const currentColumn = Number(table.dataset.sortColumn || -1);
+  const currentDirection = table.dataset.sortDirection || "none";
+  let nextDirection = "ascending";
+  if (currentColumn === columnIndex && currentDirection === "ascending") {
+    nextDirection = "descending";
+  } else if (currentColumn === columnIndex && currentDirection === "descending") {
+    nextDirection = "none";
+  }
+
+  table.dataset.sortColumn = nextDirection === "none" ? "" : String(columnIndex);
+  table.dataset.sortDirection = nextDirection;
+  sortTableRows(table, columnIndex, type, nextDirection);
+  setSortableHeaderState(table, columnIndex, nextDirection);
+}
+
+function wireSortableTable(table) {
+  if (table.dataset.sortableInitialized === "true") {
+    return;
+  }
+  const headerRow = sortableHeaderRow(table);
+  if (!headerRow) {
+    return;
+  }
+  for (const th of Array.from(headerRow.cells)) {
+    if (th.classList.contains("unsortable") || th.dataset.sortable === "false") {
+      continue;
+    }
+    const columnIndex = th.cellIndex;
+    const sortType = th.dataset.sortType || "text";
+    const label = th.textContent.trim();
+    const button = document.createElement("button");
+    const labelSpan = document.createElement("span");
+    const indicator = document.createElement("span");
+    button.type = "button";
+    button.className = "management-sort-button";
+    button.dataset.sortDirection = "none";
+    button.setAttribute("aria-label", `${label} sortieren`);
+    labelSpan.className = "management-sort-label";
+    labelSpan.textContent = label;
+    indicator.className = "management-sort-indicator";
+    indicator.setAttribute("aria-hidden", "true");
+    button.append(labelSpan, indicator);
+    button.addEventListener("click", () => toggleTableSort(table, columnIndex, sortType));
+    th.textContent = "";
+    th.dataset.sortColumn = String(columnIndex);
+    th.setAttribute("aria-sort", "none");
+    th.appendChild(button);
+  }
+  table.dataset.sortableInitialized = "true";
+}
+
+function wireSortableTables(root = document) {
+  root.querySelectorAll("table.management-sortable").forEach(wireSortableTable);
+}
+
+function resetSortableTable(table) {
+  markTableOriginalOrder(table);
+  table.dataset.sortColumn = "";
+  table.dataset.sortDirection = "none";
+  setSortableHeaderState(table, -1, "none");
+}
+
+function resetSortableTables(root = document) {
+  root.querySelectorAll("table.management-sortable").forEach(resetSortableTable);
+}
+
 function chartThemeColor(index = 0) {
   const palette = ["#12664f", "#d1633c", "#27689c", "#b48832", "#8c5b6a"];
   return palette[index % palette.length];
@@ -391,11 +623,11 @@ function renderBrokenStations(snapshot) {
         ${stationCell}
         <div class="provider-sub">${escapeHtml(stationMeta(row))}</div>
       </td>
-      <td>${escapeHtml(row.city || "")}</td>
-      <td>${numberFormat(row.affected_charger_count)}</td>
-      <td>${numberFormat(row.current_broken_charger_count)}</td>
-      <td>${durationHoursFormat(row.out_of_order_duration_seconds_total)}</td>
-      <td>${escapeHtml(row.status_label || "")}</td>
+      <td data-sort-value="${escapeAttribute(row.city || "")}">${escapeHtml(row.city || "")}</td>
+      <td data-sort-value="${numericSortValue(row.affected_charger_count)}">${numberFormat(row.affected_charger_count)}</td>
+      <td data-sort-value="${numericSortValue(row.current_broken_charger_count)}">${numberFormat(row.current_broken_charger_count)}</td>
+      <td data-sort-value="${numericSortValue(row.out_of_order_duration_seconds_total)}">${durationHoursFormat(row.out_of_order_duration_seconds_total)}</td>
+      <td data-sort-value="${escapeAttribute(row.status_label || "")}">${escapeHtml(row.status_label || "")}</td>
     `;
     tbody.appendChild(tr);
   }
@@ -419,10 +651,10 @@ function renderBusyStations(snapshot) {
         ${stationCell}
         <div class="provider-sub">${escapeHtml(stationMeta(row))}</div>
       </td>
-      <td>${escapeHtml(row.city || "")}</td>
-      <td>${numberFormat(row.busy_transition_count)}</td>
-      <td>${numberFormat(row.busy_evse_count)}</td>
-      <td>${numberFormat(row.max_power_kw)} kW</td>
+      <td data-sort-value="${escapeAttribute(row.city || "")}">${escapeHtml(row.city || "")}</td>
+      <td data-sort-value="${numericSortValue(row.busy_transition_count)}">${numberFormat(row.busy_transition_count)}</td>
+      <td data-sort-value="${numericSortValue(row.busy_evse_count)}">${numberFormat(row.busy_evse_count)}</td>
+      <td data-sort-value="${numericSortValue(row.max_power_kw)}">${numberFormat(row.max_power_kw)} kW</td>
     `;
     tbody.appendChild(tr);
   }
@@ -436,24 +668,28 @@ function renderProviderReports(snapshot) {
   }
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7">Für diesen Tag wurden keine Anbieterberichte veröffentlicht.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10">Für diesen Tag wurden keine Anbieterberichte veröffentlicht.</td></tr>';
     return;
   }
   for (const row of rows) {
     const tr = document.createElement("tr");
     const displayName = row.display_name || row.provider_uid || "";
     const publisher = row.publisher || row.provider_uid || "";
+    const metrics = buildProviderReportMetrics(row);
     tr.innerHTML = `
-      <td>
+      <td data-sort-value="${escapeAttribute(displayName)}">
         <span>${escapeHtml(displayName)}</span>
         <div class="provider-sub">${escapeHtml(publisher)}</div>
       </td>
-      <td>${numberFormat(row.messages_total)}</td>
-      <td>${numberFormat(row.push_messages_total)}</td>
-      <td>${numberFormat(row.http_response_messages_total)}</td>
-      <td>${numberFormat(Number(row.fetch_failure_messages_total || 0) + Number(row.http_error_messages_total || 0))}</td>
-      <td>${megabytesFormat(row.payload_byte_length_total)}</td>
-      <td>${escapeHtml(timestampFormat(row.latest_message_timestamp))}</td>
+      <td data-sort-value="${numericSortValue(metrics.receivedMessagesTotal)}">${numberFormat(metrics.receivedMessagesTotal)}</td>
+      <td data-sort-value="${numericSortValue(metrics.messagesPerCharger)}">${optionalDecimalFormat(metrics.messagesPerCharger, 1)}</td>
+      <td data-sort-value="${numericSortValue(metrics.uniqueChargersReferencedTotal)}">${optionalNumberFormat(metrics.uniqueChargersReferencedTotal)}</td>
+      <td data-sort-value="${numericSortValue(metrics.bundleChargersWithoutUpdatesTotal)}">${optionalNumberFormat(metrics.bundleChargersWithoutUpdatesTotal)}</td>
+      <td data-sort-value="${numericSortValue(row.push_messages_total)}">${numberFormat(row.push_messages_total)}</td>
+      <td data-sort-value="${numericSortValue(row.http_response_messages_total)}">${numberFormat(row.http_response_messages_total)}</td>
+      <td data-sort-value="${numericSortValue(Number(row.fetch_failure_messages_total || 0) + Number(row.http_error_messages_total || 0))}">${numberFormat(Number(row.fetch_failure_messages_total || 0) + Number(row.http_error_messages_total || 0))}</td>
+      <td data-sort-value="${numericSortValue(row.payload_byte_length_total)}">${megabytesFormat(row.payload_byte_length_total)}</td>
+      <td data-sort-value="${escapeAttribute(timestampSortValue(row.latest_message_timestamp))}">${escapeHtml(timestampFormat(row.latest_message_timestamp))}</td>
     `;
     tbody.appendChild(tr);
   }
@@ -466,6 +702,7 @@ async function initManagementPage() {
   const indexPayload = await fetchJson(MANAGEMENT_INDEX_PATH);
   const trendsPayload = await fetchJson("./data/management/trends.json");
   await waitForChart();
+  wireSortableTables();
   const availableDates = Array.isArray(indexPayload.available_dates) ? indexPayload.available_dates : [];
   if (!availableDates.length) {
     throw new Error("Keine Tagesauswertungen verfügbar.");
@@ -543,6 +780,7 @@ async function initManagementPage() {
     renderBrokenStations(currentSnapshot);
     renderBusyStations(currentSnapshot);
     renderProviderReports(currentSnapshot);
+    resetSortableTables();
     renderCharts();
 
     const summary = currentSnapshot.summary || {};

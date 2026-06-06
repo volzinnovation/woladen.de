@@ -2389,6 +2389,67 @@ select:focus-visible {
   color: #5a6772;
 }
 
+.management-sort-button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 1.5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.management-sort-button:focus-visible {
+  outline: 2px solid rgba(18, 102, 79, 0.35);
+  outline-offset: 3px;
+}
+
+.management-sort-label {
+  min-width: 0;
+}
+
+.management-sort-indicator {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 0.6rem;
+  height: 0.9rem;
+}
+
+.management-sort-indicator::before,
+.management-sort-indicator::after {
+  content: "";
+  position: absolute;
+  left: 0.12rem;
+  border-left: 0.18rem solid transparent;
+  border-right: 0.18rem solid transparent;
+  opacity: 0.3;
+}
+
+.management-sort-indicator::before {
+  top: 0.08rem;
+  border-bottom: 0.28rem solid currentColor;
+}
+
+.management-sort-indicator::after {
+  bottom: 0.08rem;
+  border-top: 0.28rem solid currentColor;
+}
+
+.management-sort-button[data-sort-direction="ascending"] .management-sort-indicator::before,
+.management-sort-button[data-sort-direction="descending"] .management-sort-indicator::after {
+  opacity: 0.95;
+}
+
 .management-table a {
   color: #12664f;
   text-decoration: none;

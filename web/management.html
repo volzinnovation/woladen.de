@@ -204,15 +204,15 @@
             </p>
           </div>
           <div class="management-table-wrap">
-            <table class="management-table">
+            <table class="management-table management-sortable">
               <thead>
                 <tr>
-                  <th>Station</th>
-                  <th>Ort</th>
-                  <th>Betroffene Ladepunkte</th>
-                  <th>Noch gestört</th>
-                  <th>Ausfallzeit</th>
-                  <th>Status</th>
+                  <th data-sort-type="text">Station</th>
+                  <th data-sort-type="text">Ort</th>
+                  <th data-sort-type="number">Betroffene Ladepunkte</th>
+                  <th data-sort-type="number">Noch gestört</th>
+                  <th data-sort-type="number">Ausfallzeit</th>
+                  <th data-sort-type="text">Status</th>
                 </tr>
               </thead>
               <tbody id="broken-stations-body"></tbody>
@@ -229,14 +229,14 @@
             </p>
           </div>
           <div class="management-table-wrap">
-            <table class="management-table">
+            <table class="management-table management-sortable">
               <thead>
                 <tr>
-                  <th>Station</th>
-                  <th>Ort</th>
-                  <th>Wechsel frei/belegt</th>
-                  <th>Beteiligte Ladepunkte</th>
-                  <th>Leistung</th>
+                  <th data-sort-type="text">Station</th>
+                  <th data-sort-type="text">Ort</th>
+                  <th data-sort-type="number">Wechsel frei/belegt</th>
+                  <th data-sort-type="number">Beteiligte Ladepunkte</th>
+                  <th data-sort-type="number">Leistung</th>
                 </tr>
               </thead>
               <tbody id="busy-stations-body"></tbody>
@@ -248,21 +248,24 @@
           <div class="management-panel-head">
             <h2>AFIR-Meldungen nach Anbieter</h2>
             <p>
-              Anbieteransicht für Datenmeldungen, Push-Verkehr und Polling im
-              Tagesarchiv.
+              Anbieteransicht für empfangene Datenmeldungen, referenzierte
+              Lader, Push-Verkehr und Polling im Tagesarchiv.
             </p>
           </div>
           <div class="management-table-wrap">
-            <table class="management-table">
+            <table class="management-table management-sortable">
               <thead>
                 <tr>
-                  <th>Anbieter</th>
-                  <th>Datenmeldungen</th>
-                  <th>Push</th>
-                  <th>Pull</th>
-                  <th>Fehler</th>
-                  <th>Datenvolumen</th>
-                  <th>Letzte Meldung</th>
+                  <th data-sort-type="text">Anbieter</th>
+                  <th data-sort-type="number">Empfangene Meldungen</th>
+                  <th data-sort-type="number">Meldungen je Lader</th>
+                  <th data-sort-type="number">Referenzierte Lader</th>
+                  <th data-sort-type="number">Bundle-Lader ohne Updates</th>
+                  <th data-sort-type="number">Push</th>
+                  <th data-sort-type="number">Pull</th>
+                  <th data-sort-type="number">Fehler</th>
+                  <th data-sort-type="number">Datenvolumen</th>
+                  <th data-sort-type="date">Letzte Meldung</th>
                 </tr>
               </thead>
               <tbody id="provider-reports-body"></tbody>
@@ -288,6 +291,11 @@
           <li>
             Hohe Auslastung heißt hier: häufige Wechsel zwischen frei und
             belegt. Störungen oder unbekannte Zustände zählen dafür nicht mit.
+          </li>
+          <li>
+            Meldungen je Lader teilt die empfangenen Meldungen durch die
+            eindeutig referenzierten Lader des Tages. Bundle-Lader ohne Updates
+            sind statisch zugeordnete Schnelllader ohne Tagesbeobachtung.
           </li>
           <li>
             Grundlage sind tägliche AFIR-Datensätze der Mobilithek, hier für

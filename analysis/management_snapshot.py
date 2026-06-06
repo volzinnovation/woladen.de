@@ -286,7 +286,48 @@ def _build_status_rollups(
     }
 
 
-def _build_provider_reports(*, target_date: date, analysis_output_dir: Path) -> list[dict[str, Any]]:
+def _provider_charger_reference_metrics(
+    *,
+    target_date: date,
+    analysis_output_dir: Path,
+    bundle_station_ids: set[str],
+) -> dict[str, dict[str, int]]:
+    target_date_text = target_date.isoformat()
+    observations_path = analysis_output_dir / "evse_observations.csv"
+    if not observations_path.exists():
+        return {}
+
+    charger_ids_by_provider: dict[str, set[str]] = defaultdict(set)
+    bundle_charger_ids_by_provider: dict[str, set[str]] = defaultdict(set)
+    for row in _read_csv_rows(observations_path):
+        if str(row.get("archive_date") or "") != target_date_text:
+            continue
+        provider_uid = str(row.get("provider_uid") or "").strip()
+        station_id = str(row.get("station_id") or "").strip()
+        if not provider_uid or not station_id:
+            continue
+        charger_ids_by_provider[provider_uid].add(station_id)
+        if station_id in bundle_station_ids:
+            bundle_charger_ids_by_provider[provider_uid].add(station_id)
+
+    provider_uids = set(charger_ids_by_provider) | set(bundle_charger_ids_by_provider)
+    return {
+        provider_uid: {
+            "unique_chargers_referenced_total": len(charger_ids_by_provider.get(provider_uid, set())),
+            "unique_bundle_chargers_referenced_total": len(
+                bundle_charger_ids_by_provider.get(provider_uid, set())
+            ),
+        }
+        for provider_uid in provider_uids
+    }
+
+
+def _build_provider_reports(
+    *,
+    target_date: date,
+    analysis_output_dir: Path,
+    bundle_station_ids: set[str],
+) -> list[dict[str, Any]]:
     target_date_text = target_date.isoformat()
     provider_summary_path = analysis_output_dir / "provider_daily_summary.csv"
     provider_meta: dict[str, dict[str, str]] = {}
@@ -300,6 +341,12 @@ def _build_provider_reports(*, target_date: date, analysis_output_dir: Path) -> 
     archive_messages_path = analysis_output_dir / "archive_messages.csv"
     if not archive_messages_path.exists():
         return []
+
+    charger_metrics = _provider_charger_reference_metrics(
+        target_date=target_date,
+        analysis_output_dir=analysis_output_dir,
+        bundle_station_ids=bundle_station_ids,
+    )
 
     grouped: dict[str, dict[str, Any]] = {}
     for row in _read_csv_rows(archive_messages_path):
@@ -316,6 +363,7 @@ def _build_provider_reports(*, target_date: date, analysis_output_dir: Path) -> 
                 "display_name": str(meta.get("display_name") or provider_uid),
                 "publisher": str(meta.get("publisher") or ""),
                 "messages_total": 0,
+                "received_messages_total": 0,
                 "push_messages_total": 0,
                 "http_response_messages_total": 0,
                 "fetch_failure_messages_total": 0,
@@ -327,6 +375,11 @@ def _build_provider_reports(*, target_date: date, analysis_output_dir: Path) -> 
                 "mapped_observation_ratio": _float_value(meta.get("mapped_observation_ratio")),
                 "mapped_stations_observed": _int_value(meta.get("mapped_stations_observed")),
                 "mapped_stations_observed_in_bundle": _int_value(meta.get("mapped_stations_observed_in_bundle")),
+                "unique_chargers_referenced_total": 0,
+                "unique_bundle_chargers_referenced_total": 0,
+                "bundle_mapped_chargers_total": _int_value(meta.get("static_matched_station_count_in_bundle")),
+                "bundle_chargers_without_updates_total": 0,
+                "messages_per_charger": 0.0,
                 "first_message_timestamp": "",
                 "latest_message_timestamp": "",
             },
@@ -335,6 +388,7 @@ def _build_provider_reports(*, target_date: date, analysis_output_dir: Path) -> 
         message_timestamp = _timestamp_sort_value(row.get("message_timestamp"))
         http_status = _int_value(row.get("http_status"))
         report["messages_total"] += 1
+        report["received_messages_total"] += 1
         report["payload_byte_length_total"] += _int_value(row.get("payload_byte_length"))
         if record_kind == "push_request":
             report["push_messages_total"] += 1
@@ -349,6 +403,28 @@ def _build_provider_reports(*, target_date: date, analysis_output_dir: Path) -> 
                 report["first_message_timestamp"] = message_timestamp
             if not report["latest_message_timestamp"] or message_timestamp > report["latest_message_timestamp"]:
                 report["latest_message_timestamp"] = message_timestamp
+
+    for provider_uid, report in grouped.items():
+        metrics = charger_metrics.get(provider_uid, {})
+        unique_charger_count = _int_value(metrics.get("unique_chargers_referenced_total"))
+        unique_bundle_charger_count = _int_value(metrics.get("unique_bundle_chargers_referenced_total"))
+        if unique_charger_count <= 0:
+            unique_charger_count = _int_value(report.get("mapped_stations_observed"))
+        if unique_bundle_charger_count <= 0:
+            unique_bundle_charger_count = _int_value(report.get("mapped_stations_observed_in_bundle"))
+
+        bundle_mapped_charger_count = _int_value(report.get("bundle_mapped_chargers_total"))
+        report["unique_chargers_referenced_total"] = unique_charger_count
+        report["unique_bundle_chargers_referenced_total"] = unique_bundle_charger_count
+        report["bundle_chargers_without_updates_total"] = max(
+            0,
+            bundle_mapped_charger_count - unique_bundle_charger_count,
+        )
+        report["messages_per_charger"] = (
+            round(_int_value(report.get("received_messages_total")) / unique_charger_count, 6)
+            if unique_charger_count > 0
+            else 0.0
+        )
 
     provider_reports = list(grouped.values())
     provider_reports.sort(
@@ -396,6 +472,7 @@ def build_management_snapshot_from_analysis_outputs(
     provider_reports = _build_provider_reports(
         target_date=target_date,
         analysis_output_dir=analysis_output_dir,
+        bundle_station_ids=set(bundle_station_metadata),
     )
 
     summary = {
