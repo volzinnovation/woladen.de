@@ -10,6 +10,8 @@ MOBIDATA_BW_DATEX_STATIC_URL = "https://api.mobidata-bw.de/ocpdb/api/public/date
 MOBIDATA_BW_DATEX_DYNAMIC_URL = "https://api.mobidata-bw.de/ocpdb/api/public/datex/v3.5/json/realtime"
 ACTIVE_SUBSCRIPTION_STATUSES = frozenset({"ACTIVE"})
 ACTIVE_DYN_DATEX_SUBSCRIPTION_PROVIDER_UIDS = (
+    "broker_audi_hub_energy_statuses",
+    "broker_audi_hub_energy_tables",
     "edri",
     "eco_movement",
     "stadtwerke_erft",
@@ -33,6 +35,8 @@ ACTIVE_DYN_DATEX_SUBSCRIPTION_PROVIDER_UIDS = (
 ACTIVE_DYNAMIC_SUBSCRIPTION_PROVIDER_UIDS = ACTIVE_DYN_DATEX_SUBSCRIPTION_PROVIDER_UIDS + ("eliso",)
 LIVE_PUSH_FALLBACK_PROVIDER_UIDS = frozenset(
     {
+        "broker_audi_hub_energy_statuses",
+        "broker_audi_hub_energy_tables",
         "chargecloud",
         "eco_movement",
         "edri",

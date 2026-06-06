@@ -559,6 +559,24 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
             feed_kind="static",
             access_mode="auth",
         ),
+        SubscriptionOffer(
+            provider_uid="broker_audi_hub_energy_statuses",
+            display_name="broker audi hub energy statuses",
+            publisher="Audi AG",
+            publication_id="998567365272563712",
+            offer_title="Broker_Audi charging hub_Dynamic data _energy-infrastructure-statuses",
+            feed_kind="dynamic",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
+            provider_uid="broker_audi_hub_energy_tables",
+            display_name="broker audi hub energy tables",
+            publisher="Audi AG",
+            publication_id="998571342932365312",
+            offer_title="Broker_Audi charging hub_ Static data _energy-infrastructure-tables",
+            feed_kind="dynamic",
+            access_mode="auth",
+        ),
     ]
 
     registry = build_live_subscription_registry(
@@ -578,6 +596,8 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
             {"id": "gp-joule-static-subscription", "dataOfferId": "997111469996658688", "contractStatus": "ACTIVE"},
             {"id": "e-clearing-dynamic-subscription", "dataOfferId": "996823601386508288", "contractStatus": "ACTIVE"},
             {"id": "e-clearing-static-subscription", "dataOfferId": "996825300704600064", "contractStatus": "ACTIVE"},
+            {"id": "audi-statuses-subscription", "dataOfferId": "998567365272563712", "contractStatus": "ACTIVE"},
+            {"id": "audi-tables-subscription", "dataOfferId": "998571342932365312", "contractStatus": "ACTIVE"},
         ],
     )
 
@@ -615,6 +635,16 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
     assert registry["gp_joule_connect"]["static_subscription_id"] == "gp-joule-static-subscription"
     assert registry["gp_joule_connect"]["fetch_kind"] == "mtls_subscription"
     assert registry["gp_joule_connect"]["enabled"] is True
+
+    assert registry["broker_audi_hub_energy_statuses"]["subscription_id"] == "audi-statuses-subscription"
+    assert registry["broker_audi_hub_energy_statuses"]["fetch_kind"] == "mtls_subscription"
+    assert registry["broker_audi_hub_energy_statuses"]["enabled"] is True
+    assert registry["broker_audi_hub_energy_statuses"]["delivery_mode"] == "push_with_poll_fallback"
+
+    assert registry["broker_audi_hub_energy_tables"]["subscription_id"] == "audi-tables-subscription"
+    assert registry["broker_audi_hub_energy_tables"]["fetch_kind"] == "mtls_subscription"
+    assert registry["broker_audi_hub_energy_tables"]["enabled"] is True
+    assert registry["broker_audi_hub_energy_tables"]["delivery_mode"] == "push_with_poll_fallback"
 
     assert registry["e_clearing_net"]["subscription_id"] == "e-clearing-dynamic-subscription"
     assert registry["e_clearing_net"]["static_subscription_id"] == "e-clearing-static-subscription"
