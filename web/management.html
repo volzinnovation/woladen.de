@@ -244,9 +244,9 @@
 
         <article class="management-panel">
           <div class="management-panel-head">
-            <h2>Datenmeldungen nach Anbieter</h2>
+            <h2>Statusdaten nach Anbieter</h2>
             <p>
-              Übersicht der empfangene Live-Status-Meldungen (gemäß AFIR),
+              Anbieteransicht für extrahierte Live-Statusbeobachtungen,
               Live-Status-Abdeckung, Push-Verkehr und Polling im Tagesarchiv.
             </p>
           </div>
@@ -255,8 +255,9 @@
               <thead>
                 <tr>
                   <th data-sort-type="text">Anbieter</th>
-                  <th data-sort-type="number">Empfangene Meldungen</th>
-                  <th data-sort-type="number">Meldungen je Ladestation</th>
+                  <th data-sort-type="number">Statusbeobachtungen</th>
+                  <th data-sort-type="number">Beobachtungen je Ladestation</th>
+                  <th data-sort-type="number">Empfangene AFIR-Meldungen</th>
                   <th data-sort-type="number">Ladestationen mit Live-Status</th>
                   <th data-sort-type="number">Ladestationen ohne Live-Status</th>
                   <th data-sort-type="number">Push</th>
@@ -291,8 +292,11 @@
             belegt. Störungen oder unbekannte Zustände zählen dafür nicht mit.
           </li>
           <li>
-            Meldungen je Ladestation teilt die empfangenen Meldungen durch die
-            Anzahl eindeutig referenzierter Ladestation-IDs des Tages.
+            Beobachtungen je Ladestation teilt die extrahierten
+            Ladepunkt-Statusbeobachtungen durch die Anzahl eindeutig
+            referenzierter Ladestation-IDs des Tages. Empfangene AFIR-Meldungen
+            zählen nur den Transport: Ein Push kann eine einzelne Änderung oder
+            viele Statusbeobachtungen enthalten.
             Ladestationen ohne Live-Status zählt statisch zugeordnete
             Schnellladestation-IDs ohne Tagesbeobachtung.
           </li>

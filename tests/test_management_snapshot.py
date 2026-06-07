@@ -525,6 +525,8 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
     assert result["provider_reports"][0]["bundle_mapped_chargers_total"] == 3
     assert result["provider_reports"][0]["bundle_chargers_without_updates_total"] == 1
     assert result["provider_reports"][0]["messages_per_charger"] == 4.0
+    assert result["provider_reports"][0]["observations_per_charger"] == 40.0
+    assert result["provider_reports"][0]["mapped_observations_per_charger"] == 33.333333
     assert result["provider_reports"][0]["push_messages_total"] == 10
     assert result["provider_reports"][0]["http_response_messages_total"] == 1
     assert result["provider_reports"][0]["fetch_failure_messages_total"] == 1

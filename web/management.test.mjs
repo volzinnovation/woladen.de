@@ -57,7 +57,7 @@ test("overview metric options cover the management KPI cards", () => {
     "stations_with_disruptions",
     "disruptions_at_end_of_day",
     "high_utilization_stations",
-    "archive_messages_total",
+    "observations_total",
   ]);
 });
 
@@ -68,14 +68,14 @@ test("buildSummaryCards exposes the public-facing station metrics", () => {
       stations_with_disruptions: 870,
       disruptions_at_end_of_day: 441,
       high_utilization_stations: 1872,
-      archive_messages_total: 30970,
+      observations_total: 30970,
     },
   });
 
   assert.equal(cards[0].label, "Stationen mit Live-Daten gemäß AFIR");
   assert.equal(cards[1].value, "870");
   assert.equal(cards[3].label, "Stationen mit hoher Auslastung");
-  assert.equal(cards[4].label, "AFIR Datenmeldungen");
+  assert.equal(cards[4].label, "AFIR Statusbeobachtungen");
 });
 
 test("buildStationRows sorts broken and busy station tables for the public page", () => {
@@ -116,7 +116,7 @@ test("buildStationRows sorts broken and busy station tables for the public page"
   assert.deepEqual(busyRows.at(-1).station_id, "station-c");
 });
 
-test("buildProviderRows sorts provider reporting by daily message volume", () => {
+test("buildProviderRows sorts provider reporting by daily status observation volume", () => {
   const rows = buildProviderRows({
     provider_reports: [
       { provider_uid: "small", display_name: "Small", messages_total: 10, observations_total: 500 },
@@ -127,20 +127,23 @@ test("buildProviderRows sorts provider reporting by daily message volume", () =>
 
   assert.deepEqual(
     rows.map((row) => row.provider_uid),
-    ["large", "medium", "small"],
+    ["medium", "small", "large"],
   );
 });
 
-test("buildProviderReportMetrics derives messages per referenced charger and missing bundle chargers", () => {
+test("buildProviderReportMetrics derives observation density and missing bundle chargers", () => {
   const metrics = buildProviderReportMetrics({
     received_messages_total: 120,
+    observations_total: 720,
     unique_chargers_referenced_total: 6,
     unique_bundle_chargers_referenced_total: 4,
     bundle_mapped_chargers_total: 7,
   });
 
   assert.equal(metrics.receivedMessagesTotal, 120);
+  assert.equal(metrics.observationsTotal, 720);
   assert.equal(metrics.messagesPerCharger, 20);
+  assert.equal(metrics.observationsPerCharger, 120);
   assert.equal(metrics.bundleChargersWithoutUpdatesTotal, 3);
 });
 

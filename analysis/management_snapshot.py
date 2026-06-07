@@ -380,6 +380,8 @@ def _build_provider_reports(
                 "bundle_mapped_chargers_total": _int_value(meta.get("static_matched_station_count_in_bundle")),
                 "bundle_chargers_without_updates_total": 0,
                 "messages_per_charger": 0.0,
+                "observations_per_charger": 0.0,
+                "mapped_observations_per_charger": 0.0,
                 "first_message_timestamp": "",
                 "latest_message_timestamp": "",
             },
@@ -425,10 +427,21 @@ def _build_provider_reports(
             if unique_charger_count > 0
             else 0.0
         )
+        report["observations_per_charger"] = (
+            round(_int_value(report.get("observations_total")) / unique_charger_count, 6)
+            if unique_charger_count > 0
+            else 0.0
+        )
+        report["mapped_observations_per_charger"] = (
+            round(_int_value(report.get("mapped_observations_total")) / unique_charger_count, 6)
+            if unique_charger_count > 0
+            else 0.0
+        )
 
     provider_reports = list(grouped.values())
     provider_reports.sort(
         key=lambda row: (
+            -_int_value(row.get("observations_total")),
             -_int_value(row.get("messages_total")),
             -_int_value(row.get("push_messages_total")),
             -_int_value(row.get("payload_byte_length_total")),

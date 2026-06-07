@@ -24,9 +24,9 @@ export const OVERVIEW_METRICS = {
     description: "Stationen mit Wechseln zwischen frei und belegt im Tagesverlauf.",
     kind: "count",
   },
-  archive_messages_total: {
-    label: "AFIR Datenmeldungen",
-    description: "Archivierte AFIR-Aktualisierungen im Tagesverlauf.",
+  observations_total: {
+    label: "AFIR Statusbeobachtungen",
+    description: "Extrahierte Ladepunkt-Statusbeobachtungen im Tagesverlauf.",
     kind: "count",
   },
 };
@@ -133,6 +133,7 @@ function timestampFormat(value) {
 
 export function buildProviderReportMetrics(row) {
   const receivedMessagesTotal = firstNumber(row?.received_messages_total, row?.messages_total) ?? 0;
+  const observationsTotal = firstNumber(row?.observations_total) ?? 0;
   const uniqueChargersReferencedTotal = firstNumber(
     row?.unique_chargers_referenced_total,
     row?.mapped_stations_observed,
@@ -146,11 +147,17 @@ export function buildProviderReportMetrics(row) {
     row?.static_matched_station_count_in_bundle,
   );
   const explicitMessagesPerCharger = firstNumber(row?.messages_per_charger);
+  const explicitObservationsPerCharger = firstNumber(row?.observations_per_charger);
   const explicitBundleWithoutUpdates = firstNumber(row?.bundle_chargers_without_updates_total);
   const messagesPerCharger =
     explicitMessagesPerCharger ??
     (uniqueChargersReferencedTotal && uniqueChargersReferencedTotal > 0
       ? receivedMessagesTotal / uniqueChargersReferencedTotal
+      : null);
+  const observationsPerCharger =
+    explicitObservationsPerCharger ??
+    (uniqueChargersReferencedTotal && uniqueChargersReferencedTotal > 0
+      ? observationsTotal / uniqueChargersReferencedTotal
       : null);
   const bundleChargersWithoutUpdatesTotal =
     explicitBundleWithoutUpdates ??
@@ -160,11 +167,13 @@ export function buildProviderReportMetrics(row) {
 
   return {
     receivedMessagesTotal,
+    observationsTotal,
     uniqueChargersReferencedTotal,
     uniqueBundleChargersReferencedTotal,
     bundleMappedChargersTotal,
     bundleChargersWithoutUpdatesTotal,
     messagesPerCharger,
+    observationsPerCharger,
   };
 }
 
@@ -235,9 +244,9 @@ export function buildSummaryCards(snapshot) {
       detail: "Hier war besonders viel los.",
     },
     {
-      label: "AFIR Datenmeldungen",
-      value: numberFormat(summary.archive_messages_total),
-      detail: "Aktualisierungen im Tagesverlauf.",
+      label: "AFIR Statusbeobachtungen",
+      value: numberFormat(summary.observations_total),
+      detail: "Extrahierte Ladepunkt-Statusmeldungen im Tagesverlauf.",
     },
   ];
 }
@@ -282,13 +291,13 @@ export function buildStationRows(snapshot, key) {
 export function buildProviderRows(snapshot) {
   const rows = Array.isArray(snapshot?.provider_reports) ? [...snapshot.provider_reports] : [];
   rows.sort((left, right) => {
-    const messageDelta = Number(right?.messages_total || 0) - Number(left?.messages_total || 0);
-    if (messageDelta !== 0) {
-      return messageDelta;
-    }
     const observationDelta = Number(right?.observations_total || 0) - Number(left?.observations_total || 0);
     if (observationDelta !== 0) {
       return observationDelta;
+    }
+    const messageDelta = Number(right?.messages_total || 0) - Number(left?.messages_total || 0);
+    if (messageDelta !== 0) {
+      return messageDelta;
     }
     return String(left?.display_name || left?.provider_uid || "").localeCompare(
       String(right?.display_name || right?.provider_uid || ""),
@@ -668,7 +677,7 @@ function renderProviderReports(snapshot) {
   }
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="10">Für diesen Tag wurden keine Anbieterberichte veröffentlicht.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11">Für diesen Tag wurden keine Anbieterberichte veröffentlicht.</td></tr>';
     return;
   }
   for (const row of rows) {
@@ -681,8 +690,9 @@ function renderProviderReports(snapshot) {
         <span>${escapeHtml(displayName)}</span>
         <div class="provider-sub">${escapeHtml(publisher)}</div>
       </td>
+      <td data-sort-value="${numericSortValue(metrics.observationsTotal)}">${numberFormat(metrics.observationsTotal)}</td>
+      <td data-sort-value="${numericSortValue(metrics.observationsPerCharger)}">${optionalDecimalFormat(metrics.observationsPerCharger, 1)}</td>
       <td data-sort-value="${numericSortValue(metrics.receivedMessagesTotal)}">${numberFormat(metrics.receivedMessagesTotal)}</td>
-      <td data-sort-value="${numericSortValue(metrics.messagesPerCharger)}">${optionalDecimalFormat(metrics.messagesPerCharger, 1)}</td>
       <td data-sort-value="${numericSortValue(metrics.uniqueChargersReferencedTotal)}">${optionalNumberFormat(metrics.uniqueChargersReferencedTotal)}</td>
       <td data-sort-value="${numericSortValue(metrics.bundleChargersWithoutUpdatesTotal)}">${optionalNumberFormat(metrics.bundleChargersWithoutUpdatesTotal)}</td>
       <td data-sort-value="${numericSortValue(row.push_messages_total)}">${numberFormat(row.push_messages_total)}</td>
