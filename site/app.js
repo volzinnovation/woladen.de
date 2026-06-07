@@ -1422,22 +1422,56 @@ function getMarkerColor(props) {
   return "#64748b"; // Grey
 }
 
+function hasAvailabilitySummary(props) {
+  return hasLiveStationSummary(props) || hasAggregateOccupancySummary(props);
+}
+
+function isStationOutOfOrder(props) {
+  return hasAvailabilitySummary(props) && getAvailabilityStatus(props) === "out_of_order";
+}
+
+function isStationFullyOccupied(props) {
+  return hasAvailabilitySummary(props) && getAvailabilityStatus(props) === "occupied";
+}
+
+function createLiveStatusMarker(lat, lon, markerClass, size) {
+  return L.marker([lat, lon], {
+    icon: L.divIcon({
+      className: `station-map-marker ${markerClass}`,
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+    }),
+    keyboard: false,
+  });
+}
+
+function createStationMarker(feature) {
+  const [lon, lat] = feature.geometry.coordinates;
+  const props = feature.properties;
+
+  if (isStationOutOfOrder(props)) {
+    return createLiveStatusMarker(lat, lon, "station-map-marker-out-of-order", 22);
+  }
+
+  if (isStationFullyOccupied(props)) {
+    return createLiveStatusMarker(lat, lon, "station-map-marker-fully-occupied", 18);
+  }
+
+  const color = getMarkerColor(props);
+  return L.circleMarker([lat, lon], {
+    color: "#ffffff",
+    weight: 1,
+    fillColor: color,
+    fillOpacity: 1,
+    radius: 8,
+  });
+}
+
 function renderMapMarkers() {
   state.views.layers.chargers.clearLayers();
 
   const markers = state.filtered.map((feature) => {
-    const [lon, lat] = feature.geometry.coordinates;
-    const color = getMarkerColor(feature.properties);
-
-    // Simple Circle Marker for performance and clean look
-    const marker = L.circleMarker([lat, lon], {
-      color: "#ffffff",
-      weight: 1,
-      fillColor: color,
-      fillOpacity: 1,
-      radius: 8,
-    });
-
+    const marker = createStationMarker(feature);
     marker.on("click", () => openDetail(feature));
     return marker;
   });
