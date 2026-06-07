@@ -323,10 +323,14 @@ body {
 
 .station-map-marker {
   display: block;
-  position: absolute;
   box-sizing: border-box;
   background: transparent;
   border: 0;
+}
+
+.station-map-marker-icon {
+  display: block;
+  filter: drop-shadow(0 2px 3px rgba(15, 23, 42, 0.22));
 }
 
 .station-map-marker-shape {

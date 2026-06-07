@@ -57,6 +57,8 @@ const FAVORITE_SORT_RATING = "rating";
 const LIVE_SUMMARY_REFRESH_MS = 15000;
 const LIVE_API_TIMEOUT_MS = 3500;
 const LIVE_DETAIL_TIMEOUT_MS = 4000;
+const LIVE_OUT_OF_ORDER_MARKER_SIZE = 22;
+const LIVE_FULLY_OCCUPIED_MARKER_SIZE = 18;
 const STATION_ID_NAMESPACE = "DE:";
 const LEGACY_STATION_ID_RE = /^[0-9a-f]{16}$/i;
 const NAMESPACED_STATION_ID_RE = /^DE:([0-9a-f]{16})$/i;
@@ -87,6 +89,22 @@ const LIVE_DYNAMIC_KEY_LABELS = {
   lastUpdated: "Seit",
   value: "",
 };
+const LIVE_STATUS_MARKER_CONFIGS = {
+  outOfOrder: {
+    size: LIVE_OUT_OF_ORDER_MARKER_SIZE,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${LIVE_OUT_OF_ORDER_MARKER_SIZE}" height="${LIVE_OUT_OF_ORDER_MARKER_SIZE}" viewBox="0 0 ${LIVE_OUT_OF_ORDER_MARKER_SIZE} ${LIVE_OUT_OF_ORDER_MARKER_SIZE}">
+      <circle cx="11" cy="11" r="10.25" fill="#ef4444" stroke="#ffffff" stroke-width="1.5"/>
+      <path d="M7.25 7.25L14.75 14.75M14.75 7.25L7.25 14.75" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"/>
+    </svg>`,
+  },
+  fullyOccupied: {
+    size: LIVE_FULLY_OCCUPIED_MARKER_SIZE,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${LIVE_FULLY_OCCUPIED_MARKER_SIZE}" height="${LIVE_FULLY_OCCUPIED_MARKER_SIZE}" viewBox="0 0 ${LIVE_FULLY_OCCUPIED_MARKER_SIZE} ${LIVE_FULLY_OCCUPIED_MARKER_SIZE}">
+      <circle cx="9" cy="9" r="8" fill="#ffffff" stroke="#f59e0b" stroke-width="2"/>
+    </svg>`,
+  },
+};
+const liveStatusMarkerIcons = new Map();
 const AMENITY_MAPPING = {
   amenity_restaurant: { label: "Restaurant", icon: "amenity_restaurant.png" },
   amenity_cafe: { label: "Café", icon: "amenity_cafe.png" },
@@ -1445,16 +1463,35 @@ function isStationFullyOccupied(props) {
   return hasAvailabilitySummary(props) && getAvailabilityStatus(props) === "occupied";
 }
 
-function createLiveStatusMarker(lat, lon, markerClass, size, stationId) {
-  return L.marker([lat, lon], {
-    icon: L.divIcon({
-      className: "station-map-marker",
-      html: `<span class="station-map-marker-shape ${markerClass}" data-station-id="${escapeHtml(stationId)}"></span>`,
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size / 2],
-    }),
+function getLiveStatusMarkerIcon(statusKey) {
+  if (liveStatusMarkerIcons.has(statusKey)) {
+    return liveStatusMarkerIcons.get(statusKey);
+  }
+
+  const config = LIVE_STATUS_MARKER_CONFIGS[statusKey];
+  const icon = L.icon({
+    iconUrl: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(config.svg)}`,
+    iconRetinaUrl: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(config.svg)}`,
+    iconSize: [config.size, config.size],
+    iconAnchor: [config.size / 2, config.size / 2],
+    className: "station-map-marker-icon",
+  });
+  liveStatusMarkerIcons.set(statusKey, icon);
+  return icon;
+}
+
+function createLiveStatusMarker(lat, lon, statusKey, stationId) {
+  const marker = L.marker([lat, lon], {
+    icon: getLiveStatusMarkerIcon(statusKey),
     keyboard: false,
   });
+  marker.on("add", () => {
+    const element = marker.getElement();
+    if (element && stationId) {
+      element.setAttribute("data-station-id", stationId);
+    }
+  });
+  return marker;
 }
 
 function createStationMarker(feature) {
@@ -1463,11 +1500,11 @@ function createStationMarker(feature) {
   const stationId = getStationIdFromProps(props);
 
   if (isStationOutOfOrder(props)) {
-    return createLiveStatusMarker(lat, lon, "station-map-marker-out-of-order", 22, stationId);
+    return createLiveStatusMarker(lat, lon, "outOfOrder", stationId);
   }
 
   if (isStationFullyOccupied(props)) {
-    return createLiveStatusMarker(lat, lon, "station-map-marker-fully-occupied", 18, stationId);
+    return createLiveStatusMarker(lat, lon, "fullyOccupied", stationId);
   }
 
   const color = getMarkerColor(props);
