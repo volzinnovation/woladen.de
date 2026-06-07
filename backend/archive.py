@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import tarfile
+import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -729,10 +730,8 @@ class DailyResponseArchiveDownloader:
         prefix = self.config.hf_archive_path_prefix.strip("/")
         prefix_root = f"{prefix}/" if prefix else ""
         rows: list[dict[str, Any]] = []
-        for repo_path in self._client().list_repo_files(
-            repo_id=self.config.hf_archive_repo_id,
-            repo_type=self.config.hf_archive_repo_type,
-        ):
+        repo_paths = self._list_repo_files_with_retry()
+        for repo_path in repo_paths:
             remote_path = str(repo_path).strip()
             if prefix_root and not remote_path.startswith(prefix_root):
                 continue
@@ -753,6 +752,34 @@ class DailyResponseArchiveDownloader:
             )
         rows.sort(key=lambda row: (row["target_date"], row["remote_path"]))
         return rows
+
+    def _list_repo_files_with_retry(self) -> list[str]:
+        retries = 4
+        delay_seconds = 2.0
+        client = self._client()
+        last_error: Exception | None = None
+
+        for attempt in range(1, retries + 1):
+            try:
+                return list(
+                    client.list_repo_files(
+                        repo_id=self.config.hf_archive_repo_id,
+                        repo_type=self.config.hf_archive_repo_type,
+                    )
+                )
+            except Exception as exc:
+                last_error = exc
+                message = str(exc)
+                if "429" not in message and "Too Many Requests" not in message:
+                    raise
+                if attempt == retries:
+                    raise
+                time.sleep(delay_seconds)
+                delay_seconds *= 2
+
+        if last_error is not None:
+            raise last_error
+        return []
 
     def latest_available_date(self) -> date | None:
         archives = self.list_available_archives()
