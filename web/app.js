@@ -1198,6 +1198,9 @@ function requestRatingSummariesForFeatures(features) {
 }
 
 function refreshRenderedViews() {
+  if (els.views.map.classList.contains("active")) {
+    renderMapMarkers();
+  }
   if (els.views.list.classList.contains("active")) {
     renderList();
   }
@@ -1557,6 +1560,7 @@ function switchView(viewId, options = {}) {
 
   // Map resize fix
   if (viewId === "view-map" && state.views.map) {
+    renderMapMarkers();
     setTimeout(() => state.views.map.invalidateSize(), 100);
   }
 }
