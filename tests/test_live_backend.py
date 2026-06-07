@@ -22,7 +22,12 @@ from fastapi.testclient import TestClient
 from backend.api import create_app
 from backend.archive import DailyResponseArchiveDownloader, DailyResponseArchiver, ResponseLogWriter
 from backend.config import AppConfig, load_env_file
-from backend.datex import decode_json_payload, extract_dynamic_facts
+from backend.datex import (
+    decode_json_payload,
+    extract_dynamic_facts,
+    extract_exchange_protocol,
+    extract_exchange_protocol_from_content,
+)
 from backend.fetcher import CurlFetcher
 from backend.loaders import load_evse_matches, load_provider_targets, load_site_matches
 from backend.models import FetchResponse
@@ -357,6 +362,21 @@ def _dynamic_payload(
             ]
         }
     }
+
+
+def _with_exchange_protocol(payload: dict, protocol: str) -> dict:
+    wrapped = json.loads(json.dumps(payload))
+    wrapped.setdefault("messageContainer", {})["exchangeInformation"] = {
+        "exchangeContext": {
+            "codedExchangeProtocol": {"value": protocol},
+            "exchangeSpecificationVersion": "3",
+        },
+        "dynamicInformation": {
+            "exchangeStatus": {"value": "online"},
+            "messageGenerationTimestamp": "2026-04-15T08:00:05+00:00",
+        },
+    }
+    return wrapped
 
 
 def _dynamic_payload_with_energy_rate_update(
@@ -911,6 +931,14 @@ def test_extract_dynamic_facts_parses_status_and_inherited_price():
     assert facts[1].operational_status == "CHARGING"
 
 
+def test_extract_exchange_protocol_reads_message_container_protocol():
+    payload = _with_exchange_protocol(_dynamic_payload(), "snapshotPull")
+    payload_bytes = json.dumps(payload).encode("utf-8")
+
+    assert extract_exchange_protocol(payload) == "snapshotPull"
+    assert extract_exchange_protocol_from_content(payload_bytes) == "snapshotPull"
+
+
 def test_extract_dynamic_facts_keeps_latest_duplicate_evse():
     payload = _dynamic_payload()
     duplicate = payload["messageContainer"]["payload"][0]["aegiEnergyInfrastructureStatusPublication"][
@@ -1291,6 +1319,50 @@ def test_ingestion_backs_off_unchanged_snapshot_provider(app_config):
     assert provider["consecutive_unchanged_count"] == 2
     third_interval = int((_parse_dt(provider["next_poll_at"]) - _parse_dt(provider["last_polled_at"])).total_seconds())
     assert third_interval == 90
+
+
+def test_delta_provider_snapshot_pull_uses_snapshot_backoff(app_config):
+    payload = json.dumps(_with_exchange_protocol(_dynamic_payload(), "snapshotPull")).encode("utf-8")
+    fetcher = MockFetcher({"qwello": TimeoutError("skip"), "ampeco": FetchResponse(payload, "application/json", 200)})
+    service = _build_service(app_config, fetcher)
+
+    first = service.ingest_provider("ampeco")
+    assert first["changed_observation_count"] == 2
+    provider = service.store.get_provider("ampeco")
+    assert provider is not None
+    first_interval = int((_parse_dt(provider["next_poll_at"]) - _parse_dt(provider["last_polled_at"])).total_seconds())
+    assert first_interval == app_config.poll_interval_snapshot_seconds
+
+    second = service.ingest_provider("ampeco")
+    assert second["changed_observation_count"] == 0
+    provider = service.store.get_provider("ampeco")
+    assert provider is not None
+    assert provider["consecutive_unchanged_count"] == 1
+    second_interval = int((_parse_dt(provider["next_poll_at"]) - _parse_dt(provider["last_polled_at"])).total_seconds())
+    assert second_interval == app_config.poll_interval_snapshot_seconds * 2
+
+
+def test_queued_delta_provider_snapshot_pull_sets_snapshot_next_poll(app_config):
+    payload = json.dumps(_with_exchange_protocol(_dynamic_payload(), "snapshotPull")).encode("utf-8")
+    fetcher = MockFetcher({"qwello": TimeoutError("skip"), "ampeco": FetchResponse(payload, "application/json", 200)})
+    service = _build_service(app_config, fetcher)
+
+    queued = service.receive_provider("ampeco")
+    assert queued["result"] == "queued"
+    provider = service.store.get_provider("ampeco")
+    assert provider is not None
+    queued_interval = int((_parse_dt(provider["next_poll_at"]) - _parse_dt(provider["last_polled_at"])).total_seconds())
+    assert queued_interval == app_config.poll_interval_snapshot_seconds
+
+    processed = service.process_next_receipt()
+    assert processed is not None
+    assert processed["result"] == "ok"
+    provider = service.store.get_provider("ampeco")
+    assert provider is not None
+    completed_interval = int(
+        (_parse_dt(provider["next_poll_at"]) - _parse_dt(provider["last_polled_at"])).total_seconds()
+    )
+    assert completed_interval == app_config.poll_interval_snapshot_seconds
 
 
 def test_ingestion_logs_invalid_payload_error(app_config):

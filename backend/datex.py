@@ -178,6 +178,43 @@ def _value_field(value: Any) -> Any:
     return value
 
 
+def extract_exchange_protocol(payload: dict[str, Any]) -> str:
+    candidate_containers: list[dict[str, Any]] = [payload]
+
+    message_container = payload.get("messageContainer")
+    if isinstance(message_container, dict):
+        candidate_containers.append(message_container)
+
+    for container in candidate_containers:
+        exchange_information = container.get("exchangeInformation")
+        if not isinstance(exchange_information, dict):
+            continue
+        exchange_context = exchange_information.get("exchangeContext")
+        if not isinstance(exchange_context, dict):
+            continue
+        protocol = str(_value_field(exchange_context.get("codedExchangeProtocol")) or "").strip()
+        if protocol:
+            return protocol
+
+    return ""
+
+
+def extract_exchange_protocol_from_content(content: bytes) -> str:
+    raw = gzip.decompress(content) if content[:2] == b"\x1f\x8b" else content
+    text = raw.decode("utf-8", errors="ignore")
+    match = re.search(
+        r'"codedExchangeProtocol"\s*:\s*(?:\{[^{}]{0,512}"value"\s*:\s*"([^"]+)"|"([^"]+)")',
+        text,
+    )
+    if match is not None:
+        return str(match.group(1) or match.group(2) or "").strip()
+
+    try:
+        return extract_exchange_protocol(decode_json_payload(content))
+    except Exception:
+        return ""
+
+
 def _reference_id(value: Any) -> str:
     if isinstance(value, dict):
         for key in ("idG", "id"):

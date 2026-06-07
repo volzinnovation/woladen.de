@@ -7,7 +7,12 @@ from typing import Any
 
 from .archive import ResponseLogWriter
 from .config import AppConfig
-from .datex import decode_json_payload, extract_dynamic_facts
+from .datex import (
+    decode_json_payload,
+    extract_dynamic_facts,
+    extract_exchange_protocol,
+    extract_exchange_protocol_from_content,
+)
 from .fetcher import CurlFetcher
 from .loaders import load_evse_matches, load_provider_targets, load_site_matches, load_station_records
 from .models import EvseMatch, FetchResponse, SiteMatch
@@ -127,19 +132,22 @@ class IngestionService:
         content_type: str,
     ) -> dict[str, Any]:
         payload = decode_json_payload(payload_bytes)
+        exchange_protocol = extract_exchange_protocol(payload)
         facts = extract_dynamic_facts(
             payload,
             provider_uid,
             self._site_station_map(provider_uid),
             self._evse_station_map(provider_uid),
         )
-        return self.store.persist_provider_observations(
+        stats = self.store.persist_provider_observations(
             provider_uid=provider_uid,
             facts=facts,
             fetched_at=fetched_at,
             payload_bytes=payload_bytes,
             content_type=content_type,
         )
+        stats["exchange_protocol"] = exchange_protocol
+        return stats
 
     def _resolve_provider_for_push(
         self,
@@ -309,6 +317,7 @@ class IngestionService:
                 changed_observation_count=int(ingest_stats["changed_observation_count"]),
                 changed_mapped_observation_count=int(ingest_stats["changed_mapped_observation_count"]),
                 changed_dropped_observation_count=int(ingest_stats["changed_dropped_observation_count"]),
+                exchange_protocol=str(ingest_stats.get("exchange_protocol") or ""),
             )
             return {
                 "provider_uid": provider_uid,
@@ -421,6 +430,7 @@ class IngestionService:
                     "error": error_text,
                 }
             payload_sha256 = hashlib.sha256(fetch_response.body).hexdigest()
+            exchange_protocol = extract_exchange_protocol_from_content(fetch_response.body)
             task = self.receipt_queue.build_task(
                 task_kind="poll",
                 provider_uid=provider_uid,
@@ -437,6 +447,7 @@ class IngestionService:
                 fetched_at=fetched_at,
                 http_status=fetch_response.http_status,
                 payload_sha256=payload_sha256,
+                exchange_protocol=exchange_protocol,
             )
             return self._queued_result_payload(
                 provider_uid=provider_uid,
@@ -756,6 +767,7 @@ class IngestionService:
                     changed_observation_count=int(ingest_stats["changed_observation_count"]),
                     changed_mapped_observation_count=int(ingest_stats["changed_mapped_observation_count"]),
                     changed_dropped_observation_count=int(ingest_stats["changed_dropped_observation_count"]),
+                    exchange_protocol=str(ingest_stats.get("exchange_protocol") or ""),
                 )
             else:
                 self.store.finish_push_run(

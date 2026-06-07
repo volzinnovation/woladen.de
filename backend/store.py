@@ -20,6 +20,7 @@ SQLITE_LOCK_ERROR_MARKERS = (
     "database schema is locked",
     "database is busy",
 )
+SNAPSHOT_EXCHANGE_PROTOCOLS = {"snapshotpull", "snapshotpush"}
 
 
 def utc_now_iso() -> str:
@@ -66,6 +67,14 @@ def _record_timing_metric(timings: dict[str, float] | None, metric_name: str, st
         return
     elapsed_ms = (time.perf_counter() - started_at) * 1000.0
     timings[metric_name] = timings.get(metric_name, 0.0) + elapsed_ms
+
+
+def _normalize_exchange_protocol(value: str) -> str:
+    return "".join(ch for ch in str(value or "").lower() if ch.isalnum())
+
+
+def _is_snapshot_exchange_protocol(value: str) -> bool:
+    return _normalize_exchange_protocol(value) in SNAPSHOT_EXCHANGE_PROTOCOLS
 
 
 class LiveStore:
@@ -1162,6 +1171,7 @@ class LiveStore:
         changed_observation_count: int = 0,
         changed_mapped_observation_count: int = 0,
         changed_dropped_observation_count: int = 0,
+        exchange_protocol: str = "",
     ) -> None:
         ended_text = ended_at or utc_now_iso()
         self._run_write_with_retry(
@@ -1180,6 +1190,7 @@ class LiveStore:
                 changed_observation_count=changed_observation_count,
                 changed_mapped_observation_count=changed_mapped_observation_count,
                 changed_dropped_observation_count=changed_dropped_observation_count,
+                exchange_protocol=exchange_protocol,
             )
         )
 
@@ -1200,6 +1211,7 @@ class LiveStore:
         changed_observation_count: int,
         changed_mapped_observation_count: int,
         changed_dropped_observation_count: int,
+        exchange_protocol: str,
     ) -> None:
         with self.connection() as conn:
             provider_row = conn.execute("SELECT * FROM providers WHERE provider_uid = ?", (provider_uid,)).fetchone()
@@ -1209,6 +1221,7 @@ class LiveStore:
                 result=result,
                 changed_observation_count=changed_observation_count,
                 reference_time=fetched_at or ended_text,
+                exchange_protocol=exchange_protocol,
             )
             conn.execute(
                 """
@@ -1264,10 +1277,14 @@ class LiveStore:
         fetched_at: str,
         http_status: int = 0,
         payload_sha256: str = "",
+        exchange_protocol: str = "",
     ) -> None:
         ended_text = utc_now_iso()
         provider = self.get_provider(provider_uid) or {}
-        base_next_poll_at = _shift_iso(fetched_at or ended_text, self._base_poll_interval_seconds(provider))
+        base_next_poll_at = _shift_iso(
+            fetched_at or ended_text,
+            self._base_poll_interval_seconds(provider, exchange_protocol=exchange_protocol),
+        )
         self._run_write_with_retry(
             lambda: self._queue_poll_run_once(
                 poll_run_id,
@@ -1325,6 +1342,7 @@ class LiveStore:
         changed_observation_count: int = 0,
         changed_mapped_observation_count: int = 0,
         changed_dropped_observation_count: int = 0,
+        exchange_protocol: str = "",
     ) -> None:
         ended_text = utc_now_iso()
         self._run_write_with_retry(
@@ -1343,6 +1361,7 @@ class LiveStore:
                 changed_observation_count=changed_observation_count,
                 changed_mapped_observation_count=changed_mapped_observation_count,
                 changed_dropped_observation_count=changed_dropped_observation_count,
+                exchange_protocol=exchange_protocol,
             )
         )
 
@@ -1363,6 +1382,7 @@ class LiveStore:
         changed_observation_count: int,
         changed_mapped_observation_count: int,
         changed_dropped_observation_count: int,
+        exchange_protocol: str,
     ) -> None:
         with self.connection() as conn:
             provider_row = conn.execute("SELECT * FROM providers WHERE provider_uid = ?", (provider_uid,)).fetchone()
@@ -1372,6 +1392,7 @@ class LiveStore:
                 result=result,
                 changed_observation_count=changed_observation_count,
                 reference_time=fetched_at or ended_text,
+                exchange_protocol=exchange_protocol,
             )
             current_next_poll_at = _parse_iso_utc(provider.get("next_poll_at"))
             desired_next_poll_dt = _parse_iso_utc(desired_next_poll_at)
@@ -1563,8 +1584,8 @@ class LiveStore:
                 (received_at or ended_text, "queued", "", ended_text, provider_uid),
             )
 
-    def _base_poll_interval_seconds(self, provider: dict[str, Any]) -> int:
-        if bool(provider.get("delta_delivery")):
+    def _base_poll_interval_seconds(self, provider: dict[str, Any], *, exchange_protocol: str = "") -> int:
+        if bool(provider.get("delta_delivery")) and not _is_snapshot_exchange_protocol(exchange_protocol):
             return max(1, int(self.config.poll_interval_delta_seconds))
         return max(1, int(self.config.poll_interval_snapshot_seconds))
 
@@ -1585,8 +1606,10 @@ class LiveStore:
         result: str,
         changed_observation_count: int,
         reference_time: str,
+        exchange_protocol: str = "",
     ) -> tuple[str, int, int, int]:
-        base_interval = self._base_poll_interval_seconds(provider)
+        snapshot_like_payload = _is_snapshot_exchange_protocol(exchange_protocol)
+        base_interval = self._base_poll_interval_seconds(provider, exchange_protocol=exchange_protocol)
         no_data_count = 0
         error_count = 0
         unchanged_count = 0
@@ -1605,7 +1628,7 @@ class LiveStore:
             )
         elif result == "ok" and changed_observation_count <= 0:
             unchanged_count = int(provider.get("consecutive_unchanged_count") or 0) + 1
-            if bool(provider.get("delta_delivery")):
+            if bool(provider.get("delta_delivery")) and not snapshot_like_payload:
                 interval_seconds = base_interval
             else:
                 interval_seconds = min(
