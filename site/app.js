@@ -759,6 +759,7 @@ const state = {
       user: null,
       detailAmenities: null,
     },
+    markersByStationId: new Map(),
   },
 };
 
@@ -1028,11 +1029,14 @@ async function fetchJsonWithTimeout(url, options = {}, timeoutMs = LIVE_API_TIME
 }
 
 function upsertLiveStationSummaries(stations, missingStationIds = []) {
+  const affectedStationIds = new Set();
+
   stations.forEach((summary) => {
     const stationId = getStationIdFromProps(summary);
     if (!stationId) {
       return;
     }
+    affectedStationIds.add(stationId);
     state.live.summaryByStationId.set(stationId, summary);
     state.live.summaryFetchedAtByStationId.set(stationId, Date.now());
     const feature = findFeatureByStationId(stationId);
@@ -1046,6 +1050,7 @@ function upsertLiveStationSummaries(stations, missingStationIds = []) {
     if (!id) {
       return;
     }
+    affectedStationIds.add(id);
     state.live.summaryByStationId.delete(id);
     state.live.summaryFetchedAtByStationId.set(id, Date.now());
     const feature = findFeatureByStationId(id);
@@ -1053,6 +1058,8 @@ function upsertLiveStationSummaries(stations, missingStationIds = []) {
       clearLiveStationSummaryFromProps(feature.properties);
     }
   });
+
+  return Array.from(affectedStationIds);
 }
 
 function requestLiveSummariesForFeatures(features) {
@@ -1104,8 +1111,11 @@ function requestLiveSummariesForFeatures(features) {
         throw new Error("Unexpected live station lookup payload");
       }
       state.live.reachable = true;
-      upsertLiveStationSummaries(payload.stations, payload.missing_station_ids || []);
-      refreshRenderedViews();
+      const affectedStationIds = upsertLiveStationSummaries(
+        payload.stations,
+        payload.missing_station_ids || [],
+      );
+      refreshRenderedViews({ markerStationIds: affectedStationIds });
     } catch (err) {
       console.error("Failed to load live station summaries", err);
     } finally {
@@ -1197,10 +1207,8 @@ function requestRatingSummariesForFeatures(features) {
   })();
 }
 
-function refreshRenderedViews() {
-  if (els.views.map.classList.contains("active")) {
-    renderMapMarkers();
-  }
+function refreshRenderedViews({ markerStationIds = [] } = {}) {
+  updateMapMarkersForStationIds(markerStationIds);
   if (els.views.list.classList.contains("active")) {
     renderList();
   }
@@ -1321,7 +1329,7 @@ async function loadLiveStationDetail(stationId) {
       state.live.summaryByStationId.set(stationId, payload.station);
       state.live.summaryFetchedAtByStationId.set(stationId, Date.now());
     }
-    refreshRenderedViews();
+    refreshRenderedViews({ markerStationIds: [stationId] });
     return payload;
   } catch (err) {
     console.error(`Failed to load live detail for station ${stationId}`, err);
@@ -1470,16 +1478,49 @@ function createStationMarker(feature) {
   });
 }
 
+function bindStationMarker(marker, feature) {
+  marker.on("click", () => openDetail(feature));
+  return marker;
+}
+
 function renderMapMarkers() {
   state.views.layers.chargers.clearLayers();
+  state.views.markersByStationId.clear();
 
-  const markers = state.filtered.map((feature) => {
-    const marker = createStationMarker(feature);
-    marker.on("click", () => openDetail(feature));
-    return marker;
+  state.filtered.forEach((feature) => {
+    const marker = bindStationMarker(createStationMarker(feature), feature);
+    const stationId = getStationIdFromProps(feature.properties);
+    if (stationId) {
+      state.views.markersByStationId.set(stationId, marker);
+    }
+
+    marker.addTo(state.views.layers.chargers);
   });
+}
 
-  markers.forEach((m) => m.addTo(state.views.layers.chargers));
+function updateMapMarkersForStationIds(stationIds) {
+  if (!state.views.layers.chargers || !Array.isArray(stationIds) || stationIds.length === 0) {
+    return;
+  }
+
+  Array.from(new Set(stationIds)).forEach((stationId) => {
+    const feature = findFeatureByStationId(stationId);
+    const existingMarker = state.views.markersByStationId.get(stationId);
+    const isFiltered = feature ? state.filtered.includes(feature) : false;
+
+    if (existingMarker) {
+      state.views.layers.chargers.removeLayer(existingMarker);
+      state.views.markersByStationId.delete(stationId);
+    }
+
+    if (!feature || !isFiltered) {
+      return;
+    }
+
+    const nextMarker = bindStationMarker(createStationMarker(feature), feature);
+    state.views.markersByStationId.set(stationId, nextMarker);
+    nextMarker.addTo(state.views.layers.chargers);
+  });
 }
 
 function updateUserMarker() {
@@ -1560,7 +1601,6 @@ function switchView(viewId, options = {}) {
 
   // Map resize fix
   if (viewId === "view-map" && state.views.map) {
-    renderMapMarkers();
     setTimeout(() => state.views.map.invalidateSize(), 100);
   }
 }
