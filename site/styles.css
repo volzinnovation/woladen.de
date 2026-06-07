@@ -323,7 +323,7 @@ body {
 
 .station-map-marker {
   display: block;
-  position: relative;
+  position: absolute;
   box-sizing: border-box;
   background: transparent;
   border: 0;
