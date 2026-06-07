@@ -1445,10 +1445,11 @@ function isStationFullyOccupied(props) {
   return hasAvailabilitySummary(props) && getAvailabilityStatus(props) === "occupied";
 }
 
-function createLiveStatusMarker(lat, lon, markerClass, size) {
+function createLiveStatusMarker(lat, lon, markerClass, size, stationId) {
   return L.marker([lat, lon], {
     icon: L.divIcon({
-      className: `station-map-marker ${markerClass}`,
+      className: "station-map-marker",
+      html: `<span class="station-map-marker-shape ${markerClass}" data-station-id="${escapeHtml(stationId)}"></span>`,
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
     }),
@@ -1459,13 +1460,14 @@ function createLiveStatusMarker(lat, lon, markerClass, size) {
 function createStationMarker(feature) {
   const [lon, lat] = feature.geometry.coordinates;
   const props = feature.properties;
+  const stationId = getStationIdFromProps(props);
 
   if (isStationOutOfOrder(props)) {
-    return createLiveStatusMarker(lat, lon, "station-map-marker-out-of-order", 22);
+    return createLiveStatusMarker(lat, lon, "station-map-marker-out-of-order", 22, stationId);
   }
 
   if (isStationFullyOccupied(props)) {
-    return createLiveStatusMarker(lat, lon, "station-map-marker-fully-occupied", 18);
+    return createLiveStatusMarker(lat, lon, "station-map-marker-fully-occupied", 18, stationId);
   }
 
   const color = getMarkerColor(props);

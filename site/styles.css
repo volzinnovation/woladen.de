@@ -323,14 +323,22 @@ body {
 
 .station-map-marker {
   display: block;
+  position: relative;
+  box-sizing: border-box;
+  background: transparent;
+  border: 0;
+}
+
+.station-map-marker-shape {
+  position: absolute;
+  inset: 0;
+  display: block;
   box-sizing: border-box;
   border-radius: 50%;
+  pointer-events: none;
 }
 
 .station-map-marker-out-of-order {
-  position: relative;
-  width: 22px;
-  height: 22px;
   background: #ef4444;
   border: 1.5px solid #ffffff;
   box-shadow: 0 2px 5px rgba(15, 23, 42, 0.24);
@@ -361,8 +369,6 @@ body {
 }
 
 .station-map-marker-fully-occupied {
-  width: 18px;
-  height: 18px;
   background: #ffffff;
   border: 2px solid #f59e0b;
   box-shadow: 0 2px 5px rgba(15, 23, 42, 0.2);
