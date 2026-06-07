@@ -107,15 +107,15 @@ Then open `http://localhost:4173/`.
 <!-- DATA_STATUS_START -->
 ## Data Build Status
 
-- Last build (UTC): `2026-06-06T01:42:58+00:00`
+- Last build (UTC): `2026-06-07T01:48:14+00:00`
 - Source: `https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-04-22.csv`
 - Full registry stations: `72155`
 - Fast chargers (>= 50.0 kW): `15214`
-- Fast chargers with live occupancy: `1314`
-- Fast chargers with static AFIR details: `9766` (price: `8042`, opening hours: `11030`)
+- Fast chargers with live occupancy: `1292`
+- Fast chargers with static AFIR details: `9771` (price: `8049`, opening hours: `11031`)
 - Chargers with >=1 nearby amenity: `15214`
-- Occupancy sources scanned: `32` (matched EVSEs: `5372`)
-- Static AFIR sources used: `21` (helpdesk phones: `5607`)
+- Occupancy sources scanned: `32` (matched EVSEs: `5322`)
+- Static AFIR sources used: `22` (helpdesk phones: `5609`)
 - Amenity backend: `osm-pbf`
 - Live amenity lookups this run: `0` (cache hits: `0`, deferred: `0`)
 
