@@ -53,3 +53,14 @@ def test_open_static_workflow_default_includes_belgium_energyvision():
     assert "Verify published combined release assets" in workflow
     assert "open_static.sqlite3.zst" in workflow
     assert "missing published release asset" in workflow
+
+
+def test_onboarded_static_catalog_workflow_is_public_repo_artifact_only():
+    workflow = Path(".github/workflows/build-onboarded-static-catalog.yml").read_text(encoding="utf-8")
+
+    assert "Build onboarded static catalog" in workflow
+    assert "requirements.txt -r requirements-open-static.txt" in workflow
+    assert "actions/upload-artifact@v4" in workflow
+    assert "data/onboarded_static" in workflow
+    assert "git push" not in workflow
+    assert "requirements-commercial.txt" not in workflow
