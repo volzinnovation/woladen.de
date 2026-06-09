@@ -3,24 +3,27 @@
 # woladen.de
 Find charging stations where charging is fun.
 
-We build an open data collection of recharging stations in Europe with nearby amenities from OpenStreetMap with AFIR-based live data, where available.
+`woladen.de` is the Germany-focused fast-charger web product. The same repository also builds an open static SQLite bundle for supported European AFIR/NAP charging infrastructure sources, plus Switzerland and Norway, for mobile/offline clients.
 
 ## What This Repo Does
 
-- Ingests the official NAP charging registries in all countries that have implemented the European AFIR regulation plus Switzerland and Norway and open data work-arounds, where available.
--  Source discovery starts from the national access points (NAP) and subscribes to all data providers.
-- Provides a web front-end, with list view, map view, favorites and tools such as filters to active chargers with at least `50 kW` nominal power or particular amenities nearby.
-- Augments matched stations with live occupancy from NAP DATEX2 and OCPI data streams.
+- Ingests the official Bundesnetzagentur charging registry for the public Germany product.
+- Builds an open static European charging bundle from national NAP/AFIR sources, public registries, and reviewed source-specific workarounds.
+- Filters the Germany product to active fast chargers with at least `50 kW` nominal power by default.
+- Enriches stations with nearby amenities from OpenStreetMap within the default `250 m` radius.
+- Augments matched Germany stations with live occupancy from NAP DATEX II and OCPI data streams, where available.
 - Exposes a live backend API for AFIR push/poll ingestion and station status at `https://live.woladen.de`.
-- Enriches each charger with nearby amenities (`100m` radius) from OSM
-  using either local `germany-latest.osm.pbf` or Overpass fallback.
 - Publishes a mobile-ready static web map with filters (operator + amenities).
-- New stations discovered daily via GitHub Actions on day 1 at `00:00 UTC` (`01:00 CET`).
+- Refreshes Germany data daily via GitHub Actions at `01:00 UTC`.
 
 ## Project Structure
 
 - `scripts/build_data.py`: End-to-end data pipeline.
 - `scripts/build_site.py`: Creates deployable `site/` bundle.
+- `scripts/build_eu_static_description_bundle.py`: Normalizes supported European static sources into bundle CSV rows.
+- `scripts/build_open_static_sqlite_bundle.py`: Builds per-country and aggregate open-static SQLite bundle files.
+- `scripts/build_open_static_regional_release_assets.py`: Builds regional mobile download packages and manifests.
+- `scripts/build_onboarded_static_catalog.py`: Builds onboarded source seed catalogs for CH, NL, and BE.
 - `backend/`: Live backend for DATEX ingestion, SQLite persistence, and FastAPI endpoints.
 - `deploy/ionos/`: Packaging and install scripts for the IONOS VPS that serves `live.woladen.de`.
 - `web/`: Frontend app (Leaflet + vanilla JS/CSS/HTML).
@@ -29,12 +32,64 @@ We build an open data collection of recharging stations in Europe with nearby am
 - `data/`: Cached source and generated analytics outputs.
 - `.github/workflows/daily-data-generation.yml`: Daily data generation + commit.
 - `.github/workflows/pages-deploy.yml`: GitHub Pages build + deploy.
+- `.github/workflows/build-open-static-sqlite-bundle.yml`: Manual open-static SQLite/release bundle generation.
+- `.github/workflows/build-onboarded-static-catalog.yml`: Manual or weekly onboarded static catalog artifact generation.
+
+## Data Sources
+
+The Germany web product is built from the Bundesnetzagentur charging registry, Mobilithek/AFIR provider metadata, selected live occupancy feeds, and OpenStreetMap amenities.
+
+The open static bundle currently supports these country sources:
+
+| Country | Primary source used by the bundle |
+| --- | --- |
+| AT | E-Control DATEX energy infrastructure table publication |
+| BE | EnergyVision OCPI locations, Road OCPI locations, Group INDIGO DATEX static data, and Monta AFIR charge-point table |
+| CH | Swiss BFE Ladestationen static OICP JSON |
+| CY | Traffic4Cyprus/FixCyprus DATEX II chargers |
+| CZ | MPO public charging-station register XLSX |
+| DE | `woladen.de` Bundesnetzagentur-derived static bundle rows |
+| DK | Monta AFIR charge-point table |
+| ES | DGT electrolineras DATEX II static charging infrastructure |
+| FI | Digitraffic DATEX locations |
+| FR | Base nationale IRVE static consolidation |
+| GR | Electrokinisi IDRO static charging-station JSON ZIP |
+| HU | NAP subscription DATEX II static snapshots for Eco-Movement and MVM Mobiliti |
+| LT | Via Lietuva DATEX II public charging infrastructure table, with tracked static fallback during backend challenge periods |
+| LU | Public electrical charging stations WFS GeoJSON |
+| LV | Transportdata Eco-Movement and LVC DATEX energy infrastructure snapshots |
+| MT | Transport Malta eGIS Charging Points ArcGIS layer |
+| NL | NDW OCPI locations |
+| NO | NOBIL API v3 static charging-station datadump |
+| PL | EIPA reader static JSON files, with browser pages as fallback evidence |
+| PT | MOBI.E DATEX II v3 Energy Infrastructure Table Publication |
+| SE | NOBIL API v3 static charging-station datadump |
+| SI | NAP Prometej IDACS Energy Infrastructure Table Publication |
+| OSM | OpenStreetMap/Geofabrik PBFs for nearby amenities |
+
+The generated `source_attribution.json` records source URLs, source UIDs, license review status, static/dynamic boundaries, and credential handling. Treat that file as the bundle's machine-readable attribution contract.
 
 ## GitHub Setup
 
 1. In repository settings, set GitHub Pages source to `GitHub Actions`.
 2. Ensure the default branch allows `github-actions[bot]` pushes (for generated artifacts).
 3. Keep DNS for `woladen.de` pointed to GitHub Pages.
+
+For the open-static bundle workflow, configure the source credentials as GitHub Actions secrets when the corresponding countries are included:
+
+- `AT_ECONTROL_API_KEY`, optional `AT_ECONTROL_REFERER`, and optional `AT_LADESTELLEN_USER` / `AT_LADESTELLEN_PASSWORD`
+- `TRANSPORTDATA_BE_ENERGYVISION_PROD_TOKEN` and `TRANSPORTDATA_BE_ENERGYVISION_PROD_TOKEN_C`
+- `MONTA_PUBLIC_CLIENT_ID` / `MONTA_PUBLIC_CLIENT_SECRET`, or the `DK_MONTA_CLIENT_ID` / `DK_MONTA_CLIENT_SECRET` aliases
+- `PL_EIPA_READER_TOKEN`
+- `NO_SE_NOBIL_KEY`
+- `SI_NAP_EMAIL` / `SI_NAP_PASSWORD`
+- `PT_NAP_PASSWORD`
+- `HU_NAP_EMAIL` / `HU_NAP_PASSWORD`
+- `TRANSPORTDATA_LV_ECO_MOVEMENT_STATIC_API_KEY`
+- `TRANSPORTDATA_LV_ECO_MOVEMENT_STATUS_PRICE_API_KEY`
+- `TRANSPORTDATA_LV_LVC_EV_CHARGING_STREAM_API_KEY`
+
+Local secret files belong under ignored `secret/` paths. Do not commit credentials, raw private payloads, or live deployment material.
 
 ## Backend Deployment
 
@@ -55,18 +110,20 @@ Useful public backend endpoints:
 
 ## Local Usage
 
-Install dependencies:
+Use Python 3.12. Create an isolated environment and install the base dependencies:
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 python3 -m pip install -r requirements.txt
 ```
 
-Build data:
+Build the Germany product data:
 
 ```bash
-python scripts/build_data.py \
+python3 scripts/build_data.py \
   --min-power-kw 50 \
-  --radius-m 100 \
+  --radius-m 250 \
   --amenity-backend osm-pbf \
   --osm-pbf-path data/germany-latest.osm.pbf \
   --download-osm-pbf
@@ -75,9 +132,9 @@ python scripts/build_data.py \
 Overpass fallback:
 
 ```bash
-python scripts/build_data.py \
+python3 scripts/build_data.py \
   --min-power-kw 50 \
-  --radius-m 100 \
+  --radius-m 250 \
   --amenity-backend overpass \
   --query-budget 500 \
   --refresh-days 30
@@ -86,24 +143,138 @@ python scripts/build_data.py \
 Build site bundle:
 
 ```bash
-python scripts/build_site.py
+python3 scripts/build_site.py
 ```
 
 Test the built web app locally against `https://live.woladen.de`:
 
 ```bash
-python scripts/build_site.py
+python3 scripts/build_site.py
 python3 -m http.server 4173 --directory site
 ```
 
 Then open `http://localhost:4173/`.
+
+Run the focused frontend checks after web changes:
+
+```bash
+node --test web/filtering.test.mjs web/location.test.mjs
+```
+
+## Open Static Bundle
+
+Install the additional open-static dependencies when building European bundle artifacts:
+
+```bash
+python3 -m pip install -r requirements.txt -r requirements-open-static.txt
+```
+
+For local OSM/PBF enrichment or release-style compression, install the system tools too:
+
+```bash
+# macOS
+brew install zstd osmium-tool
+
+# Debian/Ubuntu
+sudo apt-get update && sudo apt-get install -y zstd osmium-tool
+```
+
+The easiest supported path is the GitHub Actions workflow. It fetches source payloads, builds normalized CSV rows, builds per-country SQLite parts, aggregates them, checks row counts, and can publish/update the release assets:
+
+```bash
+gh workflow run build-open-static-sqlite-bundle.yml \
+  --repo volzinnovation/woladen.de \
+  --ref main \
+  -f countries='AT,BE,CH,CY,CZ,DE,DK,ES,FI,FR,GR,HU,LT,LU,LV,MT,NL,NO,PL,PT,SE,SI' \
+  -f release_tag='open-static-ios-regional-latest' \
+  -f refresh_ch_nl_normalized=true \
+  -f include_osm_pbf=false \
+  -f download_osm_pbf=false \
+  -f fail_on_pbf_missing=false \
+  -f publish_release=true
+```
+
+Use `publish_release=false` for trial runs. Set `include_osm_pbf=true` and `download_osm_pbf=true` when you want the workflow to enrich non-DE countries from country PBF files; this is slower and can run for hours.
+
+To build locally from already fetched source archives/caches, or after running the same `commercial_fetch_*` commands used by `.github/workflows/build-open-static-sqlite-bundle.yml`:
+
+```bash
+export COUNTRIES='AT,BE,CH,CY,CZ,DE,DK,ES,FI,FR,GR,HU,LT,LU,LV,MT,NL,NO,PL,PT,SE,SI'
+export WOLADEN_COMMERCIAL_SQLITE_PATH=data/commercial_state.sqlite3
+export WOLADEN_COMMERCIAL_RAW_PAYLOAD_DIR=data/commercial_raw
+
+python3 scripts/build_onboarded_static_catalog.py \
+  --output-dir data/onboarded_static \
+  --country BE,NL,CH
+
+python3 scripts/build_eu_static_description_bundle.py \
+  --output-dir data/eu27_ch_static \
+  --woladen-de-data-dir data \
+  --onboarded-static-dir data/onboarded_static \
+  --refresh-ch-nl-normalized
+
+python3 scripts/validate_open_static_bundle.py \
+  --bundle-dir data/eu27_ch_static \
+  --normalized-only \
+  --require-normalized-rows
+
+mkdir -p tmp/open-static-parts tmp/open-static
+for country in ${COUNTRIES//,/ }; do
+  python3 scripts/build_open_static_sqlite_bundle.py country \
+    --input-dir data/eu27_ch_static \
+    --country "$country" \
+    --output-path "tmp/open-static-parts/open-static-$country.sqlite3"
+done
+
+python3 scripts/build_open_static_sqlite_bundle.py aggregate \
+  --parts-dir tmp/open-static-parts \
+  --output-path tmp/open-static/open_static.sqlite3
+
+python3 scripts/build_open_static_sqlite_bundle.py check-counts \
+  --db-path tmp/open-static/open_static.sqlite3 \
+  --expected-dir data/eu27_ch_static \
+  --countries "$COUNTRIES"
+```
+
+Regional mobile release assets can be generated from the country parts:
+
+```bash
+python3 scripts/build_open_static_regional_release_assets.py \
+  --parts-dir tmp/open-static-parts \
+  --output-dir tmp/open-static-regional-packs \
+  --github-owner volzinnovation \
+  --github-repo woladen.de \
+  --github-release-tag open-static-ios-regional-latest
+```
+
+The bundle workflow publishes:
+
+- `open_static.sqlite3.zst`
+- `open_static.sqlite3.zst.sha256`
+- `open_static.sqlite3.sha256`
+- `open-static-<GROUP>.sqlite3.zlib`
+- `open-static-<GROUP>.sqlite3.zlib.sha256`
+- `open-static-<GROUP>.sqlite3.sha256`
+- `open-static-<GROUP>.manifest.json`
+- `regional_pack_index.json`
+
+The regional groups are `DACH`, `BENELUX`, `ROMANIC`, `NORDICS`, and `REST-EUROPE`.
+
+## Workflow Notes
+
+- `daily-data-generation.yml` refreshes Germany data and commits generated `data/` and README status changes.
+- `pages-deploy.yml` builds and deploys only the static GitHub Pages site.
+- `build-open-static-sqlite-bundle.yml` creates open-static bundle artifacts and, when requested, GitHub Release assets.
+- `build-onboarded-static-catalog.yml` uploads `data/onboarded_static` as an artifact; it does not commit generated catalog files.
+- `live-deploy.yml` deploys `live.woladen.de` and is separate from bundle generation.
 
 ## Notes
 
 - `--amenity-backend auto` (default) uses local `data/germany-latest.osm.pbf` if present, otherwise Overpass.
 - `--query-budget`, `--refresh-days`, and `--overpass-delay-ms` only apply to the Overpass backend.
 - If BNetzA fetch fails and no local cache exists, the pipeline fails intentionally.
-- On first successful run, artifacts in `data/` are updated and committed by CI.
+- On a successful Germany data run, generated artifacts in `data/` and the data-status block below are updated and committed by CI.
+- Treat `site/`, `data/eu27_ch_static/`, `data/onboarded_static/`, `data/osm_pbf_cache/`, `data/commercial_raw/`, and `data/commercial_archives/` as generated or cached outputs.
 
 <!-- DATA_STATUS_START -->
 ## Data Build Status
