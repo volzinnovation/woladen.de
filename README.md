@@ -3,7 +3,7 @@
 # woladen.de
 Find charging stations where charging is fun.
 
-`[woladen.de](https://woladen.de/)` allows you to discover recharging stations in Europe. The same repository also builds an open static SQLite bundle for supported European AFIR/NAP charging infrastructure sources, plus Switzerland and Norway, for mobile/offline clients.
+[woladen.de](https://woladen.de/) allows you to discover recharging stations in Europe. The same repository also builds an open static SQLite bundle for supported European AFIR/NAP charging infrastructure sources, plus Switzerland and Norway, for mobile/offline clients.
 
 ## What This Repo Does
 
