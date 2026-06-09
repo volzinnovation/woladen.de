@@ -1,9 +1,9 @@
-![Mobile test](test-results/mobile_test.webp)
+![Data coverage](web/img/chargers_naturalearth_purple_laea_baden_baden.png)
 
 # woladen.de
 Find charging stations where charging is fun.
 
-`woladen.de` is the Germany-focused fast-charger web product. The same repository also builds an open static SQLite bundle for supported European AFIR/NAP charging infrastructure sources, plus Switzerland and Norway, for mobile/offline clients.
+[woladen.de](https://woladen.de/) allows you to discover recharging stations in Europe. This repository builds an open static SQLite bundle for supported European AFIR/NAP charging infrastructure sources, plus Switzerland and Norway, for mobile/offline clients and the web app.
 
 ## What This Repo Does
 
