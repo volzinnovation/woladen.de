@@ -88,7 +88,7 @@ Counts below are from the `open-static-ios-regional-latest` SQLite bundle. `Fast
 | FR | 63,775 | 159,693 | 44,877 | 40,356 |
 | GR | 3,977 | 9,254 | 1,569 | 1,128 |
 | HU | 1,343 | 2,520 | 686 | 586 |
-| LT | 2,496 | 13,814 | 2,767 | 0 |
+| LT | 2,496 | 13,814 | 2,767 | 2,112 |
 | LU | 530 | 530 | 17 | 17 |
 | LV | 1,102 | 3,203 | 1,814 | 1,705 |
 | MT | 184 | 184 | 32 | 30 |
@@ -98,7 +98,7 @@ Counts below are from the `open-static-ios-regional-latest` SQLite bundle. `Fast
 | PT | 7,978 | 19,340 | 7,138 | 6,505 |
 | SE | 8,922 | 61,118 | 11,797 | 10,351 |
 | SI | 1,191 | 3,412 | 542 | 500 |
-| **Total** | **288,994** | **824,703** | **179,785** | **157,318** |
+| **Total** | **288,994** | **824,703** | **179,785** | **159,430** |
 
 The generated `source_attribution.json` records source URLs, source UIDs, license review status, static/dynamic boundaries, and credential handling. Treat that file as the bundle's machine-readable attribution contract.
 
