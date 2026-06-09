@@ -5,7 +5,7 @@
 ![Data coverage](web/img/chargers_naturalearth_purple_laea_baden_baden.png)
 
 # About woladen.de
-Purpose: **Find charging stations in Europe where charging is fun.**
+Purpose: **Find charging stations in Europe where charging your EV is fun.**
 
 [woladen.de](https://woladen.de/) allows you to discover recharging stations in Europe. This repository builds an open static SQLite bundle for supported European AFIR/NAP charging infrastructure sources, plus Switzerland and Norway, for mobile/offline clients and the web app.
 
