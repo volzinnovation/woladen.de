@@ -197,7 +197,27 @@ gh workflow run build-open-static-sqlite-bundle.yml \
   -f publish_release=true
 ```
 
-Use `publish_release=false` for trial runs. Set `include_osm_pbf=true` and `download_osm_pbf=true` when you want the workflow to enrich non-DE countries from country PBF files; this is slower and can run for hours.
+Use `publish_release=false` for trial runs. The example above publishes a fast, non-enriched bundle; it is useful for checking the pipeline, but it is not byte-equivalent to the prior analytics release because non-DE OSM amenities are not populated.
+
+For migration runs that need to reuse a prepared bundle artifact from another repository, set the source/reuse repository inputs and configure `OPEN_STATIC_ARTIFACT_READER_TOKEN` as a GitHub Actions secret when the artifact repository is private:
+
+```bash
+gh workflow run build-open-static-sqlite-bundle.yml \
+  --repo volzinnovation/woladen.de \
+  --ref main \
+  -f countries='AT,BE,CH,CY,CZ,DE,DK,ES,FI,FR,GR,HU,LT,LU,LV,MT,NL,NO,PL,PT,SE,SI' \
+  -f source_run_id='<analytics-source-run-id>' \
+  -f source_run_repo='volzinnovation/Woladen.de-analytics' \
+  -f amenity_reuse_run_id='<analytics-prepared-run-id>' \
+  -f amenity_reuse_repo='volzinnovation/Woladen.de-analytics' \
+  -f release_tag='open-static-ios-regional-latest' \
+  -f include_osm_pbf=false \
+  -f download_osm_pbf=false \
+  -f fail_on_pbf_missing=false \
+  -f publish_release=true
+```
+
+For a fresh enriched rebuild, set `include_osm_pbf=true` and `download_osm_pbf=true`; this is slower and can run for hours.
 
 To build locally from already fetched source archives/caches, or after running the same `commercial_fetch_*` commands used by `.github/workflows/build-open-static-sqlite-bundle.yml`:
 

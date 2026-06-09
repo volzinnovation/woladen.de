@@ -13,8 +13,18 @@ on:
         required: false
         default: ""
         type: string
+      source_run_repo:
+        description: "Optional owner/repo containing source_run_id. Defaults to this repo; private cross-repo reuse needs OPEN_STATIC_ARTIFACT_READER_TOKEN."
+        required: false
+        default: ""
+        type: string
       amenity_reuse_run_id:
         description: "Optional prior run ID with open-static-normalized-source-ready; reuses its station_amenities.csv, then optionally overlays selected PBF-enriched countries."
+        required: false
+        default: ""
+        type: string
+      amenity_reuse_repo:
+        description: "Optional owner/repo containing amenity_reuse_run_id. Defaults to this repo; private cross-repo reuse needs OPEN_STATIC_ARTIFACT_READER_TOKEN."
         required: false
         default: ""
         type: string
@@ -219,7 +229,8 @@ jobs:
         with:
           name: open-static-normalized-source
           run-id: ${{ inputs.source_run_id }}
-          github-token: ${{ github.token }}
+          repository: ${{ inputs.source_run_repo || github.repository }}
+          github-token: ${{ secrets.OPEN_STATIC_ARTIFACT_READER_TOKEN || github.token }}
           path: ${{ runner.temp }}/eu27_ch_static
 
       - name: Validate normalized source bundle
@@ -405,7 +416,8 @@ jobs:
         with:
           name: open-static-normalized-source-ready
           run-id: ${{ inputs.amenity_reuse_run_id }}
-          github-token: ${{ github.token }}
+          repository: ${{ inputs.amenity_reuse_repo || github.repository }}
+          github-token: ${{ secrets.OPEN_STATIC_ARTIFACT_READER_TOKEN || github.token }}
           path: ${{ runner.temp }}/eu27_ch_static_previous
 
       - name: Merge country amenity parts
@@ -650,8 +662,8 @@ jobs:
             echo "- Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             echo "- Commit: ${GITHUB_SHA}"
             echo "- Countries: ${{ inputs.countries || 'AT,BE,CH,CY,CZ,DE,DK,ES,FI,FR,GR,HU,LT,LU,LV,MT,NL,NO,PL,PT,SE,SI' }}"
-            echo "- Source bundle: generated on the GitHub Actions runner"
-            echo "- Amenity enrichment: include=${{ inputs.include_osm_pbf }}, countries=${{ inputs.amenity_countries || inputs.countries || 'AT,BE,CH,CY,CZ,DE,DK,ES,FI,FR,GR,HU,LT,LU,LV,MT,NL,NO,PL,PT,SE,SI' }}, download_non_de_pbf=${{ inputs.download_osm_pbf }}, reuse_run=${{ inputs.amenity_reuse_run_id }}"
+            echo "- Source bundle: generated/reused on the GitHub Actions runner; source_run=${{ inputs.source_run_id }}, source_repo=${{ inputs.source_run_repo || github.repository }}"
+            echo "- Amenity enrichment: include=${{ inputs.include_osm_pbf }}, countries=${{ inputs.amenity_countries || inputs.countries || 'AT,BE,CH,CY,CZ,DE,DK,ES,FI,FR,GR,HU,LT,LU,LV,MT,NL,NO,PL,PT,SE,SI' }}, download_non_de_pbf=${{ inputs.download_osm_pbf }}, reuse_run=${{ inputs.amenity_reuse_run_id }}, reuse_repo=${{ inputs.amenity_reuse_repo || github.repository }}"
             echo "- Release assets: open_static.sqlite3.zst, open_static.sqlite3.zst.sha256, open_static.sqlite3.sha256"
             echo "- Regional app assets: open-static-<GROUP>.sqlite3.zlib, open-static-<GROUP>.sqlite3.zlib.sha256, open-static-<GROUP>.sqlite3.sha256, open-static-<GROUP>.manifest.json, regional_pack_index.json"
             echo "- Regional packages: DACH, BENELUX, ROMANIC, NORDICS, REST-EUROPE"
