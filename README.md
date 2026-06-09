@@ -1,4 +1,4 @@
-![Mobile test](test-results/mobile_test.webp)
+![Data coverage](web/img/chargers_naturalearth_purple_laea_baden_baden.png)
 
 # woladen.de
 Find charging stations where charging is fun.
