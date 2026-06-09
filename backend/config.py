@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_FAST_CHARGERS_CSV_PATH = REPO_ROOT / "data" / "chargers_fast.csv"
 DEFAULT_FULL_CHARGERS_CSV_PATH = REPO_ROOT / "data" / "chargers_full.csv"
+DEFAULT_OPEN_STATIC_SQLITE_PATH = REPO_ROOT / "data" / "open_static.sqlite3"
 
 
 def _env_path(name: str, default: Path) -> Path:
@@ -79,6 +80,12 @@ class AppConfig:
         default_factory=lambda: _env_path(
             "WOLADEN_LIVE_CHARGERS_GEOJSON_PATH",
             REPO_ROOT / "data" / "chargers_fast.geojson",
+        )
+    )
+    open_static_sqlite_path: Path | None = field(
+        default_factory=lambda: _env_existing_path(
+            "WOLADEN_OPEN_STATIC_SQLITE_PATH",
+            DEFAULT_OPEN_STATIC_SQLITE_PATH,
         )
     )
     raw_payload_dir: Path = field(

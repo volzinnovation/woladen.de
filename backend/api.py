@@ -9,6 +9,13 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from .config import AppConfig
+from .open_catalog import (
+    DEFAULT_CATALOG_RADIUS_M,
+    MAX_CATALOG_LIMIT,
+    MAX_CATALOG_RADIUS_M,
+    OpenCatalogStore,
+    OpenCatalogUnavailable,
+)
 from .service import IngestionService
 from .store import LiveStore
 
@@ -213,6 +220,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     effective_config = config or AppConfig()
     store = LiveStore(effective_config)
     store.initialize()
+    open_catalog_store = OpenCatalogStore(effective_config.open_static_sqlite_path)
     ingestion_service = IngestionService(effective_config, store=store)
     station_catalog_path = effective_config.full_chargers_csv_path or effective_config.chargers_csv_path
     if (
@@ -236,6 +244,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     )
     app.state.config = effective_config
     app.state.store = store
+    app.state.open_catalog_store = open_catalog_store
     app.state.ingestion_service = ingestion_service
     app.state.receipt_queue = ingestion_service.receipt_queue
 
@@ -322,6 +331,52 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.get("/v1/providers")
     def list_providers() -> list[dict]:
         return app.state.store.list_providers()
+
+    @app.get("/v1/catalog/search")
+    def catalog_search(
+        request: Request,
+        lat: float = Query(ge=-90.0, le=90.0),
+        lon: float = Query(ge=-180.0, le=180.0),
+        radius_m: int = Query(default=DEFAULT_CATALOG_RADIUS_M, ge=1, le=MAX_CATALOG_RADIUS_M),
+        limit: int = Query(default=100, ge=1, le=MAX_CATALOG_LIMIT),
+        mode: str = Query(default="travel", pattern="^(travel|local)$"),
+        country: str = Query(default="", max_length=8),
+        country_code: str = Query(default="", max_length=8),
+        min_power_kw: float | None = Query(default=None, ge=0.0),
+        connector_type: str = Query(default="", max_length=64),
+        current_type: str = Query(default="", max_length=32),
+        operator: str = Query(default="", max_length=128),
+        source_uid: str = Query(default="", max_length=128),
+    ) -> JSONResponse:
+        effective_min_power_kw = min_power_kw
+        if effective_min_power_kw is None and mode == "travel":
+            effective_min_power_kw = 50.0
+        try:
+            payload = app.state.open_catalog_store.search(
+                latitude=lat,
+                longitude=lon,
+                radius_m=radius_m,
+                limit=limit,
+                country_code=country_code or country,
+                min_power_kw=effective_min_power_kw,
+                connector_type=connector_type.strip(),
+                current_type=current_type.strip(),
+                operator_query=operator.strip(),
+                source_uid=source_uid.strip(),
+            )
+        except OpenCatalogUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        return _json_response(request, payload)
+
+    @app.get("/v1/catalog/stations/{station_id}")
+    def catalog_station_detail(request: Request, station_id: str) -> JSONResponse:
+        try:
+            payload = app.state.open_catalog_store.get_station(station_id)
+        except OpenCatalogUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        if payload is None:
+            raise HTTPException(status_code=404, detail="catalog_station_not_found")
+        return _json_response(request, payload)
 
     @app.get("/v1/stations")
     def list_stations(

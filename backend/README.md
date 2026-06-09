@@ -166,6 +166,8 @@ The backend uses `AppConfig` in [config.py](/Users/raphaelvolz/Github/woladen.de
 - `WOLADEN_LIVE_CHARGERS_CSV_PATH`: charger baseline CSV. Default: `data/chargers_fast.csv`
 - `WOLADEN_LIVE_FULL_CHARGERS_CSV_PATH`: canonical full-registry charger CSV for backend matching and `/status` diagnostics. Default: `data/chargers_full.csv` when present, otherwise `data/chargers_fast.csv`
 - `WOLADEN_LIVE_CHARGERS_GEOJSON_PATH`: bundled charger GeoJSON used by `/status`. Default: `data/chargers_fast.geojson`
+- `WOLADEN_OPEN_STATIC_SQLITE_PATH`: read-only open static SQLite bundle used by
+  the public catalog API. Default: `data/open_static.sqlite3` when present.
 - `WOLADEN_LIVE_PROVIDER_OVERRIDE_PATH`: optional provider override JSON
 - `WOLADEN_LIVE_SUBSCRIPTION_REGISTRY_PATH`: subscription registry JSON. Default: `secret/mobilithek_subscriptions.json`
 - `WOLADEN_MACHINE_CERT_P12`: Mobilithek machine certificate for mTLS polling
@@ -548,6 +550,51 @@ Representative fields:
 - `last_push_received_at`
 - `last_push_result`
 - `last_push_error_text`
+
+### `GET /v1/catalog/search`
+
+Public open-catalog station search for map and list views. It reads the
+configured `open_static.sqlite3` bundle in read-only mode and uses
+`station_rtree` for coordinate-window filtering when the bundle contains it.
+
+Query parameters:
+
+- `lat`, `lon`: required search center
+- `radius_m`: default `50000`, maximum `500000`
+- `limit`: default `100`, maximum `100`
+- `mode`: `travel` or `local`; `travel` applies `min_power_kw=50` unless an
+  explicit `min_power_kw` is supplied
+- `country` / `country_code`
+- `min_power_kw`
+- `connector_type`
+- `current_type`
+- `operator`
+- `source_uid`
+
+Response:
+
+- `stations`: station summaries with coordinates, public source/provenance
+  fields, amenity summary, and `distance_m`
+- `query`: normalized query values
+- `stats`: candidate, matched-distance, and returned counts
+
+Example:
+
+```bash
+curl 'http://127.0.0.1:8001/v1/catalog/search?lat=52.52&lon=13.405&radius_m=50000&mode=travel'
+```
+
+### `GET /v1/catalog/stations/{station_id}`
+
+Public open-catalog detail lookup for one station. The response includes the
+open static station fields, charger rows, OSM amenity metadata, source
+attribution fields, and no private dynamic analytics.
+
+Example:
+
+```bash
+curl 'http://127.0.0.1:8001/v1/catalog/stations/de:example'
+```
 
 ### `GET /v1/stations`
 
