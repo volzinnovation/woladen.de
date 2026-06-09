@@ -70,6 +70,36 @@ The open static bundle currently supports these country sources:
 | SI | NAP Prometej IDACS Energy Infrastructure Table Publication |
 | OSM | OpenStreetMap/Geofabrik PBFs for nearby amenities |
 
+## Bundle Coverage
+
+Counts below are from the `open-static-ios-regional-latest` SQLite bundle. `Fast chargers` counts charger rows with `max_power_kw >= 50`; `Fast chargers with amenities` counts those charger rows when the associated station has at least one nearby amenity.
+
+| Country | Stations | Chargers | Fast chargers | Fast chargers with amenities |
+| --- | ---: | ---: | ---: | ---: |
+| AT | 14,660 | 38,771 | 10,518 | 9,223 |
+| BE | 5,804 | 17,232 | 389 | 249 |
+| CH | 8,671 | 18,745 | 4,303 | 4,068 |
+| CY | 100 | 171 | 11 | 6 |
+| CZ | 3,755 | 6,594 | 2,438 | 2,150 |
+| DE | 72,155 | 197,527 | 45,008 | 41,549 |
+| DK | 3,379 | 13,469 | 1,963 | 1,787 |
+| ES | 12,241 | 36,446 | 11,382 | 9,466 |
+| FI | 3,673 | 19,444 | 5,556 | 5,350 |
+| FR | 63,775 | 159,693 | 44,877 | 40,356 |
+| GR | 3,977 | 9,254 | 1,569 | 1,128 |
+| HU | 1,343 | 2,520 | 686 | 586 |
+| LT | 2,496 | 13,814 | 2,767 | 0 |
+| LU | 530 | 530 | 17 | 17 |
+| LV | 1,102 | 3,203 | 1,814 | 1,705 |
+| MT | 184 | 184 | 32 | 30 |
+| NL | 61,282 | 157,485 | 6,258 | 4,700 |
+| NO | 5,176 | 32,681 | 15,122 | 13,306 |
+| PL | 6,600 | 13,070 | 5,598 | 4,286 |
+| PT | 7,978 | 19,340 | 7,138 | 6,505 |
+| SE | 8,922 | 61,118 | 11,797 | 10,351 |
+| SI | 1,191 | 3,412 | 542 | 500 |
+| **Total** | **288,994** | **824,703** | **179,785** | **157,318** |
+
 The generated `source_attribution.json` records source URLs, source UIDs, license review status, static/dynamic boundaries, and credential handling. Treat that file as the bundle's machine-readable attribution contract.
 
 ## GitHub Setup
