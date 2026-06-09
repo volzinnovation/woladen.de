@@ -3506,6 +3506,35 @@ def test_daily_response_archive_downloader_retries_hf_rate_limits(app_config, mo
     assert sleeps == [2.0, 4.0]
 
 
+def test_daily_response_archive_downloader_retries_hf_transient_server_errors(app_config, monkeypatch):
+    class StubHfApi:
+        def __init__(self):
+            self.calls = 0
+
+        def list_repo_files(self, **kwargs):
+            self.calls += 1
+            if self.calls < 3:
+                raise RuntimeError("503 Service Unavailable")
+            return [
+                "provider-response-archives/2026/04/live-provider-responses-2026-04-16.tgz",
+            ]
+
+    sleeps: list[float] = []
+    monkeypatch.setattr("backend.archive.time.sleep", sleeps.append)
+
+    configured = replace(
+        app_config,
+        hf_archive_repo_id="raphaelvolz/woladen-live-archives",
+        hf_archive_repo_type="dataset",
+        hf_archive_path_prefix="provider-response-archives",
+    )
+
+    archives = DailyResponseArchiveDownloader(configured, hf_api=StubHfApi()).list_available_archives()
+
+    assert [row["target_date"] for row in archives] == ["2026-04-16"]
+    assert sleeps == [2.0, 4.0]
+
+
 def test_load_env_file_can_filter_archive_settings(tmp_path, monkeypatch):
     env_file = tmp_path / "woladen-live.env"
     env_file.write_text(

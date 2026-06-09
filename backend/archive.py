@@ -758,6 +758,18 @@ class DailyResponseArchiveDownloader:
         delay_seconds = 2.0
         client = self._client()
         last_error: Exception | None = None
+        transient_markers = (
+            "429",
+            "Too Many Requests",
+            "500",
+            "502",
+            "503",
+            "504",
+            "Internal Error",
+            "Bad Gateway",
+            "Service Unavailable",
+            "Gateway Timeout",
+        )
 
         for attempt in range(1, retries + 1):
             try:
@@ -770,7 +782,7 @@ class DailyResponseArchiveDownloader:
             except Exception as exc:
                 last_error = exc
                 message = str(exc)
-                if "429" not in message and "Too Many Requests" not in message:
+                if not any(marker in message for marker in transient_markers):
                     raise
                 if attempt == retries:
                     raise
