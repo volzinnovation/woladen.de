@@ -11,14 +11,13 @@ Purpose: **Find charging stations in Europe where charging is fun.**
 
 ## What This Repo Does
 
-- Ingests the official Bundesnetzagentur charging registry for the public Germany product.
 - Builds an open static European charging bundle from national NAP/AFIR sources, public registries, and reviewed source-specific workarounds.
-- Filters the Germany product to active fast chargers with at least `50 kW` nominal power by default.
-- Enriches stations with nearby amenities from OpenStreetMap within the default `250 m` radius.
-- Augments matched Germany stations with live occupancy from NAP DATEX II and OCPI data streams, where available.
+- Filters the European recharging stations depending on criteria, e.g. to active fast chargers with at least `50 kW` nominal power by default or certain nearby amenities.
+- Enriches stations with nearby amenities from OpenStreetMap within a specified radius.
+- Augments matched recharging stations with live occupancy from NAP DATEX II and OCPI data streams, where available.
 - Exposes a live backend API for AFIR push/poll ingestion and station status at `https://live.woladen.de`.
 - Publishes a mobile-ready static web map with filters (operator + amenities).
-- Refreshes Germany data daily via GitHub Actions at `01:00 UTC`.
+- Refreshes data daily from NAP sources via GitHub Actions at `01:00 UTC`.
 
 ## Project Structure
 
@@ -41,7 +40,7 @@ Purpose: **Find charging stations in Europe where charging is fun.**
 
 ## Data Sources
 
-The Germany web product is built from the Bundesnetzagentur charging registry, Mobilithek/AFIR provider metadata, selected live occupancy feeds, and OpenStreetMap amenities.
+The data product is built from the national NAP charging registry, and data published by CPOs on their NAP accounts. We consume AFIR static metadata, and consume live occupancy feeds where possible, and combine this with open data from OpenStreetMap for amenities.
 
 The open static bundle currently supports these country sources:
 
@@ -266,7 +265,7 @@ The regional groups are `DACH`, `BENELUX`, `ROMANIC`, `NORDICS`, and `REST-EUROP
 
 ## Workflow Notes
 
-- `daily-data-generation.yml` refreshes Germany data and commits generated `data/` and README status changes.
+- `daily-data-generation.yml` refreshes station data and commits generated `data/` and README status changes.
 - `pages-deploy.yml` builds and deploys only the static GitHub Pages site.
 - `build-open-static-sqlite-bundle.yml` creates open-static bundle artifacts and, when requested, GitHub Release assets.
 - `build-onboarded-static-catalog.yml` uploads `data/onboarded_static` as an artifact; it does not commit generated catalog files.
@@ -277,7 +276,7 @@ The regional groups are `DACH`, `BENELUX`, `ROMANIC`, `NORDICS`, and `REST-EUROP
 - `--amenity-backend auto` (default) uses local `data/germany-latest.osm.pbf` if present, otherwise Overpass.
 - `--query-budget`, `--refresh-days`, and `--overpass-delay-ms` only apply to the Overpass backend.
 - If BNetzA fetch fails and no local cache exists, the pipeline fails intentionally.
-- On a successful Germany data run, generated artifacts in `data/` and the data-status block below are updated and committed by CI.
+- On a successful data run, generated artifacts in `data/` and the data-status block below are updated and committed by CI.
 - Treat `site/`, `data/eu27_ch_static/`, `data/onboarded_static/`, `data/osm_pbf_cache/`, `data/commercial_raw/`, and `data/commercial_archives/` as generated or cached outputs.
 
 <!-- DATA_STATUS_START -->
