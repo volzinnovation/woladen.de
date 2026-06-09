@@ -1,20 +1,21 @@
 ![Mobile test](test-results/mobile_test.webp)
 
 # woladen.de
+Find charging stations where charging is fun.
 
-Fast chargers in Germany with nearby amenities from OpenStreetMap, now with AFIR-based live data, where available.
+We build an open data collection of recharging stations in Europe with nearby amenities from OpenStreetMap with AFIR-based live data, where available.
 
 ## What This Repo Does
 
-- Ingests the official Bundesnetzagentur charging registry.
-  Source discovery starts from the BNetzA E-Mobilitaet start page (`Downloads und Formulare`) and selects the newest CSV/XLSX link.
-- Filters to active chargers with at least `50 kW` nominal power.
-- Augments matched stations with live occupancy from the MobiData BW OCPI feeds.
+- Ingests the official NAP charging registries in all countries that have implemented the European AFIR regulation plus Switzerland and Norway and open data work-arounds, where available.
+-  Source discovery starts from the national access points (NAP) and subscribes to all data providers.
+- Provides a web front-end, with list view, map view, favorites and tools such as filters to active chargers with at least `50 kW` nominal power or particular amenities nearby.
+- Augments matched stations with live occupancy from NAP DATEX2 and OCPI data streams.
 - Exposes a live backend API for AFIR push/poll ingestion and station status at `https://live.woladen.de`.
 - Enriches each charger with nearby amenities (`100m` radius) from OSM
   using either local `germany-latest.osm.pbf` or Overpass fallback.
 - Publishes a mobile-ready static web map with filters (operator + amenities).
-- Runs monthly via GitHub Actions on day 1 at `00:00 UTC` (`01:00 CET`).
+- New stations discovered daily via GitHub Actions on day 1 at `00:00 UTC` (`01:00 CET`).
 
 ## Project Structure
 
