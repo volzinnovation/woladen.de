@@ -340,6 +340,43 @@ def test_run_analysis_builds_history_csvs_from_archives(tmp_path):
     assert provider_rows[0]["dynamic_station_coverage_ratio_in_bundle"] == "1.0"
 
 
+def test_run_analysis_can_skip_persisting_observation_rows(tmp_path):
+    provider_config_path = tmp_path / "provider_config.json"
+    chargers_csv_path = tmp_path / "chargers.csv"
+    site_match_path = tmp_path / "site_matches.csv"
+    archive_path = tmp_path / "live-provider-responses-2026-04-15.tgz"
+    output_dir = tmp_path / "analysis-output"
+
+    _write_provider_config(provider_config_path)
+    _write_chargers_csv(chargers_csv_path)
+    _write_site_matches_csv(site_match_path)
+    _write_archive(archive_path)
+
+    config = AppConfig(
+        provider_config_path=provider_config_path,
+        chargers_csv_path=chargers_csv_path,
+        site_match_path=site_match_path,
+        provider_override_path=tmp_path / "missing-overrides.json",
+        subscription_registry_path=tmp_path / "missing-subscriptions.json",
+        archive_timezone_name="UTC",
+    )
+    result = run_analysis(
+        archive_paths=[archive_path],
+        output_dir=output_dir,
+        config=config,
+        write_observations=False,
+    )
+
+    assert result["observation_row_count"] == 6
+    assert _read_csv(output_dir / "evse_observations.csv") == []
+    station_rows = _read_csv(output_dir / "station_daily_summary.csv")
+    assert station_rows[0]["station_id"] == "station-1"
+    assert station_rows[0]["evses_observed"] == "2"
+    provider_rows = _read_csv(output_dir / "provider_daily_summary.csv")
+    assert provider_rows[0]["extracted_observation_count_total"] == "6"
+    assert provider_rows[0]["mapped_stations_observed"] == "1"
+
+
 def test_competitive_analysis_status_uses_conservative_thresholds():
     assert _competitive_analysis_status(
         messages_total=12,

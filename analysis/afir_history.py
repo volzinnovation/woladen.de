@@ -593,6 +593,7 @@ def stream_archive_history(
     status_change_writer: csv.DictWriter,
     progress_callback: ProgressCallback | None = None,
     progress_interval: int = 0,
+    write_observations: bool = True,
 ) -> StreamedHistoryResult:
     site_station_maps = _build_site_station_maps(config)
     evse_station_maps = _build_evse_station_maps(config)
@@ -701,7 +702,8 @@ def stream_archive_history(
                     "next_available_charging_slots_json": _json_text(fact.next_available_charging_slots),
                     "supplemental_facility_status_json": _json_text(fact.supplemental_facility_status),
                 }
-                observation_writer.writerow(observation_row)
+                if write_observations:
+                    observation_writer.writerow(observation_row)
                 observation_row_count += 1
 
                 latest_key = (
@@ -974,6 +976,7 @@ def run_analysis(
     config: AppConfig | None = None,
     progress_callback: ProgressCallback | None = None,
     progress_interval: int = 0,
+    write_observations: bool = True,
 ) -> dict[str, Any]:
     effective_config = config or AppConfig()
     if progress_callback is not None:
@@ -1023,6 +1026,7 @@ def run_analysis(
                 status_change_writer=evse_status_changes_writer,
                 progress_callback=progress_callback,
                 progress_interval=progress_interval,
+                write_observations=write_observations,
             )
 
         if progress_callback is not None:

@@ -598,6 +598,7 @@ def generate_management_snapshot(
             config=effective_config,
             progress_callback=progress_callback,
             progress_interval=progress_interval,
+            write_observations=False,
         )
         if progress_callback is not None:
             progress_callback(
