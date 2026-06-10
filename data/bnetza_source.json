@@ -1,6 +1,6 @@
 {
-  "source_url": "https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-04-22.csv",
-  "fetched_at": "2026-06-09T01:41:32.470059+00:00",
-  "bytes": 49684448,
-  "content_type": "application/octet-stream"
+  "source_url": "https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-06-03.xlsx",
+  "fetched_at": "2026-06-10T01:47:33.116760+00:00",
+  "bytes": 29650954,
+  "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 }
