@@ -157,7 +157,12 @@ jobs:
 
       - name: Generate management snapshot
         if: steps.berlin_gate.outputs.should_run == 'true'
-        run: python scripts/generate_management_snapshot.py --date "$TARGET_DATE" --output-root data/management
+        timeout-minutes: 150
+        run: |
+          python scripts/generate_management_snapshot.py \
+            --date "$TARGET_DATE" \
+            --output-root data/management \
+            --progress-interval 1000
 
       - name: Update occupancy analytics database
         if: steps.berlin_gate.outputs.should_run == 'true'

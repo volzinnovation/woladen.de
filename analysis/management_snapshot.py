@@ -7,7 +7,7 @@ from collections import Counter, defaultdict
 from datetime import date, datetime, timezone
 from itertools import groupby
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from analysis.afir_history import run_analysis
 from analysis.output_io import publish_staged_directory, staged_output_directory, write_json
@@ -580,6 +580,8 @@ def generate_management_snapshot(
     archive_dir: Path | None = None,
     output_root: Path = DEFAULT_MANAGEMENT_OUTPUT_ROOT,
     config: AppConfig | None = None,
+    progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    progress_interval: int = 0,
 ) -> dict[str, Any]:
     effective_config = config or AppConfig()
     effective_archive_dir = archive_dir or effective_config.archive_dir
@@ -594,7 +596,20 @@ def generate_management_snapshot(
             archive_paths=[archive_path],
             output_dir=analysis_output_dir,
             config=effective_config,
+            progress_callback=progress_callback,
+            progress_interval=progress_interval,
         )
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "phase": "management_analysis_finished",
+                    "target_date": target_date.isoformat(),
+                    "analysis_output_dir": str(analysis_output_dir),
+                    "message_rows": analysis_result.get("message_row_count", 0),
+                    "observation_rows": analysis_result.get("observation_row_count", 0),
+                    "status_change_rows": analysis_result.get("status_change_row_count", 0),
+                }
+            )
 
         with staged_output_directory(output_root) as staged_output_root:
             existing_snapshot_paths = sorted(output_root.glob("days/*/*/*/snapshot.json"))
@@ -618,6 +633,15 @@ def generate_management_snapshot(
             )
             index_payloads = rebuild_management_indexes(staged_output_root)
             publish_staged_directory(staged_output_root, output_root)
+            if progress_callback is not None:
+                progress_callback(
+                    {
+                        "phase": "management_snapshot_published",
+                        "target_date": target_date.isoformat(),
+                        "snapshot_path": str(_snapshot_path(output_root, target_date).resolve()),
+                        "available_dates": len(index_payloads["index"]["available_dates"]),
+                    }
+                )
 
     return {
         "snapshot_date": target_date.isoformat(),

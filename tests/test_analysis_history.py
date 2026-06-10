@@ -268,10 +268,13 @@ def test_run_analysis_builds_history_csvs_from_archives(tmp_path):
         subscription_registry_path=tmp_path / "missing-subscriptions.json",
         archive_timezone_name="UTC",
     )
+    progress_events = []
     result = run_analysis(
         archive_paths=[archive_path],
         output_dir=output_dir,
         config=config,
+        progress_callback=progress_events.append,
+        progress_interval=1,
     )
 
     assert result["archive_count"] == 1
@@ -281,6 +284,19 @@ def test_run_analysis_builds_history_csvs_from_archives(tmp_path):
     assert result["status_change_row_count"] == 4
     assert result["station_daily_row_count"] == 1
     assert result["provider_daily_row_count"] == 1
+    assert [event["phase"] for event in progress_events] == [
+        "analysis_started",
+        "archive_started",
+        "records_streamed",
+        "records_streamed",
+        "records_streamed",
+        "archive_finished",
+        "status_changes_finalized",
+        "history_streamed",
+        "analysis_finished",
+    ]
+    assert progress_events[-1]["observation_rows"] == 6
+    assert progress_events[-1]["status_change_rows"] == 4
 
     provider_catalog_rows = _read_csv(output_dir / "provider_catalog.csv")
     assert provider_catalog_rows[0]["provider_uid"] == "qwello"

@@ -56,6 +56,7 @@ jobs:
           chmod 600 tmp/hf_private
 
       - name: Download and generate snapshots
+        timeout-minutes: 720
         run: |
           python - <<'PY'
           from datetime import date, timedelta
@@ -70,7 +71,9 @@ jobs:
           current = start
           while current <= end:
               target = current.isoformat()
+              print(f"Downloading archive for {target}", flush=True)
               subprocess.run([sys.executable, "scripts/live_download_archive.py", "--date", target], check=True)
+              print(f"Generating management snapshot for {target}", flush=True)
               subprocess.run(
                   [
                       sys.executable,
@@ -79,6 +82,8 @@ jobs:
                       target,
                       "--output-root",
                       "data/management",
+                      "--progress-interval",
+                      "1000",
                   ],
                   check=True,
               )

@@ -12,7 +12,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any, Callable, Iterable, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -191,6 +191,9 @@ class StreamedHistoryResult:
     archive_dates: list[str]
     observation_row_count: int
     status_change_row_count: int
+
+
+ProgressCallback = Callable[[dict[str, Any]], None]
 
 
 class StatusChangeTracker:
@@ -588,6 +591,8 @@ def stream_archive_history(
     message_writer: csv.DictWriter,
     observation_writer: csv.DictWriter,
     status_change_writer: csv.DictWriter,
+    progress_callback: ProgressCallback | None = None,
+    progress_interval: int = 0,
 ) -> StreamedHistoryResult:
     site_station_maps = _build_site_station_maps(config)
     evse_station_maps = _build_evse_station_maps(config)
@@ -599,10 +604,28 @@ def stream_archive_history(
     observation_row_count = 0
     status_change_row_count = 0
     status_change_tracker = StatusChangeTracker()
+    archive_count = len(archive_paths)
+    processed_record_count = 0
 
-    for archive_path in archive_paths:
+    for archive_index, archive_path in enumerate(archive_paths, start=1):
+        archive_record_count = 0
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "phase": "archive_started",
+                    "archive_path": str(archive_path),
+                    "archive_index": archive_index,
+                    "archive_count": archive_count,
+                    "processed_records": processed_record_count,
+                    "message_rows": len(message_rows),
+                    "observation_rows": observation_row_count,
+                    "status_change_rows": status_change_row_count,
+                }
+            )
         fallback_archive_date = _parse_archive_name(archive_path)
         for member_name, record in _iter_archive_members(archive_path):
+            processed_record_count += 1
+            archive_record_count += 1
             provider_uid = str(record.get("provider_uid") or "").strip() or Path(member_name).parts[0]
             archive_date_text = str(record.get("archive_date") or "").strip()
             if not archive_date_text and fallback_archive_date is not None:
@@ -695,10 +718,55 @@ def stream_archive_history(
                     status_change_writer.writerow(closed_change)
                     status_change_row_count += 1
 
+            if (
+                progress_callback is not None
+                and progress_interval > 0
+                and processed_record_count % progress_interval == 0
+            ):
+                progress_callback(
+                    {
+                        "phase": "records_streamed",
+                        "archive_path": str(archive_path),
+                        "archive_index": archive_index,
+                        "archive_count": archive_count,
+                        "processed_records": processed_record_count,
+                        "archive_records": archive_record_count,
+                        "message_rows": len(message_rows),
+                        "observation_rows": observation_row_count,
+                        "status_change_rows": status_change_row_count,
+                    }
+                )
+
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "phase": "archive_finished",
+                    "archive_path": str(archive_path),
+                    "archive_index": archive_index,
+                    "archive_count": archive_count,
+                    "processed_records": processed_record_count,
+                    "archive_records": archive_record_count,
+                    "message_rows": len(message_rows),
+                    "observation_rows": observation_row_count,
+                    "status_change_rows": status_change_row_count,
+                }
+            )
+
     final_window_end_at = _window_end_at(archive_dates_seen, config)
     for row in status_change_tracker.finalize(final_window_end_at):
         status_change_writer.writerow(row)
         status_change_row_count += 1
+
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "phase": "status_changes_finalized",
+                "processed_records": processed_record_count,
+                "message_rows": len(message_rows),
+                "observation_rows": observation_row_count,
+                "status_change_rows": status_change_row_count,
+            }
+        )
 
     return StreamedHistoryResult(
         message_rows=message_rows,
@@ -904,8 +972,18 @@ def run_analysis(
     archive_paths: Sequence[Path],
     output_dir: Path,
     config: AppConfig | None = None,
+    progress_callback: ProgressCallback | None = None,
+    progress_interval: int = 0,
 ) -> dict[str, Any]:
     effective_config = config or AppConfig()
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "phase": "analysis_started",
+                "archive_count": len(archive_paths),
+                "output_dir": str(output_dir),
+            }
+        )
     provider_catalog_rows, _ = _build_provider_catalog(effective_config)
     station_catalog = _build_station_catalog(effective_config)
     bundle_station_ids = _build_bundle_station_ids(effective_config)
@@ -943,8 +1021,20 @@ def run_analysis(
                 message_writer=archive_messages_writer,
                 observation_writer=evse_observations_writer,
                 status_change_writer=evse_status_changes_writer,
+                progress_callback=progress_callback,
+                progress_interval=progress_interval,
             )
 
+        if progress_callback is not None:
+            progress_callback(
+                {
+                    "phase": "history_streamed",
+                    "archive_dates": streamed.archive_dates,
+                    "message_rows": len(streamed.message_rows),
+                    "observation_rows": streamed.observation_row_count,
+                    "status_change_rows": streamed.status_change_row_count,
+                }
+            )
         station_daily_rows = build_station_daily_summary(streamed.latest_rows, station_catalog=station_catalog)
         provider_daily_rows = build_provider_daily_summary(
             streamed.archive_dates,
@@ -957,6 +1047,20 @@ def run_analysis(
         write_csv(staged_outputs.station_daily_summary_path, STATION_DAILY_SUMMARY_FIELDS, station_daily_rows)
         write_csv(staged_outputs.provider_daily_summary_path, PROVIDER_DAILY_SUMMARY_FIELDS, provider_daily_rows)
         publish_staged_directory(staged_dir, output_dir)
+
+    if progress_callback is not None:
+        progress_callback(
+            {
+                "phase": "analysis_finished",
+                "archive_dates": streamed.archive_dates,
+                "message_rows": len(streamed.message_rows),
+                "observation_rows": streamed.observation_row_count,
+                "status_change_rows": streamed.status_change_row_count,
+                "station_daily_rows": len(station_daily_rows),
+                "provider_daily_rows": len(provider_daily_rows),
+                "output_dir": str(output_dir.resolve()),
+            }
+        )
 
     return {
         "archive_count": len(archive_paths),
