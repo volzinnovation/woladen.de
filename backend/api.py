@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import re
+import secrets
 import time
+import urllib.parse
+from collections.abc import Mapping
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -43,11 +46,18 @@ PUBLICATION_LOOKUP_KEYS = (
     "x-publication-id",
     "x-mobilithek-publication-id",
 )
+PUSH_TOKEN_LOOKUP_KEYS = (
+    "push_token",
+    "pushtoken",
+    "x-woladen-push-token",
+    "x-push-token",
+)
 PROFILE_FLAG_VALUES = {"1", "true", "yes", "on"}
 PROFILE_HEADER_NAMES = ("Server-Timing", "Timing-Allow-Origin", "Content-Length")
 MAX_STATION_LOOKUP_IDS = 20
 MAX_RATING_LOOKUP_IDS = 50
 STATION_ID_NAMESPACE = "DE:"
+REDACTED_VALUE = "[redacted]"
 
 
 class StationLookupRequest(BaseModel):
@@ -155,6 +165,52 @@ def _request_lookup_value(request: Request, keys: tuple[str, ...]) -> str:
             if text:
                 return text
     return ""
+
+
+def _request_bearer_token(request: Request) -> str:
+    authorization = str(request.headers.get("authorization") or "").strip()
+    scheme, separator, token = authorization.partition(" ")
+    if not separator or scheme.lower() != "bearer":
+        return ""
+    return token.strip()
+
+
+def _request_push_token(request: Request) -> str:
+    token = _request_lookup_value(request, PUSH_TOKEN_LOOKUP_KEYS)
+    if token:
+        return token
+    return _request_bearer_token(request)
+
+
+def _validate_push_auth(request: Request, config: AppConfig) -> None:
+    expected_token = str(config.api_push_token or "").strip()
+    if not expected_token:
+        raise HTTPException(status_code=503, detail="push_auth_not_configured")
+
+    received_token = _request_push_token(request)
+    if not received_token or not secrets.compare_digest(received_token, expected_token):
+        raise HTTPException(status_code=401, detail="push_auth_failed")
+
+
+def _redact_sensitive_query(query: str) -> str:
+    if not query:
+        return ""
+    sensitive_keys = {_normalize_lookup_key(key) for key in PUSH_TOKEN_LOOKUP_KEYS}
+    pairs = urllib.parse.parse_qsl(query, keep_blank_values=True)
+    redacted_pairs = [
+        (key, REDACTED_VALUE if _normalize_lookup_key(key) in sensitive_keys else value)
+        for key, value in pairs
+    ]
+    return urllib.parse.urlencode(redacted_pairs)
+
+
+def _redact_sensitive_headers(headers: Mapping[str, object]) -> dict[str, object]:
+    sensitive_keys = {_normalize_lookup_key(key) for key in PUSH_TOKEN_LOOKUP_KEYS}
+    sensitive_keys.add("authorization")
+    return {
+        key: REDACTED_VALUE if _normalize_lookup_key(key) in sensitive_keys else value
+        for key, value in headers.items()
+    }
 
 
 def _profiling_enabled(request: Request) -> bool:
@@ -298,6 +354,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     async def push_ingest(request: Request, provider_uid: str = "") -> Response:
         if not effective_config.api_push_enabled:
             raise HTTPException(status_code=404, detail="push_endpoint_disabled")
+        _validate_push_auth(request, effective_config)
         payload_bytes = await request.body()
         resolved_provider_uid = provider_uid or _request_lookup_value(request, PROVIDER_LOOKUP_KEYS)
         subscription_id = _request_lookup_value(request, SUBSCRIPTION_LOOKUP_KEYS)
@@ -312,8 +369,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                 content_type=request.headers.get("content-type", ""),
                 content_encoding=request.headers.get("content-encoding", ""),
                 request_path=request.url.path,
-                request_query=request.url.query,
-                request_headers=dict(request.headers),
+                request_query=_redact_sensitive_query(request.url.query),
+                request_headers=_redact_sensitive_headers(dict(request.headers)),
             )
         except KeyError as exc:
             detail = str(exc)

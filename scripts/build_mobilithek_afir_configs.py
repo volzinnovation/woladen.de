@@ -22,7 +22,6 @@ from typing import Any
 
 import pandas as pd
 import requests
-import urllib3
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -334,7 +333,6 @@ def search_mobilithek_offers(
         json={"searchString": search_term},
         headers=auth_headers(access_token),
         timeout=60,
-        verify=False,
     )
     response.raise_for_status()
     return response.json()["dataOffers"]
@@ -347,7 +345,6 @@ def fetch_offer_metadata(
         METADATA_OFFER_URL.format(publication_id=publication_id),
         headers=auth_headers(access_token),
         timeout=60,
-        verify=False,
     )
     response.raise_for_status()
     return response.json()
@@ -364,7 +361,6 @@ def create_subscription(
         headers={"Authorization": f"Bearer {access_token}"},
         json={"dataOfferId": publication_id, "relevantToMDVPBefG": False},
         timeout=20,
-        verify=False,
     )
 
     body = response.text[:500]
@@ -726,7 +722,6 @@ def probe_publication_file_access(
         PUBLICATION_FILE_ACCESS_URL.format(publication_id=publication_id),
         headers={"Authorization": f"Bearer {access_token}"},
         timeout=20,
-        verify=False,
     )
     payload: dict[str, Any] = {}
     try:
@@ -946,7 +941,6 @@ def write_matches_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def main() -> None:
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     args = parse_args()
 
     session = requests.Session()

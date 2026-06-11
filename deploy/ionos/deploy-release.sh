@@ -18,6 +18,7 @@ Optional:
   --identity PATH          SSH private key
   --hf-token PATH          Local Hugging Face token file to upload as /etc/woladen/huggingface.token
   --hf-repo-id REPO        Hugging Face dataset repo id to write into the remote env file
+  --push-token TOKEN       Shared secret required by POST /v1/push
   --env-file PATH          Local env file to upload as /etc/woladen/woladen-live.env
   --install-root PATH      Remote install root (default: /srv/woladen-live)
   --config-dir PATH        Remote config dir (default: /etc/woladen)
@@ -44,6 +45,7 @@ LOCAL_SUBSCRIPTIONS=""
 LOCAL_HF_TOKEN=""
 LOCAL_ENV_FILE=""
 HF_REPO_ID=""
+PUSH_TOKEN=""
 INSTALL_ROOT="/srv/woladen-live"
 CONFIG_DIR="/etc/woladen"
 STATE_DIR="/var/lib/woladen"
@@ -92,6 +94,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --hf-repo-id)
       HF_REPO_ID=$2
+      shift 2
+      ;;
+    --push-token)
+      PUSH_TOKEN=$2
       shift 2
       ;;
     --env-file)
@@ -200,9 +206,10 @@ fi
 
 SUDO_PASSWORD_B64=$(printf '%s' "${WOLADEN_DEPLOY_SUDO_PASSWORD}" | base64 | tr -d '\n')
 HF_REPO_ID_B64=$(printf '%s' "$HF_REPO_ID" | base64 | tr -d '\n')
+PUSH_TOKEN_B64=$(printf '%s' "$PUSH_TOKEN" | base64 | tr -d '\n')
 
 "${ssh_cmd[@]}" "$SSH_TARGET" \
-  "env SUDO_PASSWORD_B64='$SUDO_PASSWORD_B64' HF_REPO_ID_B64='$HF_REPO_ID_B64' bash -s -- '$REMOTE_TMP_DIR' '$INSTALL_ROOT' '$CONFIG_DIR' '$STATE_DIR' '$APP_USER' '$APP_GROUP' '$LIVE_DOMAIN' '$KEEP_RELEASES'" <<'EOF'
+  "env SUDO_PASSWORD_B64='$SUDO_PASSWORD_B64' HF_REPO_ID_B64='$HF_REPO_ID_B64' PUSH_TOKEN_B64='$PUSH_TOKEN_B64' bash -s -- '$REMOTE_TMP_DIR' '$INSTALL_ROOT' '$CONFIG_DIR' '$STATE_DIR' '$APP_USER' '$APP_GROUP' '$LIVE_DOMAIN' '$KEEP_RELEASES'" <<'EOF'
 set -euo pipefail
 
 remote_tmp_dir=$1
@@ -216,6 +223,7 @@ keep_releases=$8
 
 sudo_password=$(printf '%s' "${SUDO_PASSWORD_B64:-}" | base64 --decode)
 hf_repo_id=$(printf '%s' "${HF_REPO_ID_B64:-}" | base64 --decode)
+push_token=$(printf '%s' "${PUSH_TOKEN_B64:-}" | base64 --decode)
 bundle_extract_dir="$remote_tmp_dir/extracted"
 bundle_dir=""
 current_release_dir=""
@@ -384,6 +392,9 @@ echo "Runtime config sync: cert=${cert_changed:-0} pwd=${password_changed:-0} su
 
 if [[ -n "$hf_repo_id" ]]; then
   upsert_env_value "WOLADEN_LIVE_HF_ARCHIVE_REPO_ID" "$hf_repo_id"
+fi
+if [[ -n "$push_token" ]]; then
+  upsert_env_value "WOLADEN_LIVE_API_PUSH_TOKEN" "$push_token"
 fi
 if [[ -f "$remote_tmp_dir/huggingface.token" ]]; then
   upsert_env_value "WOLADEN_LIVE_HF_ARCHIVE_TOKEN_FILE" "$hf_token_target"

@@ -65,6 +65,7 @@ export WOLADEN_DEPLOY_SUDO_PASSWORD='your-deploy-user-sudo-password'
   --password-file secret/pwd.txt \
   --subscriptions secret/mobilithek_subscriptions.json \
   --hf-token secret/hf_private \
+  --push-token "$LIVE_API_PUSH_TOKEN" \
   --hf-repo-id loffenauer/AFIR
 ```
 
@@ -95,7 +96,9 @@ Configure these GitHub secrets:
 - `LIVE_DEPLOY_USER`
 - `LIVE_DEPLOY_PORT`
 - `LIVE_DEPLOY_SSH_PRIVATE_KEY`
+- `LIVE_DEPLOY_SSH_KNOWN_HOSTS`
 - `LIVE_DEPLOY_SUDO_PASSWORD`
+- `LIVE_API_PUSH_TOKEN`
 - `MOBILITHEK_USERNAME`
 - `MOBILITHEK_PASSWORD`
 - `MOBILITHEK_MACHINE_CERT_P12_BASE64`
@@ -106,8 +109,10 @@ Important:
 
 - the VPS only needs the deploy user's public key in `authorized_keys`
 - GitHub must store the matching private key in `LIVE_DEPLOY_SSH_PRIVATE_KEY`
+- GitHub must store the pinned SSH host key line in `LIVE_DEPLOY_SSH_KNOWN_HOSTS`; do not derive it during deploy
+- GitHub must store a URL-safe shared push secret in `LIVE_API_PUSH_TOKEN`
 - the deploy user still needs `sudo` rights on the VPS because installation writes into `/srv`, `/etc/systemd/system`, and `/etc/cron.d`
-- the workflow uploads `certificate.p12`, `pwd.txt`, `mobilithek_subscriptions.json`, and `huggingface.token` into `/etc/woladen/` automatically during each deploy
+- the workflow uploads `certificate.p12`, `pwd.txt`, `mobilithek_subscriptions.json`, and `huggingface.token` into `/etc/woladen/` automatically during each deploy, and upserts `WOLADEN_LIVE_API_PUSH_TOKEN` into `/etc/woladen/woladen-live.env`
 
 ## Required Remote Secrets
 

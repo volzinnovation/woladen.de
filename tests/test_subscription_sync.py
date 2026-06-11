@@ -22,6 +22,62 @@ def _load_sync_module():
 sync_module = _load_sync_module()
 
 
+def test_fetch_mobilithek_access_token_uses_tls_verification():
+    captured: dict[str, object] = {}
+
+    class DummyResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"access_token": "token-123"}
+
+    class DummySession:
+        def post(self, url, **kwargs):
+            captured["url"] = url
+            captured["data"] = kwargs.get("data")
+            captured["verify"] = kwargs.get("verify", True)
+            return DummyResponse()
+
+    token = sync_module.fetch_mobilithek_access_token(
+        DummySession(),
+        username="raphael@example.test",
+        password="top-secret",
+    )
+
+    assert token == "token-123"
+    assert captured["url"] == sync_module.MOBILITHEK_TOKEN_URL
+    assert captured["data"]["username"] == "raphael@example.test"
+    assert captured["verify"] is True
+
+
+def test_fetch_account_subscriptions_uses_tls_verification(monkeypatch):
+    captured: dict[str, object] = {}
+
+    class DummyResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"content": [{"id": "contract-1"}], "last": True, "totalElements": 1, "totalPages": 1}
+
+    class DummySession:
+        def post(self, url, **kwargs):
+            captured["url"] = url
+            captured["headers"] = kwargs.get("headers")
+            captured["verify"] = kwargs.get("verify", True)
+            return DummyResponse()
+
+    monkeypatch.setattr(sync_module.requests, "Session", lambda: DummySession())
+
+    payload = sync_module.fetch_account_subscriptions("token-123")
+
+    assert payload["content"] == [{"id": "contract-1"}]
+    assert captured["url"] == sync_module.CONTRACT_SEARCH_URL
+    assert captured["headers"] == {"Authorization": "Bearer token-123"}
+    assert captured["verify"] is True
+
+
 def test_load_subscription_offers_includes_static_dynamic_noauth_and_model_other(tmp_path: Path):
     config_path = tmp_path / "providers.json"
     config_path.write_text(

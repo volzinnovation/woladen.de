@@ -36,6 +36,7 @@ def test_mobilithek_offer_search_uses_bearer_token():
         def post(self, url, **kwargs):
             captured["url"] = url
             captured["headers"] = kwargs.get("headers")
+            captured["verify"] = kwargs.get("verify", True)
             return DummyResponse()
 
     payload = build_configs.search_mobilithek_offers(
@@ -49,6 +50,7 @@ def test_mobilithek_offer_search_uses_bearer_token():
     assert payload == {"content": []}
     assert captured["url"] == build_configs.METADATA_SEARCH_URL
     assert captured["headers"] == {"Authorization": "Bearer token-123"}
+    assert captured["verify"] is True
 
 
 def test_mobilithek_offer_metadata_uses_bearer_token():
@@ -65,6 +67,7 @@ def test_mobilithek_offer_metadata_uses_bearer_token():
         def get(self, url, **kwargs):
             captured["url"] = url
             captured["headers"] = kwargs.get("headers")
+            captured["verify"] = kwargs.get("verify", True)
             return DummyResponse()
 
     payload = build_configs.fetch_offer_metadata(
@@ -78,6 +81,65 @@ def test_mobilithek_offer_metadata_uses_bearer_token():
         publication_id="988133177339846656"
     )
     assert captured["headers"] == {"Authorization": "Bearer token-123"}
+    assert captured["verify"] is True
+
+
+def test_mobilithek_subscription_create_uses_tls_verification():
+    captured: dict[str, object] = {}
+
+    class DummyResponse:
+        text = '{"ok": true}'
+        status_code = 201
+
+    class DummySession:
+        def post(self, url, **kwargs):
+            captured["url"] = url
+            captured["headers"] = kwargs.get("headers")
+            captured["verify"] = kwargs.get("verify", True)
+            return DummyResponse()
+
+    result = build_configs.create_subscription(
+        DummySession(),
+        access_token="token-123",
+        publication_id="988133177339846656",
+    )
+
+    assert result["status"] == "created"
+    assert captured["url"] == build_configs.CONTRACT_CREATE_URL
+    assert captured["headers"] == {"Authorization": "Bearer token-123"}
+    assert captured["verify"] is True
+
+
+def test_mobilithek_publication_probe_uses_tls_verification():
+    captured: dict[str, object] = {}
+
+    class DummyResponse:
+        ok = True
+        status_code = 200
+        text = '{"isAccessible": true}'
+
+        def json(self):
+            return {"isAccessible": True}
+
+    class DummySession:
+        def get(self, url, **kwargs):
+            captured["url"] = url
+            captured["headers"] = kwargs.get("headers")
+            captured["verify"] = kwargs.get("verify", True)
+            return DummyResponse()
+
+    result = build_configs.probe_publication_file_access(
+        DummySession(),
+        access_token="token-123",
+        publication_id="988133177339846656",
+    )
+
+    assert result["status"] == "ok"
+    assert captured["url"] == build_configs.PUBLICATION_FILE_ACCESS_URL.format(
+        publication_id="988133177339846656"
+    )
+    assert captured["headers"] == {"Authorization": "Bearer token-123"}
+    assert captured["verify"] is True
 
 
 def test_charging_related_offer_accepts_schema_even_when_search_category_is_missing():

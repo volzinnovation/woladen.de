@@ -175,6 +175,7 @@ The backend uses `AppConfig` in [config.py](/Users/raphaelvolz/Github/woladen.de
 - `WOLADEN_LIVE_API_HOST`: FastAPI bind host. Default: `127.0.0.1`
 - `WOLADEN_LIVE_API_PORT`: FastAPI bind port. Default: `8001`
 - `WOLADEN_LIVE_API_PUSH_ENABLED`: enable Mobilithek push routes. Default: `1`
+- `WOLADEN_LIVE_API_PUSH_TOKEN`: shared secret required for `POST /v1/push`
 - `WOLADEN_LIVE_API_CORS_ALLOWED_ORIGINS`: comma-separated explicit CORS allowlist
 - `WOLADEN_LIVE_API_CORS_ALLOW_ORIGIN_REGEX`: regex fallback for local development (`localhost`, `127.0.0.1`, `0.0.0.0`, `[::1]` by default)
 - `WOLADEN_LIVE_POLL_TIMEOUT_SECONDS`: fetch timeout
@@ -496,6 +497,12 @@ Request body:
 
 - Raw DATEX II v3 JSON or XML payload as delivered by Mobilithek
 
+Authentication:
+
+- Configure `WOLADEN_LIVE_API_PUSH_TOKEN` on the live API process.
+- Send the token as `X-Woladen-Push-Token`, `Authorization: Bearer <token>`, or a `push_token` callback query parameter.
+- `GET` and `HEAD` probe routes remain unauthenticated; only `POST` can mutate live state.
+
 Provider resolution:
 
 1. Path parameter `provider_uid` on `/v1/push/{provider_uid}`
@@ -506,6 +513,8 @@ Provider resolution:
 Expected behavior:
 
 - `200 OK` with empty body on successful ingestion
+- `401` when the submitted push token is missing or wrong
+- `503` when push ingestion is enabled but no server-side push token is configured
 - `400` when no provider hint is available
 - `404` when the referenced provider, subscription, or publication cannot be resolved
 - `422` when the payload cannot be decoded as a valid DATEX payload
@@ -514,8 +523,8 @@ Expected behavior:
 Recommended Mobilithek callback URLs:
 
 ```text
-https://live.woladen.de/v1/push/enbwmobility
-https://live.woladen.de/v1/push/wirelane
+https://live.woladen.de/v1/push/enbwmobility?push_token=<url-safe-secret>
+https://live.woladen.de/v1/push/wirelane?push_token=<url-safe-secret>
 ```
 
 Example:
@@ -523,6 +532,7 @@ Example:
 ```bash
 curl -X POST http://127.0.0.1:8001/v1/push/qwello \
   -H 'Content-Type: application/json' \
+  -H "X-Woladen-Push-Token: $WOLADEN_LIVE_API_PUSH_TOKEN" \
   --data-binary @payload.json
 ```
 

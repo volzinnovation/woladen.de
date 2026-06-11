@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 import requests
-import urllib3
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -79,7 +78,6 @@ def fetch_mobilithek_access_token(session: requests.Session, *, username: str, p
             "password": password,
         },
         timeout=30,
-        verify=False,
     )
     response.raise_for_status()
     payload = response.json()
@@ -113,7 +111,6 @@ def fetch_account_subscriptions(access_token: str) -> dict[str, Any]:
             headers={"Authorization": f"Bearer {access_token}"},
             json={"searchString": ""},
             timeout=30,
-            verify=False,
         )
         response.raise_for_status()
         payload = response.json()
@@ -135,8 +132,6 @@ def fetch_account_subscriptions(access_token: str) -> dict[str, Any]:
 
 
 def main() -> None:
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
     args = parse_args()
     config = AppConfig()
     offers = load_subscription_offers(

@@ -154,6 +154,7 @@ class AppConfig:
         ).strip()
     )
     api_push_enabled: bool = field(default_factory=lambda: _env_bool("WOLADEN_LIVE_API_PUSH_ENABLED", True))
+    api_push_token: str = field(default_factory=lambda: str(os.environ.get("WOLADEN_LIVE_API_PUSH_TOKEN", "")).strip())
     poll_timeout_seconds: int = field(
         default_factory=lambda: int(os.environ.get("WOLADEN_LIVE_POLL_TIMEOUT_SECONDS", "10"))
     )
