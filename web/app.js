@@ -59,8 +59,9 @@ const LIVE_API_TIMEOUT_MS = 3500;
 const LIVE_DETAIL_TIMEOUT_MS = 4000;
 const CATALOG_SEARCH_RADIUS_M = 20000;
 const CATALOG_SEARCH_LIMIT = 100;
-const CATALOG_COUNTRY_CODE = "DE";
 const CATALOG_DETAIL_TIMEOUT_MS = 4500;
+const CATALOG_MAP_MOVE_DEBOUNCE_MS = 450;
+const CATALOG_MIN_RELOAD_DISTANCE_M = 1000;
 const LIVE_OUT_OF_ORDER_MARKER_SIZE = 22;
 const LIVE_FULLY_OCCUPIED_MARKER_SIZE = 18;
 const STATION_ID_NAMESPACE = "DE:";
@@ -767,6 +768,7 @@ const state = {
     loading: false,
     error: null,
     lastQueryKey: "",
+    center: null, // { lat, lon, source }
     detailByStationId: new Map(),
     pendingDetailStationIds: new Set(),
     missingDetailStationIds: new Set(),
@@ -915,6 +917,7 @@ async function init() {
 
 /* --- DATA LOADING --- */
 let catalogSearchSequence = 0;
+let catalogMapMoveTimer = 0;
 
 async function loadData() {
   try {
@@ -1121,24 +1124,63 @@ function catalogSearchMode() {
     : "travel";
 }
 
+function normalizeCatalogCenter(center) {
+  const lat = Number(center?.lat);
+  const lon = Number(center?.lon ?? center?.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return null;
+  }
+  return {
+    lat,
+    lon,
+    source: String(center?.source || "map"),
+  };
+}
+
+function hasCatalogSearchCenter() {
+  return Boolean(normalizeCatalogCenter(state.catalog.center));
+}
+
+function hasCatalogListContext() {
+  return Boolean(state.catalog.lastQueryKey || state.features.length > 0 || hasCatalogSearchCenter());
+}
+
+function setCatalogSearchCenter(center, source = "map") {
+  const normalized = normalizeCatalogCenter({ ...center, source });
+  if (!normalized) {
+    return false;
+  }
+  state.catalog.center = normalized;
+  return true;
+}
+
+function getCatalogSearchCenter() {
+  return normalizeCatalogCenter(state.catalog.center);
+}
+
+function getDistanceReferencePosition() {
+  return getCatalogSearchCenter() || (hasResolvedUserLocation() ? state.userPos : null);
+}
+
 function catalogSearchQueryKey() {
-  if (!hasResolvedUserLocation()) {
+  const center = getCatalogSearchCenter();
+  if (!center) {
     return "";
   }
   const minPower = Number(state.filters.minPower ?? DEFAULT_MIN_POWER_KW);
   return JSON.stringify({
-    lat: Number(state.userPos.lat).toFixed(5),
-    lon: Number(state.userPos.lon).toFixed(5),
+    lat: center.lat.toFixed(5),
+    lon: center.lon.toFixed(5),
     radius_m: CATALOG_SEARCH_RADIUS_M,
     limit: CATALOG_SEARCH_LIMIT,
     mode: catalogSearchMode(),
-    country_code: CATALOG_COUNTRY_CODE,
     min_power_kw: Number.isFinite(minPower) ? minPower : DEFAULT_MIN_POWER_KW,
   });
 }
 
-async function loadCatalogStationsNearUserLocation({ force = false } = {}) {
-  if (!state.live.baseUrl || !hasResolvedUserLocation()) {
+async function loadCatalogStationsForCurrentCenter({ force = false } = {}) {
+  const center = getCatalogSearchCenter();
+  if (!state.live.baseUrl || !center) {
     return;
   }
 
@@ -1161,12 +1203,11 @@ async function loadCatalogStationsNearUserLocation({ force = false } = {}) {
   try {
     const payload = await fetchJsonWithTimeout(
       buildLiveApiUrl("/v1/catalog/search", {
-        lat: state.userPos.lat,
-        lon: state.userPos.lon,
+        lat: center.lat,
+        lon: center.lon,
         radius_m: CATALOG_SEARCH_RADIUS_M,
         limit: CATALOG_SEARCH_LIMIT,
         mode: catalogSearchMode(),
-        country_code: CATALOG_COUNTRY_CODE,
         min_power_kw: Number.isFinite(minPowerKw) ? minPowerKw : DEFAULT_MIN_POWER_KW,
       }),
       {},
@@ -1514,7 +1555,7 @@ function renderCatalogError(container) {
   button.className = "primary-btn";
   button.textContent = "Erneut laden";
   button.addEventListener("click", () => {
-    void loadCatalogStationsNearUserLocation({ force: true });
+    void loadCatalogStationsForCurrentCenter({ force: true });
   });
   actions.appendChild(button);
   panel.appendChild(actions);
@@ -1813,6 +1854,7 @@ function initMap() {
   state.views.layers.chargers.addTo(state.views.map);
 
   state.views.layers.user = L.layerGroup().addTo(state.views.map);
+  state.views.map.on("moveend", queueCatalogSearchFromMapMove);
 
   // Detail Mini Map
   state.views.detailMap = L.map("detail-map", {
@@ -1829,6 +1871,41 @@ function initMap() {
   }).addTo(state.views.detailMap);
   state.views.detailMap.setView([51.1657, 10.4515], 6, { animate: false });
   state.views.layers.detailAmenities = L.layerGroup().addTo(state.views.detailMap);
+}
+
+function loadCatalogStationsFromMapCenter({ force = false } = {}) {
+  if (!state.views.map) {
+    return;
+  }
+  const mapCenter = state.views.map.getCenter();
+  const nextCenter = normalizeCatalogCenter({
+    lat: mapCenter.lat,
+    lon: mapCenter.lng,
+    source: "map",
+  });
+  if (!nextCenter) {
+    return;
+  }
+  const previousCenter = getCatalogSearchCenter();
+  if (
+    !force &&
+    previousCenter &&
+    distanceBetweenCoordinatesMeters(previousCenter, nextCenter) < CATALOG_MIN_RELOAD_DISTANCE_M
+  ) {
+    return;
+  }
+  setCatalogSearchCenter(nextCenter, "map");
+  void loadCatalogStationsForCurrentCenter({ force });
+}
+
+function queueCatalogSearchFromMapMove() {
+  if (!state.views.map) {
+    return;
+  }
+  window.clearTimeout(catalogMapMoveTimer);
+  catalogMapMoveTimer = window.setTimeout(() => {
+    loadCatalogStationsFromMapCenter();
+  }, CATALOG_MAP_MOVE_DEBOUNCE_MS);
 }
 
 function getMarkerColor(props) {
@@ -2028,7 +2105,12 @@ function switchView(viewId, options = {}) {
 
   // Map resize fix
   if (viewId === "view-map" && state.views.map) {
-    setTimeout(() => state.views.map.invalidateSize(), 100);
+    setTimeout(() => {
+      state.views.map.invalidateSize();
+      if (!hasCatalogSearchCenter()) {
+        loadCatalogStationsFromMapCenter({ force: true });
+      }
+    }, 100);
   }
 }
 
@@ -2111,8 +2193,8 @@ function renderAmenityFilters() {
 
 function updateFilters(options = {}) {
   const { reloadCatalog = false } = options;
-  if (reloadCatalog && hasResolvedUserLocation()) {
-    void loadCatalogStationsNearUserLocation({ force: true }).then(updateFilterLabel);
+  if (reloadCatalog && hasCatalogSearchCenter()) {
+    void loadCatalogStationsForCurrentCenter({ force: true }).then(updateFilterLabel);
     updateFilterLabel();
     return;
   }
@@ -2196,8 +2278,7 @@ function applyFilters() {
     matchesFeatureFilters(feature, state.filters, { getDisplayedMaxPowerKw, now }),
   );
 
-  // Re-sort if we have location
-  if (state.userPos) {
+  if (getDistanceReferencePosition()) {
     state.filtered.sort((a, b) => getDistance(a) - getDistance(b));
   }
 
@@ -2218,18 +2299,18 @@ function renderList() {
   const container = els.lists.chargers;
   container.innerHTML = "";
 
-  const locationViewModel = getLocationListViewModel();
-  if (locationViewModel.blocksStationList) {
-    renderLocationGate(container, locationViewModel);
-    return;
-  }
-
   if (state.catalog.loading) {
     container.innerHTML = `<div class="loading-state" data-nosnippet>Lade Ladestationen im Umkreis von 20 km...</div>`;
     return;
   }
   if (state.catalog.error) {
     renderCatalogError(container);
+    return;
+  }
+
+  const locationViewModel = getLocationListViewModel();
+  if (locationViewModel.blocksStationList && !hasCatalogListContext()) {
+    renderLocationGate(container, locationViewModel);
     return;
   }
 
@@ -3276,15 +3357,25 @@ function syncDetailModalWithUrl() {
   openDetail(feature, { syncUrl: false });
 }
 
-function getDistance(feature) {
-  if (!state.userPos) return Infinity;
-  const [lon, lat] = feature.geometry.coordinates;
+function distanceBetweenCoordinatesMeters(left, right) {
+  const leftLat = Number(left?.lat);
+  const leftLon = Number(left?.lon ?? left?.lng);
+  const rightLat = Number(right?.lat);
+  const rightLon = Number(right?.lon ?? right?.lng);
+  if (
+    !Number.isFinite(leftLat) ||
+    !Number.isFinite(leftLon) ||
+    !Number.isFinite(rightLat) ||
+    !Number.isFinite(rightLon)
+  ) {
+    return Infinity;
+  }
   // Haversine approx is enough for sorting
   const R = 6371e3; // meters
-  const φ1 = (state.userPos.lat * Math.PI) / 180;
-  const φ2 = (lat * Math.PI) / 180;
-  const Δφ = ((lat - state.userPos.lat) * Math.PI) / 180;
-  const Δλ = ((lon - state.userPos.lon) * Math.PI) / 180;
+  const φ1 = (leftLat * Math.PI) / 180;
+  const φ2 = (rightLat * Math.PI) / 180;
+  const Δφ = ((rightLat - leftLat) * Math.PI) / 180;
+  const Δλ = ((rightLon - leftLon) * Math.PI) / 180;
 
   const a =
     Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
@@ -3292,6 +3383,17 @@ function getDistance(feature) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c; // meters
+}
+
+function getDistance(feature) {
+  const backendDistance = Number(feature?.properties?.distance_m);
+  if (Number.isFinite(backendDistance) && backendDistance >= 0) {
+    return backendDistance;
+  }
+  const reference = getDistanceReferencePosition();
+  if (!reference) return Infinity;
+  const [lon, lat] = feature.geometry.coordinates;
+  return distanceBetweenCoordinatesMeters(reference, { lat, lon });
 }
 
 function getDistanceFormatted(feature) {
@@ -3415,12 +3517,13 @@ async function requestUserLocation() {
       requestState: LOCATION_REQUEST_READY,
       errorCode: "",
     });
+    setCatalogSearchCenter(state.userPos, "location");
     updateUserMarker();
 
     if (state.views.map) {
       state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
     }
-    await loadCatalogStationsNearUserLocation({ force: true });
+    await loadCatalogStationsForCurrentCenter({ force: true });
   } catch (err) {
     console.warn("Location error", err);
     updateLocationState({
