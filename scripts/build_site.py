@@ -8,6 +8,8 @@ import json
 import math
 import re
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 from urllib.parse import parse_qsl, quote, urlsplit, urlunsplit
 
@@ -31,6 +33,7 @@ REQUIRED_DATA = [
     "chargers_fast.geojson",
     "chargers_under_50.geojson",
     "operators.json",
+    "open_static_summary.json",
     "station_ratings.json",
     "summary.json",
 ]
@@ -646,7 +649,37 @@ def copy_station_occupancy_tree() -> None:
     shutil.copytree(source_root, target_root)
 
 
+def write_station_occupancy_index() -> None:
+    source_root = DATA_DIR / "station-occupancy"
+    if not source_root.exists():
+        return
+    station_ids = sorted(
+        path.stem
+        for path in source_root.rglob("*.json")
+        if path.name != "index.json"
+    )
+    (source_root / "index.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "station_ids": station_ids,
+            },
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
+
+
+def refresh_open_static_summary() -> None:
+    script = ROOT / "scripts" / "build_open_static_summary.py"
+    subprocess.run([sys.executable, str(script)], check=True)
+
+
 def main() -> None:
+    refresh_open_static_summary()
+    write_station_occupancy_index()
+
     if SITE_DIR.exists():
         shutil.rmtree(SITE_DIR)
     SITE_DIR.mkdir(parents=True, exist_ok=True)

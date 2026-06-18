@@ -22,6 +22,17 @@ import {
   resolveLiveApiBaseUrl as computeLiveApiBaseUrl,
 } from "./live-api.mjs?v=20260618-split-live-routing";
 import {
+  buildGeocoderApiUrl,
+  normalizeGeocodePayload,
+  resolveGeocoderApiBaseUrl as computeGeocoderApiBaseUrl,
+} from "./geocoding.mjs?v=20260618-commercial-merge";
+import {
+  formatBundleSourceTitle,
+  formatLicenseStatus,
+  normalizeBundleSources,
+  normalizeMappedCountries,
+} from "./open-static-ui.mjs?v=20260618-commercial-merge";
+import {
   formatRatingCount,
   formatRatingValue,
   getUserRating,
@@ -57,6 +68,8 @@ const FAVORITE_SORT_RATING = "rating";
 const LIVE_SUMMARY_REFRESH_MS = 15000;
 const LIVE_API_TIMEOUT_MS = 3500;
 const LIVE_DETAIL_TIMEOUT_MS = 4000;
+const GEOCODER_API_TIMEOUT_MS = 3500;
+const GEOCODER_SUGGESTION_DEBOUNCE_MS = 250;
 const CATALOG_SEARCH_RADIUS_M = 20000;
 const CATALOG_SEARCH_LIMIT = 100;
 const CATALOG_DETAIL_TIMEOUT_MS = 4500;
@@ -269,8 +282,24 @@ function resolveGermanLiveApiBaseUrl() {
   return resolved;
 }
 
+function resolveGeocoderApiBaseUrl() {
+  const configuredValue = typeof window.WOLADEN_GEOCODER_API_BASE_URL === "string"
+    ? window.WOLADEN_GEOCODER_API_BASE_URL.trim()
+    : "";
+  const resolved = computeGeocoderApiBaseUrl({
+    configuredValue,
+    locationHref: window.location.href,
+    locationHostname: window.location.hostname,
+  });
+  if (!resolved && configuredValue) {
+    console.warn("Ignoring invalid geocoder API base URL", configuredValue);
+  }
+  return resolved;
+}
+
 const LIVE_API_BASE_URL = resolveLiveApiBaseUrl();
 const LIVE_DE_API_BASE_URL = resolveGermanLiveApiBaseUrl();
+const GEOCODER_API_BASE_URL = resolveGeocoderApiBaseUrl();
 
 function normalizeAvailabilityStatus(value) {
   const raw = String(value || "").trim();
@@ -790,8 +819,17 @@ const state = {
     pendingDetailStationIds: new Set(),
     missingDetailStationIds: new Set(),
   },
+  search: {
+    activeResult: null,
+    loading: false,
+    requestSeq: 0,
+    results: [],
+    suggestionTimer: 0,
+  },
   occupancyHistory: {
     byStationId: new Map(),
+    availableStationIds: null,
+    manifestPromise: null,
     pendingStationIds: new Set(),
     missingStationIds: new Set(),
   },
@@ -832,6 +870,7 @@ const els = {
   filter: {
     trigger: document.getElementById("filter-trigger"),
     label: document.getElementById("filter-label"),
+    count: document.getElementById("filter-count"),
     operator: document.getElementById("filter-operator"),
     amenityName: document.getElementById("filter-amenity-name"),
     currentlyOpen: document.getElementById("filter-currently-open"),
@@ -840,6 +879,11 @@ const els = {
     amenities: document.getElementById("filter-amenities"),
     applyBtn: document.getElementById("btn-apply-filter"),
     listFilterBtn: document.getElementById("btn-list-filter"),
+  },
+  search: {
+    form: document.getElementById("location-search-form"),
+    input: document.getElementById("location-search-input"),
+    results: document.getElementById("location-search-results"),
   },
   detail: {
     title: document.getElementById("detail-title"),
@@ -890,6 +934,12 @@ const els = {
     closeAmenityDetail: document.querySelector('[data-close="modal-amenity-detail"]'),
   },
   meta: document.getElementById("app-meta"),
+  info: {
+    stationCount: document.getElementById("bundle-station-count"),
+    chargerCount: document.getElementById("bundle-charger-count"),
+    mappedCountries: document.getElementById("mapped-country-list"),
+    dataSources: document.getElementById("data-source-list"),
+  },
 };
 
 const VIEW_IDS = new Set(["view-list", "view-map", "view-favorites", "view-info"]);
@@ -903,6 +953,7 @@ async function init() {
   initNavigation();
   syncViewWithRequestedHash();
   initFilters();
+  initLocationSearch();
   window.addEventListener("popstate", syncDetailModalWithUrl);
   window.addEventListener("hashchange", syncViewWithRequestedHash);
 
@@ -936,14 +987,29 @@ async function init() {
 let catalogSearchSequence = 0;
 let catalogMapMoveTimer = 0;
 
+async function fetchOptionalJson(path) {
+  try {
+    const response = await fetch(path);
+    if (!response.ok) {
+      return null;
+    }
+    return await response.json();
+  } catch (error) {
+    return null;
+  }
+}
+
 async function loadData() {
   try {
-    const summaryRes = await fetch("./data/summary.json");
+    const [summaryRes, openStaticSummaryData] = await Promise.all([
+      fetch("./data/summary.json"),
+      fetchOptionalJson("./data/open_static_summary.json"),
+    ]);
     if (!summaryRes.ok) throw new Error("Network response was not ok");
     const summaryData = await summaryRes.json();
 
     populateOperators();
-    setAppMeta(null, summaryData);
+    setAppMeta(null, summaryData, openStaticSummaryData);
     renderAmenityFilters(); // Render dynamic amenity filters
     await loadStaticRatingSummaries(summaryData);
     await syncLocationPermissionState();
@@ -980,6 +1046,227 @@ async function loadStaticRatingSummaries(summaryData) {
   } catch (err) {
     console.warn("Failed to load static station ratings", err);
   }
+}
+
+function geocoderApiUrl(path, params = {}) {
+  return buildGeocoderApiUrl(GEOCODER_API_BASE_URL, path, params);
+}
+
+function initLocationSearch() {
+  if (!els.search.form || !els.search.input || !els.search.results) {
+    return;
+  }
+  els.search.form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    submitLocationSearch({ returnToMap: els.views.map.classList.contains("active") });
+  });
+  els.search.input.addEventListener("input", queueLocationSuggestions);
+  els.search.input.addEventListener("focus", () => {
+    if (state.search.results.length > 0) {
+      renderLocationSearchResults(state.search.results);
+    }
+  });
+  els.search.input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      submitLocationSearch({ returnToMap: els.views.map.classList.contains("active") });
+      return;
+    }
+    if (event.key === "Escape") {
+      clearLocationSearchResults();
+      els.search.input.blur();
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (!els.search.form.contains(event.target)) {
+      clearLocationSearchResults();
+    }
+  });
+}
+
+function submitLocationSearch(options = {}) {
+  const { returnToMap = false } = options;
+  cancelQueuedLocationSuggestions();
+  void runLocationAutocomplete(els.search.input?.value, { selectFirst: true });
+  if (returnToMap) {
+    focusMapKeyboardNavigation();
+  }
+}
+
+function focusMapKeyboardNavigation() {
+  if (!els.views.map.classList.contains("active")) {
+    return;
+  }
+  els.search.input?.blur();
+  state.views.map?.getContainer?.()?.focus?.({ preventScroll: true });
+}
+
+function getLocationSearchFocus() {
+  if (hasResolvedUserLocation()) {
+    return state.userPos;
+  }
+  if (!state.views.map) {
+    return null;
+  }
+  const center = state.views.map.getCenter();
+  return { lat: center.lat, lon: center.lng };
+}
+
+function queueLocationSuggestions() {
+  cancelQueuedLocationSuggestions();
+  const query = String(els.search.input?.value || "").trim();
+  if (query.length < 3) {
+    clearLocationSearchResults();
+    return;
+  }
+  state.search.suggestionTimer = window.setTimeout(() => {
+    state.search.suggestionTimer = 0;
+    void runLocationAutocomplete(query);
+  }, GEOCODER_SUGGESTION_DEBOUNCE_MS);
+}
+
+function cancelQueuedLocationSuggestions() {
+  if (!state.search.suggestionTimer) {
+    return;
+  }
+  window.clearTimeout(state.search.suggestionTimer);
+  state.search.suggestionTimer = 0;
+}
+
+function clearLocationSearchResults() {
+  if (!els.search.results) {
+    return;
+  }
+  cancelQueuedLocationSuggestions();
+  state.search.requestSeq += 1;
+  state.search.loading = false;
+  state.search.results = [];
+  els.search.results.hidden = true;
+  els.search.results.replaceChildren();
+  els.search.input?.setAttribute("aria-expanded", "false");
+}
+
+function renderLocationSearchMessage(message, tone = "muted") {
+  if (!els.search.results) {
+    return;
+  }
+  const item = document.createElement("div");
+  item.className = `location-search-message location-search-message-${tone}`;
+  item.textContent = message;
+  els.search.results.replaceChildren(item);
+  els.search.results.hidden = false;
+  els.search.input?.setAttribute("aria-expanded", "true");
+}
+
+function renderLocationSearchResults(results) {
+  if (!els.search.results) {
+    return;
+  }
+  els.search.results.replaceChildren();
+  if (!results.length) {
+    renderLocationSearchMessage("Keine Vorschläge gefunden.");
+    return;
+  }
+  const list = document.createElement("div");
+  list.className = "location-search-result-list";
+  list.setAttribute("role", "listbox");
+  results.forEach((result, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "location-search-result";
+    button.setAttribute("role", "option");
+    button.dataset.index = String(index);
+    const title = document.createElement("span");
+    title.className = "location-search-result-title";
+    title.textContent = result.name || result.label;
+    const meta = document.createElement("span");
+    meta.className = "location-search-result-meta";
+    meta.textContent = [
+      result.locality && result.locality !== result.name ? result.locality : "",
+      result.region,
+      result.country,
+    ].filter(Boolean).join(" · ") || result.label;
+    button.append(title, meta);
+    button.addEventListener("click", () => selectLocationSearchResult(result));
+    list.appendChild(button);
+  });
+  els.search.results.appendChild(list);
+  els.search.results.hidden = false;
+  els.search.input?.setAttribute("aria-expanded", "true");
+}
+
+async function runLocationAutocomplete(rawQuery, options = {}) {
+  const { selectFirst = false } = options;
+  const query = String(rawQuery || "").trim();
+  if (query.length < 2) {
+    renderLocationSearchMessage("Bitte mindestens zwei Zeichen eingeben.");
+    return;
+  }
+
+  const requestId = ++state.search.requestSeq;
+  state.search.loading = true;
+  if (selectFirst) {
+    renderLocationSearchMessage("Suche Ort...");
+  }
+  const focus = getLocationSearchFocus();
+  const url = geocoderApiUrl("autocomplete", {
+    q: query,
+    lat: focus?.lat,
+    lon: focus?.lon,
+    limit: 5,
+  });
+  if (!url) {
+    state.search.loading = false;
+    renderLocationSearchMessage("Ortssuche ist nicht konfiguriert.", "error");
+    return;
+  }
+
+  try {
+    const payload = normalizeGeocodePayload(
+      await fetchJsonWithTimeout(url, {}, GEOCODER_API_TIMEOUT_MS),
+    );
+    if (requestId !== state.search.requestSeq) {
+      return;
+    }
+    state.search.results = payload.results;
+    state.search.loading = false;
+    if (!payload.ok) {
+      renderLocationSearchMessage("Ortssuche ist gerade nicht erreichbar.", "error");
+      return;
+    }
+    if (selectFirst && payload.results.length > 0) {
+      selectLocationSearchResult(payload.results[0]);
+      return;
+    }
+    renderLocationSearchResults(payload.results);
+  } catch (error) {
+    if (requestId !== state.search.requestSeq) {
+      return;
+    }
+    state.search.loading = false;
+    renderLocationSearchMessage("Ortssuche ist gerade nicht erreichbar.", "error");
+  }
+}
+
+function selectLocationSearchResult(result) {
+  if (!result || !Number.isFinite(result.lat) || !Number.isFinite(result.lon)) {
+    return;
+  }
+  state.search.activeResult = result;
+  if (els.search.input) {
+    els.search.input.value = result.label;
+  }
+  clearLocationSearchResults();
+  setCatalogSearchCenter({ lat: result.lat, lon: result.lon }, "search");
+  void loadCatalogStationsForCurrentCenter({ force: true });
+  if (!state.views.map) {
+    return;
+  }
+  const zoom = Math.max(state.views.map.getZoom(), 12);
+  state.views.map.flyTo([result.lat, result.lon], zoom, {
+    animate: true,
+    duration: 0.5,
+  });
 }
 
 function prepareChargerFeature(feature, powerClass) {
@@ -1826,15 +2113,14 @@ async function loadCatalogStationDetail(stationId) {
   }
 }
 
-function setAppMeta(geoData, summaryData) {
-  if (!els.meta) return;
-
+function setAppMeta(geoData, summaryData, openStaticSummaryData = null) {
   const generatedAt =
+    openStaticSummaryData?.generated_at ||
     summaryData?.run?.finished_at ||
     geoData?.generated_at ||
     null;
 
-  if (generatedAt) {
+  if (els.meta && generatedAt) {
     const parsed = new Date(generatedAt);
     const date = Number.isNaN(parsed.getTime()) ? generatedAt : parsed.toLocaleString("de-DE", {
       day: "2-digit",
@@ -1843,13 +2129,132 @@ function setAppMeta(geoData, summaryData) {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const fastTotal = Number(summaryData?.records?.fast_chargers_total || 0);
-    const under50Total = Number(summaryData?.records?.chargers_under_50_total || 0);
-    const countSuffix = fastTotal && under50Total
-      ? ` · ${fastTotal.toLocaleString("de-DE")} Schnelllader · ${under50Total.toLocaleString("de-DE")} unter 50 kW`
+    const stationTotal = Number(openStaticSummaryData?.bundle?.station_count || 0);
+    const chargerTotal = Number(openStaticSummaryData?.bundle?.charger_count || 0);
+    const countSuffix = stationTotal && chargerTotal
+      ? ` · ${formatInteger(stationTotal)} Stationen · ${formatInteger(chargerTotal)} Ladepunkte`
       : "";
     els.meta.textContent = `Datenstand: ${date}${countSuffix}`;
   }
+  renderBundleCounts(openStaticSummaryData, summaryData);
+  renderMappedCountries(openStaticSummaryData);
+  renderDataSources(openStaticSummaryData);
+}
+
+function formatInteger(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return "";
+  }
+  return new Intl.NumberFormat("de-DE").format(numeric);
+}
+
+function renderBundleCounts(openStaticSummaryData, summaryData) {
+  const countryTotals = normalizeMappedCountries(openStaticSummaryData).reduce(
+    (totals, country) => ({
+      stations: totals.stations + (Number(country.stationCount) || 0),
+      chargers: totals.chargers + (Number(country.chargerCount) || 0),
+    }),
+    { stations: 0, chargers: 0 },
+  );
+  const stationCount =
+    Number(openStaticSummaryData?.bundle?.station_count || 0) ||
+    countryTotals.stations ||
+    Number(summaryData?.records?.full_registry_active_stations_total || 0);
+  const chargerCount =
+    Number(openStaticSummaryData?.bundle?.charger_count || 0) ||
+    countryTotals.chargers ||
+    Number(summaryData?.records?.raw_rows || 0);
+  if (els.info.stationCount) {
+    els.info.stationCount.textContent = formatInteger(stationCount) || "...";
+  }
+  if (els.info.chargerCount) {
+    els.info.chargerCount.textContent = formatInteger(chargerCount) || "...";
+  }
+}
+
+function renderMappedCountries(openStaticSummaryData) {
+  const container = els.info.mappedCountries;
+  if (!container) {
+    return;
+  }
+  const displayCountries = normalizeMappedCountries(openStaticSummaryData);
+  container.replaceChildren();
+  if (!displayCountries.length) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 3;
+    cell.textContent = "Länderabdeckung konnte nicht geladen werden.";
+    row.appendChild(cell);
+    container.appendChild(row);
+    return;
+  }
+  displayCountries.forEach((country) => {
+    const row = document.createElement("tr");
+    const name = document.createElement("td");
+    const code = document.createElement("td");
+    const count = document.createElement("td");
+    name.textContent = country.name || country.code;
+    code.textContent = country.code ? `(${country.code})` : "";
+    code.className = "country-code";
+    count.className = "station-count";
+    count.textContent = formatInteger(country.stationCount) || "...";
+    row.append(name, code, count);
+    container.appendChild(row);
+  });
+}
+
+function renderDataSources(openStaticSummaryData) {
+  const container = els.info.dataSources;
+  if (!container) {
+    return;
+  }
+  const displaySources = normalizeBundleSources(openStaticSummaryData);
+  container.replaceChildren();
+  if (!displaySources.length) {
+    const item = document.createElement("li");
+    item.textContent = "Datenquellen konnten nicht geladen werden.";
+    container.appendChild(item);
+  }
+
+  displaySources.forEach((source) => {
+    const item = document.createElement("li");
+    const title = document.createElement("div");
+    title.className = "source-title";
+    const sourceTitle = formatBundleSourceTitle(source);
+    if (source.sourceUrl) {
+      const link = document.createElement("a");
+      link.href = source.sourceUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = sourceTitle;
+      title.appendChild(link);
+    } else {
+      title.textContent = sourceTitle;
+    }
+    item.appendChild(title);
+
+    const license = formatLicenseStatus(source.license);
+    if (license) {
+      const meta = document.createElement("div");
+      meta.className = "source-meta";
+      meta.textContent = license;
+      item.appendChild(meta);
+    }
+    container.appendChild(item);
+  });
+
+  const geocoderItem = document.createElement("li");
+  const geocoderTitle = document.createElement("div");
+  geocoderTitle.className = "source-title";
+  const geocoderLink = document.createElement("a");
+  geocoderLink.href = "https://openrouteservice.org/dev/#/api-docs/geocode/autocomplete/get";
+  geocoderLink.target = "_blank";
+  geocoderLink.rel = "noopener noreferrer";
+  geocoderLink.textContent = "GEO: openrouteservice Geocoding Autocomplete (Pelias)";
+  geocoderTitle.appendChild(geocoderLink);
+  geocoderItem.appendChild(geocoderTitle);
+  container.appendChild(geocoderItem);
 }
 
 function populateOperators() {
@@ -2248,8 +2653,14 @@ function updateFilters(options = {}) {
 function updateFilterLabel() {
   const filterCount = countActiveFilters(state.filters);
 
-  els.filter.label.textContent =
-    filterCount > 0 ? `Filter (${filterCount})` : "Alle Filter";
+  if (els.filter.label) {
+    els.filter.label.textContent =
+      filterCount > 0 ? `Filter (${filterCount})` : "Alle Filter";
+  }
+  if (els.filter.count) {
+    els.filter.count.hidden = filterCount <= 0;
+    els.filter.count.textContent = String(filterCount);
+  }
 }
 
 function getRatingForProps(props) {
@@ -2738,6 +3149,29 @@ function occupancyHistoryUrlForStationId(stationId) {
   return new URL(`./data/station-occupancy/${historyPath}`, import.meta.url);
 }
 
+async function loadOccupancyHistoryManifest() {
+  if (state.occupancyHistory.availableStationIds) {
+    return state.occupancyHistory.availableStationIds;
+  }
+  if (!state.occupancyHistory.manifestPromise) {
+    state.occupancyHistory.manifestPromise = fetchOptionalJson(
+      "./data/station-occupancy/index.json",
+    ).then((payload) => {
+      const stationIds = Array.isArray(payload?.station_ids)
+        ? payload.station_ids
+        : [];
+      const availableStationIds = new Set(
+        stationIds
+          .map((stationId) => safeOccupancyHistoryStationId(stationId))
+          .filter(Boolean),
+      );
+      state.occupancyHistory.availableStationIds = availableStationIds;
+      return availableStationIds;
+    });
+  }
+  return state.occupancyHistory.manifestPromise;
+}
+
 function renderOccupancyHistoryChart(history, feature) {
   const normalized = normalizeOccupancyHistory(history);
   if (!normalized) return false;
@@ -2779,9 +3213,19 @@ function loadDetailOccupancyHistoryFile(stationId, feature) {
   }
 
   state.occupancyHistory.pendingStationIds.add(stationId);
-  const historyUrl = occupancyHistoryUrlForStationId(stationId);
-  fetch(historyUrl)
+  loadOccupancyHistoryManifest()
+    .then((availableStationIds) => {
+      const safeStationId = safeOccupancyHistoryStationId(stationId);
+      if (!availableStationIds.has(safeStationId)) {
+        state.occupancyHistory.missingStationIds.add(stationId);
+        return null;
+      }
+      return fetch(occupancyHistoryUrlForStationId(stationId));
+    })
     .then((response) => {
+      if (!response) {
+        return null;
+      }
       if (response.status === 404) {
         state.occupancyHistory.missingStationIds.add(stationId);
         return null;

@@ -12,6 +12,7 @@
   --color-primary-light: #ccfbf1;
 
   --color-accent: #f59e0b; /* Amber 500 */
+  --color-danger: #dc2626;
 
   --color-text-main: #1e293b; /* Slate 800 */
   --color-text-muted: #64748b; /* Slate 500 */
@@ -55,6 +56,18 @@ body {
   color: var(--color-text-main);
   /* Prevent scroll chaining/rubber banding on mobile body */
   overscroll-behavior: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* APP SHELL */
@@ -443,6 +456,110 @@ body {
     background 0.2s ease,
     box-shadow 0.2s ease,
     color 0.2s ease;
+}
+
+.location-search-form {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.search-bar .location-search-input {
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-dim);
+  padding: 0.5rem 0.875rem;
+  border-color: var(--color-border);
+  font-size: 0.95rem;
+}
+
+.search-bar .location-search-input:focus {
+  border-color: rgba(15, 118, 110, 0.55);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+}
+
+.location-search-results {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  right: 0;
+  z-index: 450;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  max-height: min(18rem, calc(100vh - 8rem));
+}
+
+.location-search-result-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.location-search-result,
+.location-search-message {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 0.75rem 0.875rem;
+  font-family: inherit;
+}
+
+.location-search-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  cursor: pointer;
+  color: var(--color-text-main);
+}
+
+.location-search-result + .location-search-result {
+  border-top: 1px solid var(--color-border);
+}
+
+.location-search-result:hover,
+.location-search-result:focus-visible {
+  background: var(--color-surface-dim);
+  outline: none;
+}
+
+.location-search-result-title {
+  font-size: 0.94rem;
+  font-weight: 600;
+}
+
+.location-search-result-meta,
+.location-search-message {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.location-search-message-error {
+  color: var(--color-danger);
+}
+
+.filter-btn {
+  position: relative;
+}
+
+.filter-count {
+  position: absolute;
+  right: -0.2rem;
+  top: -0.2rem;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.25rem;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: white;
+  border: 2px solid var(--color-surface-elevated);
+  font-size: 0.68rem;
+  line-height: 0.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 /* LIST & GRID CONTAINERS */
@@ -1728,6 +1845,89 @@ input[type="search"]::placeholder {
 .info-card h3 {
   margin-top: 0;
   color: var(--color-primary);
+}
+
+.info-card h4 {
+  margin: 1.25rem 0 0.6rem;
+  font-size: 0.9rem;
+  color: var(--color-text-main);
+}
+
+.country-table {
+  display: block;
+  width: 100%;
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+}
+
+.country-table thead,
+.country-table tbody {
+  display: block;
+}
+
+.country-table tr {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.5rem 8rem;
+  column-gap: 0.35rem;
+  align-items: baseline;
+  width: 100%;
+}
+
+.country-table th,
+.country-table td {
+  display: block;
+  padding: 0.48rem 0.35rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.country-table th {
+  color: var(--color-text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.country-table thead th:first-child {
+  grid-column: 1 / 3;
+}
+
+.country-table .country-code {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.country-table th.station-count,
+.country-table td.station-count {
+  grid-column: 3;
+  padding-right: 0.35rem;
+  text-align: right !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.source-list {
+  display: grid;
+  gap: 0.8rem;
+  list-style: disc;
+  padding-left: 1.2rem;
+  margin: 0 0 1rem;
+}
+
+.source-list li {
+  padding-left: 0.15rem;
+}
+
+.source-title {
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.source-meta {
+  margin-top: 0.2rem;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .legend-list {

@@ -84,7 +84,7 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css?v=20260607-live-map-marker-icons" />
+    <link rel="stylesheet" href="./styles.css?v=20260618-commercial-merge" />
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -114,8 +114,37 @@
                   <circle cx="12" cy="12" r="4" />
                 </svg>
               </button>
-              <div class="filter-summary" id="filter-trigger">
-                <span id="filter-label">Alle Filter</span>
+              <form
+                id="location-search-form"
+                class="location-search-form"
+                role="search"
+                autocomplete="off"
+              >
+                <label class="sr-only" for="location-search-input"
+                  >Ort oder Adresse suchen</label
+                >
+                <input
+                  id="location-search-input"
+                  class="location-search-input"
+                  type="search"
+                  placeholder="Ort oder Adresse suchen"
+                  spellcheck="false"
+                  autocomplete="off"
+                  aria-controls="location-search-results"
+                  aria-expanded="false"
+                />
+                <div
+                  id="location-search-results"
+                  class="location-search-results"
+                  hidden
+                ></div>
+              </form>
+              <button
+                id="filter-trigger"
+                class="icon-btn filter-btn"
+                type="button"
+                aria-label="Filter öffnen"
+              >
                 <svg
                   width="16"
                   height="16"
@@ -128,7 +157,8 @@
                     d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"
                   />
                 </svg>
-              </div>
+                <span id="filter-count" class="filter-count" hidden>0</span>
+              </button>
             </div>
           </div>
         </div>
@@ -177,15 +207,36 @@
             <div class="info-card">
               <h3><span data-nosnippet>Über woladen.de</span></h3>
               <p>
-                Finde Ladepunkte mit der besten Aufenthaltsqualität. Woladen
-                zeigt dir Ladepunkte im Umkreis von 20 km um deinen Standort.
-                Standardmäßig sucht woladen.de Schnelllader ab 50 kW; über den
-                Leistungsfilter kannst du auch Normalladepunkte unter 50 kW
-                einblenden. Dazu siehst du Stationen in Deutschland
-                übersichtlich in Liste und Karte sowie Angebote vor Ort wie
-                Supermarkt, Bäckerei oder Restaurant in der direkten Umgebung.
-                Ohne Ladeweile.
+                Finde Ladepunkte mit der besten Aufenthaltsqualität, oft mit
+                Live-Daten zur Verfügbarkeit und Preisen. Woladen kennt
+                <span id="bundle-station-count">...</span> Stationen mit
+                <span id="bundle-charger-count">...</span> Ladepunkten in vielen
+                Ländern und zeigt sie im Umkreis von 20 km um deinen Standort
+                oder die gesuchte Kartenposition. Standardmäßig sucht
+                woladen.de Schnelllader ab 50 kW; über den Leistungsfilter
+                kannst du auch Normalladepunkte unter 50 kW einblenden.
+                Angebote vor Ort wie Supermarkt, Bäckerei oder Restaurant
+                helfen gegen Ladeweile.
               </p>
+              <h4>Aktuelle Länderabdeckung</h4>
+              <table class="country-table" data-nosnippet>
+                <colgroup>
+                  <col class="country-name-col" />
+                  <col class="country-code-col" />
+                  <col class="country-stations-col" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th colspan="2" scope="colgroup">Land</th>
+                    <th scope="col" class="station-count">Stationen</th>
+                  </tr>
+                </thead>
+                <tbody id="mapped-country-list">
+                  <tr>
+                    <td colspan="3">Lade Länder...</td>
+                  </tr>
+                </tbody>
+              </table>
               <div id="app-meta" class="meta-block" data-nosnippet></div>
             </div>
 
@@ -203,8 +254,8 @@
                 </li>
                 <li><span class="dot grey"></span> Keine Angebote vor Ort</li>
                 <li>
-                  <span class="dot live-out-of-order"></span> Live-Status: außer
-                  Betrieb
+                  <span class="dot live-out-of-order"></span> Live-Status:
+                  außer Betrieb
                 </li>
                 <li>
                   <span class="dot live-fully-occupied"></span> Live-Status:
@@ -276,36 +327,9 @@
 
             <div class="info-card" data-nosnippet>
               <h3>Datenquellen & Lizenzen</h3>
-              <p class="data-source-note">
-                <a
-                  href="https://www.bundesnetzagentur.de/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/start.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  >BNetzA: Ladesäulenregister (Downloads und Formulare)</a
-                ><br />
-                <a
-                  href="https://mobilithek.info/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  >Mobilithek</a
-                >: aktive Datenangebote von 800 Volt Technologies GmbH, ELU
-                Mobility, EnBW mobility+ AG &amp; Co. KG, Monta ApS, Qwello
-                Deutschland GmbH, SMATRICS GmbH &amp; Co KG, Smartlab
-                Innovationsgesellschaft mbH, Tesla Germany GmbH, Wirelane GmbH,
-                chargecloud GmbH, eRound, eliso GmbH und vaylens GmbH.<br />
-                <a
-                  href="https://mobidata-bw.de/de/dataset/e-ladesaulen"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  >MobiData BW: E-Ladesäulen / OCPI</a
-                ><br />
-                <a
-                  href="https://www.openstreetmap.org/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  >OpenStreetMap</a
-                >
-              </p>
+              <ul id="data-source-list" class="source-list">
+                <li>Lade Datenquellen...</li>
+              </ul>
               <p class="data-source-note">
                 Kartendaten und POI-Daten © OpenStreetMap-Mitwirkende, verfügbar
                 unter ODbL v1.0.
@@ -723,6 +747,6 @@
       crossorigin=""
     ></script>
     <script src="./app-install-promo.js"></script>
-    <script src="./app.js?v=20260618-split-live-routing" type="module"></script>
+    <script src="./app.js?v=20260618-commercial-merge" type="module"></script>
   </body>
 </html>
