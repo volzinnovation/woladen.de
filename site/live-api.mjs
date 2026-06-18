@@ -1,7 +1,8 @@
 const LIVE_LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "0.0.0.0", "::1", "[::1]"]);
 const LIVE_REMOTE_HOSTS = new Map([
-  ["woladen.de", "https://live.woladen.de"],
-  ["www.woladen.de", "https://live.woladen.de"],
+  ["woladen.de", "https://live-eu.woladen.de"],
+  ["www.woladen.de", "https://live-eu.woladen.de"],
+  ["live-eu.woladen.de", "https://live-eu.woladen.de"],
   ["live.woladen.de", "https://live.woladen.de"],
 ]);
 const LIVE_API_QUERY_PARAM = "liveApiBaseUrl";
@@ -49,7 +50,7 @@ export function resolveLiveApiBaseUrl({
 
   const hostname = String(locationHostname || "").trim();
   if (LIVE_LOCAL_HOSTS.has(hostname)) {
-    return normalizeLiveApiBaseUrl("https://live.woladen.de");
+    return normalizeLiveApiBaseUrl("https://live-eu.woladen.de");
   }
   if (LIVE_REMOTE_HOSTS.has(hostname)) {
     return normalizeLiveApiBaseUrl(LIVE_REMOTE_HOSTS.get(hostname) || "");

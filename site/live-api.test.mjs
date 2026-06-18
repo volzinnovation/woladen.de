@@ -22,7 +22,7 @@ test("queryLiveApiBaseUrl reads the explicit local override", () => {
 test("resolveLiveApiBaseUrl prefers query override over configured and host defaults", () => {
   assert.equal(
     resolveLiveApiBaseUrl({
-      configuredValue: "https://live.woladen.de",
+      configuredValue: "https://live-eu.woladen.de",
       locationHref: "http://127.0.0.1:4173/?liveApiBaseUrl=http://127.0.0.1:8001",
       locationHostname: "127.0.0.1",
     }),
@@ -30,13 +30,24 @@ test("resolveLiveApiBaseUrl prefers query override over configured and host defa
   );
 });
 
-test("resolveLiveApiBaseUrl keeps the existing production default for localhost without override", () => {
+test("resolveLiveApiBaseUrl keeps the live-eu production default for localhost without override", () => {
   assert.equal(
     resolveLiveApiBaseUrl({
       configuredValue: "",
       locationHref: "http://127.0.0.1:4173/",
       locationHostname: "127.0.0.1",
     }),
-    "https://live.woladen.de",
+    "https://live-eu.woladen.de",
+  );
+});
+
+test("resolveLiveApiBaseUrl maps the public site to live-eu", () => {
+  assert.equal(
+    resolveLiveApiBaseUrl({
+      configuredValue: "",
+      locationHref: "https://woladen.de/",
+      locationHostname: "woladen.de",
+    }),
+    "https://live-eu.woladen.de",
   );
 });

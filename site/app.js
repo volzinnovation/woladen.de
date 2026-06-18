@@ -16,11 +16,11 @@ import {
   getLocationLookupViewModel,
   normalizeLocationPermissionState,
   requestBrowserLocation,
-} from "./location.mjs?v=20260517-location-list-fix-2";
+} from "./location.mjs?v=20260618-live-eu-catalog-search";
 import {
   normalizeLiveApiBaseUrl,
   resolveLiveApiBaseUrl as computeLiveApiBaseUrl,
-} from "./live-api.mjs";
+} from "./live-api.mjs?v=20260618-live-eu-catalog-search";
 import {
   formatRatingCount,
   formatRatingValue,
@@ -57,6 +57,10 @@ const FAVORITE_SORT_RATING = "rating";
 const LIVE_SUMMARY_REFRESH_MS = 15000;
 const LIVE_API_TIMEOUT_MS = 3500;
 const LIVE_DETAIL_TIMEOUT_MS = 4000;
+const CATALOG_SEARCH_RADIUS_M = 20000;
+const CATALOG_SEARCH_LIMIT = 100;
+const CATALOG_COUNTRY_CODE = "DE";
+const CATALOG_DETAIL_TIMEOUT_MS = 4500;
 const LIVE_OUT_OF_ORDER_MARKER_SIZE = 22;
 const LIVE_FULLY_OCCUPIED_MARKER_SIZE = 18;
 const STATION_ID_NAMESPACE = "DE:";
@@ -759,15 +763,18 @@ const state = {
     detailByStationId: new Map(),
     reachable: false,
   },
+  catalog: {
+    loading: false,
+    error: null,
+    lastQueryKey: "",
+    detailByStationId: new Map(),
+    pendingDetailStationIds: new Set(),
+    missingDetailStationIds: new Set(),
+  },
   occupancyHistory: {
     byStationId: new Map(),
     pendingStationIds: new Set(),
     missingStationIds: new Set(),
-  },
-  under50: {
-    loaded: false,
-    loadingPromise: null,
-    error: null,
   },
   views: {
     map: null, // Leaflet map instance
@@ -907,32 +914,21 @@ async function init() {
 }
 
 /* --- DATA LOADING --- */
+let catalogSearchSequence = 0;
+
 async function loadData() {
   try {
-    const [fastGeoRes, summaryRes] = await Promise.all([
-      fetch("./data/chargers_fast.geojson"),
-      fetch("./data/summary.json"),
-    ]);
-
-    if (!fastGeoRes.ok || !summaryRes.ok) throw new Error("Network response was not ok");
-
-    const fastGeoData = await fastGeoRes.json();
+    const summaryRes = await fetch("./data/summary.json");
+    if (!summaryRes.ok) throw new Error("Network response was not ok");
     const summaryData = await summaryRes.json();
 
-    state.features = (fastGeoData.features || []).map((feature) =>
-      prepareChargerFeature(feature, "fast"),
-    );
-
-    // Sort features initially just to have a defined order, strictly standard
-    // Real sorting happens when we have location
-
     populateOperators();
-    setAppMeta(fastGeoData, summaryData);
+    setAppMeta(null, summaryData);
     renderAmenityFilters(); // Render dynamic amenity filters
     await loadStaticRatingSummaries(summaryData);
     await syncLocationPermissionState();
 
-    applyFilters(); // Initial render
+    applyFilters(); // Initial location gate render
     syncDetailModalWithUrl();
 
     // Request location once after data is ready, but only when the page is visible.
@@ -968,48 +964,247 @@ async function loadStaticRatingSummaries(summaryData) {
 
 function prepareChargerFeature(feature, powerClass) {
   const prepared = feature || {};
+  const stationId = normalizeStationId(prepared.properties?.station_id || "");
   prepared.properties = {
     ...(prepared.properties || {}),
+    ...(stationId ? { station_id: stationId } : {}),
     charger_power_class: powerClass,
   };
   return prepared;
 }
 
-function shouldIncludeUnder50Features() {
-  return Number(state.filters.minPower ?? DEFAULT_MIN_POWER_KW) < DEFAULT_MIN_POWER_KW;
+function firstText(...values) {
+  for (const value of values) {
+    const text = String(value ?? "").trim();
+    if (text) {
+      return text;
+    }
+  }
+  return "";
 }
 
-async function ensureUnder50FeaturesLoaded() {
-  if (state.under50.loaded) {
+function finiteNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function catalogAmenityFilterKey(category) {
+  const raw = String(category || "").trim();
+  if (!raw) {
+    return "";
+  }
+  if (AMENITY_MAPPING[raw]) {
+    return raw;
+  }
+  const prefixed = `amenity_${raw}`;
+  return AMENITY_MAPPING[prefixed] ? prefixed : "";
+}
+
+function normalizeCatalogAmenityExamples(examples) {
+  if (!Array.isArray(examples)) {
+    return [];
+  }
+  return examples
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+      const category = firstText(item.category, item.kind, item.amenity_kind);
+      return {
+        category,
+        name: firstText(item.name, item.title),
+        distance_m: finiteNumber(item.distance_m, Number.NaN),
+        lat: finiteNumber(item.lat ?? item.latitude, Number.NaN),
+        lon: finiteNumber(item.lon ?? item.longitude, Number.NaN),
+        opening_hours: firstText(item.opening_hours, item.hours),
+      };
+    })
+    .filter(Boolean);
+}
+
+function catalogAmenityExamplesFromStation(station) {
+  const explicitExamples = normalizeCatalogAmenityExamples(station?.amenity_examples);
+  if (explicitExamples.length > 0) {
+    return explicitExamples;
+  }
+  const nearestKind = firstText(station?.nearest_amenity_kind);
+  const nearestName = firstText(station?.nearest_amenity_name);
+  if (!nearestKind && !nearestName) {
+    return [];
+  }
+  return [
+    {
+      category: nearestKind,
+      name: nearestName,
+      distance_m: finiteNumber(station?.nearest_amenity_distance_m, Number.NaN),
+    },
+  ];
+}
+
+function applyCatalogAmenityCounts(props, categoryCounts) {
+  if (!props || !categoryCounts || typeof categoryCounts !== "object") {
     return;
   }
-  if (state.under50.loadingPromise) {
-    return state.under50.loadingPromise;
+  Object.entries(categoryCounts).forEach(([category, count]) => {
+    const filterKey = catalogAmenityFilterKey(category);
+    if (!filterKey) {
+      return;
+    }
+    props[filterKey] = finiteNumber(count, 0);
+  });
+}
+
+function catalogStationToFeature(station) {
+  const lat = finiteNumber(station?.latitude, Number.NaN);
+  const lon = finiteNumber(station?.longitude, Number.NaN);
+  const maxPowerKw = finiteNumber(station?.max_power_kw, 0);
+  const categoryCounts = station?.amenity_category_counts && typeof station.amenity_category_counts === "object"
+    ? station.amenity_category_counts
+    : {};
+  const props = {
+    station_id: normalizeStationId(station?.station_id || ""),
+    operator: firstText(station?.operator_name, station?.operator, station?.station_name, "Unbekannt"),
+    station_name: firstText(station?.station_name),
+    address: firstText(station?.address),
+    postcode: firstText(station?.postal_code, station?.postcode),
+    city: firstText(station?.city),
+    country_code: firstText(station?.country_code),
+    charging_points_count: Math.max(1, Math.round(finiteNumber(
+      station?.charger_count ?? station?.charging_points_count ?? station?.total_evses,
+      1,
+    ))),
+    connector_count: Math.max(0, Math.round(finiteNumber(station?.connector_count, 0))),
+    max_power_kw: maxPowerKw,
+    max_individual_power_kw: maxPowerKw,
+    connector_types_display: firstText(station?.connector_types),
+    current_types_display: firstText(station?.current_types),
+    payment_methods_display: firstText(station?.payment_methods),
+    auth_methods_display: firstText(station?.auth_methods),
+    service_types_display: firstText(station?.service_types),
+    opening_hours: firstText(station?.opening_hours),
+    opening_hours_display: firstText(station?.opening_hours),
+    green_energy: station?.green_energy,
+    helpdesk_phone: firstText(station?.helpdesk_phone),
+    price_display: firstText(station?.price_display),
+    price_currency: firstText(station?.price_currency),
+    detail_source_uid: firstText(station?.source_uid, station?.provider_uid),
+    detail_source_name: firstText(station?.provider_uid, station?.source_uid),
+    detail_last_updated: firstText(station?.detail_last_updated),
+    source_station_id: firstText(station?.source_station_id),
+    source_url: firstText(station?.source_url),
+    public_bundle_status: firstText(station?.public_bundle_status),
+    amenities_total: Math.max(0, Math.round(finiteNumber(station?.amenities_total, 0))),
+    nearest_amenity_kind: firstText(station?.nearest_amenity_kind),
+    nearest_amenity_name: firstText(station?.nearest_amenity_name),
+    nearest_amenity_distance_m: finiteNumber(station?.nearest_amenity_distance_m, Number.NaN),
+    amenity_category_counts: categoryCounts,
+    amenity_examples: catalogAmenityExamplesFromStation(station),
+    distance_m: finiteNumber(station?.distance_m, Number.NaN),
+  };
+  applyCatalogAmenityCounts(props, categoryCounts);
+  return prepareChargerFeature(
+    {
+      type: "Feature",
+      geometry: {
+        type: "Point",
+        coordinates: [lon, lat],
+      },
+      properties: props,
+    },
+    maxPowerKw >= DEFAULT_MIN_POWER_KW ? "fast" : "normal",
+  );
+}
+
+function catalogSearchMode() {
+  return Number(state.filters.minPower ?? DEFAULT_MIN_POWER_KW) < DEFAULT_MIN_POWER_KW
+    ? "local"
+    : "travel";
+}
+
+function catalogSearchQueryKey() {
+  if (!hasResolvedUserLocation()) {
+    return "";
+  }
+  const minPower = Number(state.filters.minPower ?? DEFAULT_MIN_POWER_KW);
+  return JSON.stringify({
+    lat: Number(state.userPos.lat).toFixed(5),
+    lon: Number(state.userPos.lon).toFixed(5),
+    radius_m: CATALOG_SEARCH_RADIUS_M,
+    limit: CATALOG_SEARCH_LIMIT,
+    mode: catalogSearchMode(),
+    country_code: CATALOG_COUNTRY_CODE,
+    min_power_kw: Number.isFinite(minPower) ? minPower : DEFAULT_MIN_POWER_KW,
+  });
+}
+
+async function loadCatalogStationsNearUserLocation({ force = false } = {}) {
+  if (!state.live.baseUrl || !hasResolvedUserLocation()) {
+    return;
   }
 
-  state.under50.error = null;
-  state.under50.loadingPromise = (async () => {
-    const response = await fetch("./data/chargers_under_50.geojson");
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    const geoData = await response.json();
-    const under50Features = (geoData.features || []).map((feature) =>
-      prepareChargerFeature(feature, "normal"),
-    );
-    state.features.push(...under50Features);
-    state.under50.loaded = true;
-    populateOperators();
-    renderAmenityFilters();
-  })();
+  const queryKey = catalogSearchQueryKey();
+  if (!force && queryKey && queryKey === state.catalog.lastQueryKey) {
+    return;
+  }
+
+  const searchSequence = ++catalogSearchSequence;
+  const minPowerKw = Number(state.filters.minPower ?? DEFAULT_MIN_POWER_KW);
+  state.catalog.loading = true;
+  state.catalog.error = null;
+  state.catalog.lastQueryKey = queryKey;
+  state.features = [];
+  state.filtered = [];
+  populateOperators();
+  renderAmenityFilters();
+  applyFilters();
 
   try {
-    await state.under50.loadingPromise;
+    const payload = await fetchJsonWithTimeout(
+      buildLiveApiUrl("/v1/catalog/search", {
+        lat: state.userPos.lat,
+        lon: state.userPos.lon,
+        radius_m: CATALOG_SEARCH_RADIUS_M,
+        limit: CATALOG_SEARCH_LIMIT,
+        mode: catalogSearchMode(),
+        country_code: CATALOG_COUNTRY_CODE,
+        min_power_kw: Number.isFinite(minPowerKw) ? minPowerKw : DEFAULT_MIN_POWER_KW,
+      }),
+      {},
+      LIVE_API_TIMEOUT_MS,
+    );
+    if (searchSequence !== catalogSearchSequence) {
+      return;
+    }
+    if (!payload || typeof payload !== "object" || !Array.isArray(payload.stations)) {
+      throw new Error("Unexpected catalog search payload");
+    }
+    const featuresByStationId = new Map();
+    payload.stations.forEach((station) => {
+      const feature = catalogStationToFeature(station);
+      const stationId = getStationIdFromProps(feature.properties);
+      const [lon, lat] = feature.geometry.coordinates || [];
+      if (!stationId || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lon))) {
+        return;
+      }
+      featuresByStationId.set(stationId, feature);
+    });
+    state.features = Array.from(featuresByStationId.values());
+    state.live.reachable = true;
   } catch (err) {
-    state.under50.error = err;
-    console.error("Failed to load under-50 kW charger data", err);
+    if (searchSequence !== catalogSearchSequence) {
+      return;
+    }
+    console.error("Failed to load live catalog station search", err);
+    state.features = [];
+    state.catalog.error = err;
   } finally {
-    state.under50.loadingPromise = null;
+    if (searchSequence === catalogSearchSequence) {
+      state.catalog.loading = false;
+      populateOperators();
+      renderAmenityFilters();
+      applyFilters();
+      syncDetailModalWithUrl();
+    }
   }
 }
 
@@ -1094,6 +1289,13 @@ function requestLiveSummariesForFeatures(features) {
   if (stationIds.length === 0) {
     return;
   }
+  const apiIdByStationId = new Map(stationIds.map((stationId) => [
+    stationId,
+    toLiveApiStationId(stationId),
+  ]));
+  const stationIdByApiId = new Map(
+    Array.from(apiIdByStationId.entries()).map(([stationId, apiId]) => [apiId, stationId]),
+  );
 
   const now = Date.now();
   const pendingIds = stationIds.filter((stationId) => {
@@ -1107,6 +1309,7 @@ function requestLiveSummariesForFeatures(features) {
   if (pendingIds.length === 0) {
     return;
   }
+  const pendingApiIds = pendingIds.map((stationId) => apiIdByStationId.get(stationId) || stationId);
 
   pendingIds.forEach((stationId) => {
     state.live.pendingSummaryStationIds.add(stationId);
@@ -1121,7 +1324,7 @@ function requestLiveSummariesForFeatures(features) {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ station_ids: pendingIds }),
+          body: JSON.stringify({ station_ids: pendingApiIds }),
         },
         LIVE_API_TIMEOUT_MS,
       );
@@ -1129,9 +1332,17 @@ function requestLiveSummariesForFeatures(features) {
         throw new Error("Unexpected live station lookup payload");
       }
       state.live.reachable = true;
+      const stations = payload.stations.map((station) => {
+        const apiId = String(station?.station_id || "").trim();
+        const appStationId = stationIdByApiId.get(apiId) || normalizeStationId(apiId);
+        return appStationId ? { ...station, station_id: appStationId } : station;
+      });
+      const missingStationIds = (payload.missing_station_ids || []).map((apiId) =>
+        stationIdByApiId.get(String(apiId || "").trim()) || normalizeStationId(apiId),
+      );
       const affectedStationIds = upsertLiveStationSummaries(
-        payload.stations,
-        payload.missing_station_ids || [],
+        stations,
+        missingStationIds,
       );
       refreshRenderedViews({ markerStationIds: affectedStationIds });
     } catch (err) {
@@ -1150,13 +1361,16 @@ function upsertRatingSummaries(summaries, missingStationIds = []) {
     if (!normalized) {
       return;
     }
-    const stationId = normalized.station_id;
-    state.ratingSummariesByStationId.set(stationId, normalized);
+    const stationId = normalizeStationId(normalized.station_id);
+    state.ratingSummariesByStationId.set(stationId, {
+      ...normalized,
+      station_id: stationId,
+    });
     state.ratingSummaryFetchedAtByStationId.set(stationId, Date.now());
   });
 
   missingStationIds.forEach((stationId) => {
-    const id = String(stationId || "").trim();
+    const id = normalizeStationId(stationId);
     if (!id) {
       return;
     }
@@ -1284,6 +1498,29 @@ function renderLocationGate(container, viewModel) {
   container.appendChild(createLocationPanel(viewModel));
 }
 
+function renderCatalogError(container) {
+  container.innerHTML = "";
+  const panel = document.createElement("section");
+  panel.className = "location-gate location-gate-error";
+  panel.setAttribute("data-nosnippet", "");
+  panel.innerHTML = `
+    <h3 class="location-gate-title">Ladepunkte konnten nicht geladen werden</h3>
+    <p class="location-gate-copy">Die Live-Suche ist gerade nicht erreichbar. Bitte versuche es erneut.</p>
+  `;
+  const actions = document.createElement("div");
+  actions.className = "location-gate-actions";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "primary-btn";
+  button.textContent = "Erneut laden";
+  button.addEventListener("click", () => {
+    void loadCatalogStationsNearUserLocation({ force: true });
+  });
+  actions.appendChild(button);
+  panel.appendChild(actions);
+  container.appendChild(panel);
+}
+
 function createLocationPanel(viewModel) {
   const panel = document.createElement("section");
   panel.className = `location-gate location-gate-${viewModel.kind}`;
@@ -1330,8 +1567,9 @@ async function loadLiveStationDetail(stationId) {
   }
 
   try {
+    const apiStationId = toLiveApiStationId(stationId);
     const payload = await fetchJsonWithTimeout(
-      buildLiveApiUrl(`/v1/stations/${encodeURIComponent(stationId)}`, {
+      buildLiveApiUrl(`/v1/stations/${encodeURIComponent(apiStationId)}`, {
         history_limit: 20,
       }),
       {},
@@ -1340,18 +1578,168 @@ async function loadLiveStationDetail(stationId) {
     if (!payload || typeof payload !== "object") {
       throw new Error("Unexpected station detail payload");
     }
+    const normalizedPayload = {
+      ...payload,
+      station: payload.station ? { ...payload.station, station_id: stationId } : payload.station,
+      evses: Array.isArray(payload.evses)
+        ? payload.evses.map((evse) => ({ ...evse, station_id: stationId }))
+        : payload.evses,
+    };
     state.live.reachable = true;
-    state.live.detailByStationId.set(stationId, payload);
-    if (feature && payload.station) {
-      applyLiveStationSummaryToProps(feature.properties, payload.station);
-      state.live.summaryByStationId.set(stationId, payload.station);
+    state.live.detailByStationId.set(stationId, normalizedPayload);
+    if (feature && normalizedPayload.station) {
+      applyLiveStationSummaryToProps(feature.properties, normalizedPayload.station);
+      state.live.summaryByStationId.set(stationId, normalizedPayload.station);
       state.live.summaryFetchedAtByStationId.set(stationId, Date.now());
     }
     refreshRenderedViews({ markerStationIds: [stationId] });
-    return payload;
+    return normalizedPayload;
   } catch (err) {
     console.error(`Failed to load live detail for station ${stationId}`, err);
     return null;
+  }
+}
+
+function catalogDetailLookupIds(stationId) {
+  const normalized = normalizeStationId(stationId);
+  const ids = [normalized];
+  const namespacedMatch = normalized.match(NAMESPACED_STATION_ID_RE);
+  if (namespacedMatch) {
+    ids.push(namespacedMatch[1].toLowerCase());
+  }
+  return Array.from(new Set(ids.filter(Boolean)));
+}
+
+async function fetchCatalogStationDetailPayload(stationId) {
+  let lastError = null;
+  for (const lookupId of catalogDetailLookupIds(stationId)) {
+    try {
+      return await fetchJsonWithTimeout(
+        buildLiveApiUrl(`/v1/catalog/stations/${encodeURIComponent(lookupId)}`),
+        {},
+        CATALOG_DETAIL_TIMEOUT_MS,
+      );
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError || new Error("catalog_station_detail_failed");
+}
+
+function applyCatalogStationDetailToFeature(feature, payload) {
+  if (!feature || !payload || typeof payload !== "object") {
+    return;
+  }
+
+  if (payload.station) {
+    const currentDistance = feature.properties?.distance_m;
+    const enriched = catalogStationToFeature(payload.station);
+    feature.geometry = enriched.geometry;
+    feature.properties = {
+      ...feature.properties,
+      ...enriched.properties,
+      distance_m: Number.isFinite(Number(enriched.properties.distance_m))
+        ? enriched.properties.distance_m
+        : currentDistance,
+    };
+  }
+
+  const props = feature.properties;
+  const amenities = payload.amenities && typeof payload.amenities === "object"
+    ? payload.amenities
+    : null;
+  if (amenities) {
+    props.amenities_total = Math.max(0, Math.round(finiteNumber(
+      amenities.amenities_total,
+      props.amenities_total || 0,
+    )));
+    props.nearest_amenity_kind = firstText(
+      amenities.nearest_amenity_kind,
+      props.nearest_amenity_kind,
+    );
+    props.nearest_amenity_name = firstText(
+      amenities.nearest_amenity_name,
+      props.nearest_amenity_name,
+    );
+    props.nearest_amenity_distance_m = finiteNumber(
+      amenities.nearest_amenity_distance_m,
+      props.nearest_amenity_distance_m,
+    );
+    if (amenities.amenity_category_counts && typeof amenities.amenity_category_counts === "object") {
+      props.amenity_category_counts = amenities.amenity_category_counts;
+      applyCatalogAmenityCounts(props, amenities.amenity_category_counts);
+    }
+    const examples = normalizeCatalogAmenityExamples(amenities.amenity_examples);
+    if (examples.length > 0) {
+      props.amenity_examples = examples;
+    }
+  }
+
+  const chargers = Array.isArray(payload.chargers) ? payload.chargers : [];
+  if (chargers.length > 0) {
+    props.connector_count = chargers.length;
+    props.charging_points_count = Math.max(getChargingPointCount(props), chargers.length);
+    const connectorTypes = Array.from(new Set(
+      chargers.map((charger) => firstText(charger.connector_type)).filter(Boolean),
+    ));
+    const currentTypes = Array.from(new Set(
+      chargers.map((charger) => firstText(charger.current_type)).filter(Boolean),
+    ));
+    if (connectorTypes.length > 0) {
+      props.connector_types_display = connectorTypes.join(", ");
+    }
+    if (currentTypes.length > 0) {
+      props.current_types_display = currentTypes.join(", ");
+    }
+  }
+}
+
+async function loadCatalogStationDetail(stationId) {
+  const normalizedStationId = normalizeStationId(stationId);
+  if (!state.live.baseUrl || !normalizedStationId) {
+    return null;
+  }
+  if (state.catalog.detailByStationId.has(normalizedStationId)) {
+    return state.catalog.detailByStationId.get(normalizedStationId);
+  }
+  if (state.catalog.pendingDetailStationIds.has(normalizedStationId)) {
+    return null;
+  }
+
+  state.catalog.pendingDetailStationIds.add(normalizedStationId);
+  try {
+    const payload = await fetchCatalogStationDetailPayload(normalizedStationId);
+    if (!payload || typeof payload !== "object" || !payload.station) {
+      throw new Error("Unexpected catalog station detail payload");
+    }
+
+    const payloadStationId = normalizeStationId(payload.station.station_id || normalizedStationId);
+    let feature = findFeatureByStationId(payloadStationId) || findFeatureByStationId(normalizedStationId);
+    if (!feature) {
+      feature = catalogStationToFeature(payload.station);
+      state.features.push(feature);
+    }
+    applyCatalogStationDetailToFeature(feature, payload);
+    const featureStationId = getStationIdFromProps(feature.properties) || payloadStationId || normalizedStationId;
+    state.catalog.detailByStationId.set(featureStationId, payload);
+    state.catalog.missingDetailStationIds.delete(featureStationId);
+    populateOperators();
+    renderAmenityFilters();
+    applyFilters();
+    if (
+      currentDetailFeature &&
+      getStationIdFromProps(currentDetailFeature.properties) === featureStationId &&
+      !els.modals.detail.classList.contains("hidden")
+    ) {
+      populateDetailContent(feature, state.live.detailByStationId.get(featureStationId) || null);
+    }
+    return payload;
+  } catch (err) {
+    console.warn(`Failed to load catalog detail for station ${normalizedStationId}`, err);
+    state.catalog.missingDetailStationIds.add(normalizedStationId);
+    return null;
+  } finally {
+    state.catalog.pendingDetailStationIds.delete(normalizedStationId);
   }
 }
 
@@ -1391,7 +1779,7 @@ function populateOperators() {
   });
 
   const operators = Array.from(operatorCounts.entries())
-    .filter(([, stations]) => stations >= 100) // Only major ones
+    .filter(([, stations]) => stations >= 1)
     .map(([name]) => name)
     .sort();
 
@@ -1668,7 +2056,7 @@ function initFilters() {
   els.filter.power.addEventListener("input", (e) => {
     state.filters.minPower = Number(e.target.value);
     els.filter.powerVal.textContent = state.filters.minPower;
-    updateFilters();
+    updateFilters({ reloadCatalog: true });
   });
 }
 
@@ -1721,15 +2109,10 @@ function renderAmenityFilters() {
   });
 }
 
-function updateFilters() {
-  if (shouldIncludeUnder50Features() && !state.under50.loaded) {
-    if (els.views.list.classList.contains("active")) {
-      els.lists.chargers.innerHTML = `<div class="loading-state" data-nosnippet>Lade Normalladepunkte...</div>`;
-    }
-    void ensureUnder50FeaturesLoaded().then(() => {
-      applyFilters();
-      updateFilterLabel();
-    });
+function updateFilters(options = {}) {
+  const { reloadCatalog = false } = options;
+  if (reloadCatalog && hasResolvedUserLocation()) {
+    void loadCatalogStationsNearUserLocation({ force: true }).then(updateFilterLabel);
     updateFilterLabel();
     return;
   }
@@ -1840,8 +2223,14 @@ function renderList() {
     renderLocationGate(container, locationViewModel);
     return;
   }
-  if (!hasResolvedUserLocation() && (locationViewModel.title || locationViewModel.message)) {
-    container.appendChild(createLocationPanel(locationViewModel));
+
+  if (state.catalog.loading) {
+    container.innerHTML = `<div class="loading-state" data-nosnippet>Lade Ladestationen im Umkreis von 20 km...</div>`;
+    return;
+  }
+  if (state.catalog.error) {
+    renderCatalogError(container);
+    return;
   }
 
   // Keep the web list aligned with the native apps.
@@ -1881,21 +2270,36 @@ function renderFavorites() {
     return;
   }
 
-  const hasMissingFavorite = Array.from(state.favorites).some((stationId) =>
-    !findFeatureByStationId(stationId),
-  );
-  if (hasMissingFavorite && !state.under50.loaded && !state.under50.error) {
-    container.innerHTML = `<div class="loading-state" data-nosnippet>Lade Favoriten...</div>`;
-    void ensureUnder50FeaturesLoaded().then(renderFavorites);
+  if (!hasResolvedUserLocation()) {
+    renderLocationGate(container, getLocationListViewModel());
+    return;
+  }
+  if (state.catalog.loading) {
+    container.innerHTML = `<div class="loading-state" data-nosnippet>Lade Favoriten im aktuellen Umkreis...</div>`;
+    return;
+  }
+  if (state.catalog.error) {
+    renderCatalogError(container);
     return;
   }
 
+  const hasMissingFavorite = Array.from(state.favorites).some((stationId) =>
+    !findFeatureByStationId(stationId),
+  );
+
   // Find feature objects for favorites
   const favFeatures = state.features.filter((f) =>
-    state.favorites.has(f.properties.station_id),
+    state.favorites.has(getStationIdFromProps(f.properties)),
   );
 
   favFeatures.sort(compareFavoriteFeatures);
+
+  if (favFeatures.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="text-align:center; padding:2rem; color:#888;">
+      Deine Favoriten liegen nicht im aktuellen 20-km-Umkreis.
+    </div>`;
+    return;
+  }
 
   favFeatures.forEach((feature) => {
     const card = createStationCard(feature, { showNote: true });
@@ -1903,6 +2307,16 @@ function renderFavorites() {
   });
   requestLiveSummariesForFeatures(favFeatures);
   requestRatingSummariesForFeatures(favFeatures);
+
+  if (hasMissingFavorite) {
+    const note = document.createElement("div");
+    note.className = "empty-state";
+    note.style.textAlign = "center";
+    note.style.padding = "1rem";
+    note.style.color = "#888";
+    note.textContent = "Einige Favoriten liegen außerhalb des aktuellen 20-km-Umkreises.";
+    container.appendChild(note);
+  }
 }
 
 function createStationCard(feature, options = {}) {
@@ -2477,6 +2891,7 @@ function openDetail(feature, options = {}) {
 
   const stationId = getStationIdFromProps(p);
   if (stationId) {
+    void loadCatalogStationDetail(stationId);
     void loadLiveStationDetail(stationId);
     requestRatingSummariesForFeatures([feature]);
   }
@@ -2789,6 +3204,15 @@ function normalizeStationId(value) {
   return stationId;
 }
 
+function toLiveApiStationId(value) {
+  const stationId = normalizeStationId(value);
+  const namespacedMatch = stationId.match(NAMESPACED_STATION_ID_RE);
+  if (namespacedMatch) {
+    return namespacedMatch[1].toLowerCase();
+  }
+  return stationId;
+}
+
 function getRequestedStationId() {
   const params = new URLSearchParams(window.location.search);
   return normalizeStationId(params.get("station") || "");
@@ -2813,7 +3237,10 @@ function updateRequestedStationId(stationId) {
 }
 
 function findFeatureByStationId(stationId) {
-  return state.features.find((feature) => feature.properties.station_id === stationId) || null;
+  const normalizedStationId = normalizeStationId(stationId);
+  return state.features.find((feature) =>
+    normalizeStationId(feature.properties?.station_id || "") === normalizedStationId,
+  ) || null;
 }
 
 function syncDetailModalWithUrl() {
@@ -2828,14 +3255,14 @@ function syncDetailModalWithUrl() {
     }
     return;
   }
-  if (!state.features.length) {
-    return;
-  }
-
   const feature = findFeatureByStationId(stationId);
   if (!feature) {
-    if (!state.under50.loaded && !state.under50.error) {
-      void ensureUnder50FeaturesLoaded().then(syncDetailModalWithUrl);
+    if (
+      state.live.baseUrl &&
+      !state.catalog.pendingDetailStationIds.has(stationId) &&
+      !state.catalog.missingDetailStationIds.has(stationId)
+    ) {
+      void loadCatalogStationDetail(stationId).then(syncDetailModalWithUrl);
       return;
     }
     console.warn("Unknown station requested", stationId);
@@ -2989,11 +3416,11 @@ async function requestUserLocation() {
       errorCode: "",
     });
     updateUserMarker();
-    applyFilters();
 
     if (state.views.map) {
       state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
     }
+    await loadCatalogStationsNearUserLocation({ force: true });
   } catch (err) {
     console.warn("Location error", err);
     updateLocationState({
@@ -3015,7 +3442,11 @@ function loadFavorites() {
     const raw = localStorage.getItem("woladen_favs");
     if (raw) {
       const arr = JSON.parse(raw);
-      state.favorites = new Set(arr);
+      state.favorites = new Set(
+        Array.isArray(arr)
+          ? arr.map(normalizeStationId).filter(Boolean)
+          : [],
+      );
     }
   } catch (e) {
     console.error("Error loading favorites", e);
@@ -3024,7 +3455,11 @@ function loadFavorites() {
 
 function loadRatings() {
   try {
-    state.ratings = parseStoredRatings(localStorage.getItem(RATINGS_STORAGE_KEY));
+    state.ratings = new Map(
+      Array.from(parseStoredRatings(localStorage.getItem(RATINGS_STORAGE_KEY)).entries())
+        .map(([stationId, rating]) => [normalizeStationId(stationId), rating])
+        .filter(([stationId]) => stationId),
+    );
   } catch (e) {
     console.error("Error loading ratings", e);
     state.ratings = new Map();
@@ -3033,7 +3468,11 @@ function loadRatings() {
 
 function loadNotes() {
   try {
-    state.notes = parseStoredNotes(localStorage.getItem(NOTES_STORAGE_KEY));
+    state.notes = new Map(
+      Array.from(parseStoredNotes(localStorage.getItem(NOTES_STORAGE_KEY)).entries())
+        .map(([stationId, note]) => [normalizeStationId(stationId), note])
+        .filter(([stationId]) => stationId),
+    );
   } catch (e) {
     console.error("Error loading notes", e);
     state.notes = new Map();

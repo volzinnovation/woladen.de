@@ -36,7 +36,7 @@ test("browser location lookup resolves coordinates from geolocation", async () =
   });
 });
 
-test("station list stays usable until a location is available", () => {
+test("station list waits for a location before loading nearby stations", () => {
   const waiting = getLocationLookupViewModel({
     hasLocation: false,
     permissionState: "prompt",
@@ -48,8 +48,9 @@ test("station list stays usable until a location is available", () => {
     geolocationSupported: true,
   });
 
-  assert.equal(waiting.blocksStationList, false);
+  assert.equal(waiting.blocksStationList, true);
   assert.equal(waiting.actionLabel, "Standort freigeben");
+  assert.match(waiting.message, /20 km/);
   assert.equal(ready.blocksStationList, false);
 });
 
@@ -63,21 +64,21 @@ test("missing location access shows the denied-permission message", () => {
   });
 
   assert.equal(error.code, LOCATION_ERROR_PERMISSION_DENIED);
-  assert.equal(viewModel.blocksStationList, false);
+  assert.equal(viewModel.blocksStationList, true);
   assert.equal(viewModel.title, "Standortfreigabe benötigt");
   assert.match(viewModel.message, /Aktiviere den Standortzugriff/);
 });
 
-test("unavailable browser position does not block the station list", () => {
+test("unavailable browser position blocks live station search until retried", () => {
   const viewModel = getLocationLookupViewModel({
     hasLocation: false,
     errorCode: LOCATION_ERROR_POSITION_UNAVAILABLE,
     geolocationSupported: true,
   });
 
-  assert.equal(viewModel.blocksStationList, false);
+  assert.equal(viewModel.blocksStationList, true);
   assert.equal(viewModel.actionLabel, "Erneut versuchen");
-  assert.match(viewModel.message, /ohne Entfernungssortierung/);
+  assert.match(viewModel.message, /Browser einen Standort liefern kann/);
 });
 
 test("startup location request runs unless access is blocked or already resolved", () => {

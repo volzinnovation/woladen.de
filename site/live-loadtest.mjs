@@ -3,7 +3,7 @@ import {
   resolveLiveApiBaseUrl,
 } from "./live-api.mjs";
 
-const DEFAULT_BASE_URL = "https://live.woladen.de";
+const DEFAULT_BASE_URL = "https://live-eu.woladen.de";
 const DEFAULT_LOOKUP_STATION_IDS = [
   "de_bw_000001",
   "de_by_000001",
