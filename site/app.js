@@ -18,9 +18,9 @@ import {
   requestBrowserLocation,
 } from "./location.mjs?v=20260618-live-eu-catalog-search";
 import {
-  normalizeLiveApiBaseUrl,
+  resolveGermanLiveApiBaseUrl as computeGermanLiveApiBaseUrl,
   resolveLiveApiBaseUrl as computeLiveApiBaseUrl,
-} from "./live-api.mjs?v=20260618-live-eu-catalog-search";
+} from "./live-api.mjs?v=20260618-split-live-routing";
 import {
   formatRatingCount,
   formatRatingValue,
@@ -254,7 +254,23 @@ function resolveLiveApiBaseUrl() {
   return resolved;
 }
 
+function resolveGermanLiveApiBaseUrl() {
+  const configuredValue = typeof window.WOLADEN_DE_LIVE_API_BASE_URL === "string"
+    ? window.WOLADEN_DE_LIVE_API_BASE_URL.trim()
+    : "";
+  const resolved = computeGermanLiveApiBaseUrl({
+    configuredValue,
+    locationHref: window.location.href,
+    locationHostname: window.location.hostname,
+  });
+  if (!resolved && configuredValue) {
+    console.warn("Ignoring invalid German live API base URL", configuredValue);
+  }
+  return resolved;
+}
+
 const LIVE_API_BASE_URL = resolveLiveApiBaseUrl();
+const LIVE_DE_API_BASE_URL = resolveGermanLiveApiBaseUrl();
 
 function normalizeAvailabilityStatus(value) {
   const raw = String(value || "").trim();
@@ -758,6 +774,7 @@ const state = {
   },
   live: {
     baseUrl: LIVE_API_BASE_URL,
+    deBaseUrl: LIVE_DE_API_BASE_URL,
     summaryByStationId: new Map(),
     summaryFetchedAtByStationId: new Map(),
     pendingSummaryStationIds: new Set(),
@@ -1249,8 +1266,8 @@ async function loadCatalogStationsForCurrentCenter({ force = false } = {}) {
   }
 }
 
-function buildLiveApiUrl(path, params = {}) {
-  const url = new URL(path, state.live.baseUrl);
+function buildApiUrl(baseUrl, path, params = {}) {
+  const url = new URL(path, baseUrl);
   Object.entries(params).forEach(([key, value]) => {
     if (value === undefined || value === null || value === "") {
       return;
@@ -1258,6 +1275,14 @@ function buildLiveApiUrl(path, params = {}) {
     url.searchParams.set(key, String(value));
   });
   return url.toString();
+}
+
+function buildLiveApiUrl(path, params = {}) {
+  return buildApiUrl(state.live.baseUrl, path, params);
+}
+
+function buildStationLiveApiUrl(stationId, path, params = {}) {
+  return buildApiUrl(liveApiBaseUrlForStationId(stationId), path, params);
 }
 
 async function fetchJsonWithTimeout(url, options = {}, timeoutMs = LIVE_API_TIMEOUT_MS) {
@@ -1317,7 +1342,7 @@ function upsertLiveStationSummaries(stations, missingStationIds = []) {
 }
 
 function requestLiveSummariesForFeatures(features) {
-  if (!state.live.baseUrl) {
+  if (!state.live.baseUrl && !state.live.deBaseUrl) {
     return;
   }
 
@@ -1350,48 +1375,65 @@ function requestLiveSummariesForFeatures(features) {
   if (pendingIds.length === 0) {
     return;
   }
-  const pendingApiIds = pendingIds.map((stationId) => apiIdByStationId.get(stationId) || stationId);
 
   pendingIds.forEach((stationId) => {
     state.live.pendingSummaryStationIds.add(stationId);
   });
 
   void (async () => {
+    const affectedStationIds = [];
     try {
-      const payload = await fetchJsonWithTimeout(
-        buildLiveApiUrl("/v1/stations/lookup"),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ station_ids: pendingApiIds }),
-        },
-        LIVE_API_TIMEOUT_MS,
-      );
-      if (!payload || typeof payload !== "object" || !Array.isArray(payload.stations)) {
-        throw new Error("Unexpected live station lookup payload");
-      }
-      state.live.reachable = true;
-      const stations = payload.stations.map((station) => {
-        const apiId = String(station?.station_id || "").trim();
-        const appStationId = stationIdByApiId.get(apiId) || normalizeStationId(apiId);
-        return appStationId ? { ...station, station_id: appStationId } : station;
-      });
-      const missingStationIds = (payload.missing_station_ids || []).map((apiId) =>
-        stationIdByApiId.get(String(apiId || "").trim()) || normalizeStationId(apiId),
-      );
-      const affectedStationIds = upsertLiveStationSummaries(
-        stations,
-        missingStationIds,
-      );
-      refreshRenderedViews({ markerStationIds: affectedStationIds });
+      const groupedIds = groupStationIdsByLiveApiBaseUrl(pendingIds);
+      await Promise.all(Array.from(groupedIds.entries()).map(async ([baseUrl, groupedStationIds]) => {
+        const groupedApiIds = groupedStationIds.map((stationId) =>
+          apiIdByStationId.get(stationId) || stationId,
+        );
+        try {
+          const payload = await fetchJsonWithTimeout(
+            buildApiUrl(baseUrl, "/v1/stations/lookup"),
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ station_ids: groupedApiIds }),
+            },
+            LIVE_API_TIMEOUT_MS,
+          );
+          if (!payload || typeof payload !== "object" || !Array.isArray(payload.stations)) {
+            throw new Error("Unexpected live station lookup payload");
+          }
+          state.live.reachable = true;
+          const stations = payload.stations.map((station) => {
+            const apiId = String(station?.station_id || "").trim();
+            const normalizedApiId = normalizeStationId(apiId);
+            const appStationId = stationIdByApiId.get(apiId) ||
+              stationIdByApiId.get(normalizedApiId) ||
+              normalizedApiId;
+            return appStationId ? { ...station, station_id: appStationId } : station;
+          });
+          const missingStationIds = (payload.missing_station_ids || []).map((apiId) => {
+            const rawApiId = String(apiId || "").trim();
+            const normalizedApiId = normalizeStationId(rawApiId);
+            return stationIdByApiId.get(rawApiId) || stationIdByApiId.get(normalizedApiId) || normalizedApiId;
+          });
+          affectedStationIds.push(...upsertLiveStationSummaries(
+            stations,
+            missingStationIds,
+          ));
+        } catch (err) {
+          console.error(`Failed to load live station summaries from ${baseUrl}`, err);
+        }
+      }));
     } catch (err) {
       console.error("Failed to load live station summaries", err);
     } finally {
       pendingIds.forEach((stationId) => {
         state.live.pendingSummaryStationIds.delete(stationId);
       });
+      if (affectedStationIds.length > 0) {
+        refreshRenderedViews({ markerStationIds: Array.from(new Set(affectedStationIds)) });
+      }
     }
   })();
 }
@@ -1596,7 +1638,7 @@ function createLocationPanel(viewModel) {
 }
 
 async function loadLiveStationDetail(stationId) {
-  if (!state.live.baseUrl || !stationId) {
+  if (!stationId || !liveApiBaseUrlForStationId(stationId)) {
     return null;
   }
   const feature = findFeatureByStationId(stationId);
@@ -1610,7 +1652,7 @@ async function loadLiveStationDetail(stationId) {
   try {
     const apiStationId = toLiveApiStationId(stationId);
     const payload = await fetchJsonWithTimeout(
-      buildLiveApiUrl(`/v1/stations/${encodeURIComponent(apiStationId)}`, {
+      buildStationLiveApiUrl(stationId, `/v1/stations/${encodeURIComponent(apiStationId)}`, {
         history_limit: 20,
       }),
       {},
@@ -3286,12 +3328,37 @@ function normalizeStationId(value) {
 }
 
 function toLiveApiStationId(value) {
-  const stationId = normalizeStationId(value);
-  const namespacedMatch = stationId.match(NAMESPACED_STATION_ID_RE);
-  if (namespacedMatch) {
-    return namespacedMatch[1].toLowerCase();
+  return normalizeStationId(value);
+}
+
+function isGermanStationId(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return false;
   }
-  return stationId;
+  return LEGACY_STATION_ID_RE.test(raw) || /^DE:/i.test(normalizeStationId(raw));
+}
+
+function liveApiBaseUrlForStationId(stationId) {
+  if (isGermanStationId(stationId)) {
+    return state.live.deBaseUrl || state.live.baseUrl;
+  }
+  return state.live.baseUrl;
+}
+
+function groupStationIdsByLiveApiBaseUrl(stationIds) {
+  const groups = new Map();
+  stationIds.forEach((stationId) => {
+    const baseUrl = liveApiBaseUrlForStationId(stationId);
+    if (!baseUrl) {
+      return;
+    }
+    if (!groups.has(baseUrl)) {
+      groups.set(baseUrl, []);
+    }
+    groups.get(baseUrl).push(stationId);
+  });
+  return groups;
 }
 
 function getRequestedStationId() {

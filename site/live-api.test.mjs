@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 
 import {
   normalizeLiveApiBaseUrl,
+  queryGermanLiveApiBaseUrl,
   queryLiveApiBaseUrl,
+  resolveGermanLiveApiBaseUrl,
   resolveLiveApiBaseUrl,
 } from "./live-api.mjs";
 
@@ -16,6 +18,13 @@ test("queryLiveApiBaseUrl reads the explicit local override", () => {
   assert.equal(
     queryLiveApiBaseUrl("http://127.0.0.1:4173/?station=abc&liveApiBaseUrl=http://127.0.0.1:8001"),
     "http://127.0.0.1:8001",
+  );
+});
+
+test("queryGermanLiveApiBaseUrl reads the explicit German backend override", () => {
+  assert.equal(
+    queryGermanLiveApiBaseUrl("http://127.0.0.1:4173/?deLiveApiBaseUrl=http://127.0.0.1:8002"),
+    "http://127.0.0.1:8002",
   );
 });
 
@@ -49,5 +58,38 @@ test("resolveLiveApiBaseUrl maps the public site to live-eu", () => {
       locationHostname: "woladen.de",
     }),
     "https://live-eu.woladen.de",
+  );
+});
+
+test("resolveGermanLiveApiBaseUrl maps German live data to live.woladen.de", () => {
+  assert.equal(
+    resolveGermanLiveApiBaseUrl({
+      configuredValue: "",
+      locationHref: "https://woladen.de/",
+      locationHostname: "woladen.de",
+    }),
+    "https://live.woladen.de",
+  );
+});
+
+test("resolveGermanLiveApiBaseUrl keeps local single-backend override behavior", () => {
+  assert.equal(
+    resolveGermanLiveApiBaseUrl({
+      configuredValue: "",
+      locationHref: "http://127.0.0.1:4173/?liveApiBaseUrl=http://127.0.0.1:8001",
+      locationHostname: "127.0.0.1",
+    }),
+    "http://127.0.0.1:8001",
+  );
+});
+
+test("resolveGermanLiveApiBaseUrl prefers the German-specific override", () => {
+  assert.equal(
+    resolveGermanLiveApiBaseUrl({
+      configuredValue: "",
+      locationHref: "http://127.0.0.1:4173/?liveApiBaseUrl=http://127.0.0.1:8001&deLiveApiBaseUrl=http://127.0.0.1:8002",
+      locationHostname: "127.0.0.1",
+    }),
+    "http://127.0.0.1:8002",
   );
 });
