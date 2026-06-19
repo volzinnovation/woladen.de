@@ -3953,11 +3953,15 @@ function updateFavBtnState() {
 
   if (isFav) {
     els.detail.favBtn.classList.add("active");
+    els.detail.favBtn.setAttribute("aria-pressed", "true");
+    els.detail.favBtn.setAttribute("aria-label", "Favorit entfernen");
     els.detail.favBtn
       .querySelector("polygon")
       .setAttribute("fill", "currentColor");
   } else {
     els.detail.favBtn.classList.remove("active");
+    els.detail.favBtn.setAttribute("aria-pressed", "false");
+    els.detail.favBtn.setAttribute("aria-label", "Favorit speichern");
     els.detail.favBtn.querySelector("polygon").setAttribute("fill", "none");
   }
 }

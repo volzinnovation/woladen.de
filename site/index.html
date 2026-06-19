@@ -444,7 +444,14 @@
         <div class="modal-content bottom-sheet">
           <header class="modal-header">
             <h3>Filter</h3>
-            <button class="close-btn" data-close="modal-filter">&times;</button>
+            <button
+              class="close-btn"
+              data-close="modal-filter"
+              type="button"
+              aria-label="Filter schließen"
+            >
+              &times;
+            </button>
           </header>
           <div class="modal-body">
             <label class="filter-group">
@@ -510,7 +517,12 @@
       <!-- DETAIL MODAL -->
       <div id="modal-detail" class="modal-overlay hidden">
         <div class="modal-content full-sheet">
-          <button class="close-btn-float" data-close="modal-detail">
+          <button
+            class="close-btn-float"
+            data-close="modal-detail"
+            type="button"
+            aria-label="Details schließen"
+          >
             <svg
               width="24"
               height="24"
@@ -539,7 +551,9 @@
               <button
                 id="btn-toggle-fav"
                 class="fav-btn-round"
-                aria-label="Favorit"
+                type="button"
+                aria-label="Favorit speichern"
+                aria-pressed="false"
               >
                 <svg
                   width="24"
@@ -718,7 +732,12 @@
 
       <div id="modal-amenity-detail" class="modal-overlay hidden">
         <div class="modal-content amenity-detail-sheet" role="dialog" aria-modal="true" aria-labelledby="amenity-sheet-title">
-          <button class="close-btn-float" data-close="modal-amenity-detail" aria-label="Schließen">
+          <button
+            class="close-btn-float"
+            data-close="modal-amenity-detail"
+            type="button"
+            aria-label="Angebot schließen"
+          >
             <svg
               width="24"
               height="24"
