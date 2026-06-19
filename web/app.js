@@ -33,6 +33,10 @@ import {
   normalizeMappedCountries,
 } from "./open-static-ui.mjs?v=20260618-commercial-merge";
 import {
+  getMapKeyboardAction,
+  performMapKeyboardAction,
+} from "./map-keyboard.mjs?v=20260618-keyboard-restore";
+import {
   formatRatingCount,
   formatRatingValue,
   getUserRating,
@@ -826,6 +830,9 @@ const state = {
     results: [],
     suggestionTimer: 0,
   },
+  keyboard: {
+    selectedStationId: "",
+  },
   occupancyHistory: {
     byStationId: new Map(),
     availableStationIds: null,
@@ -978,6 +985,7 @@ async function init() {
   els.detail.ratingStars.addEventListener("click", handleRatingClick);
   els.detail.noteInput.addEventListener("input", handleDetailNoteInput);
   els.favorites.sort.addEventListener("change", handleFavoriteSortChange);
+  document.addEventListener("keydown", handleGlobalKeydown);
 
   // Load Data
   await loadData();
@@ -1091,6 +1099,14 @@ function submitLocationSearch(options = {}) {
   if (returnToMap) {
     focusMapKeyboardNavigation();
   }
+}
+
+function focusLocationSearchInput() {
+  if (!els.search.input) {
+    return;
+  }
+  els.search.input.focus({ preventScroll: true });
+  els.search.input.select();
 }
 
 function focusMapKeyboardNavigation() {
@@ -2768,7 +2784,7 @@ function renderList() {
   }
 
   // Keep the web list aligned with the native apps.
-  const displayItems = state.filtered.slice(0, LIST_VIEW_MAX_STATIONS);
+  const displayItems = getListDisplayItems();
 
   if (displayItems.length === 0) {
     container.innerHTML = `<div class="empty-state">Keine Ladestationen gefunden.</div>`;
@@ -2855,8 +2871,19 @@ function renderFavorites() {
 
 function createStationCard(feature, options = {}) {
   const p = feature.properties;
+  const stationId = getStationIdFromProps(p);
   const div = document.createElement("div");
   div.className = "station-card";
+  div.tabIndex = 0;
+  div.setAttribute("role", "button");
+  div.dataset.stationId = stationId;
+  div.setAttribute("aria-label", `Details öffnen: ${p.operator || "Ladestation"} ${p.city || ""}`.trim());
+  if (stationId && state.keyboard.selectedStationId === stationId) {
+    div.classList.add("keyboard-selected");
+    div.setAttribute("aria-selected", "true");
+  } else {
+    div.setAttribute("aria-selected", "false");
+  }
 
   const distance = getDistanceFormatted(feature);
   const occupancySummary = formatOccupancySummary(p);
@@ -2913,8 +2940,141 @@ function createStationCard(feature, options = {}) {
     ${noteMarkup}
   `;
 
-  div.addEventListener("click", () => openDetail(feature));
+  div.addEventListener("click", () => {
+    state.keyboard.selectedStationId = stationId;
+    openDetail(feature);
+  });
+  div.addEventListener("focus", () => {
+    if (stationId) {
+      state.keyboard.selectedStationId = stationId;
+      updateListKeyboardSelection();
+    }
+  });
   return div;
+}
+
+function getListDisplayItems() {
+  return state.filtered.slice(0, LIST_VIEW_MAX_STATIONS);
+}
+
+function isEditableKeyTarget(target) {
+  if (!target || !(target instanceof HTMLElement)) {
+    return false;
+  }
+  const tagName = target.tagName.toLowerCase();
+  return target.isContentEditable || ["input", "select", "textarea"].includes(tagName);
+}
+
+function isModalOpen(name) {
+  return Boolean(els.modals[name] && !els.modals[name].classList.contains("hidden"));
+}
+
+function isAnyModalOpen() {
+  return Object.values(els.modals).some((modal) => modal && !modal.classList.contains("hidden"));
+}
+
+function handleGlobalKeydown(event) {
+  if (event.defaultPrevented || isEditableKeyTarget(event.target)) {
+    return;
+  }
+  if (event.key === "Escape" && isModalOpen("amenityDetail")) {
+    event.preventDefault();
+    closeModal("amenityDetail");
+    return;
+  }
+  if (event.key === "Escape" && isModalOpen("detail")) {
+    event.preventDefault();
+    closeModal("detail");
+    focusSelectedListCard();
+    return;
+  }
+  if (event.key === "Escape" && isModalOpen("filter")) {
+    event.preventDefault();
+    closeModal("filter");
+    return;
+  }
+  if (handleMapKeyboardEvent(event)) {
+    return;
+  }
+  if (!els.views.list.classList.contains("active") || isAnyModalOpen()) {
+    return;
+  }
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    moveListKeyboardSelection(event.key === "ArrowDown" ? 1 : -1);
+    return;
+  }
+  if (event.key === "Enter") {
+    const feature = selectedListFeature();
+    if (feature) {
+      event.preventDefault();
+      openDetail(feature);
+    }
+  }
+}
+
+function handleMapKeyboardEvent(event) {
+  if (!els.views.map.classList.contains("active") || isAnyModalOpen() || !state.views.map) {
+    return false;
+  }
+  const action = getMapKeyboardAction(event.key);
+  if (!action) {
+    return false;
+  }
+  event.preventDefault();
+  return performMapKeyboardAction(action, state.views.map, {
+    focusSearchInput: focusLocationSearchInput,
+  });
+}
+
+function selectedListFeature() {
+  const selectedStationId = state.keyboard.selectedStationId;
+  if (!selectedStationId) {
+    return null;
+  }
+  return getListDisplayItems().find(
+    (feature) => getStationIdFromProps(feature.properties) === selectedStationId,
+  ) || null;
+}
+
+function moveListKeyboardSelection(delta) {
+  const displayItems = getListDisplayItems();
+  if (displayItems.length === 0) {
+    state.keyboard.selectedStationId = "";
+    return;
+  }
+  const selectedIndex = displayItems.findIndex(
+    (feature) => getStationIdFromProps(feature.properties) === state.keyboard.selectedStationId,
+  );
+  const fallbackIndex = delta > 0 ? -1 : displayItems.length;
+  const nextIndex = Math.max(
+    0,
+    Math.min(displayItems.length - 1, (selectedIndex >= 0 ? selectedIndex : fallbackIndex) + delta),
+  );
+  state.keyboard.selectedStationId = getStationIdFromProps(displayItems[nextIndex].properties);
+  updateListKeyboardSelection();
+  focusSelectedListCard();
+}
+
+function updateListKeyboardSelection() {
+  els.lists.chargers.querySelectorAll(".station-card").forEach((card) => {
+    const isSelected = card.dataset.stationId === state.keyboard.selectedStationId;
+    card.classList.toggle("keyboard-selected", isSelected);
+    card.setAttribute("aria-selected", isSelected ? "true" : "false");
+  });
+}
+
+function focusSelectedListCard() {
+  if (!state.keyboard.selectedStationId || !els.views.list.classList.contains("active")) {
+    return;
+  }
+  const card = Array.from(els.lists.chargers.querySelectorAll(".station-card"))
+    .find((candidate) => candidate.dataset.stationId === state.keyboard.selectedStationId);
+  if (!card) {
+    return;
+  }
+  card.focus({ preventScroll: true });
+  card.scrollIntoView({ block: "nearest" });
 }
 
 function compareFavoriteFeatures(a, b) {
