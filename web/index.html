@@ -84,7 +84,15 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css?v=20260618-commercial-merge" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    />
+    <link rel="stylesheet" href="./styles.css?v=20260619-audit-accessibility" />
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -92,7 +100,11 @@
       <main class="viewport">
         <!-- MAP VIEW -->
         <div id="view-map" class="view hidden">
-          <div id="map"></div>
+          <div
+            id="map"
+            role="region"
+            aria-label="Karte mit Ladestationen. Nutze die Liste für eine barriereärmere Ergebnisansicht."
+          ></div>
 
           <!-- Floating Controls for Map -->
           <div class="map-controls-overlay" data-nosnippet>
@@ -157,6 +169,7 @@
                     d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"
                   />
                 </svg>
+                <span id="filter-active-label" class="filter-active-label" hidden></span>
                 <span id="filter-count" class="filter-count" hidden>0</span>
               </button>
             </div>
@@ -368,7 +381,7 @@
         role="navigation"
         aria-label="Hauptnavigation"
       >
-        <button class="nav-item active" data-target="view-list">
+        <button class="nav-item active" data-target="view-list" type="button" aria-current="page">
           <svg
             class="nav-icon"
             viewBox="0 0 24 24"
@@ -387,7 +400,7 @@
           </svg>
           <span>Liste</span>
         </button>
-        <button class="nav-item" data-target="view-map">
+        <button class="nav-item" data-target="view-map" type="button">
           <svg
             class="nav-icon"
             viewBox="0 0 24 24"
@@ -405,7 +418,7 @@
           </svg>
           <span>Karte</span>
         </button>
-        <button class="nav-item" data-target="view-favorites">
+        <button class="nav-item" data-target="view-favorites" type="button">
           <svg
             class="nav-icon"
             viewBox="0 0 24 24"
@@ -421,7 +434,7 @@
           </svg>
           <span>Favoriten</span>
         </button>
-        <button class="nav-item" data-target="view-info">
+        <button class="nav-item" data-target="view-info" type="button">
           <svg
             class="nav-icon"
             viewBox="0 0 24 24"
@@ -441,9 +454,15 @@
 
       <!-- FILTER MODAL (Overlay) -->
       <div id="modal-filter" class="modal-overlay hidden">
-        <div class="modal-content bottom-sheet">
+        <div
+          class="modal-content bottom-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="filter-modal-title"
+          tabindex="-1"
+        >
           <header class="modal-header">
-            <h3>Filter</h3>
+            <h3 id="filter-modal-title">Filter</h3>
             <button
               class="close-btn"
               data-close="modal-filter"
@@ -516,7 +535,13 @@
 
       <!-- DETAIL MODAL -->
       <div id="modal-detail" class="modal-overlay hidden">
-        <div class="modal-content full-sheet">
+        <div
+          class="modal-content full-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="detail-title"
+          tabindex="-1"
+        >
           <button
             class="close-btn-float"
             data-close="modal-detail"
@@ -731,7 +756,13 @@
       </div>
 
       <div id="modal-amenity-detail" class="modal-overlay hidden">
-        <div class="modal-content amenity-detail-sheet" role="dialog" aria-modal="true" aria-labelledby="amenity-sheet-title">
+        <div
+          class="modal-content amenity-detail-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="amenity-sheet-title"
+          tabindex="-1"
+        >
           <button
             class="close-btn-float"
             data-close="modal-amenity-detail"
@@ -773,7 +804,8 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <script src="./app-install-promo.js"></script>
-    <script src="./app.js?v=20260618-commercial-merge" type="module"></script>
+    <script src="./app.js?v=20260619-audit-accessibility" type="module"></script>
   </body>
 </html>

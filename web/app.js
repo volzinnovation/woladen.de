@@ -78,6 +78,9 @@ const CATALOG_SEARCH_LIMIT = 100;
 const CATALOG_DETAIL_TIMEOUT_MS = 4500;
 const CATALOG_MAP_MOVE_DEBOUNCE_MS = 450;
 const CATALOG_MIN_RELOAD_DISTANCE_M = 1000;
+const STATIC_FALLBACK_LIST_LIMIT = 20;
+const MAP_UNCLUSTERED_MARKER_LIMIT = 350;
+const MAP_UNCLUSTERED_FULL_RENDER_ZOOM = 9;
 const LIVE_OUT_OF_ORDER_MARKER_SIZE = 22;
 const LIVE_FULLY_OCCUPIED_MARKER_SIZE = 18;
 const STATION_ID_NAMESPACE = "DE:";
@@ -855,6 +858,7 @@ function buildLiveDynamicNotes(evse) {
 /* --- STATE --- */
 const state = {
   features: [], // All charger features
+  staticFeatures: [], // Static fast-charger fallback features
   filtered: [], // Currently filtered features
   favorites: new Set(), // Set of station_ids
   ratings: new Map(), // station_id -> 1-5 rating stored locally
@@ -893,6 +897,7 @@ const state = {
     loading: false,
     error: null,
     lastQueryKey: "",
+    lastResultCount: null,
     center: null, // { lat, lon, source }
     detailByStationId: new Map(),
     pendingDetailStationIds: new Set(),
@@ -910,6 +915,12 @@ const state = {
   },
   mapFocus: {
     stationId: "",
+  },
+  mapInteraction: {
+    hasUserInteracted: false,
+  },
+  modal: {
+    lastFocusedByName: new Map(),
   },
   occupancyHistory: {
     byStationId: new Map(),
@@ -956,6 +967,7 @@ const els = {
     trigger: document.getElementById("filter-trigger"),
     label: document.getElementById("filter-label"),
     count: document.getElementById("filter-count"),
+    activeLabel: document.getElementById("filter-active-label"),
     operator: document.getElementById("filter-operator"),
     amenityName: document.getElementById("filter-amenity-name"),
     currentlyOpen: document.getElementById("filter-currently-open"),
@@ -1099,15 +1111,17 @@ async function fetchOptionalJson(path) {
 
 async function loadData() {
   try {
-    const [summaryRes, openStaticSummaryData] = await Promise.all([
+    const [summaryRes, openStaticSummaryData, staticGeoData] = await Promise.all([
       fetch("./data/summary.json"),
       fetchOptionalJson("./data/open_static_summary.json"),
+      fetchOptionalJson("./data/chargers_fast.geojson"),
     ]);
     if (!summaryRes.ok) throw new Error("Network response was not ok");
     const summaryData = await summaryRes.json();
+    state.staticFeatures = normalizeStaticFallbackFeatures(staticGeoData);
 
     populateOperators();
-    setAppMeta(null, summaryData, openStaticSummaryData);
+    setAppMeta(staticGeoData, summaryData, openStaticSummaryData);
     renderAmenityFilters(); // Render dynamic amenity filters
     await loadStaticRatingSummaries(summaryData);
     await syncLocationPermissionState();
@@ -1122,6 +1136,17 @@ async function loadData() {
     console.error("Failed to load data", err);
     els.lists.chargers.innerHTML = `<div class="empty-state">Fehler beim Laden der Daten.<br>${err.message}</div>`;
   }
+}
+
+function normalizeStaticFallbackFeatures(geoData) {
+  const features = Array.isArray(geoData?.features) ? geoData.features : [];
+  return features
+    .map((feature) => prepareChargerFeature(feature, "fast"))
+    .filter((feature) => {
+      const stationId = getStationIdFromProps(feature.properties);
+      const [lon, lat] = feature.geometry?.coordinates || [];
+      return Boolean(stationId) && Number.isFinite(Number(lat)) && Number.isFinite(Number(lon));
+    });
 }
 
 async function loadStaticRatingSummaries(summaryData) {
@@ -1555,8 +1580,49 @@ function hasCatalogSearchCenter() {
   return Boolean(normalizeCatalogCenter(state.catalog.center));
 }
 
+function hasCatalogSearchContext() {
+  return Boolean(state.catalog.lastQueryKey || hasCatalogSearchCenter());
+}
+
 function hasCatalogListContext() {
-  return Boolean(state.catalog.lastQueryKey || state.features.length > 0 || hasCatalogSearchCenter());
+  return Boolean(hasCatalogSearchContext() || state.features.length > 0);
+}
+
+function hasEmptyCatalogResult() {
+  return Boolean(
+    state.catalog.lastQueryKey &&
+    state.catalog.lastResultCount === 0 &&
+    !state.catalog.loading &&
+    !state.catalog.error,
+  );
+}
+
+function getCatalogStaticFallbackFeatures() {
+  const center = getCatalogSearchCenter();
+  if (!center) {
+    return state.staticFeatures;
+  }
+  return state.staticFeatures.filter((feature) => {
+    const coords = getFeatureLatLon(feature);
+    return coords && distanceBetweenCoordinatesMeters(center, coords) <= CATALOG_SEARCH_RADIUS_M;
+  });
+}
+
+function getFilterSourceFeatures() {
+  if (
+    (state.catalog.loading || state.catalog.error) &&
+    state.features.length === 0 &&
+    state.staticFeatures.length > 0
+  ) {
+    return getCatalogStaticFallbackFeatures();
+  }
+  if (hasEmptyCatalogResult() && state.staticFeatures.length > 0) {
+    return getCatalogStaticFallbackFeatures();
+  }
+  if (hasCatalogSearchContext() || state.catalog.loading) {
+    return state.features;
+  }
+  return state.staticFeatures;
 }
 
 function setCatalogSearchCenter(center, source = "map") {
@@ -1607,6 +1673,7 @@ async function loadCatalogStationsForCurrentCenter({ force = false } = {}) {
   const minPowerKw = Number(state.filters.minPower ?? DEFAULT_MIN_POWER_KW);
   state.catalog.loading = true;
   state.catalog.error = null;
+  state.catalog.lastResultCount = null;
   state.catalog.lastQueryKey = queryKey;
   state.features = [];
   state.filtered = [];
@@ -1651,6 +1718,7 @@ async function loadCatalogStationsForCurrentCenter({ force = false } = {}) {
       featuresByStationId.set(stationId, feature);
     });
     state.features = Array.from(featuresByStationId.values());
+    state.catalog.lastResultCount = state.features.length;
     state.live.reachable = true;
   } catch (err) {
     if (searchSequence !== catalogSearchSequence) {
@@ -1658,6 +1726,7 @@ async function loadCatalogStationsForCurrentCenter({ force = false } = {}) {
     }
     console.error("Failed to load live catalog station search", err);
     state.features = [];
+    state.catalog.lastResultCount = null;
     state.catalog.error = err;
   } finally {
     if (searchSequence === catalogSearchSequence) {
@@ -1687,6 +1756,10 @@ function buildLiveApiUrl(path, params = {}) {
 
 function buildStationLiveApiUrl(stationId, path, params = {}) {
   return buildApiUrl(liveApiBaseUrlForStationId(stationId), path, params);
+}
+
+function isAbortError(error) {
+  return error?.name === "AbortError";
 }
 
 async function fetchJsonWithTimeout(url, options = {}, timeoutMs = LIVE_API_TIMEOUT_MS) {
@@ -1990,8 +2063,7 @@ function renderLocationGate(container, viewModel) {
   container.appendChild(createLocationPanel(viewModel));
 }
 
-function renderCatalogError(container) {
-  container.innerHTML = "";
+function createCatalogErrorPanel() {
   const panel = document.createElement("section");
   panel.className = "location-gate location-gate-error";
   panel.setAttribute("data-nosnippet", "");
@@ -2010,6 +2082,12 @@ function renderCatalogError(container) {
   });
   actions.appendChild(button);
   panel.appendChild(actions);
+  return panel;
+}
+
+function renderCatalogError(container) {
+  container.innerHTML = "";
+  const panel = createCatalogErrorPanel();
   container.appendChild(panel);
 }
 
@@ -2031,15 +2109,28 @@ function createLocationPanel(viewModel) {
   copy.textContent = viewModel.message;
   panel.appendChild(copy);
 
-  if (viewModel.actionLabel) {
+  if (viewModel.actionLabel || viewModel.blocksStationList) {
     const actions = document.createElement("div");
     actions.className = "location-gate-actions";
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "primary-btn";
-    button.textContent = viewModel.actionLabel;
-    button.addEventListener("click", requestUserLocation);
-    actions.appendChild(button);
+    if (viewModel.actionLabel) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "primary-btn";
+      button.textContent = viewModel.actionLabel;
+      button.addEventListener("click", requestUserLocation);
+      actions.appendChild(button);
+    }
+    if (viewModel.blocksStationList) {
+      const searchButton = document.createElement("button");
+      searchButton.type = "button";
+      searchButton.className = "text-btn location-gate-secondary";
+      searchButton.textContent = "Ort auf Karte suchen";
+      searchButton.addEventListener("click", () => {
+        switchView("view-map");
+        window.setTimeout(focusLocationSearchInput, 0);
+      });
+      actions.appendChild(searchButton);
+    }
     panel.appendChild(actions);
   }
 
@@ -2087,7 +2178,9 @@ async function loadLiveStationDetail(stationId) {
     refreshRenderedViews({ markerStationIds: [stationId] });
     return normalizedPayload;
   } catch (err) {
-    console.error(`Failed to load live detail for station ${stationId}`, err);
+    if (!isAbortError(err)) {
+      console.error(`Failed to load live detail for station ${stationId}`, err);
+    }
     return null;
   }
 }
@@ -2385,7 +2478,7 @@ function renderDataSources(openStaticSummaryData) {
 function populateOperators() {
   const selectedOperator = state.filters.operator;
   const operatorCounts = new Map();
-  state.features.forEach((feature) => {
+  getFilterSourceFeatures().forEach((feature) => {
     const name = String(feature?.properties?.operator || "").trim();
     if (!name) return;
     operatorCounts.set(name, (operatorCounts.get(name) || 0) + 1);
@@ -2420,13 +2513,23 @@ function initMap() {
     attribution: "© OpenStreetMap",
   }).addTo(state.views.map);
 
-  state.views.layers.chargers = L.markerClusterGroup
-    ? L.markerClusterGroup()
+  state.views.layers.chargers = hasMapMarkerClustering()
+    ? L.markerClusterGroup({ showCoverageOnHover: false })
     : L.layerGroup();
   state.views.layers.chargers.addTo(state.views.map);
 
   state.views.layers.user = L.layerGroup().addTo(state.views.map);
+  ["dragstart", "zoomstart"].forEach((eventName) => {
+    state.views.map.on(eventName, () => {
+      state.mapInteraction.hasUserInteracted = true;
+    });
+  });
   state.views.map.on("moveend", queueCatalogSearchFromMapMove);
+  state.views.map.on("zoomend", () => {
+    if (!hasMapMarkerClustering()) {
+      renderMapMarkers();
+    }
+  });
 
   // Detail Mini Map
   state.views.detailMap = L.map("detail-map", {
@@ -2445,8 +2548,15 @@ function initMap() {
   state.views.layers.detailAmenities = L.layerGroup().addTo(state.views.detailMap);
 }
 
-function loadCatalogStationsFromMapCenter({ force = false } = {}) {
+function loadCatalogStationsFromMapCenter({ force = false, requireUserInteraction = false } = {}) {
   if (!state.views.map) {
+    return;
+  }
+  if (
+    requireUserInteraction &&
+    !state.mapInteraction.hasUserInteracted &&
+    !hasCatalogSearchCenter()
+  ) {
     return;
   }
   const mapCenter = state.views.map.getCenter();
@@ -2476,7 +2586,7 @@ function queueCatalogSearchFromMapMove() {
   }
   window.clearTimeout(catalogMapMoveTimer);
   catalogMapMoveTimer = window.setTimeout(() => {
-    loadCatalogStationsFromMapCenter();
+    loadCatalogStationsFromMapCenter({ requireUserInteraction: true });
   }, CATALOG_MAP_MOVE_DEBOUNCE_MS);
 }
 
@@ -2500,6 +2610,47 @@ function isStationFullyOccupied(props) {
   return hasAvailabilitySummary(props) && getAvailabilityStatus(props) === "occupied";
 }
 
+function formatStationMarkerLabel(feature) {
+  const props = feature?.properties || {};
+  const name = firstText(props.operator, props.station_name, "Ladestation");
+  const city = firstText(props.city);
+  const power = Math.round(getDisplayedMaxPowerKw(props));
+  const powerText = power > 0 ? `${power} kW` : "";
+  const amenityText = formatAmenityCount(props.amenities_total);
+  const occupancyText = formatOccupancySummary(props);
+  const parts = [name, city, powerText, amenityText, occupancyText]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean);
+  return `Details öffnen: ${parts.join(", ")}`;
+}
+
+function enhanceStationMarkerElement(marker, feature) {
+  const element = marker.getElement?.();
+  if (!element) {
+    return;
+  }
+  const stationId = getStationIdFromProps(feature?.properties || {});
+  const label = formatStationMarkerLabel(feature);
+  if (stationId) {
+    element.setAttribute("data-station-id", stationId);
+  }
+  element.setAttribute("role", "button");
+  element.setAttribute("aria-label", label);
+  element.setAttribute("title", label);
+  element.setAttribute("tabindex", "0");
+  if (element.getAttribute("data-keyboard-bound") !== "true") {
+    element.setAttribute("data-keyboard-bound", "true");
+    element.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      openDetail(feature);
+    });
+  }
+}
+
 function getLiveStatusMarkerIcon(statusKey) {
   if (liveStatusMarkerIcons.has(statusKey)) {
     return liveStatusMarkerIcons.get(statusKey);
@@ -2517,16 +2668,11 @@ function getLiveStatusMarkerIcon(statusKey) {
   return icon;
 }
 
-function createLiveStatusMarker(lat, lon, statusKey, stationId) {
+function createLiveStatusMarker(lat, lon, statusKey, feature) {
   const marker = L.marker([lat, lon], {
     icon: getLiveStatusMarkerIcon(statusKey),
-    keyboard: false,
-  });
-  marker.on("add", () => {
-    const element = marker.getElement();
-    if (element && stationId) {
-      element.setAttribute("data-station-id", stationId);
-    }
+    keyboard: true,
+    title: formatStationMarkerLabel(feature),
   });
   return marker;
 }
@@ -2534,14 +2680,13 @@ function createLiveStatusMarker(lat, lon, statusKey, stationId) {
 function createStationMarker(feature) {
   const [lon, lat] = feature.geometry.coordinates;
   const props = feature.properties;
-  const stationId = getStationIdFromProps(props);
 
   if (isStationOutOfOrder(props)) {
-    return createLiveStatusMarker(lat, lon, "outOfOrder", stationId);
+    return createLiveStatusMarker(lat, lon, "outOfOrder", feature);
   }
 
   if (isStationFullyOccupied(props)) {
-    return createLiveStatusMarker(lat, lon, "fullyOccupied", stationId);
+    return createLiveStatusMarker(lat, lon, "fullyOccupied", feature);
   }
 
   const color = getMarkerColor(props);
@@ -2555,8 +2700,25 @@ function createStationMarker(feature) {
 }
 
 function bindStationMarker(marker, feature) {
+  marker.bindTooltip(formatStationMarkerLabel(feature), { direction: "top", offset: [0, -8] });
+  marker.on("add", () => enhanceStationMarkerElement(marker, feature));
   marker.on("click", () => openDetail(feature));
   return marker;
+}
+
+function hasMapMarkerClustering() {
+  return typeof L.markerClusterGroup === "function";
+}
+
+function getMapMarkerFeatures() {
+  if (hasMapMarkerClustering()) {
+    return state.filtered;
+  }
+  const zoom = Number(state.views.map?.getZoom?.());
+  if (Number.isFinite(zoom) && zoom >= MAP_UNCLUSTERED_FULL_RENDER_ZOOM) {
+    return state.filtered;
+  }
+  return state.filtered.slice(0, MAP_UNCLUSTERED_MARKER_LIMIT);
 }
 
 function getFeatureLatLon(feature) {
@@ -2604,7 +2766,7 @@ function renderMapMarkers() {
   state.views.layers.chargers.clearLayers();
   state.views.markersByStationId.clear();
 
-  state.filtered.forEach((feature) => {
+  getMapMarkerFeatures().forEach((feature) => {
     applyCachedLiveStationSummaryToFeature(feature);
     const marker = bindStationMarker(createStationMarker(feature), feature);
     const stationId = getStationIdFromProps(feature.properties);
@@ -2614,6 +2776,7 @@ function renderMapMarkers() {
 
     marker.addTo(state.views.layers.chargers);
   });
+  window.requestAnimationFrame(enhanceMapClusterElements);
 }
 
 function updateMapMarkersForStationIds(stationIds) {
@@ -2621,23 +2784,50 @@ function updateMapMarkersForStationIds(stationIds) {
     return;
   }
 
+  const displayedFeatures = new Set(getMapMarkerFeatures());
   Array.from(new Set(stationIds)).forEach((stationId) => {
     const feature = findFeatureByStationId(stationId);
     const existingMarker = state.views.markersByStationId.get(stationId);
     const isFiltered = feature ? state.filtered.includes(feature) : false;
+    const isDisplayedOnMap = feature ? displayedFeatures.has(feature) : false;
 
     if (existingMarker) {
       state.views.layers.chargers.removeLayer(existingMarker);
       state.views.markersByStationId.delete(stationId);
     }
 
-    if (!feature || !isFiltered) {
+    if (!feature || !isFiltered || !isDisplayedOnMap) {
       return;
     }
 
     const nextMarker = bindStationMarker(createStationMarker(feature), feature);
     state.views.markersByStationId.set(stationId, nextMarker);
     nextMarker.addTo(state.views.layers.chargers);
+  });
+  window.requestAnimationFrame(enhanceMapClusterElements);
+}
+
+function enhanceMapClusterElements() {
+  document.querySelectorAll("#map .marker-cluster").forEach((element) => {
+    const count = String(element.textContent || "").trim();
+    const label = count
+      ? `Kartengruppe mit ${count} Ladestationen. Aktivieren zum Hineinzoomen.`
+      : "Kartengruppe mit Ladestationen. Aktivieren zum Hineinzoomen.";
+    element.setAttribute("role", "button");
+    element.setAttribute("aria-label", label);
+    element.setAttribute("title", label);
+    element.setAttribute("tabindex", "0");
+    if (element.getAttribute("data-keyboard-bound") !== "true") {
+      element.setAttribute("data-keyboard-bound", "true");
+      element.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        element.click();
+      });
+    }
   });
 }
 
@@ -2666,7 +2856,13 @@ function initNavigation() {
 
 function setActiveNavItem(viewId) {
   els.navItems.forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.target === viewId);
+    const isActive = btn.dataset.target === viewId;
+    btn.classList.toggle("active", isActive);
+    if (isActive) {
+      btn.setAttribute("aria-current", "page");
+    } else {
+      btn.removeAttribute("aria-current");
+    }
   });
 }
 
@@ -2744,9 +2940,6 @@ function switchView(viewId, options = {}) {
       focusMapOnPendingStation();
       state.views.map.invalidateSize({ pan: false });
       refreshMapMarkersFromCurrentFeatures();
-      if (!hasCatalogSearchCenter() && !getRequestedStationId()) {
-        loadCatalogStationsFromMapCenter({ force: true });
-      }
     });
     setTimeout(() => {
       state.views.map.invalidateSize({ pan: false });
@@ -2797,7 +2990,7 @@ function renderAmenityFilters() {
   const availableAmenities = new Set();
   const amenityKeys = Object.keys(AMENITY_MAPPING);
   
-  state.features.forEach(f => {
+  getFilterSourceFeatures().forEach(f => {
     const p = f.properties;
     amenityKeys.forEach(key => {
       if (p[key] > 0) availableAmenities.add(key);
@@ -2867,15 +3060,23 @@ function updateFilters(options = {}) {
 
 function updateFilterLabel() {
   const filterCount = countActiveFilters(state.filters);
+  const labels = getActiveFilterLabels();
+  const labelSummary = labels.join(", ");
 
   if (els.filter.label) {
     els.filter.label.textContent =
       filterCount > 0 ? `Filter (${filterCount})` : "Alle Filter";
   }
+  if (els.filter.activeLabel) {
+    els.filter.activeLabel.hidden = labels.length === 0;
+    els.filter.activeLabel.textContent = labels.join(" · ");
+  }
   if (els.filter.trigger) {
     els.filter.trigger.setAttribute(
       "aria-label",
-      filterCount > 0 ? `Filter öffnen, ${filterCount} aktiv` : "Filter öffnen",
+      filterCount > 0
+        ? `Filter öffnen, ${filterCount} aktiv: ${labelSummary}`
+        : "Filter öffnen",
     );
   }
   if (els.filter.count) {
@@ -2886,7 +3087,9 @@ function updateFilterLabel() {
     els.filter.listFilterBtn.textContent = filterCount > 0 ? `Filter (${filterCount})` : "Filter";
     els.filter.listFilterBtn.setAttribute(
       "aria-label",
-      filterCount > 0 ? `Filter öffnen, ${filterCount} aktiv` : "Filter öffnen",
+      filterCount > 0
+        ? `Filter öffnen, ${filterCount} aktiv: ${labelSummary}`
+        : "Filter öffnen",
     );
     els.filter.listFilterBtn.classList.toggle("active", filterCount > 0);
   }
@@ -3022,7 +3225,7 @@ function updateRatingDependentViews() {
 
 function applyFilters() {
   const now = new Date();
-  state.filtered = state.features.filter((feature) =>
+  state.filtered = getFilterSourceFeatures().filter((feature) =>
     matchesFeatureFilters(feature, state.filters, { getDisplayedMaxPowerKw, now }),
   );
 
@@ -3047,26 +3250,45 @@ function renderList() {
   const container = els.lists.chargers;
   container.innerHTML = "";
 
-  if (state.catalog.loading) {
+  if (state.catalog.loading && state.features.length === 0 && state.staticFeatures.length === 0) {
     container.innerHTML = `<div class="loading-state" data-nosnippet>Lade Ladestationen im Umkreis von 20 km...</div>`;
     return;
   }
-  if (state.catalog.error) {
+  if (state.catalog.error && state.staticFeatures.length === 0) {
     renderCatalogError(container);
     return;
+  }
+  if (state.catalog.error) {
+    const panel = createCatalogErrorPanel();
+    panel.classList.add("location-gate-inline");
+    container.appendChild(panel);
+  } else if (state.catalog.loading) {
+    const loading = document.createElement("div");
+    loading.className = "loading-state";
+    loading.setAttribute("data-nosnippet", "");
+    loading.textContent = "Live-Suche lädt. Bis dahin werden gespeicherte Schnelllader angezeigt.";
+    container.appendChild(loading);
   }
 
   const locationViewModel = getLocationListViewModel();
   if (locationViewModel.blocksStationList && !hasCatalogListContext()) {
-    renderLocationGate(container, locationViewModel);
-    return;
+    const panel = createLocationPanel(locationViewModel);
+    if (state.staticFeatures.length === 0) {
+      container.appendChild(panel);
+      return;
+    }
+    panel.classList.add("location-gate-inline");
+    container.appendChild(panel);
   }
 
   // Keep the web list aligned with the native apps.
   const displayItems = getListDisplayItems();
 
   if (displayItems.length === 0) {
-    container.innerHTML = `<div class="empty-state">Keine Ladestationen gefunden.</div>`;
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "Keine Ladestationen gefunden.";
+    container.appendChild(empty);
     return;
   }
 
@@ -3099,16 +3321,29 @@ function renderFavorites() {
     return;
   }
 
-  if (!hasResolvedUserLocation()) {
-    renderLocationGate(container, getLocationListViewModel());
+  if (state.catalog.loading && state.features.length === 0 && state.staticFeatures.length === 0) {
+    container.innerHTML = `<div class="loading-state" data-nosnippet>Lade Favoriten im aktuellen Suchumkreis...</div>`;
     return;
   }
-  if (state.catalog.loading) {
-    container.innerHTML = `<div class="loading-state" data-nosnippet>Lade Favoriten im aktuellen Umkreis...</div>`;
+  if (state.catalog.error && state.staticFeatures.length === 0) {
+    renderCatalogError(container);
     return;
   }
   if (state.catalog.error) {
-    renderCatalogError(container);
+    const panel = createCatalogErrorPanel();
+    panel.classList.add("location-gate-inline");
+    container.appendChild(panel);
+  } else if (state.catalog.loading) {
+    const loading = document.createElement("div");
+    loading.className = "loading-state";
+    loading.setAttribute("data-nosnippet", "");
+    loading.textContent = "Live-Suche lädt. Favoriten aus den gespeicherten Schnellladern bleiben sichtbar.";
+    container.appendChild(loading);
+  }
+
+  const locationViewModel = getLocationListViewModel();
+  if (locationViewModel.blocksStationList && !hasCatalogListContext() && state.staticFeatures.length === 0) {
+    renderLocationGate(container, locationViewModel);
     return;
   }
 
@@ -3117,16 +3352,20 @@ function renderFavorites() {
   );
 
   // Find feature objects for favorites
-  const favFeatures = state.features.filter((f) =>
-    state.favorites.has(getStationIdFromProps(f.properties)),
-  );
+  const favFeatures = Array.from(state.favorites)
+    .map((stationId) => findFeatureByStationId(stationId))
+    .filter(Boolean);
 
   favFeatures.sort(compareFavoriteFeatures);
 
   if (favFeatures.length === 0) {
-    container.innerHTML = `<div class="empty-state" style="text-align:center; padding:2rem; color:#888;">
-      Deine Favoriten liegen nicht im aktuellen 20-km-Umkreis.
-    </div>`;
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.style.textAlign = "center";
+    empty.style.padding = "2rem";
+    empty.style.color = "#888";
+    empty.textContent = "Deine Favoriten liegen nicht im aktuellen Suchumkreis.";
+    container.appendChild(empty);
     return;
   }
 
@@ -3143,7 +3382,7 @@ function renderFavorites() {
     note.style.textAlign = "center";
     note.style.padding = "1rem";
     note.style.color = "#888";
-    note.textContent = "Einige Favoriten liegen außerhalb des aktuellen 20-km-Umkreises.";
+    note.textContent = "Einige Favoriten liegen außerhalb des aktuellen Suchumkreises.";
     container.appendChild(note);
   }
 }
@@ -3233,7 +3472,7 @@ function createStationCard(feature, options = {}) {
 }
 
 function getListDisplayItems() {
-  return state.filtered.slice(0, LIST_VIEW_MAX_STATIONS);
+  return state.filtered.slice(0, hasCatalogSearchContext() ? LIST_VIEW_MAX_STATIONS : STATIC_FALLBACK_LIST_LIMIT);
 }
 
 function isEditableKeyTarget(target) {
@@ -3252,24 +3491,31 @@ function isAnyModalOpen() {
   return Object.values(els.modals).some((modal) => modal && !modal.classList.contains("hidden"));
 }
 
+function handleModalKeydown(event) {
+  const modalName = getTopOpenModalName();
+  if (!modalName) {
+    return false;
+  }
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeModal(modalName);
+    return true;
+  }
+  if (event.key === "Tab") {
+    trapModalTab(event, modalName);
+    return true;
+  }
+  return false;
+}
+
 function handleGlobalKeydown(event) {
-  if (event.defaultPrevented || isEditableKeyTarget(event.target)) {
+  if (event.defaultPrevented) {
     return;
   }
-  if (event.key === "Escape" && isModalOpen("amenityDetail")) {
-    event.preventDefault();
-    closeModal("amenityDetail");
+  if (handleModalKeydown(event)) {
     return;
   }
-  if (event.key === "Escape" && isModalOpen("detail")) {
-    event.preventDefault();
-    closeModal("detail");
-    focusSelectedListCard();
-    return;
-  }
-  if (event.key === "Escape" && isModalOpen("filter")) {
-    event.preventDefault();
-    closeModal("filter");
+  if (isEditableKeyTarget(event.target)) {
     return;
   }
   if (handleMapKeyboardEvent(event)) {
@@ -3373,11 +3619,15 @@ function compareFavoriteFeaturesByRating(a, b) {
 }
 
 function compareFavoriteFeaturesByDistance(a, b) {
-  if (state.userPos) {
-    const distanceDiff = getDistance(a) - getDistance(b);
-    if (distanceDiff !== 0) {
-      return distanceDiff;
-    }
+  const leftDistance = getDistance(a);
+  const rightDistance = getDistance(b);
+  const leftFinite = Number.isFinite(leftDistance);
+  const rightFinite = Number.isFinite(rightDistance);
+  if (leftFinite && rightFinite && leftDistance !== rightDistance) {
+    return leftDistance - rightDistance;
+  }
+  if (leftFinite !== rightFinite) {
+    return leftFinite ? -1 : 1;
   }
   return compareFavoriteFeaturesByName(a, b);
 }
@@ -4278,6 +4528,8 @@ function findFeatureByStationId(stationId) {
   const normalizedStationId = normalizeStationId(stationId);
   return state.features.find((feature) =>
     normalizeStationId(feature.properties?.station_id || "") === normalizedStationId,
+  ) || state.staticFeatures.find((feature) =>
+    normalizeStationId(feature.properties?.station_id || "") === normalizedStationId,
   ) || null;
 }
 
@@ -4598,20 +4850,106 @@ function saveFavorites() {
 }
 
 /* --- MODAL UTILS --- */
+const MODAL_FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
+function getModalContent(name) {
+  return els.modals[name]?.querySelector(".modal-content") || null;
+}
+
+function getTopOpenModalName() {
+  return Object.keys(els.modals)
+    .reverse()
+    .find((name) => isModalOpen(name)) || "";
+}
+
+function visibleElement(element) {
+  return Boolean(element && (element.offsetWidth || element.offsetHeight || element.getClientRects().length));
+}
+
+function getModalFocusableElements(name) {
+  const content = getModalContent(name);
+  if (!content) {
+    return [];
+  }
+  return Array.from(content.querySelectorAll(MODAL_FOCUSABLE_SELECTOR))
+    .filter((element) => !element.disabled && visibleElement(element));
+}
+
+function focusModal(name) {
+  const content = getModalContent(name);
+  if (!content) {
+    return;
+  }
+  const focusTarget = getModalFocusableElements(name)[0] || content;
+  focusTarget.focus({ preventScroll: true });
+}
+
+function restoreModalFocus(name) {
+  const previous = state.modal.lastFocusedByName.get(name);
+  state.modal.lastFocusedByName.delete(name);
+  if (previous && previous.isConnected && visibleElement(previous)) {
+    previous.focus({ preventScroll: true });
+    return true;
+  }
+  return false;
+}
+
+function trapModalTab(event, name) {
+  const focusable = getModalFocusableElements(name);
+  if (focusable.length === 0) {
+    event.preventDefault();
+    getModalContent(name)?.focus({ preventScroll: true });
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const active = document.activeElement;
+  if (event.shiftKey && active === first) {
+    event.preventDefault();
+    last.focus({ preventScroll: true });
+    return;
+  }
+  if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus({ preventScroll: true });
+  }
+}
+
 function openModal(name) {
   const m = els.modals[name];
-  if (m) m.classList.remove("hidden");
+  if (!m) {
+    return;
+  }
+  const activeElement = document.activeElement;
+  if (activeElement instanceof HTMLElement && !m.contains(activeElement)) {
+    state.modal.lastFocusedByName.set(name, activeElement);
+  }
+  m.classList.remove("hidden");
+  window.requestAnimationFrame(() => focusModal(name));
 }
 
 function closeModal(name, options = {}) {
   const syncUrl = options.syncUrl !== false;
   const m = els.modals[name];
-  if (m) m.classList.add("hidden");
+  if (m) {
+    m.classList.add("hidden");
+  }
   if (name === "detail") {
     currentDetailFeature = null;
     if (syncUrl) {
       updateRequestedStationId("");
     }
+  }
+  const restored = restoreModalFocus(name);
+  if (name === "detail" && !restored) {
+    focusSelectedListCard();
   }
 }
 
