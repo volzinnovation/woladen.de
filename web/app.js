@@ -27,7 +27,7 @@ import {
   resolveGeocoderApiBaseUrl as computeGeocoderApiBaseUrl,
 } from "./geocoding.mjs?v=20260618-commercial-merge";
 import {
-  formatLicenseStatus,
+  formatBundleSourceTitle,
   normalizeBundleSources,
   normalizeMappedCountries,
 } from "./open-static-ui.mjs?v=20260618-commercial-merge";
@@ -2269,16 +2269,25 @@ function renderDataSources(openStaticSummaryData) {
   let renderedSourceCount = 0;
 
   displaySources.forEach((source) => {
-    const license = formatLicenseStatus(source.license);
-    if (!license) {
+    const sourceTitle = formatBundleSourceTitle(source);
+    if (!sourceTitle) {
       return;
     }
 
     const item = document.createElement("li");
-    const meta = document.createElement("div");
-    meta.className = "source-meta";
-    meta.textContent = license;
-    item.appendChild(meta);
+    const title = document.createElement("div");
+    title.className = "source-title";
+    if (source.sourceUrl) {
+      const link = document.createElement("a");
+      link.href = source.sourceUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = sourceTitle;
+      title.appendChild(link);
+    } else {
+      title.textContent = sourceTitle;
+    }
+    item.appendChild(title);
     container.appendChild(item);
     renderedSourceCount += 1;
   });
@@ -2288,6 +2297,18 @@ function renderDataSources(openStaticSummaryData) {
     item.textContent = "Datenquellen konnten nicht geladen werden.";
     container.appendChild(item);
   }
+
+  const geocoderItem = document.createElement("li");
+  const geocoderTitle = document.createElement("div");
+  geocoderTitle.className = "source-title";
+  const geocoderLink = document.createElement("a");
+  geocoderLink.href = "https://openrouteservice.org/dev/#/api-docs/geocode/autocomplete/get";
+  geocoderLink.target = "_blank";
+  geocoderLink.rel = "noopener noreferrer";
+  geocoderLink.textContent = "GEO: openrouteservice Geocoding Autocomplete (Pelias)";
+  geocoderTitle.appendChild(geocoderLink);
+  geocoderItem.appendChild(geocoderTitle);
+  container.appendChild(geocoderItem);
 }
 
 function populateOperators() {
