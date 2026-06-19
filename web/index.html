@@ -168,9 +168,17 @@
           <div class="view-header" data-nosnippet>
             <h2>Ladepunkte in der Nähe</h2>
             <div class="header-actions">
-              <button id="btn-list-filter" class="text-btn">Filter</button>
+              <button id="btn-list-filter" class="text-btn" type="button">
+                Filter
+              </button>
             </div>
           </div>
+          <div
+            id="active-filter-summary"
+            class="active-filter-summary"
+            hidden
+            data-nosnippet
+          ></div>
           <div id="charger-list" class="list-container">
             <!-- Cards injected here -->
             <div class="loading-state" data-nosnippet>Lade Ladesäulen...</div>

@@ -904,6 +904,7 @@ const els = {
     amenities: document.getElementById("filter-amenities"),
     applyBtn: document.getElementById("btn-apply-filter"),
     listFilterBtn: document.getElementById("btn-list-filter"),
+    activeSummary: document.getElementById("active-filter-summary"),
   },
   search: {
     form: document.getElementById("location-search-form"),
@@ -2705,19 +2706,33 @@ function renderAmenityFilters() {
     const config = AMENITY_MAPPING[key];
     const path = getAmenityIconPath(key);
 
-    const div = document.createElement("div");
-    div.className = "amenity-toggle";
-    div.dataset.key = key;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "amenity-toggle";
+    button.dataset.key = key;
+    const isActive = state.filters.amenities.has(key);
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    button.setAttribute(
+      "aria-label",
+      isActive ? `${config.label} Filter aktiv` : `${config.label} filtern`,
+    );
 
     if (path) {
-      div.innerHTML = `<img src="${path}" alt="${config.label}" loading="lazy"><span class="amenity-name">${config.label}</span>`;
+      button.innerHTML = `<img src="${path}" alt="" loading="lazy"><span class="amenity-name">${config.label}</span>`;
     } else {
-      div.innerHTML = `<div style="width:32px;height:32px;background:#eee;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px">?</div><span class="amenity-name">${config.label}</span>`;
+      button.innerHTML = `<span class="amenity-icon-fallback" aria-hidden="true">?</span><span class="amenity-name">${config.label}</span>`;
     }
 
-    div.addEventListener("click", () => {
-      div.classList.toggle("active");
-      if (div.classList.contains("active")) {
+    button.addEventListener("click", () => {
+      const nextActive = !state.filters.amenities.has(key);
+      button.classList.toggle("active", nextActive);
+      button.setAttribute("aria-pressed", nextActive ? "true" : "false");
+      button.setAttribute(
+        "aria-label",
+        nextActive ? `${config.label} Filter aktiv` : `${config.label} filtern`,
+      );
+      if (nextActive) {
         state.filters.amenities.add(key);
       } else {
         state.filters.amenities.delete(key);
@@ -2725,7 +2740,7 @@ function renderAmenityFilters() {
       updateFilters();
     });
 
-    els.filter.amenities.appendChild(div);
+    els.filter.amenities.appendChild(button);
   });
 }
 
@@ -2748,10 +2763,90 @@ function updateFilterLabel() {
     els.filter.label.textContent =
       filterCount > 0 ? `Filter (${filterCount})` : "Alle Filter";
   }
+  if (els.filter.trigger) {
+    els.filter.trigger.setAttribute(
+      "aria-label",
+      filterCount > 0 ? `Filter öffnen, ${filterCount} aktiv` : "Filter öffnen",
+    );
+  }
   if (els.filter.count) {
     els.filter.count.hidden = filterCount <= 0;
     els.filter.count.textContent = String(filterCount);
   }
+  if (els.filter.listFilterBtn) {
+    els.filter.listFilterBtn.textContent = filterCount > 0 ? `Filter (${filterCount})` : "Filter";
+    els.filter.listFilterBtn.setAttribute(
+      "aria-label",
+      filterCount > 0 ? `Filter öffnen, ${filterCount} aktiv` : "Filter öffnen",
+    );
+    els.filter.listFilterBtn.classList.toggle("active", filterCount > 0);
+  }
+  renderActiveFilterSummary(filterCount);
+}
+
+function renderActiveFilterSummary(filterCount) {
+  const container = els.filter.activeSummary;
+  if (!container) {
+    return;
+  }
+  const labels = getActiveFilterLabels();
+  container.hidden = filterCount <= 0 || labels.length === 0;
+  container.replaceChildren();
+  if (container.hidden) {
+    container.removeAttribute("aria-label");
+    return;
+  }
+  container.setAttribute("aria-label", `Aktive Filter: ${labels.join(", ")}`);
+
+  const summary = document.createElement("span");
+  summary.className = "active-filter-summary-text";
+  summary.textContent = labels.join(" · ");
+  container.appendChild(summary);
+
+  const clearButton = document.createElement("button");
+  clearButton.type = "button";
+  clearButton.className = "active-filter-clear";
+  clearButton.textContent = "Zurücksetzen";
+  clearButton.addEventListener("click", clearFilters);
+  container.appendChild(clearButton);
+}
+
+function getActiveFilterLabels() {
+  const labels = [];
+  if (state.filters.operator) {
+    labels.push(state.filters.operator);
+  }
+  const amenityNameQuery = String(state.filters.amenityNameQuery || "").trim();
+  if (amenityNameQuery) {
+    labels.push(`Name: ${amenityNameQuery}`);
+  }
+  if (state.filters.currentlyOpenOnly) {
+    labels.push("Jetzt geöffnet");
+  }
+  const minPower = Number(state.filters.minPower);
+  if (Number.isFinite(minPower) && minPower !== DEFAULT_MIN_POWER_KW) {
+    labels.push(`ab ${Math.round(minPower)} kW`);
+  }
+  Array.from(state.filters.amenities)
+    .map((key) => AMENITY_MAPPING[key]?.label || key)
+    .sort((a, b) => a.localeCompare(b, "de"))
+    .forEach((label) => labels.push(label));
+  return labels;
+}
+
+function clearFilters() {
+  state.filters.operator = "";
+  state.filters.minPower = DEFAULT_MIN_POWER_KW;
+  state.filters.amenities.clear();
+  state.filters.amenityNameQuery = "";
+  state.filters.currentlyOpenOnly = false;
+  els.filter.operator.value = "";
+  els.filter.amenityName.value = "";
+  els.filter.currentlyOpen.checked = false;
+  els.filter.power.value = String(DEFAULT_MIN_POWER_KW);
+  els.filter.powerVal.textContent = String(DEFAULT_MIN_POWER_KW);
+  renderAmenityFilters();
+  updateFilters({ reloadCatalog: true });
 }
 
 function getRatingForProps(props) {
