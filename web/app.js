@@ -628,6 +628,21 @@ function applyLiveStationSummaryToProps(props, summary) {
   });
 }
 
+function applyCachedLiveStationSummaryToFeature(feature) {
+  const props = feature?.properties;
+  const stationId = getStationIdFromProps(props);
+  if (!stationId) {
+    return false;
+  }
+  const summary = state.live.summaryByStationId.get(stationId) ||
+    state.live.summaryByStationId.get(toLiveApiStationId(stationId));
+  if (!summary) {
+    return false;
+  }
+  applyLiveStationSummaryToProps(props, summary);
+  return true;
+}
+
 function clearLiveStationSummaryFromProps(props) {
   if (!props) return;
   LIVE_STATION_FIELDS.forEach((key) => {
@@ -832,6 +847,9 @@ const state = {
   },
   keyboard: {
     selectedStationId: "",
+  },
+  mapFocus: {
+    stationId: "",
   },
   occupancyHistory: {
     byStationId: new Map(),
@@ -1547,6 +1565,7 @@ async function loadCatalogStationsForCurrentCenter({ force = false } = {}) {
       if (!stationId || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lon))) {
         return;
       }
+      applyCachedLiveStationSummaryToFeature(feature);
       featuresByStationId.set(stationId, feature);
     });
     state.features = Array.from(featuresByStationId.values());
@@ -2450,11 +2469,53 @@ function bindStationMarker(marker, feature) {
   return marker;
 }
 
+function getFeatureLatLon(feature) {
+  const [lon, lat] = feature?.geometry?.coordinates || [];
+  if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lon))) {
+    return null;
+  }
+  return { lat: Number(lat), lon: Number(lon) };
+}
+
+function centerMapOnFeature(feature, options = {}) {
+  if (!state.views.map) {
+    return;
+  }
+  const { minZoom = 13 } = options;
+  const coords = getFeatureLatLon(feature);
+  if (!coords) {
+    return;
+  }
+  const zoom = Math.max(state.views.map.getZoom(), minZoom);
+  state.views.map.setView([coords.lat, coords.lon], zoom, { animate: false });
+}
+
+function focusMapOnPendingStation() {
+  const stationId = normalizeStationId(state.mapFocus.stationId || "");
+  if (!stationId || !state.views.map) {
+    return false;
+  }
+  const feature = findFeatureByStationId(stationId) ||
+    (
+      currentDetailFeature &&
+      normalizeStationId(getStationIdFromProps(currentDetailFeature.properties)) === stationId
+        ? currentDetailFeature
+        : null
+    );
+  if (!feature) {
+    return false;
+  }
+  centerMapOnFeature(feature);
+  state.mapFocus.stationId = "";
+  return true;
+}
+
 function renderMapMarkers() {
   state.views.layers.chargers.clearLayers();
   state.views.markersByStationId.clear();
 
   state.filtered.forEach((feature) => {
+    applyCachedLiveStationSummaryToFeature(feature);
     const marker = bindStationMarker(createStationMarker(feature), feature);
     const stationId = getStationIdFromProps(feature.properties);
     if (stationId) {
@@ -2568,13 +2629,27 @@ function switchView(viewId, options = {}) {
 
   // Map resize fix
   if (viewId === "view-map" && state.views.map) {
-    setTimeout(() => {
-      state.views.map.invalidateSize();
+    requestAnimationFrame(() => {
+      state.views.map.invalidateSize({ pan: false });
+      focusMapOnPendingStation();
+      state.views.map.invalidateSize({ pan: false });
+      refreshMapMarkersFromCurrentFeatures();
       if (!hasCatalogSearchCenter()) {
         loadCatalogStationsFromMapCenter({ force: true });
       }
-    }, 100);
+    });
+    setTimeout(() => {
+      state.views.map.invalidateSize({ pan: false });
+      refreshMapMarkersFromCurrentFeatures();
+    }, 150);
   }
+}
+
+function refreshMapMarkersFromCurrentFeatures() {
+  if (!state.views.layers.chargers) {
+    return;
+  }
+  renderMapMarkers();
 }
 
 /* --- FILTER LOGIC --- */
@@ -3539,6 +3614,10 @@ function openDetail(feature, options = {}) {
   const syncUrl = options.syncUrl !== false;
   currentDetailFeature = feature;
   const p = feature.properties;
+  const stationId = getStationIdFromProps(p);
+  if (stationId) {
+    state.mapFocus.stationId = stationId;
+  }
 
   populateDetailContent(feature, state.live.detailByStationId.get(getStationIdFromProps(p)) || null);
 
@@ -3616,7 +3695,6 @@ function openDetail(feature, options = {}) {
     updateRequestedStationId(p.station_id || "");
   }
 
-  const stationId = getStationIdFromProps(p);
   if (stationId) {
     void loadCatalogStationDetail(stationId);
     void loadLiveStationDetail(stationId);
@@ -4025,6 +4103,7 @@ function syncDetailModalWithUrl() {
     return;
   }
 
+  centerMapOnFeature(feature);
   openDetail(feature, { syncUrl: false });
 }
 
