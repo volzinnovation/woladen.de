@@ -27,7 +27,6 @@ import {
   resolveGeocoderApiBaseUrl as computeGeocoderApiBaseUrl,
 } from "./geocoding.mjs?v=20260618-commercial-merge";
 import {
-  formatBundleSourceTitle,
   formatLicenseStatus,
   normalizeBundleSources,
   normalizeMappedCountries,
@@ -2267,50 +2266,28 @@ function renderDataSources(openStaticSummaryData) {
   }
   const displaySources = normalizeBundleSources(openStaticSummaryData);
   container.replaceChildren();
-  if (!displaySources.length) {
+  let renderedSourceCount = 0;
+
+  displaySources.forEach((source) => {
+    const license = formatLicenseStatus(source.license);
+    if (!license) {
+      return;
+    }
+
+    const item = document.createElement("li");
+    const meta = document.createElement("div");
+    meta.className = "source-meta";
+    meta.textContent = license;
+    item.appendChild(meta);
+    container.appendChild(item);
+    renderedSourceCount += 1;
+  });
+
+  if (!renderedSourceCount) {
     const item = document.createElement("li");
     item.textContent = "Datenquellen konnten nicht geladen werden.";
     container.appendChild(item);
   }
-
-  displaySources.forEach((source) => {
-    const item = document.createElement("li");
-    const title = document.createElement("div");
-    title.className = "source-title";
-    const sourceTitle = formatBundleSourceTitle(source);
-    if (source.sourceUrl) {
-      const link = document.createElement("a");
-      link.href = source.sourceUrl;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = sourceTitle;
-      title.appendChild(link);
-    } else {
-      title.textContent = sourceTitle;
-    }
-    item.appendChild(title);
-
-    const license = formatLicenseStatus(source.license);
-    if (license) {
-      const meta = document.createElement("div");
-      meta.className = "source-meta";
-      meta.textContent = license;
-      item.appendChild(meta);
-    }
-    container.appendChild(item);
-  });
-
-  const geocoderItem = document.createElement("li");
-  const geocoderTitle = document.createElement("div");
-  geocoderTitle.className = "source-title";
-  const geocoderLink = document.createElement("a");
-  geocoderLink.href = "https://openrouteservice.org/dev/#/api-docs/geocode/autocomplete/get";
-  geocoderLink.target = "_blank";
-  geocoderLink.rel = "noopener noreferrer";
-  geocoderLink.textContent = "GEO: openrouteservice Geocoding Autocomplete (Pelias)";
-  geocoderTitle.appendChild(geocoderLink);
-  geocoderItem.appendChild(geocoderTitle);
-  container.appendChild(geocoderItem);
 }
 
 function populateOperators() {
