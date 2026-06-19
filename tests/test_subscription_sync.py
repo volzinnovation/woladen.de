@@ -633,6 +633,24 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
             feed_kind="dynamic",
             access_mode="auth",
         ),
+        SubscriptionOffer(
+            provider_uid="tc_backend",
+            display_name="tc backend",
+            publisher="Taubert Consulting GmbH",
+            publication_id="1000746576770711552",
+            offer_title="AFIR-recharging-dyn-TC-Backend",
+            feed_kind="dynamic",
+            access_mode="auth",
+        ),
+        SubscriptionOffer(
+            provider_uid="tc_backend",
+            display_name="tc backend",
+            publisher="Taubert Consulting GmbH",
+            publication_id="1000749522967314432",
+            offer_title="AFIR-recharging-stat-TC-Backend",
+            feed_kind="static",
+            access_mode="auth",
+        ),
     ]
 
     registry = build_live_subscription_registry(
@@ -654,6 +672,8 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
             {"id": "e-clearing-static-subscription", "dataOfferId": "996825300704600064", "contractStatus": "ACTIVE"},
             {"id": "audi-statuses-subscription", "dataOfferId": "998567365272563712", "contractStatus": "ACTIVE"},
             {"id": "audi-tables-subscription", "dataOfferId": "998571342932365312", "contractStatus": "ACTIVE"},
+            {"id": "tc-backend-dynamic-subscription", "dataOfferId": "1000746576770711552", "contractStatus": "ACTIVE"},
+            {"id": "tc-backend-static-subscription", "dataOfferId": "1000749522967314432", "contractStatus": "ACTIVE"},
         ],
     )
 
@@ -706,6 +726,12 @@ def test_build_live_subscription_registry_enables_new_active_afir_providers():
     assert registry["e_clearing_net"]["static_subscription_id"] == "e-clearing-static-subscription"
     assert "fetch_kind" not in registry["e_clearing_net"]
     assert "enabled" not in registry["e_clearing_net"]
+
+    assert registry["tc_backend"]["subscription_id"] == "tc-backend-dynamic-subscription"
+    assert registry["tc_backend"]["static_subscription_id"] == "tc-backend-static-subscription"
+    assert registry["tc_backend"]["fetch_kind"] == "mtls_subscription"
+    assert registry["tc_backend"]["enabled"] is True
+    assert registry["tc_backend"]["delivery_mode"] == "push_with_poll_fallback"
 
 
 def test_resolve_credentials_reads_secret_files(tmp_path: Path, monkeypatch):

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-11T09:03:07+00:00",
+  "generated_at": "2026-06-15T08:24:33+00:00",
   "search_term": "AFIR",
   "search_total_elements": 89,
   "charging_offer_count": 83,
@@ -18,8 +18,8 @@
   "totals": {
     "stations": 73224,
     "charging_points": 201100,
-    "bundle_stations": 15460,
-    "bundle_charging_points": 53009
+    "bundle_stations": 15462,
+    "bundle_charging_points": 53015
   },
   "providers": [
     {
@@ -161,7 +161,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.007114078Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:13.246747757Z\"}",
             "status": "already_exists"
           }
         },
@@ -299,7 +299,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.157793966Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:13.432446126Z\"}",
             "status": "already_exists"
           }
         },
@@ -309,13 +309,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.007114078Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:13.246747757Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.157793966Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:13.432446126Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -399,7 +399,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:22.412313512Z\"}",
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:13.70917375Z\"}",
             "status": "error"
           }
         },
@@ -410,7 +410,7 @@
         "static": {
           "attempted": true,
           "status_code": 400,
-          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:22.412313512Z\"}",
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:13.70917375Z\"}",
           "status": "error"
         },
         "dynamic": null,
@@ -495,7 +495,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:22.284478617Z\"}",
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:13.577750934Z\"}",
             "status": "error"
           }
         },
@@ -506,7 +506,7 @@
         "static": {
           "attempted": true,
           "status_code": 400,
-          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:22.284478617Z\"}",
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:13.577750934Z\"}",
           "status": "error"
         },
         "dynamic": null,
@@ -592,7 +592,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:24.330195572Z\"}",
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:16.006445795Z\"}",
             "status": "error"
           }
         },
@@ -603,7 +603,7 @@
         "dynamic": {
           "attempted": true,
           "status_code": 400,
-          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:24.330195572Z\"}",
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:16.006445795Z\"}",
           "status": "error"
         },
         "other": []
@@ -687,7 +687,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:24.445857618Z\"}",
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:16.13805126Z\"}",
             "status": "error"
           }
         },
@@ -698,7 +698,7 @@
         "static": {
           "attempted": true,
           "status_code": 400,
-          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:24.445857618Z\"}",
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:16.13805126Z\"}",
           "status": "error"
         },
         "dynamic": null,
@@ -875,7 +875,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.144745764Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:12.035906536Z\"}",
             "status": "already_exists"
           }
         },
@@ -886,7 +886,7 @@
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.144745764Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:12.035906536Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -1062,7 +1062,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.02760045Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:11.861608244Z\"}",
             "status": "already_exists"
           }
         },
@@ -1073,7 +1073,7 @@
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.02760045Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:11.861608244Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -1157,7 +1157,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:30.033372926Z\"}",
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:22.56194958Z\"}",
             "status": "error"
           }
         },
@@ -1168,7 +1168,7 @@
         "static": {
           "attempted": true,
           "status_code": 400,
-          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:30.033372926Z\"}",
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:22.56194958Z\"}",
           "status": "error"
         },
         "dynamic": null,
@@ -1253,7 +1253,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:28.458645185Z\"}",
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:20.821877214Z\"}",
             "status": "error"
           }
         },
@@ -1264,7 +1264,7 @@
         "static": {
           "attempted": true,
           "status_code": 400,
-          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:28.458645185Z\"}",
+          "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:20.821877214Z\"}",
           "status": "error"
         },
         "dynamic": null,
@@ -1440,7 +1440,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.814430637Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.631009531Z\"}",
             "status": "already_exists"
           }
         },
@@ -1578,7 +1578,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:24.210126897Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:15.857516462Z\"}",
             "status": "already_exists"
           }
         },
@@ -1588,13 +1588,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.814430637Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.631009531Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:24.210126897Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:15.857516462Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -1603,16 +1603,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
-          "locations_scanned": 6983,
-          "matched_locations": 6077,
-          "matched_stations": 6077,
-          "matched_charging_points": 18966,
-          "station_coverage_ratio": 0.082992,
-          "charging_point_coverage_ratio": 0.094311,
+          "locations_scanned": 6994,
+          "matched_locations": 6078,
+          "matched_stations": 6078,
+          "matched_charging_points": 18968,
+          "station_coverage_ratio": 0.083006,
+          "charging_point_coverage_ratio": 0.094321,
           "bundle_matched_stations": 632,
           "bundle_matched_charging_points": 2045,
-          "bundle_station_coverage_ratio": 0.04088,
-          "bundle_charging_point_coverage_ratio": 0.038578,
+          "bundle_station_coverage_ratio": 0.040874,
+          "bundle_charging_point_coverage_ratio": 0.038574,
           "site_operator_samples": [
             "Stadtwerke Göttingen Aktiengesellschaft",
             "Stadtwerke Ettlingen GmbH",
@@ -1631,13 +1631,13 @@
           "access_mode": "noauth",
           "delta_delivery": true,
           "site_status_count": 19,
-          "station_status_count": 19,
-          "evse_status_count": 19,
-          "available_evses": 8,
+          "station_status_count": 21,
+          "evse_status_count": 21,
+          "available_evses": 9,
           "occupied_evses": 11,
-          "out_of_order_evses": 0,
+          "out_of_order_evses": 1,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T08:55:19.614Z"
+          "latest_last_updated": "2026-06-15T08:17:09.045Z"
         }
       }
     },
@@ -1806,7 +1806,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"Data offer is expired\",\"code\":400,\"occurred\":\"2026-06-11T08:53:29.680807251Z\"}",
+            "response_excerpt": "{\"message\":\"Data offer is expired\",\"code\":400,\"occurred\":\"2026-06-15T08:15:22.216487908Z\"}",
             "status": "error"
           }
         },
@@ -1817,7 +1817,7 @@
         "static": {
           "attempted": true,
           "status_code": 400,
-          "response_excerpt": "{\"message\":\"Data offer is expired\",\"code\":400,\"occurred\":\"2026-06-11T08:53:29.680807251Z\"}",
+          "response_excerpt": "{\"message\":\"Data offer is expired\",\"code\":400,\"occurred\":\"2026-06-15T08:15:22.216487908Z\"}",
           "status": "error"
         },
         "dynamic": null,
@@ -1993,7 +1993,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.516471148Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:12.581767544Z\"}",
             "status": "already_exists"
           }
         },
@@ -2131,7 +2131,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.631270338Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:12.745162812Z\"}",
             "status": "already_exists"
           }
         },
@@ -2141,13 +2141,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.516471148Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:12.581767544Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.631270338Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:12.745162812Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -2156,7 +2156,7 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 847,
+          "locations_scanned": 1032,
           "matched_locations": 0,
           "matched_stations": 0,
           "matched_charging_points": 0,
@@ -2167,8 +2167,8 @@
           "bundle_station_coverage_ratio": 0.0,
           "bundle_charging_point_coverage_ratio": 0.0,
           "site_operator_samples": [
-            "Ladebusiness",
-            "Ladenetz"
+            "Ladenetz",
+            "Ladebusiness"
           ]
         },
         "dynamic": {
@@ -2178,11 +2178,11 @@
           "site_status_count": 1,
           "station_status_count": 1,
           "evse_status_count": 1,
-          "available_evses": 1,
-          "occupied_evses": 0,
+          "available_evses": 0,
+          "occupied_evses": 1,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T08:55:00Z"
+          "latest_last_updated": "2026-06-15T08:17:00Z"
         }
       }
     },
@@ -2325,7 +2325,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:24.902345528Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:16.659470624Z\"}",
             "status": "already_exists"
           }
         },
@@ -2463,7 +2463,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.006895389Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:16.798373767Z\"}",
             "status": "already_exists"
           }
         },
@@ -2473,13 +2473,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:24.902345528Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:16.659470624Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.006895389Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:16.798373767Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -2654,7 +2654,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.322102835Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.721486241Z\"}",
             "status": "already_exists"
           }
         },
@@ -2792,7 +2792,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.218652519Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.620465247Z\"}",
             "status": "already_exists"
           }
         },
@@ -2802,13 +2802,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.322102835Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.721486241Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.218652519Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.620465247Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -2817,26 +2817,26 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 14292,
-          "matched_locations": 6953,
-          "matched_stations": 6953,
-          "matched_charging_points": 19104,
-          "station_coverage_ratio": 0.094955,
-          "charging_point_coverage_ratio": 0.094998,
-          "bundle_matched_stations": 3191,
-          "bundle_matched_charging_points": 10477,
-          "bundle_station_coverage_ratio": 0.206404,
-          "bundle_charging_point_coverage_ratio": 0.197646,
+          "locations_scanned": 14355,
+          "matched_locations": 6984,
+          "matched_stations": 6984,
+          "matched_charging_points": 19195,
+          "station_coverage_ratio": 0.095379,
+          "charging_point_coverage_ratio": 0.09545,
+          "bundle_matched_stations": 3203,
+          "bundle_matched_charging_points": 10506,
+          "bundle_station_coverage_ratio": 0.207153,
+          "bundle_charging_point_coverage_ratio": 0.19817,
           "site_operator_samples": [
-            "Fastned",
             "Techem Energy Services GmbH",
-            "Lidl",
             "Ubitricity",
+            "ChargePoint",
+            "Allego",
             "AVP E-Mobility",
-            "IONITY",
-            "Hochtief Ladepartner GmbH",
-            "SolBlock Solution GmbH & Co. KG",
-            "smopi® - Multi Chargepoint Solution",
+            "naturenergie holding AG",
+            "Stadtwerke Castrop-Rauxel GmbH",
+            "Kaufland",
+            "Citywatt GmbH",
             "Shell Recharge"
           ]
         },
@@ -2844,14 +2844,14 @@
           "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 145,
-          "station_status_count": 144,
-          "evse_status_count": 182,
-          "available_evses": 71,
-          "occupied_evses": 60,
-          "out_of_order_evses": 29,
-          "unknown_evses": 22,
-          "latest_last_updated": "2026-06-11T08:55:43Z"
+          "site_status_count": 193,
+          "station_status_count": 193,
+          "evse_status_count": 244,
+          "available_evses": 115,
+          "occupied_evses": 95,
+          "out_of_order_evses": 32,
+          "unknown_evses": 2,
+          "latest_last_updated": "2026-06-15T08:17:44Z"
         }
       }
     },
@@ -2994,7 +2994,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.692880054Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.595305674Z\"}",
             "status": "already_exists"
           }
         },
@@ -3132,7 +3132,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.584086186Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.479168132Z\"}",
             "status": "already_exists"
           }
         },
@@ -3142,13 +3142,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.692880054Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.595305674Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.584086186Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.479168132Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -3157,16 +3157,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 458,
-          "matched_locations": 441,
-          "matched_stations": 441,
-          "matched_charging_points": 1247,
-          "station_coverage_ratio": 0.006023,
-          "charging_point_coverage_ratio": 0.006201,
+          "locations_scanned": 459,
+          "matched_locations": 442,
+          "matched_stations": 442,
+          "matched_charging_points": 1243,
+          "station_coverage_ratio": 0.006036,
+          "charging_point_coverage_ratio": 0.006181,
           "bundle_matched_stations": 261,
-          "bundle_matched_charging_points": 844,
-          "bundle_station_coverage_ratio": 0.016882,
-          "bundle_charging_point_coverage_ratio": 0.015922,
+          "bundle_matched_charging_points": 838,
+          "bundle_station_coverage_ratio": 0.01688,
+          "bundle_charging_point_coverage_ratio": 0.015807,
           "site_operator_samples": [
             "E.ON Drive Infrastructure GmbH"
           ]
@@ -3175,14 +3175,14 @@
           "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 458,
-          "station_status_count": 694,
-          "evse_status_count": 1386,
-          "available_evses": 1093,
-          "occupied_evses": 291,
-          "out_of_order_evses": 2,
+          "site_status_count": 459,
+          "station_status_count": 692,
+          "evse_status_count": 1382,
+          "available_evses": 1111,
+          "occupied_evses": 259,
+          "out_of_order_evses": 12,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T08:55:33+00:00"
+          "latest_last_updated": "2026-06-15T08:15:41+00:00"
         }
       }
     },
@@ -3234,7 +3234,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.90160986Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:22.450676999Z\"}",
             "status": "already_exists"
           }
         },
@@ -3281,7 +3281,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.78895792Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:22.350317735Z\"}",
             "status": "already_exists"
           }
         },
@@ -3291,13 +3291,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.90160986Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:22.450676999Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.78895792Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:22.350317735Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -3327,11 +3327,11 @@
           "site_status_count": 0,
           "station_status_count": 0,
           "evse_status_count": 328,
-          "available_evses": 299,
-          "occupied_evses": 12,
-          "out_of_order_evses": 17,
+          "available_evses": 292,
+          "occupied_evses": 25,
+          "out_of_order_evses": 11,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T08:43:47.643079+00:00"
+          "latest_last_updated": "2026-06-15T08:11:56.8257+00:00"
         }
       }
     },
@@ -3474,7 +3474,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.790926085Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.196273887Z\"}",
             "status": "already_exists"
           }
         },
@@ -3612,7 +3612,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.800547948Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.710310881Z\"}",
             "status": "already_exists"
           }
         },
@@ -3622,13 +3622,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.790926085Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.196273887Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.800547948Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.710310881Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -3654,13 +3654,13 @@
           "access_mode": "auth",
           "delta_delivery": true,
           "site_status_count": 1,
-          "station_status_count": 2,
-          "evse_status_count": 18,
+          "station_status_count": 4,
+          "evse_status_count": 14,
           "available_evses": 14,
-          "occupied_evses": 4,
+          "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T08:52:19.613217Z"
+          "latest_last_updated": "2026-06-15T08:12:38.947364Z"
         }
       }
     },
@@ -3803,7 +3803,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.014180233Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.462691274Z\"}",
             "status": "already_exists"
           }
         },
@@ -3941,7 +3941,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.900651421Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.341572182Z\"}",
             "status": "already_exists"
           }
         },
@@ -3951,13 +3951,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.014180233Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.462691274Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.900651421Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.341572182Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -3966,16 +3966,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 2392,
-          "matched_locations": 2311,
-          "matched_stations": 2311,
-          "matched_charging_points": 9785,
-          "station_coverage_ratio": 0.031561,
-          "charging_point_coverage_ratio": 0.048657,
-          "bundle_matched_stations": 1654,
-          "bundle_matched_charging_points": 8176,
-          "bundle_station_coverage_ratio": 0.106986,
-          "bundle_charging_point_coverage_ratio": 0.154238,
+          "locations_scanned": 2394,
+          "matched_locations": 2310,
+          "matched_stations": 2310,
+          "matched_charging_points": 9789,
+          "station_coverage_ratio": 0.031547,
+          "charging_point_coverage_ratio": 0.048677,
+          "bundle_matched_stations": 1653,
+          "bundle_matched_charging_points": 8180,
+          "bundle_station_coverage_ratio": 0.106907,
+          "bundle_charging_point_coverage_ratio": 0.154296,
           "site_operator_samples": [
             "ENBW"
           ]
@@ -3985,13 +3985,13 @@
           "access_mode": "auth",
           "delta_delivery": true,
           "site_status_count": 1,
-          "station_status_count": 8,
-          "evse_status_count": 20,
-          "available_evses": 19,
-          "occupied_evses": 1,
-          "out_of_order_evses": 0,
+          "station_status_count": 4,
+          "evse_status_count": 9,
+          "available_evses": 2,
+          "occupied_evses": 5,
+          "out_of_order_evses": 2,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T10:56:23.388+02:00"
+          "latest_last_updated": "2026-06-15T10:18:16.298+02:00"
         }
       }
     },
@@ -4134,7 +4134,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.56990024Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:19.6935433Z\"}",
             "status": "already_exists"
           }
         },
@@ -4272,7 +4272,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.247116394Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:19.25760934Z\"}",
             "status": "already_exists"
           }
         },
@@ -4282,13 +4282,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.56990024Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:19.6935433Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.247116394Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:19.25760934Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -4313,14 +4313,14 @@
           "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 1,
-          "station_status_count": 1,
-          "evse_status_count": 2,
-          "available_evses": 2,
+          "site_status_count": 2,
+          "station_status_count": 19,
+          "evse_status_count": 35,
+          "available_evses": 34,
           "occupied_evses": 0,
-          "out_of_order_evses": 0,
+          "out_of_order_evses": 1,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T09:57:55+02:00"
+          "latest_last_updated": "2026-06-15T03:00:00+02:00"
         }
       }
     },
@@ -4463,7 +4463,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.011466136Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.435409321Z\"}",
             "status": "already_exists"
           }
         },
@@ -4601,7 +4601,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.895582299Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.324748812Z\"}",
             "status": "already_exists"
           }
         },
@@ -4611,13 +4611,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.011466136Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.435409321Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.895582299Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.324748812Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -4626,16 +4626,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
-          "locations_scanned": 4835,
-          "matched_locations": 3298,
-          "matched_stations": 3298,
-          "matched_charging_points": 8944,
-          "station_coverage_ratio": 0.04504,
-          "charging_point_coverage_ratio": 0.044475,
-          "bundle_matched_stations": 1395,
-          "bundle_matched_charging_points": 3682,
-          "bundle_station_coverage_ratio": 0.090233,
-          "bundle_charging_point_coverage_ratio": 0.06946,
+          "locations_scanned": 4857,
+          "matched_locations": 3303,
+          "matched_stations": 3303,
+          "matched_charging_points": 8958,
+          "station_coverage_ratio": 0.045108,
+          "charging_point_coverage_ratio": 0.044545,
+          "bundle_matched_stations": 1398,
+          "bundle_matched_charging_points": 3690,
+          "bundle_station_coverage_ratio": 0.090415,
+          "bundle_charging_point_coverage_ratio": 0.069603,
           "site_operator_samples": [
             "EWE Go GmbH",
             "Westfalen Weser Ladeservice GmbH",
@@ -4653,12 +4653,12 @@
           "fetch_status": "ok",
           "access_mode": "noauth",
           "delta_delivery": true,
-          "site_status_count": 7,
-          "station_status_count": 7,
-          "evse_status_count": 16,
-          "available_evses": 6,
-          "occupied_evses": 10,
-          "out_of_order_evses": 0,
+          "site_status_count": 1,
+          "station_status_count": 1,
+          "evse_status_count": 2,
+          "available_evses": 1,
+          "occupied_evses": 0,
+          "out_of_order_evses": 1,
           "unknown_evses": 0,
           "latest_last_updated": null
         }
@@ -4803,7 +4803,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.242863596Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.138397056Z\"}",
             "status": "already_exists"
           }
         },
@@ -4941,7 +4941,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.921405482Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.7611825Z\"}",
             "status": "already_exists"
           }
         },
@@ -4951,13 +4951,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.242863596Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.138397056Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.921405482Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.7611825Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -5132,7 +5132,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.519091989Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:13.844843417Z\"}",
             "status": "already_exists"
           }
         },
@@ -5270,7 +5270,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.6332284Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:13.976483949Z\"}",
             "status": "already_exists"
           }
         },
@@ -5280,13 +5280,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.519091989Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:13.844843417Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.6332284Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:13.976483949Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -5317,13 +5317,13 @@
           "access_mode": "auth",
           "delta_delivery": true,
           "site_status_count": 1,
-          "station_status_count": 2,
+          "station_status_count": 4,
           "evse_status_count": 1,
-          "available_evses": 1,
-          "occupied_evses": 0,
+          "available_evses": 0,
+          "occupied_evses": 1,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T08:50:35.247455Z"
+          "latest_last_updated": "2026-06-15T07:48:01.165020Z"
         }
       }
     },
@@ -5349,16 +5349,16 @@
             "providerApprovalAnonymousAccessRequired": null
           },
           "content_data": {
-            "accessUrl": "https://api.mobidata-bw.de/geoserver/MobiData-BW/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=MobiData-BW%3Acharge_points&outputFormat=csv",
-            "endpointDocumentation": "https://api.mobidata-bw.de/geoserver/MobiData-BW/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=MobiData-BW%3Acharge_points&outputFormat=csv",
+            "accessUrl": "https://ladestationen.api.bund.dev/",
+            "endpointDocumentation": "https://ladestationen.api.bund.dev/",
             "accessProtocol": null,
-            "mediaType": "http://publications.europa.eu/resource/authority/file-type/CSV",
+            "mediaType": "https://www.iana.org/assignments/media-types/application/json",
             "dataModel": "https://w3id.org/mdp/schema/data_model#MODEL_OTHER",
             "dataFormatAdditionalDescription": null,
-            "description": "Abzug aller der in der OCPDB-API enthaltenen Ladesäulen aus dem Geoserver",
+            "description": "Dokumentation der API des Ladesäulenregisters der Bundesnetzagentur",
             "byteSize": null,
-            "fileName": "Ladesäulen (CSV)",
-            "creationDate": "2025-01-15T12:46:47.65Z",
+            "fileName": "Dokumentation Ladestationen-API (JSON)",
+            "creationDate": "2021-08-23T10:19:50.262Z",
             "commMethod": null,
             "retentionPeriod": null,
             "deltaDelivery": null,
@@ -5375,7 +5375,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"Offer should not be harvested\",\"code\":400,\"occurred\":\"2026-06-11T08:53:30.242719053Z\"}",
+            "response_excerpt": "{\"message\":\"Offer should not be harvested\",\"code\":400,\"occurred\":\"2026-06-15T08:15:22.731574599Z\"}",
             "status": "error"
           }
         },
@@ -5386,7 +5386,7 @@
         "static": {
           "attempted": true,
           "status_code": 400,
-          "response_excerpt": "{\"message\":\"Offer should not be harvested\",\"code\":400,\"occurred\":\"2026-06-11T08:53:30.242719053Z\"}",
+          "response_excerpt": "{\"message\":\"Offer should not be harvested\",\"code\":400,\"occurred\":\"2026-06-15T08:15:22.731574599Z\"}",
           "status": "error"
         },
         "dynamic": null,
@@ -5394,7 +5394,7 @@
       },
       "coverage": {
         "static": {
-          "fetch_status": "unsupported_static_format: http://publications.europa.eu/resource/authority/file-type/CSV",
+          "fetch_status": "unsupported_static_format: https://www.iana.org/assignments/media-types/application/json",
           "access_mode": "auth",
           "locations_scanned": 0,
           "matched_locations": 0,
@@ -5562,7 +5562,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:24.663580041Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:16.419035326Z\"}",
             "status": "already_exists"
           }
         },
@@ -5700,7 +5700,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:24.786215112Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:16.533614684Z\"}",
             "status": "already_exists"
           }
         },
@@ -5710,13 +5710,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:24.663580041Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:16.419035326Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:24.786215112Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:16.533614684Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -5743,14 +5743,14 @@
           "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 2,
-          "station_status_count": 28,
-          "evse_status_count": 47,
-          "available_evses": 13,
-          "occupied_evses": 34,
+          "site_status_count": 0,
+          "station_status_count": 0,
+          "evse_status_count": 0,
+          "available_evses": 0,
+          "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T08:55:27Z"
+          "latest_last_updated": null
         }
       }
     },
@@ -5893,7 +5893,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.399598546Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:12.424897638Z\"}",
             "status": "already_exists"
           }
         },
@@ -6031,7 +6031,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.260762876Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:12.223162965Z\"}",
             "status": "already_exists"
           }
         },
@@ -6041,13 +6041,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.399598546Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:12.424897638Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.260762876Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:12.223162965Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -6077,11 +6077,11 @@
           "site_status_count": 193,
           "station_status_count": 421,
           "evse_status_count": 799,
-          "available_evses": 615,
-          "occupied_evses": 134,
-          "out_of_order_evses": 50,
+          "available_evses": 580,
+          "occupied_evses": 166,
+          "out_of_order_evses": 53,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T08:56:00.000Z"
+          "latest_last_updated": "2026-06-15T08:17:55.000Z"
         }
       }
     },
@@ -6224,7 +6224,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.211650698Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.578066459Z\"}",
             "status": "already_exists"
           }
         },
@@ -6362,7 +6362,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.332804485Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.709699803Z\"}",
             "status": "already_exists"
           }
         },
@@ -6372,13 +6372,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.211650698Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.578066459Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.332804485Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.709699803Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -6387,7 +6387,7 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
-          "locations_scanned": 986,
+          "locations_scanned": 987,
           "matched_locations": 530,
           "matched_stations": 530,
           "matched_charging_points": 1585,
@@ -6395,33 +6395,33 @@
           "charging_point_coverage_ratio": 0.007882,
           "bundle_matched_stations": 124,
           "bundle_matched_charging_points": 392,
-          "bundle_station_coverage_ratio": 0.008021,
-          "bundle_charging_point_coverage_ratio": 0.007395,
+          "bundle_station_coverage_ratio": 0.00802,
+          "bundle_charging_point_coverage_ratio": 0.007394,
           "site_operator_samples": [
-            "TELIS Unternehmensgruppe AG",
-            "Eigenbetrieb Erholungsregion Aartalsee",
-            "Charge Green OnSite GmbH",
-            "Regioladen+ GmbH",
-            "Reinhausen GmbH",
-            "EAM Natur Energie GmbH",
-            "EGT Energy Solutions GmbH (CPO)",
-            "Continental AG",
             "EW Eichsfeldgas GmbH",
-            "Flavia IT-Management GmbH"
+            "Charge Green OnSite GmbH",
+            "EAM Natur Energie GmbH",
+            "Reinhausen GmbH",
+            "EGT Energy Solutions GmbH (CPO)",
+            "Osterode Kreiswohnbau",
+            "becharged GmbH",
+            "Stadtwerke Hemau",
+            "Stadt Grebenstein",
+            "Landkreis Kassel"
           ]
         },
         "dynamic": {
           "fetch_status": "ok",
           "access_mode": "noauth",
           "delta_delivery": false,
-          "site_status_count": 986,
-          "station_status_count": 986,
-          "evse_status_count": 1677,
-          "available_evses": 1540,
-          "occupied_evses": 74,
-          "out_of_order_evses": 29,
-          "unknown_evses": 34,
-          "latest_last_updated": "2026-06-11T08:57:00.963Z"
+          "site_status_count": 987,
+          "station_status_count": 987,
+          "evse_status_count": 1679,
+          "available_evses": 1543,
+          "occupied_evses": 75,
+          "out_of_order_evses": 25,
+          "unknown_evses": 36,
+          "latest_last_updated": "2026-06-15T08:18:45.736Z"
         }
       }
     },
@@ -6564,7 +6564,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.994957002Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:15.552873724Z\"}",
             "status": "already_exists"
           }
         },
@@ -6702,7 +6702,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:24.102822848Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:15.685491057Z\"}",
             "status": "already_exists"
           }
         },
@@ -6712,13 +6712,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.994957002Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:15.552873724Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:24.102822848Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:15.685491057Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -6893,7 +6893,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.441554072Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.823220692Z\"}",
             "status": "already_exists"
           }
         },
@@ -6904,7 +6904,7 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.441554072Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.823220692Z\"}",
           "status": "already_exists"
         },
         "dynamic": null,
@@ -7080,7 +7080,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.971466651Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.355681792Z\"}",
             "status": "already_exists"
           }
         },
@@ -7218,7 +7218,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.089130937Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.464653824Z\"}",
             "status": "already_exists"
           }
         },
@@ -7228,13 +7228,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.971466651Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.355681792Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.089130937Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.464653824Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -7244,15 +7244,15 @@
           "fetch_status": "ok",
           "access_mode": "auth",
           "locations_scanned": 959,
-          "matched_locations": 595,
-          "matched_stations": 595,
-          "matched_charging_points": 1865,
-          "station_coverage_ratio": 0.008126,
-          "charging_point_coverage_ratio": 0.009274,
+          "matched_locations": 594,
+          "matched_stations": 594,
+          "matched_charging_points": 1863,
+          "station_coverage_ratio": 0.008112,
+          "charging_point_coverage_ratio": 0.009264,
           "bundle_matched_stations": 169,
           "bundle_matched_charging_points": 543,
-          "bundle_station_coverage_ratio": 0.010931,
-          "bundle_charging_point_coverage_ratio": 0.010244,
+          "bundle_station_coverage_ratio": 0.01093,
+          "bundle_charging_point_coverage_ratio": 0.010242,
           "site_operator_samples": [
             "DEAHF",
             "DENB1",
@@ -7273,11 +7273,11 @@
           "site_status_count": 161,
           "station_status_count": 959,
           "evse_status_count": 2859,
-          "available_evses": 2206,
-          "occupied_evses": 412,
-          "out_of_order_evses": 239,
-          "unknown_evses": 2,
-          "latest_last_updated": "2026-06-11T08:55:00Z"
+          "available_evses": 2156,
+          "occupied_evses": 450,
+          "out_of_order_evses": 249,
+          "unknown_evses": 4,
+          "latest_last_updated": "2026-06-15T08:15:01Z"
         }
       }
     },
@@ -7420,7 +7420,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.233490421Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.663705933Z\"}",
             "status": "already_exists"
           }
         },
@@ -7558,7 +7558,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.127013861Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.568088555Z\"}",
             "status": "already_exists"
           }
         },
@@ -7568,13 +7568,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.233490421Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.663705933Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.127013861Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.568088555Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -7583,16 +7583,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 2320,
-          "matched_locations": 1945,
-          "matched_stations": 1945,
-          "matched_charging_points": 5678,
-          "station_coverage_ratio": 0.026562,
-          "charging_point_coverage_ratio": 0.028235,
+          "locations_scanned": 2326,
+          "matched_locations": 1946,
+          "matched_stations": 1946,
+          "matched_charging_points": 5680,
+          "station_coverage_ratio": 0.026576,
+          "charging_point_coverage_ratio": 0.028245,
           "bundle_matched_stations": 236,
           "bundle_matched_charging_points": 861,
-          "bundle_station_coverage_ratio": 0.015265,
-          "bundle_charging_point_coverage_ratio": 0.016243,
+          "bundle_station_coverage_ratio": 0.015263,
+          "bundle_charging_point_coverage_ratio": 0.016241,
           "site_operator_samples": [
             "DESTA",
             "DEERM",
@@ -7611,13 +7611,13 @@
           "access_mode": "auth",
           "delta_delivery": false,
           "site_status_count": 34,
-          "station_status_count": 2320,
-          "evse_status_count": 7831,
-          "available_evses": 6475,
-          "occupied_evses": 1135,
-          "out_of_order_evses": 211,
-          "unknown_evses": 10,
-          "latest_last_updated": "2026-06-11T08:55:02Z"
+          "station_status_count": 2326,
+          "evse_status_count": 7846,
+          "available_evses": 6482,
+          "occupied_evses": 1129,
+          "out_of_order_evses": 222,
+          "unknown_evses": 13,
+          "latest_last_updated": "2026-06-15T08:15:02Z"
         }
       }
     },
@@ -7760,7 +7760,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.860095885Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.226118649Z\"}",
             "status": "already_exists"
           }
         },
@@ -7898,7 +7898,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.750864649Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.096350072Z\"}",
             "status": "already_exists"
           }
         },
@@ -7908,13 +7908,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.860095885Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.226118649Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:22.750864649Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.096350072Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -8089,7 +8089,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.785506631Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.213918166Z\"}",
             "status": "already_exists"
           }
         },
@@ -8227,7 +8227,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.676452812Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:19.796284883Z\"}",
             "status": "already_exists"
           }
         },
@@ -8237,13 +8237,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.785506631Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.213918166Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.676452812Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:19.796284883Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -8252,7 +8252,7 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 1230,
+          "locations_scanned": 1231,
           "matched_locations": 978,
           "matched_stations": 978,
           "matched_charging_points": 3971,
@@ -8260,8 +8260,8 @@
           "charging_point_coverage_ratio": 0.019746,
           "bundle_matched_stations": 129,
           "bundle_matched_charging_points": 501,
-          "bundle_station_coverage_ratio": 0.008344,
-          "bundle_charging_point_coverage_ratio": 0.009451,
+          "bundle_station_coverage_ratio": 0.008343,
+          "bundle_charging_point_coverage_ratio": 0.00945,
           "site_operator_samples": []
         },
         "dynamic": {
@@ -8272,10 +8272,10 @@
           "station_status_count": 1,
           "evse_status_count": 1,
           "available_evses": 0,
-          "occupied_evses": 1,
-          "out_of_order_evses": 0,
+          "occupied_evses": 0,
+          "out_of_order_evses": 1,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T08:58:29.3806924+00:00"
+          "latest_last_updated": "2026-06-15T08:20:21.5603353+00:00"
         }
       }
     },
@@ -8418,7 +8418,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.032601381Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.967425374Z\"}",
             "status": "already_exists"
           }
         },
@@ -8556,7 +8556,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.907631876Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.840175384Z\"}",
             "status": "already_exists"
           }
         },
@@ -8566,13 +8566,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.032601381Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.967425374Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.907631876Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.840175384Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -8581,12 +8581,12 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 143,
-          "matched_locations": 106,
-          "matched_stations": 106,
-          "matched_charging_points": 261,
-          "station_coverage_ratio": 0.001448,
-          "charging_point_coverage_ratio": 0.001298,
+          "locations_scanned": 142,
+          "matched_locations": 108,
+          "matched_stations": 108,
+          "matched_charging_points": 265,
+          "station_coverage_ratio": 0.001475,
+          "charging_point_coverage_ratio": 0.001318,
           "bundle_matched_stations": 4,
           "bundle_matched_charging_points": 10,
           "bundle_station_coverage_ratio": 0.000259,
@@ -8599,9 +8599,9 @@
             "Braun Energiedienstleistungen GmbH & Co. KG",
             "Energieversorgung Guben GmbH",
             "ELTPLAN",
-            "Autocenter Giraud GmbH",
             "Hyatt Place Frankfurt Airport",
-            "KSV Koblenzer GmbH"
+            "KSV Koblenzer GmbH",
+            "e-HET GmbH"
           ]
         },
         "dynamic": {
@@ -8615,7 +8615,7 @@
           "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T08:58:15.1530470+00:00"
+          "latest_last_updated": "2026-06-15T08:20:21.8996758+00:00"
         }
       }
     },
@@ -8758,7 +8758,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.126928389Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:16.95232797Z\"}",
             "status": "already_exists"
           }
         },
@@ -8896,7 +8896,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.239153884Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.093783575Z\"}",
             "status": "already_exists"
           }
         },
@@ -8906,13 +8906,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.126928389Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:16.95232797Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.239153884Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.093783575Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -9087,7 +9087,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.465306317Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:19.55335048Z\"}",
             "status": "already_exists"
           }
         },
@@ -9225,7 +9225,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.349894379Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:19.427453228Z\"}",
             "status": "already_exists"
           }
         },
@@ -9273,7 +9273,7 @@
             "subscription_status": {
               "attempted": true,
               "status_code": 400,
-              "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:29.566759704Z\"}",
+              "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:22.058110513Z\"}",
               "status": "error"
             }
           }
@@ -9283,20 +9283,20 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.465306317Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:19.55335048Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.349894379Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:19.427453228Z\"}",
           "status": "already_exists"
         },
         "other": [
           {
             "attempted": true,
             "status_code": 400,
-            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-11T08:53:29.566759704Z\"}",
+            "response_excerpt": "{\"message\":\"It is not allowed to create subscription for not brokered offer with ProviderApprovalRequired flag equals null or false\",\"code\":400,\"occurred\":\"2026-06-15T08:15:22.058110513Z\"}",
             "status": "error"
           }
         ]
@@ -9305,16 +9305,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 671,
-          "matched_locations": 381,
-          "matched_stations": 381,
-          "matched_charging_points": 1449,
-          "station_coverage_ratio": 0.005203,
-          "charging_point_coverage_ratio": 0.007205,
-          "bundle_matched_stations": 136,
-          "bundle_matched_charging_points": 492,
-          "bundle_station_coverage_ratio": 0.008797,
-          "bundle_charging_point_coverage_ratio": 0.009281,
+          "locations_scanned": 674,
+          "matched_locations": 380,
+          "matched_stations": 380,
+          "matched_charging_points": 1447,
+          "station_coverage_ratio": 0.00519,
+          "charging_point_coverage_ratio": 0.007195,
+          "bundle_matched_stations": 134,
+          "bundle_matched_charging_points": 488,
+          "bundle_station_coverage_ratio": 0.008666,
+          "bundle_charging_point_coverage_ratio": 0.009205,
           "site_operator_samples": [
             "Mangels-Elektro U. Sanitär GmbH",
             "Service4Charger",
@@ -9339,7 +9339,7 @@
           "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 1,
-          "latest_last_updated": "2026-06-11T08:58:52.344000Z"
+          "latest_last_updated": "2026-06-15T08:20:52.818000Z"
         }
       }
     },
@@ -9482,7 +9482,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.143958008Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:19.094638514Z\"}",
             "status": "already_exists"
           }
         },
@@ -9493,7 +9493,7 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:27.143958008Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:19.094638514Z\"}",
           "status": "already_exists"
         },
         "dynamic": null,
@@ -9677,7 +9677,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.473084994Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.365810799Z\"}",
             "status": "already_exists"
           }
         },
@@ -9815,7 +9815,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.345925803Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.247407053Z\"}",
             "status": "already_exists"
           }
         },
@@ -9825,13 +9825,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.473084994Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.365810799Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.345925803Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.247407053Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -9840,7 +9840,7 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
-          "locations_scanned": 682,
+          "locations_scanned": 683,
           "matched_locations": 667,
           "matched_stations": 667,
           "matched_charging_points": 1606,
@@ -9858,14 +9858,14 @@
           "fetch_status": "ok",
           "access_mode": "noauth",
           "delta_delivery": false,
-          "site_status_count": 682,
-          "station_status_count": 1535,
-          "evse_status_count": 1768,
-          "available_evses": 1235,
-          "occupied_evses": 482,
-          "out_of_order_evses": 51,
+          "site_status_count": 683,
+          "station_status_count": 1537,
+          "evse_status_count": 1772,
+          "available_evses": 1266,
+          "occupied_evses": 485,
+          "out_of_order_evses": 21,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T08:54:28+00:00"
+          "latest_last_updated": "2026-06-15T08:16:05+00:00"
         }
       }
     },
@@ -10008,7 +10008,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.748450744Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:12.861443504Z\"}",
             "status": "already_exists"
           }
         },
@@ -10146,7 +10146,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.883352856Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:13.059167851Z\"}",
             "status": "already_exists"
           }
         },
@@ -10156,13 +10156,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.748450744Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:12.861443504Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:21.883352856Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:13.059167851Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -10337,7 +10337,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:24.557114674Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:16.291203279Z\"}",
             "status": "already_exists"
           }
         },
@@ -10475,7 +10475,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.110270484Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.527386695Z\"}",
             "status": "already_exists"
           }
         },
@@ -10485,13 +10485,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:24.557114674Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:16.291203279Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.110270484Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.527386695Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -10500,16 +10500,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "noauth",
-          "locations_scanned": 96,
-          "matched_locations": 94,
-          "matched_stations": 94,
-          "matched_charging_points": 302,
-          "station_coverage_ratio": 0.001284,
-          "charging_point_coverage_ratio": 0.001502,
-          "bundle_matched_stations": 14,
-          "bundle_matched_charging_points": 43,
-          "bundle_station_coverage_ratio": 0.000906,
-          "bundle_charging_point_coverage_ratio": 0.000811,
+          "locations_scanned": 97,
+          "matched_locations": 95,
+          "matched_stations": 95,
+          "matched_charging_points": 306,
+          "station_coverage_ratio": 0.001297,
+          "charging_point_coverage_ratio": 0.001522,
+          "bundle_matched_stations": 15,
+          "bundle_matched_charging_points": 47,
+          "bundle_station_coverage_ratio": 0.00097,
+          "bundle_charging_point_coverage_ratio": 0.000887,
           "site_operator_samples": [
             "SMATRICS"
           ]
@@ -10519,13 +10519,13 @@
           "access_mode": "noauth",
           "delta_delivery": true,
           "site_status_count": 3,
-          "station_status_count": 3,
-          "evse_status_count": 3,
+          "station_status_count": 0,
+          "evse_status_count": 0,
           "available_evses": 0,
-          "occupied_evses": 3,
+          "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T08:59:00Z"
+          "latest_last_updated": "2026-06-15T08:21:00Z"
         }
       }
     },
@@ -10668,7 +10668,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.477162844Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.318080801Z\"}",
             "status": "already_exists"
           }
         },
@@ -10806,7 +10806,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.351654329Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.204321161Z\"}",
             "status": "already_exists"
           }
         },
@@ -10816,13 +10816,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.477162844Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.318080801Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.351654329Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.204321161Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -10997,7 +10997,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.667994571Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:15.128763018Z\"}",
             "status": "already_exists"
           }
         },
@@ -11135,7 +11135,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.555243361Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.94271054Z\"}",
             "status": "already_exists"
           }
         },
@@ -11145,13 +11145,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.667994571Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:15.128763018Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.555243361Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:14.94271054Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -11320,13 +11320,13 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:20.794638302Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:11.584437098Z\"}",
             "status": "already_exists"
           }
         },
@@ -11458,13 +11458,13 @@
           "file_access_probe": {
             "status": "ok",
             "status_code": 200,
-            "is_accessible": false,
-            "response_excerpt": "{\"isAccessible\":false}"
+            "is_accessible": true,
+            "response_excerpt": "{\"isAccessible\":true}"
           },
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:20.908337215Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:11.706482781Z\"}",
             "status": "already_exists"
           }
         },
@@ -11474,45 +11474,51 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:20.794638302Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:11.584437098Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:20.908337215Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:11.706482781Z\"}",
           "status": "already_exists"
         },
         "other": []
       },
       "coverage": {
         "static": {
-          "fetch_status": "noauth: 403 Client Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/1000749522967314432/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 0,
-          "matched_locations": 0,
-          "matched_stations": 0,
-          "matched_charging_points": 0,
-          "station_coverage_ratio": 0.0,
-          "charging_point_coverage_ratio": 0.0,
-          "bundle_matched_stations": 0,
-          "bundle_matched_charging_points": 0,
-          "bundle_station_coverage_ratio": 0.0,
-          "bundle_charging_point_coverage_ratio": 0.0,
-          "site_operator_samples": []
+          "locations_scanned": 64,
+          "matched_locations": 46,
+          "matched_stations": 46,
+          "matched_charging_points": 115,
+          "station_coverage_ratio": 0.000628,
+          "charging_point_coverage_ratio": 0.000572,
+          "bundle_matched_stations": 2,
+          "bundle_matched_charging_points": 8,
+          "bundle_station_coverage_ratio": 0.000129,
+          "bundle_charging_point_coverage_ratio": 0.000151,
+          "site_operator_samples": [
+            "Emobility East",
+            "next step mobility GmbH",
+            "Sasto Objekt",
+            "Ladestart - Scheibling Immobilien",
+            "Sonektro GmbH"
+          ]
         },
         "dynamic": {
-          "fetch_status": "noauth: 403 Client Error:  for url: https://mobilithek.info/mdp-api/mdp-conn-server/v1/publication/1000746576770711552/file/noauth",
+          "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 0,
-          "station_status_count": 0,
-          "evse_status_count": 0,
-          "available_evses": 0,
+          "site_status_count": 1,
+          "station_status_count": 1,
+          "evse_status_count": 1,
+          "available_evses": 1,
           "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": null
+          "latest_last_updated": "2026-06-15T10:19:05+02:00"
         }
       }
     },
@@ -11655,7 +11661,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.885665579Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:15.427289931Z\"}",
             "status": "already_exists"
           }
         },
@@ -11793,7 +11799,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.775347426Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:15.28305538Z\"}",
             "status": "already_exists"
           }
         },
@@ -11803,13 +11809,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.885665579Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:15.427289931Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:23.775347426Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:15.28305538Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -11984,7 +11990,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.674084404Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.070558847Z\"}",
             "status": "already_exists"
           }
         },
@@ -12122,7 +12128,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.565444651Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.922177485Z\"}",
             "status": "already_exists"
           }
         },
@@ -12132,13 +12138,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.674084404Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.070558847Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:28.565444651Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:20.922177485Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -12155,8 +12161,8 @@
           "charging_point_coverage_ratio": 0.018896,
           "bundle_matched_stations": 306,
           "bundle_matched_charging_points": 3675,
-          "bundle_station_coverage_ratio": 0.019793,
-          "bundle_charging_point_coverage_ratio": 0.069328,
+          "bundle_station_coverage_ratio": 0.01979,
+          "bundle_charging_point_coverage_ratio": 0.06932,
           "site_operator_samples": [
             "Tesla, Inc."
           ]
@@ -12172,7 +12178,7 @@
           "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T09:01:43Z"
+          "latest_last_updated": "2026-06-15T08:23:07Z"
         }
       }
     },
@@ -12315,7 +12321,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.707304989Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.523055952Z\"}",
             "status": "already_exists"
           }
         },
@@ -12453,7 +12459,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.598355241Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.423130888Z\"}",
             "status": "already_exists"
           }
         },
@@ -12463,13 +12469,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.707304989Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.523055952Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:25.598355241Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.423130888Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -12478,16 +12484,16 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 10346,
-          "matched_locations": 6957,
-          "matched_stations": 6957,
-          "matched_charging_points": 14533,
-          "station_coverage_ratio": 0.09501,
-          "charging_point_coverage_ratio": 0.072268,
-          "bundle_matched_stations": 820,
-          "bundle_matched_charging_points": 2086,
-          "bundle_station_coverage_ratio": 0.05304,
-          "bundle_charging_point_coverage_ratio": 0.039352,
+          "locations_scanned": 10362,
+          "matched_locations": 6958,
+          "matched_stations": 6958,
+          "matched_charging_points": 14535,
+          "station_coverage_ratio": 0.095023,
+          "charging_point_coverage_ratio": 0.072277,
+          "bundle_matched_stations": 821,
+          "bundle_matched_charging_points": 2088,
+          "bundle_station_coverage_ratio": 0.053098,
+          "bundle_charging_point_coverage_ratio": 0.039385,
           "site_operator_samples": [
             "enercity AG",
             "Envia  GmbH",
@@ -12512,7 +12518,7 @@
           "occupied_evses": 0,
           "out_of_order_evses": 0,
           "unknown_evses": 0,
-          "latest_last_updated": "2026-06-11T09:02:18Z"
+          "latest_last_updated": "2026-06-15T08:23:46Z"
         }
       }
     },
@@ -12655,7 +12661,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.030520949Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.884437518Z\"}",
             "status": "already_exists"
           }
         },
@@ -12793,7 +12799,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.136048133Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.002755924Z\"}",
             "status": "already_exists"
           }
         },
@@ -12803,13 +12809,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.030520949Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:17.884437518Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:26.136048133Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:18.002755924Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -12984,7 +12990,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.445776432Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.888613013Z\"}",
             "status": "already_exists"
           }
         },
@@ -13109,7 +13115,7 @@
           "subscription_status": {
             "attempted": true,
             "status_code": 409,
-            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.337153652Z\"}",
+            "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.775990619Z\"}",
             "status": "already_exists"
           }
         },
@@ -13119,13 +13125,13 @@
         "static": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.445776432Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.888613013Z\"}",
           "status": "already_exists"
         },
         "dynamic": {
           "attempted": true,
           "status_code": 409,
-          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-11T08:53:29.337153652Z\"}",
+          "response_excerpt": "{\"message\":\"Contract already exists\",\"code\":409,\"occurred\":\"2026-06-15T08:15:21.775990619Z\"}",
           "status": "already_exists"
         },
         "other": []
@@ -13134,12 +13140,12 @@
         "static": {
           "fetch_status": "ok",
           "access_mode": "auth",
-          "locations_scanned": 1852,
+          "locations_scanned": 1857,
           "matched_locations": 1344,
           "matched_stations": 1344,
-          "matched_charging_points": 3431,
+          "matched_charging_points": 3430,
           "station_coverage_ratio": 0.018355,
-          "charging_point_coverage_ratio": 0.017061,
+          "charging_point_coverage_ratio": 0.017056,
           "bundle_matched_stations": 49,
           "bundle_matched_charging_points": 119,
           "bundle_station_coverage_ratio": 0.003169,
@@ -13152,14 +13158,14 @@
           "fetch_status": "ok",
           "access_mode": "auth",
           "delta_delivery": true,
-          "site_status_count": 1,
-          "station_status_count": 1,
-          "evse_status_count": 2,
-          "available_evses": 2,
-          "occupied_evses": 0,
-          "out_of_order_evses": 0,
-          "unknown_evses": 0,
-          "latest_last_updated": "2026-05-23T02:32:29+00:00"
+          "site_status_count": 1857,
+          "station_status_count": 1857,
+          "evse_status_count": 3569,
+          "available_evses": 3254,
+          "occupied_evses": 233,
+          "out_of_order_evses": 20,
+          "unknown_evses": 62,
+          "latest_last_updated": "2026-06-14T02:33:12+00:00"
         }
       }
     }
