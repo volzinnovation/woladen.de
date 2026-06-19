@@ -627,6 +627,67 @@ function applyLiveStationSummaryToProps(props, summary) {
   });
 }
 
+const CATALOG_LIVE_SIGNAL_FIELDS = [
+  "availability_status",
+  "available_evses",
+  "occupied_evses",
+  "out_of_order_evses",
+  "unknown_evses",
+  "total_evses",
+  "source_observed_at",
+  "fetched_at",
+  "ingested_at",
+];
+
+function hasCatalogLiveStationSummary(station) {
+  if (!station || typeof station !== "object") {
+    return false;
+  }
+  return CATALOG_LIVE_SIGNAL_FIELDS.some((key) => {
+    const value = station[key];
+    return value !== undefined && value !== null && String(value).trim() !== "";
+  });
+}
+
+function catalogLiveStationSummary(station, stationId = "") {
+  if (!hasCatalogLiveStationSummary(station)) {
+    return null;
+  }
+  const summary = {
+    station_id: normalizeStationId(stationId || station?.station_id || ""),
+  };
+  LIVE_STATION_FIELDS.forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(station, key)) {
+      summary[key] = station[key];
+    }
+  });
+  summary.availability_status = normalizeAvailabilityStatus(summary.availability_status);
+  return summary;
+}
+
+function upsertCatalogLiveStationSummary(stationId, summary) {
+  const normalizedStationId = normalizeStationId(stationId || summary?.station_id || "");
+  if (!normalizedStationId || !summary) {
+    return null;
+  }
+  const normalizedSummary = {
+    ...summary,
+    station_id: normalizedStationId,
+  };
+  state.live.summaryByStationId.set(normalizedStationId, normalizedSummary);
+  state.live.summaryFetchedAtByStationId.set(normalizedStationId, Date.now());
+  return normalizedSummary;
+}
+
+function markCatalogLiveStationSummaryMissing(stationId) {
+  const normalizedStationId = normalizeStationId(stationId || "");
+  if (!normalizedStationId) {
+    return;
+  }
+  state.live.summaryByStationId.delete(normalizedStationId);
+  state.live.summaryFetchedAtByStationId.set(normalizedStationId, Date.now());
+}
+
 function applyCachedLiveStationSummaryToFeature(feature) {
   const props = feature?.properties;
   const stationId = getStationIdFromProps(props);
@@ -1454,6 +1515,10 @@ function catalogStationToFeature(station) {
     distance_m: finiteNumber(station?.distance_m, Number.NaN),
   };
   applyCatalogAmenityCounts(props, categoryCounts);
+  const liveSummary = catalogLiveStationSummary(station, props.station_id);
+  if (liveSummary) {
+    applyLiveStationSummaryToProps(props, liveSummary);
+  }
   return prepareChargerFeature(
     {
       type: "Feature",
@@ -1576,7 +1641,13 @@ async function loadCatalogStationsForCurrentCenter({ force = false } = {}) {
       if (!stationId || !Number.isFinite(Number(lat)) || !Number.isFinite(Number(lon))) {
         return;
       }
-      applyCachedLiveStationSummaryToFeature(feature);
+      const liveSummary = catalogLiveStationSummary(station, stationId);
+      if (liveSummary) {
+        const cachedSummary = upsertCatalogLiveStationSummary(stationId, liveSummary);
+        applyLiveStationSummaryToProps(feature.properties, cachedSummary);
+      } else {
+        markCatalogLiveStationSummaryMissing(stationId);
+      }
       featuresByStationId.set(stationId, feature);
     });
     state.features = Array.from(featuresByStationId.values());
