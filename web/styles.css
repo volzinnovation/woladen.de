@@ -311,6 +311,7 @@ body {
   color: var(--color-text-muted);
   font-size: 0.75rem; /* 12px */
   font-weight: 500;
+  text-decoration: none;
   cursor: pointer;
   width: 100%;
   height: 100%;
@@ -324,6 +325,104 @@ body {
 
 .nav-item.active {
   color: var(--color-primary);
+}
+
+.easter-egg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(53, 255, 132, 0.18), transparent 34rem),
+    linear-gradient(180deg, rgba(0, 16, 8, 0.96), rgba(0, 0, 0, 0.98));
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.easter-egg-overlay.is-active {
+  opacity: 1;
+}
+
+.easter-egg-overlay::before,
+.easter-egg-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.easter-egg-overlay::before {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(216, 255, 229, 0.12) 0,
+      rgba(216, 255, 229, 0.12) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(40, 255, 120, 0.08) 0,
+      rgba(40, 255, 120, 0.08) 1px,
+      transparent 1px,
+      transparent 12px
+    );
+  mix-blend-mode: screen;
+  animation: easter-scan 760ms linear infinite;
+}
+
+.easter-egg-overlay::after {
+  box-shadow: inset 0 0 8rem rgba(0, 0, 0, 0.86);
+}
+
+.easter-egg-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.easter-egg-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(216, 255, 229, 0.11);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: clamp(8rem, 34vw, 28rem);
+  font-weight: 700;
+  line-height: 1;
+  text-shadow:
+    0 0 1rem rgba(65, 255, 135, 0.34),
+    0 0 5rem rgba(65, 255, 135, 0.2);
+  animation: easter-core 920ms steps(2, end) infinite;
+}
+
+@keyframes easter-scan {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(8px);
+  }
+}
+
+@keyframes easter-core {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.08;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .easter-egg-overlay::before,
+  .easter-egg-core {
+    animation: none;
+  }
 }
 
 /* MAP VIEW */

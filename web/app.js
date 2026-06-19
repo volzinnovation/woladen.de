@@ -81,6 +81,15 @@ const CATALOG_MIN_RELOAD_DISTANCE_M = 1000;
 const STATIC_FALLBACK_LIST_LIMIT = 20;
 const MAP_UNCLUSTERED_MARKER_LIMIT = 350;
 const MAP_UNCLUSTERED_FULL_RENDER_ZOOM = 9;
+const EASTER_EGG_AUDIO_SECONDS = 1.75;
+const EASTER_EGG_AUDIO_RATE = 8192;
+const EASTER_EGG_MEMORY_SIZE = 65536;
+const EASTER_EGG_TEXT_COLUMNS = 40;
+const EASTER_EGG_TEXT_ROWS = 25;
+const EASTER_EGG_VISIBLE_BYTES = EASTER_EGG_TEXT_COLUMNS * EASTER_EGG_TEXT_ROWS * 2;
+const EASTER_EGG_SUBTRACT_STEP = 57;
+const EASTER_EGG_ITERATIONS_PER_FRAME = 1200;
+const EASTER_EGG_CHARS = "E0101101#*";
 const LIVE_OUT_OF_ORDER_MARKER_SIZE = 22;
 const LIVE_FULLY_OCCUPIED_MARKER_SIZE = 18;
 const STATION_ID_NAMESPACE = "DE:";
@@ -919,6 +928,22 @@ const state = {
   mapInteraction: {
     hasUserInteracted: false,
   },
+  easterEgg: {
+    active: false,
+    overlay: null,
+    canvas: null,
+    ctx: null,
+    core: null,
+    animationFrame: 0,
+    frame: 0,
+    width: 0,
+    height: 0,
+    audioContext: null,
+    audioSource: null,
+    audioGain: null,
+    audioBuffer: null,
+    machine: null,
+  },
   modal: {
     lastFocusedByName: new Map(),
   },
@@ -1040,7 +1065,8 @@ const els = {
   },
 };
 
-const VIEW_IDS = new Set(["view-list", "view-map", "view-favorites", "view-info"]);
+const VIEW_ORDER = ["view-list", "view-map", "view-favorites", "view-info"];
+const VIEW_IDS = new Set(VIEW_ORDER);
 const VIEW_HASH_ALIASES = new Map([
   ["list", "view-list"],
   ["liste", "view-list"],
@@ -1088,6 +1114,13 @@ async function init() {
   els.detail.noteInput.addEventListener("input", handleDetailNoteInput);
   els.favorites.sort.addEventListener("change", handleFavoriteSortChange);
   document.addEventListener("keydown", handleGlobalKeydown);
+  document.addEventListener("keyup", handleGlobalKeyup);
+  window.addEventListener("blur", stopEasterEgg);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      stopEasterEgg();
+    }
+  });
 
   // Load Data
   await loadData();
@@ -1229,7 +1262,13 @@ function focusMapKeyboardNavigation() {
     return;
   }
   els.search.input?.blur();
-  state.views.map?.getContainer?.()?.focus?.({ preventScroll: true });
+  const map = state.views.map;
+  const mapContainer = map && typeof map.getContainer === "function"
+    ? map.getContainer()
+    : null;
+  if (mapContainer && typeof mapContainer.focus === "function") {
+    mapContainer.focus({ preventScroll: true });
+  }
 }
 
 function getLocationSearchFocus() {
@@ -2473,6 +2512,18 @@ function renderDataSources(openStaticSummaryData) {
   geocoderTitle.appendChild(geocoderLink);
   geocoderItem.appendChild(geocoderTitle);
   container.appendChild(geocoderItem);
+
+  const easterEggItem = document.createElement("li");
+  const easterEggTitle = document.createElement("div");
+  easterEggTitle.className = "source-title";
+  const easterEggLink = document.createElement("a");
+  easterEggLink.href = "https://hellmood.111mb.de//wake_up_16b_writeup.html";
+  easterEggLink.target = "_blank";
+  easterEggLink.rel = "noopener noreferrer";
+  easterEggLink.textContent = "Easter Egg: wake up! 16b by HellMood (Port)";
+  easterEggTitle.appendChild(easterEggLink);
+  easterEggItem.appendChild(easterEggTitle);
+  container.appendChild(easterEggItem);
 }
 
 function populateOperators() {
@@ -2513,9 +2564,7 @@ function initMap() {
     attribution: "© OpenStreetMap",
   }).addTo(state.views.map);
 
-  state.views.layers.chargers = hasMapMarkerClustering()
-    ? L.markerClusterGroup({ showCoverageOnHover: false })
-    : L.layerGroup();
+  state.views.layers.chargers = L.layerGroup();
   state.views.layers.chargers.addTo(state.views.map);
 
   state.views.layers.user = L.layerGroup().addTo(state.views.map);
@@ -2526,9 +2575,7 @@ function initMap() {
   });
   state.views.map.on("moveend", queueCatalogSearchFromMapMove);
   state.views.map.on("zoomend", () => {
-    if (!hasMapMarkerClustering()) {
-      renderMapMarkers();
-    }
+    renderMapMarkers();
   });
 
   // Detail Mini Map
@@ -2625,7 +2672,7 @@ function formatStationMarkerLabel(feature) {
 }
 
 function enhanceStationMarkerElement(marker, feature) {
-  const element = marker.getElement?.();
+  const element = typeof marker.getElement === "function" ? marker.getElement() : null;
   if (!element) {
     return;
   }
@@ -2706,15 +2753,12 @@ function bindStationMarker(marker, feature) {
   return marker;
 }
 
-function hasMapMarkerClustering() {
-  return typeof L.markerClusterGroup === "function";
-}
-
 function getMapMarkerFeatures() {
-  if (hasMapMarkerClustering()) {
-    return state.filtered;
-  }
-  const zoom = Number(state.views.map?.getZoom?.());
+  const zoom = Number(
+    state.views.map && typeof state.views.map.getZoom === "function"
+      ? state.views.map.getZoom()
+      : NaN,
+  );
   if (Number.isFinite(zoom) && zoom >= MAP_UNCLUSTERED_FULL_RENDER_ZOOM) {
     return state.filtered;
   }
@@ -2776,7 +2820,6 @@ function renderMapMarkers() {
 
     marker.addTo(state.views.layers.chargers);
   });
-  window.requestAnimationFrame(enhanceMapClusterElements);
 }
 
 function updateMapMarkersForStationIds(stationIds) {
@@ -2804,31 +2847,6 @@ function updateMapMarkersForStationIds(stationIds) {
     state.views.markersByStationId.set(stationId, nextMarker);
     nextMarker.addTo(state.views.layers.chargers);
   });
-  window.requestAnimationFrame(enhanceMapClusterElements);
-}
-
-function enhanceMapClusterElements() {
-  document.querySelectorAll("#map .marker-cluster").forEach((element) => {
-    const count = String(element.textContent || "").trim();
-    const label = count
-      ? `Kartengruppe mit ${count} Ladestationen. Aktivieren zum Hineinzoomen.`
-      : "Kartengruppe mit Ladestationen. Aktivieren zum Hineinzoomen.";
-    element.setAttribute("role", "button");
-    element.setAttribute("aria-label", label);
-    element.setAttribute("title", label);
-    element.setAttribute("tabindex", "0");
-    if (element.getAttribute("data-keyboard-bound") !== "true") {
-      element.setAttribute("data-keyboard-bound", "true");
-      element.addEventListener("keydown", (event) => {
-        if (event.key !== "Enter" && event.key !== " ") {
-          return;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        element.click();
-      });
-    }
-  });
 }
 
 function updateUserMarker() {
@@ -2854,6 +2872,16 @@ function initNavigation() {
   });
 }
 
+function getActiveViewId() {
+  return VIEW_ORDER.find((viewId) => document.getElementById(viewId)?.classList.contains("active")) ||
+    "view-list";
+}
+
+function focusNavItem(viewId) {
+  const navItem = Array.from(els.navItems).find((btn) => btn.dataset.target === viewId);
+  navItem?.focus({ preventScroll: true });
+}
+
 function setActiveNavItem(viewId) {
   els.navItems.forEach((btn) => {
     const isActive = btn.dataset.target === viewId;
@@ -2864,6 +2892,26 @@ function setActiveNavItem(viewId) {
       btn.removeAttribute("aria-current");
     }
   });
+}
+
+function handleViewNavigationKeydown(event) {
+  if (isAnyModalOpen() || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+    return false;
+  }
+  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+    return false;
+  }
+  const currentIndex = VIEW_ORDER.indexOf(getActiveViewId());
+  if (currentIndex < 0) {
+    return false;
+  }
+  const delta = event.key === "ArrowRight" ? 1 : -1;
+  const nextIndex = (currentIndex + delta + VIEW_ORDER.length) % VIEW_ORDER.length;
+  const nextViewId = VIEW_ORDER[nextIndex];
+  event.preventDefault();
+  switchView(nextViewId);
+  focusNavItem(nextViewId);
+  return true;
 }
 
 function normalizeRequestedViewId(value) {
@@ -3508,6 +3556,277 @@ function handleModalKeydown(event) {
   return false;
 }
 
+function isEasterEggKey(event) {
+  return String(event?.key || "").toLowerCase() === "e" &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey;
+}
+
+function handleEasterEggKeydown(event) {
+  if (!isEasterEggKey(event)) {
+    return false;
+  }
+  event.preventDefault();
+  startEasterEgg();
+  return true;
+}
+
+function handleGlobalKeyup(event) {
+  if (isEasterEggKey(event)) {
+    stopEasterEgg();
+  }
+}
+
+function ensureEasterEggOverlay() {
+  if (state.easterEgg.overlay) {
+    return;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.className = "easter-egg-overlay";
+  overlay.setAttribute("aria-hidden", "true");
+
+  const canvas = document.createElement("canvas");
+  canvas.className = "easter-egg-canvas";
+
+  const core = document.createElement("div");
+  core.className = "easter-egg-core";
+  core.textContent = "E";
+
+  overlay.append(canvas, core);
+  document.body.appendChild(overlay);
+
+  state.easterEgg.overlay = overlay;
+  state.easterEgg.canvas = canvas;
+  state.easterEgg.ctx = canvas.getContext("2d");
+  state.easterEgg.core = core;
+}
+
+function startEasterEgg() {
+  if (state.easterEgg.active) {
+    return;
+  }
+  ensureEasterEggOverlay();
+  state.easterEgg.machine = createEasterEggMachine();
+  state.easterEgg.active = true;
+  state.easterEgg.overlay?.classList.add("is-active");
+  resizeEasterEggCanvas();
+  drawEasterEggFrame();
+  startEasterEggAudio();
+}
+
+function stopEasterEgg() {
+  if (!state.easterEgg.active) {
+    return;
+  }
+  state.easterEgg.active = false;
+  state.easterEgg.overlay?.classList.remove("is-active");
+  if (state.easterEgg.animationFrame) {
+    window.cancelAnimationFrame(state.easterEgg.animationFrame);
+    state.easterEgg.animationFrame = 0;
+  }
+  stopEasterEggAudio();
+}
+
+function resizeEasterEggCanvas() {
+  const canvas = state.easterEgg.canvas;
+  const ctx = state.easterEgg.ctx;
+  if (!canvas || !ctx) {
+    return;
+  }
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (state.easterEgg.width === width && state.easterEgg.height === height) {
+    return;
+  }
+  state.easterEgg.width = width;
+  state.easterEgg.height = height;
+  canvas.width = Math.max(1, Math.floor(width * dpr));
+  canvas.height = Math.max(1, Math.floor(height * dpr));
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function prefersReducedMotion() {
+  return typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function createEasterEggMachine() {
+  const memory = new Uint8Array(EASTER_EGG_MEMORY_SIZE);
+  for (let offset = 0; offset < EASTER_EGG_MEMORY_SIZE; offset += 1) {
+    if (offset < EASTER_EGG_VISIBLE_BYTES) {
+      memory[offset] = offset % 2 === 0 ? 0x20 : 0x07;
+    } else {
+      memory[offset] = ((offset * 73) ^ (offset >> 3) ^ (offset >> 9) ^ 0xb8) & 0xff;
+    }
+  }
+  return {
+    memory,
+    si: 0,
+    al: 0,
+  };
+}
+
+function stepEasterEggMachine(machine, iterations = 1) {
+  if (!machine?.memory) {
+    return;
+  }
+  for (let index = 0; index < iterations; index += 1) {
+    // Port of wake_up 16b's loop: lodsb; sub si,57; xor [si],al; out 61h,al.
+    machine.al = machine.memory[machine.si];
+    machine.si = (machine.si + 1) & 0xffff;
+    machine.si = (machine.si - EASTER_EGG_SUBTRACT_STEP) & 0xffff;
+    machine.memory[machine.si] ^= machine.al;
+  }
+}
+
+function drawEasterEggFrame() {
+  if (!state.easterEgg.active || !state.easterEgg.ctx) {
+    return;
+  }
+
+  resizeEasterEggCanvas();
+  if (!state.easterEgg.machine) {
+    state.easterEgg.machine = createEasterEggMachine();
+  }
+  stepEasterEggMachine(state.easterEgg.machine, EASTER_EGG_ITERATIONS_PER_FRAME);
+
+  const ctx = state.easterEgg.ctx;
+  const width = state.easterEgg.width;
+  const height = state.easterEgg.height;
+  const reducedMotion = prefersReducedMotion();
+  state.easterEgg.frame += reducedMotion ? 0.35 : 1;
+
+  ctx.fillStyle = reducedMotion ? "rgba(0, 6, 4, 0.48)" : "rgba(0, 6, 4, 0.30)";
+  ctx.fillRect(0, 0, width, height);
+  const cellWidth = width / EASTER_EGG_TEXT_COLUMNS;
+  const cellHeight = height / EASTER_EGG_TEXT_ROWS;
+  const fontSize = Math.max(11, Math.min(cellHeight * 0.78, cellWidth * 1.35));
+  ctx.font = `${fontSize}px "SFMono-Regular", Consolas, "Liberation Mono", monospace`;
+  ctx.textBaseline = "top";
+
+  const memory = state.easterEgg.machine.memory;
+  for (let row = 0; row < EASTER_EGG_TEXT_ROWS; row += 1) {
+    for (let column = 0; column < EASTER_EGG_TEXT_COLUMNS; column += 1) {
+      const offset = (row * EASTER_EGG_TEXT_COLUMNS + column) * 2;
+      const charByte = memory[offset];
+      const attrByte = memory[offset + 1];
+      const toggled = charByte !== 0x20 || attrByte !== 0x07;
+      const sierpinski = (charByte & 0x02) !== 0;
+      const char = toggled
+        ? EASTER_EGG_CHARS[(charByte ^ attrByte ^ column ^ row) % EASTER_EGG_CHARS.length]
+        : ".";
+      const brightness = Math.min(1, 0.18 + ((attrByte & 0x0f) / 15) * 0.38 + (sierpinski ? 0.42 : 0));
+      const x = column * cellWidth + cellWidth * 0.18;
+      const y = row * cellHeight + cellHeight * 0.12;
+
+      ctx.globalAlpha = toggled ? brightness : 0.08;
+      ctx.fillStyle = sierpinski ? "#d8ffe5" : toggled ? "#41ff87" : "#0aa64a";
+      ctx.fillText(char, x, y);
+
+      if (!reducedMotion && toggled) {
+        ctx.globalAlpha = 0.08 + brightness * 0.12;
+        ctx.fillRect(column * cellWidth, row * cellHeight + cellHeight * 0.86, cellWidth * 0.7, 1);
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  state.easterEgg.animationFrame = window.requestAnimationFrame(drawEasterEggFrame);
+}
+
+function startEasterEggAudio() {
+  const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextConstructor || state.easterEgg.audioSource) {
+    return;
+  }
+  const audioContext = state.easterEgg.audioContext || new AudioContextConstructor();
+  state.easterEgg.audioContext = audioContext;
+
+  const resumePromise = typeof audioContext.resume === "function"
+    ? audioContext.resume()
+    : null;
+  if (resumePromise && typeof resumePromise.catch === "function") {
+    resumePromise.catch(() => {});
+  }
+
+  if (!state.easterEgg.audioBuffer || state.easterEgg.audioBuffer.sampleRate !== audioContext.sampleRate) {
+    state.easterEgg.audioBuffer = createEasterEggAudioBuffer(audioContext);
+  }
+
+  const source = audioContext.createBufferSource();
+  const gain = audioContext.createGain();
+  const filter = audioContext.createBiquadFilter();
+  const now = audioContext.currentTime;
+
+  source.buffer = state.easterEgg.audioBuffer;
+  source.loop = true;
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(2400, now);
+  filter.Q.setValueAtTime(0.45, now);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.045, now + 0.08);
+
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(audioContext.destination);
+  source.start(now);
+  source.onended = () => {
+    if (state.easterEgg.audioSource === source) {
+      state.easterEgg.audioSource = null;
+      state.easterEgg.audioGain = null;
+    }
+  };
+
+  state.easterEgg.audioSource = source;
+  state.easterEgg.audioGain = gain;
+}
+
+function stopEasterEggAudio() {
+  const audioContext = state.easterEgg.audioContext;
+  const source = state.easterEgg.audioSource;
+  const gain = state.easterEgg.audioGain;
+  if (!audioContext || !source || !gain) {
+    return;
+  }
+  const now = audioContext.currentTime;
+  gain.gain.cancelScheduledValues(now);
+  gain.gain.setTargetAtTime(0.0001, now, 0.035);
+  try {
+    source.stop(now + 0.18);
+  } catch (error) {
+    // The source may already be stopping after a rapid key repeat/release.
+  }
+  state.easterEgg.audioSource = null;
+  state.easterEgg.audioGain = null;
+}
+
+function createEasterEggAudioBuffer(audioContext) {
+  const length = Math.floor(audioContext.sampleRate * EASTER_EGG_AUDIO_SECONDS);
+  const buffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
+  const data = buffer.getChannelData(0);
+  const machine = createEasterEggMachine();
+  let machineStep = -1;
+
+  for (let i = 0; i < length; i += 1) {
+    const targetStep = Math.floor((i * EASTER_EGG_AUDIO_RATE) / audioContext.sampleRate);
+    while (machineStep < targetStep) {
+      stepEasterEggMachine(machine, 1);
+      machineStep += 1;
+    }
+    const speakerBit = (machine.al & 0x02) ? 1 : -1;
+    const gritBit = (machine.al & 0x01) ? 1 : -1;
+    const highBit = (machine.al & 0x20) ? 1 : -1;
+    data[i] = speakerBit * 0.28 + gritBit * 0.06 + highBit * 0.035;
+  }
+
+  return buffer;
+}
+
 function handleGlobalKeydown(event) {
   if (event.defaultPrevented) {
     return;
@@ -3516,6 +3835,12 @@ function handleGlobalKeydown(event) {
     return;
   }
   if (isEditableKeyTarget(event.target)) {
+    return;
+  }
+  if (handleEasterEggKeydown(event)) {
+    return;
+  }
+  if (handleViewNavigationKeydown(event)) {
     return;
   }
   if (handleMapKeyboardEvent(event)) {
