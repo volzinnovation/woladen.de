@@ -969,6 +969,17 @@ const els = {
 };
 
 const VIEW_IDS = new Set(["view-list", "view-map", "view-favorites", "view-info"]);
+const VIEW_HASH_ALIASES = new Map([
+  ["list", "view-list"],
+  ["liste", "view-list"],
+  ["map", "view-map"],
+  ["karte", "view-map"],
+  ["favorites", "view-favorites"],
+  ["favoriten", "view-favorites"],
+  ["info", "view-info"],
+]);
+const INITIAL_REQUESTED_VIEW_ID = normalizeRequestedViewId(window.location.hash);
+let hasAppliedInitialRequestedView = false;
 
 /* --- INITIALIZATION --- */
 async function init() {
@@ -1868,7 +1879,12 @@ function hasResolvedUserLocation() {
 }
 
 function shouldAttemptStartupLocation() {
-  if (state.startupLocationRequested || hasResolvedUserLocation() || !navigator.geolocation) {
+  if (
+    state.startupLocationRequested ||
+    hasResolvedUserLocation() ||
+    getRequestedStationId() ||
+    !navigator.geolocation
+  ) {
     return false;
   }
   const permissionState = normalizeLocationPermissionState(state.location.permissionState);
@@ -2129,6 +2145,10 @@ async function loadCatalogStationDetail(stationId) {
     const featureStationId = getStationIdFromProps(feature.properties) || payloadStationId || normalizedStationId;
     state.catalog.detailByStationId.set(featureStationId, payload);
     state.catalog.missingDetailStationIds.delete(featureStationId);
+    if (featureStationId && normalizeStationId(getRequestedStationId()) === normalizeStationId(featureStationId)) {
+      await loadLiveStationDetail(featureStationId);
+      applyCachedLiveStationSummaryToFeature(feature);
+    }
     populateOperators();
     renderAmenityFilters();
     applyFilters();
@@ -2581,9 +2601,28 @@ function setActiveNavItem(viewId) {
   });
 }
 
+function normalizeRequestedViewId(value) {
+  const rawHash = String(value || "")
+    .replace(/^#/, "")
+    .replace(/^\/+/, "")
+    .trim()
+    .toLowerCase();
+  if (!rawHash) {
+    return "";
+  }
+  const canonicalHash = VIEW_HASH_ALIASES.get(rawHash) || rawHash;
+  return VIEW_IDS.has(canonicalHash) ? canonicalHash : "";
+}
+
 function getRequestedViewIdFromHash() {
-  const hash = String(window.location.hash || "").replace(/^#/, "").trim();
-  return VIEW_IDS.has(hash) ? hash : "view-list";
+  const requestedViewId = normalizeRequestedViewId(window.location.hash);
+  if (requestedViewId) {
+    return requestedViewId;
+  }
+  if (!hasAppliedInitialRequestedView && INITIAL_REQUESTED_VIEW_ID) {
+    return INITIAL_REQUESTED_VIEW_ID;
+  }
+  return "view-list";
 }
 
 function updateRequestedViewHash(viewId) {
@@ -2595,6 +2634,7 @@ function updateRequestedViewHash(viewId) {
 
 function syncViewWithRequestedHash() {
   const viewId = getRequestedViewIdFromHash();
+  hasAppliedInitialRequestedView = true;
   switchView(viewId, { syncHash: false });
 }
 
@@ -2635,7 +2675,7 @@ function switchView(viewId, options = {}) {
       focusMapOnPendingStation();
       state.views.map.invalidateSize({ pan: false });
       refreshMapMarkersFromCurrentFeatures();
-      if (!hasCatalogSearchCenter()) {
+      if (!hasCatalogSearchCenter() && !getRequestedStationId()) {
         loadCatalogStationsFromMapCenter({ force: true });
       }
     });
@@ -4339,9 +4379,6 @@ async function requestUserLocation() {
       requestState: LOCATION_REQUEST_ERROR,
       errorCode: "unsupported",
     });
-    if (els.views.map.classList.contains("active")) {
-      switchView("view-list");
-    }
     return;
   }
 
@@ -4382,9 +4419,6 @@ async function requestUserLocation() {
       requestState: LOCATION_REQUEST_ERROR,
       errorCode: err.code || "unknown",
     });
-    if (els.views.map.classList.contains("active")) {
-      switchView("view-list");
-    }
   }
 }
 
