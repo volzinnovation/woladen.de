@@ -3155,6 +3155,18 @@ function bindStationMarker(marker, feature) {
   return marker;
 }
 
+function renderDetailStationMarker(feature) {
+  if (!state.views.detailMap || !feature) {
+    return;
+  }
+  if (state.views.detailMap.stationMarker) {
+    state.views.detailMap.removeLayer(state.views.detailMap.stationMarker);
+  }
+  const marker = createStationMarker(feature).addTo(state.views.detailMap);
+  marker.bindTooltip(formatStationMarkerLabel(feature), { direction: "top", offset: [0, -8] });
+  state.views.detailMap.stationMarker = marker;
+}
+
 function getMapMarkerFeatures() {
   const zoom = Number(
     state.views.map && typeof state.views.map.getZoom === "function"
@@ -4826,6 +4838,9 @@ function populateDetailContent(feature, liveDetail = null) {
   renderDetailStaticInfo(p);
   renderDetailLiveState(feature, liveDetail);
   renderDetailOccupancyHistory(feature);
+  if (!els.modals.detail.classList.contains("hidden")) {
+    renderDetailStationMarker(feature);
+  }
 
   if (occupancySource) {
     els.detail.occupancySource.textContent = occupancySource;
@@ -4867,20 +4882,10 @@ function openDetail(feature, options = {}) {
   }
 
   // Mini Map
-  // Clear old markers from detail map? Not strictly needed if we just pan,
-  // but better to add a marker for the station
-  if (state.views.detailMap.stationMarker)
-    state.views.detailMap.removeLayer(state.views.detailMap.stationMarker);
   if (state.views.layers.detailAmenities) {
     state.views.layers.detailAmenities.clearLayers();
   }
-
-  state.views.detailMap.stationMarker = L.circleMarker([lat, lon], {
-    color: "#fff",
-    fillColor: "#0f766e",
-    fillOpacity: 1,
-    radius: 8,
-  }).addTo(state.views.detailMap);
+  renderDetailStationMarker(feature);
 
   const amenityBounds = renderDetailAmenityMarkers(p.amenity_examples || []);
 
