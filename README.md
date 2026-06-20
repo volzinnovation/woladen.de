@@ -332,15 +332,15 @@ The regional groups are `DACH`, `BENELUX`, `ROMANIC`, `NORDICS`, and `REST-EUROP
 <!-- DATA_STATUS_START -->
 ## Data Build Status
 
-- Last build (UTC): `2026-06-19T02:00:19+00:00`
+- Last build (UTC): `2026-06-20T01:46:33+00:00`
 - Source: `https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-06-03.xlsx`
 - Full registry stations: `73224`
-- Fast chargers (>= 50.0 kW): `15462`
-- Fast chargers with live occupancy: `1346`
-- Fast chargers with static AFIR details: `10000` (price: `8252`, opening hours: `11222`)
-- Chargers with >=1 nearby amenity: `15462`
-- Occupancy sources scanned: `29` (matched EVSEs: `5552`)
-- Static AFIR sources used: `23` (helpdesk phones: `5746`)
+- Fast chargers (>= 50.0 kW): `15463`
+- Fast chargers with live occupancy: `1481`
+- Fast chargers with static AFIR details: `9998` (price: `8251`, opening hours: `11224`)
+- Chargers with >=1 nearby amenity: `15463`
+- Occupancy sources scanned: `29` (matched EVSEs: `6881`)
+- Static AFIR sources used: `23` (helpdesk phones: `5750`)
 - Amenity backend: `osm-pbf`
 - Live amenity lookups this run: `0` (cache hits: `0`, deferred: `0`)
 
