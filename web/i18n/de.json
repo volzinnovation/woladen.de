@@ -73,7 +73,7 @@
     "minPower": "Min. Leistung: {value} kW",
     "amenities": "Angebote vor Ort",
     "apply": "Anwenden",
-    "reset": "Zurücksetzen",
+    "reset": "Filter löschen",
     "activeAmenity": "{label} Filter aktiv",
     "filterAmenity": "{label} filtern",
     "openWithCount": "Filter öffnen, {count} aktiv: {labels}",

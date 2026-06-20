@@ -1,4 +1,4 @@
-import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs?v=20260620-availability1";
+import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs?v=20260620-filter-constraints1";
 import {
   formatOpeningHoursForDisplay,
   getAmenityOpenStatus,
@@ -60,7 +60,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260620-i18n6";
+} from "./i18n.mjs?v=20260620-i18n7";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -3605,12 +3605,14 @@ function renderActiveFilterSummary(filterCount) {
   summary.textContent = summaryText;
   container.appendChild(summary);
 
-  const clearButton = document.createElement("button");
-  clearButton.type = "button";
-  clearButton.className = "active-filter-clear";
-  clearButton.textContent = t("filters.reset");
-  clearButton.addEventListener("click", clearFilters);
-  container.appendChild(clearButton);
+  if (hasClearableFilters()) {
+    const clearButton = document.createElement("button");
+    clearButton.type = "button";
+    clearButton.className = "active-filter-clear";
+    clearButton.textContent = t("filters.reset");
+    clearButton.addEventListener("click", clearFilters);
+    container.appendChild(clearButton);
+  }
 }
 
 function getActiveFilterLabels() {
@@ -3629,7 +3631,7 @@ function getActiveFilterLabels() {
     labels.push(t("filters.currentlyOpen"));
   }
   const minPower = Number(state.filters.minPower);
-  if (Number.isFinite(minPower) && minPower !== DEFAULT_MIN_POWER_KW) {
+  if (Number.isFinite(minPower) && minPower > 0) {
     labels.push(t("filters.minPowerLabel", { value: Math.round(minPower) }));
   }
   Array.from(state.filters.amenities)
@@ -3637,6 +3639,20 @@ function getActiveFilterLabels() {
     .sort((a, b) => a.localeCompare(b, getLocale()))
     .forEach((label) => labels.push(label));
   return labels;
+}
+
+function hasClearableFilters() {
+  const selectedAmenities =
+    state.filters.amenities instanceof Set ? state.filters.amenities.size : 0;
+  const minPower = Number(state.filters.minPower);
+  return Boolean(
+    state.filters.operator ||
+      String(state.filters.amenityNameQuery || "").trim() ||
+      state.filters.availableOnly ||
+      state.filters.currentlyOpenOnly ||
+      selectedAmenities > 0 ||
+      (Number.isFinite(minPower) && minPower !== DEFAULT_MIN_POWER_KW),
+  );
 }
 
 function clearFilters() {

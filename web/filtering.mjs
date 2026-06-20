@@ -42,7 +42,7 @@ export function countActiveFilters(filters) {
 
   return (
     (filters?.operator ? 1 : 0) +
-    (Number.isFinite(minPower) && minPower !== 50 ? 1 : 0) +
+    (Number.isFinite(minPower) && minPower > 0 ? 1 : 0) +
     selectedAmenities +
     (filters?.availableOnly ? 1 : 0) +
     (filters?.currentlyOpenOnly ? 1 : 0) +

@@ -110,7 +110,7 @@ test("availability filter supports live summary fields", () => {
 });
 
 test("availability filter counts as an active default filter", () => {
-  assert.equal(countActiveFilters({ minPower: 50, amenities: new Set(), availableOnly: true }), 1);
+  assert.equal(countActiveFilters({ minPower: 50, amenities: new Set(), availableOnly: true }), 2);
 });
 
 test("feature matcher filters for stations with a currently open amenity", () => {
@@ -140,7 +140,8 @@ test("feature matcher filters for stations with a currently open amenity", () =>
   );
 });
 
-test("active filter count treats under-50 kW as an explicit filter change", () => {
-  assert.equal(countActiveFilters({ minPower: 50, amenities: new Set() }), 0);
-  assert.equal(countActiveFilters({ minPower: 0, amenities: new Set() }), 1);
+test("active filter count includes the baseline fast-charger power constraint", () => {
+  assert.equal(countActiveFilters({ minPower: 50, amenities: new Set() }), 1);
+  assert.equal(countActiveFilters({ minPower: 150, amenities: new Set() }), 1);
+  assert.equal(countActiveFilters({ minPower: 0, amenities: new Set() }), 0);
 });

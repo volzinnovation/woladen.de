@@ -138,7 +138,7 @@ const FALLBACK_BUNDLE = {
     minPower: "Min. power: {value} kW",
     amenities: "Nearby places",
     apply: "Apply",
-    reset: "Reset",
+    reset: "Remove filters",
     activeAmenity: "{label} filter active",
     filterAmenity: "Filter by {label}",
     openWithCount: "Open filters, {count} active: {labels}",
@@ -459,7 +459,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260620-i18n6`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260620-i18n7`, import.meta.url));
     if (!response.ok) {
       return {};
     }
