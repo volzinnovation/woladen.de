@@ -15,7 +15,6 @@ from backend.config import AppConfig
 from backend.datex import decode_json_payload, extract_dynamic_facts
 from backend.fetcher import CurlFetcher
 from backend.loaders import load_evse_matches, load_provider_targets, load_site_matches
-from backend.store import LiveStore
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,8 +28,6 @@ def main() -> None:
     args = parse_args()
     config = AppConfig()
     fetcher = CurlFetcher(config)
-    store = LiveStore(config)
-    store.initialize()
 
     result: dict[str, object] = {
         "subscription_registry_path": str(config.subscription_registry_path),
