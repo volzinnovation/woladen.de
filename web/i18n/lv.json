@@ -42,7 +42,8 @@
     "currentlyOpen": "Atvērts tagad",
     "amenities": "Vietas tuvumā",
     "apply": "Lietot",
-    "reset": "Atiestatīt"
+    "reset": "Atiestatīt",
+    "selectedOnly": "Atlasīts tikai: {labels}"
   },
   "info": {
     "title": "Info un palīdzība",

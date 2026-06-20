@@ -42,7 +42,8 @@
     "currentlyOpen": "Nyní otevřeno",
     "amenities": "Místa poblíž",
     "apply": "Použít",
-    "reset": "Resetovat"
+    "reset": "Resetovat",
+    "selectedOnly": "Vybráno pouze: {labels}"
   },
   "info": {
     "title": "Info a pomoc",

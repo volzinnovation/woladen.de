@@ -42,7 +42,8 @@
     "currentlyOpen": "Dabar atidaryta",
     "amenities": "Vietos netoliese",
     "apply": "Taikyti",
-    "reset": "Atstatyti"
+    "reset": "Atstatyti",
+    "selectedOnly": "Pasirinkta tik: {labels}"
   },
   "info": {
     "title": "Info ir pagalba",

@@ -42,7 +42,8 @@
     "currentlyOpen": "Avert ussa",
     "amenities": "Lieus vischins",
     "apply": "Applitgar",
-    "reset": "Resetar"
+    "reset": "Resetar",
+    "selectedOnly": "Mo selecziunà: {labels}"
   },
   "info": {
     "title": "Info ed agid",

@@ -42,7 +42,8 @@
     "currentlyOpen": "Auki nyt",
     "amenities": "Paikat lähellä",
     "apply": "Käytä",
-    "reset": "Nollaa"
+    "reset": "Nollaa",
+    "selectedOnly": "Vain valittu: {labels}"
   },
   "info": {
     "title": "Info ja ohje",

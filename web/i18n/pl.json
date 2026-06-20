@@ -42,7 +42,8 @@
     "currentlyOpen": "Otwarte teraz",
     "amenities": "Miejsca w pobliżu",
     "apply": "Zastosuj",
-    "reset": "Resetuj"
+    "reset": "Resetuj",
+    "selectedOnly": "Wybrano tylko: {labels}"
   },
   "info": {
     "title": "Info i pomoc",

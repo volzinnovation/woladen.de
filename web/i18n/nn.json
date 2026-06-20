@@ -42,7 +42,8 @@
     "currentlyOpen": "Ope no",
     "amenities": "Stader i nærleiken",
     "apply": "Bruk",
-    "reset": "Tilbakestill"
+    "reset": "Tilbakestill",
+    "selectedOnly": "Berre valt: {labels}"
   },
   "info": {
     "title": "Info og hjelp",

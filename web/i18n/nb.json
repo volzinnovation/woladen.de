@@ -42,7 +42,8 @@
     "currentlyOpen": "Åpent nå",
     "amenities": "Steder i nærheten",
     "apply": "Bruk",
-    "reset": "Tilbakestill"
+    "reset": "Tilbakestill",
+    "selectedOnly": "Kun valgt: {labels}"
   },
   "info": {
     "title": "Info og hjelp",

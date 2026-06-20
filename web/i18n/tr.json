@@ -42,7 +42,8 @@
     "currentlyOpen": "Şu an açık",
     "amenities": "Yakındaki yerler",
     "apply": "Uygula",
-    "reset": "Sıfırla"
+    "reset": "Sıfırla",
+    "selectedOnly": "Yalnızca seçilen: {labels}"
   },
   "info": {
     "title": "Bilgi ve yardım",

@@ -42,7 +42,8 @@
     "currentlyOpen": "Elo op",
     "amenities": "Plazen an der Géigend",
     "apply": "Uwenden",
-    "reset": "Zrécksetzen"
+    "reset": "Zrécksetzen",
+    "selectedOnly": "Nëmmen ausgewielt: {labels}"
   },
   "info": {
     "title": "Info an Hëllef",

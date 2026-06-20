@@ -42,7 +42,8 @@
     "currentlyOpen": "Åben nu",
     "amenities": "Steder i nærheden",
     "apply": "Anvend",
-    "reset": "Nulstil"
+    "reset": "Nulstil",
+    "selectedOnly": "Kun valgt: {labels}"
   },
   "info": {
     "title": "Info og hjælp",

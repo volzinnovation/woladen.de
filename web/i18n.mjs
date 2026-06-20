@@ -140,6 +140,7 @@ const FALLBACK_BUNDLE = {
     activeAmenity: "{label} filter active",
     filterAmenity: "Filter by {label}",
     openWithCount: "Open filters, {count} active: {labels}",
+    selectedOnly: "Selected only: {labels}",
     namePrefix: "Name: {value}",
     minPowerLabel: "from {value} kW",
   },
@@ -430,7 +431,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260620-i18n4`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260620-i18n5`, import.meta.url));
     if (!response.ok) {
       return {};
     }

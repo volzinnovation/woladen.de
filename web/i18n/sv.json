@@ -42,7 +42,8 @@
     "currentlyOpen": "Öppet nu",
     "amenities": "Platser i närheten",
     "apply": "Använd",
-    "reset": "Återställ"
+    "reset": "Återställ",
+    "selectedOnly": "Endast valt: {labels}"
   },
   "info": {
     "title": "Info och hjälp",

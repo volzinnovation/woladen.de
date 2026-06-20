@@ -60,7 +60,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260620-i18n4";
+} from "./i18n.mjs?v=20260620-i18n5";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -3437,11 +3437,12 @@ function renderActiveFilterSummary(filterCount) {
     container.removeAttribute("aria-label");
     return;
   }
-  container.setAttribute("aria-label", t("aria.activeFilters", { labels: labels.join(", ") }));
+  const summaryText = t("filters.selectedOnly", { labels: labels.join(" · ") });
+  container.setAttribute("aria-label", summaryText);
 
   const summary = document.createElement("span");
   summary.className = "active-filter-summary-text";
-  summary.textContent = labels.join(" · ");
+  summary.textContent = summaryText;
   container.appendChild(summary);
 
   const clearButton = document.createElement("button");

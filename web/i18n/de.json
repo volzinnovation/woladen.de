@@ -75,6 +75,7 @@
     "activeAmenity": "{label} Filter aktiv",
     "filterAmenity": "{label} filtern",
     "openWithCount": "Filter öffnen, {count} aktiv: {labels}",
+    "selectedOnly": "Nur ausgewählt: {labels}",
     "namePrefix": "Name: {value}",
     "minPowerLabel": "ab {value} kW"
   },

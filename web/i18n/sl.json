@@ -42,7 +42,8 @@
     "currentlyOpen": "Odprto zdaj",
     "amenities": "Kraji v bližini",
     "apply": "Uporabi",
-    "reset": "Ponastavi"
+    "reset": "Ponastavi",
+    "selectedOnly": "Izbrano samo: {labels}"
   },
   "info": {
     "title": "Info in pomoč",

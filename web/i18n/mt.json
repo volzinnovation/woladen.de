@@ -42,7 +42,8 @@
     "currentlyOpen": "Miftuħ issa",
     "amenities": "Postijiet qrib",
     "apply": "Applika",
-    "reset": "Irrisettja"
+    "reset": "Irrisettja",
+    "selectedOnly": "Magħżul biss: {labels}"
   },
   "info": {
     "title": "Info u għajnuna",

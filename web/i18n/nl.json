@@ -42,7 +42,8 @@
     "currentlyOpen": "Nu open",
     "amenities": "Plekken in de buurt",
     "apply": "Toepassen",
-    "reset": "Resetten"
+    "reset": "Resetten",
+    "selectedOnly": "Alleen geselecteerd: {labels}"
   },
   "info": {
     "title": "Info en hulp",

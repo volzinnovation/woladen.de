@@ -42,7 +42,8 @@
     "currentlyOpen": "Most nyitva",
     "amenities": "Közeli helyek",
     "apply": "Alkalmaz",
-    "reset": "Visszaállítás"
+    "reset": "Visszaállítás",
+    "selectedOnly": "Csak kiválasztva: {labels}"
   },
   "info": {
     "title": "Infó és segítség",
