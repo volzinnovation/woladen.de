@@ -22,6 +22,7 @@ ACTIVE_DYN_DATEX_SUBSCRIPTION_PROVIDER_UIDS = (
     "enbwmobility",
     "eround",
     "ev_price",
+    "flavia",
     "gp_joule_connect",
     "lichtblick_emobility",
     "ladenetz_de_ladestationsdaten",
@@ -47,6 +48,7 @@ LIVE_PUSH_FALLBACK_PROVIDER_UIDS = frozenset(
         "enbwmobility",
         "eround",
         "ev_price",
+        "flavia",
         "grid",
         "gls_mobility",
         "ladebusiness_ladestationsdaten",
@@ -389,7 +391,7 @@ def build_live_subscription_registry(
             entry["publication_id"] = offer.publication_id
             entry["offer_title"] = offer.offer_title
             entry["access_mode"] = offer.access_mode
-            if offer.access_mode == "auth" and offer.provider_uid in supported_dynamic_uids:
+            if offer.provider_uid in supported_dynamic_uids:
                 entry["enabled"] = True
                 entry["fetch_kind"] = "mtls_subscription"
         elif offer.feed_kind == "static":

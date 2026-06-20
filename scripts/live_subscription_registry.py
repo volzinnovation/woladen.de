@@ -14,7 +14,7 @@ if str(REPO_ROOT) not in sys.path:
 from backend.config import AppConfig
 from backend.datex import decode_json_payload, extract_dynamic_facts
 from backend.fetcher import CurlFetcher
-from backend.loaders import load_provider_targets
+from backend.loaders import load_evse_matches, load_provider_targets, load_site_matches
 from backend.store import LiveStore
 
 
@@ -58,7 +58,20 @@ def main() -> None:
     if args.provider:
         providers = [provider for provider in providers if provider.provider_uid == args.provider]
 
-    site_maps = {provider.provider_uid: store.get_site_station_map(provider.provider_uid) for provider in providers}
+    station_catalog_path = config.full_chargers_csv_path or config.chargers_csv_path
+    site_matches = load_site_matches(config.site_match_path, station_catalog_path)
+    site_maps: dict[str, dict[str, str]] = {}
+    for match in site_matches:
+        site_maps.setdefault(match.provider_uid, {})[match.site_id] = match.station_id
+    evse_matches = load_evse_matches(station_catalog_path, config.site_match_path)
+    evse_maps: dict[str, dict[str, dict[str, str]]] = {}
+    for match in evse_matches:
+        evse_maps.setdefault(match.provider_uid, {})[match.evse_id] = {
+            "station_id": match.station_id,
+            "site_id": match.site_id,
+            "station_ref": match.station_ref,
+        }
+
     for provider in providers:
         if provider.fetch_kind != "mtls_subscription" or not provider.enabled:
             continue
@@ -76,7 +89,12 @@ def main() -> None:
                 provider_result["result"] = "no_data" if response.http_status == 204 else "not_modified"
             else:
                 payload = decode_json_payload(response.body)
-                facts = extract_dynamic_facts(payload, provider.provider_uid, site_maps.get(provider.provider_uid, {}))
+                facts = extract_dynamic_facts(
+                    payload,
+                    provider.provider_uid,
+                    site_maps.get(provider.provider_uid, {}),
+                    evse_maps.get(provider.provider_uid, {}),
+                )
                 provider_result["status"] = "ok"
                 provider_result["observation_count"] = len(facts)
                 provider_result["matched_station_count"] = len({fact.station_id for fact in facts if fact.station_id})

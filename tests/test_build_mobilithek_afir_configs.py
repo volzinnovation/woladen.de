@@ -162,6 +162,29 @@ def test_is_test_offer_filters_obvious_mobilithek_test_feeds():
     assert not build_configs.is_test_offer({"title": "AFIR-recharging-stat-Ladesonne GmbH & Co. KG"})
 
 
+def test_canonical_provider_uid_preserves_history_for_retitled_offers():
+    assert (
+        build_configs.canonical_provider_uid_for_offer(
+            {
+                "publication_id": "983008874583728128",
+                "provider_stem": "volkswagengroupcharging",
+                "publisher": "Volkswagen Group Charging",
+            }
+        )
+        == "volkswagencharginggroup"
+    )
+    assert (
+        build_configs.canonical_provider_uid_for_offer(
+            {
+                "publication_id": "998567365272563712",
+                "provider_stem": "audi_hub",
+                "publisher": "Audi AG",
+            }
+        )
+        == "broker_audi_hub_energy_statuses"
+    )
+
+
 def test_load_dynamic_subscription_ids_reads_registry(tmp_path: Path):
     registry_path = tmp_path / "mobilithek_subscriptions.json"
     registry_path.write_text(
@@ -256,6 +279,63 @@ def test_summarize_static_coverage_reports_full_registry_and_bundle_counters():
     assert summary["bundle_matched_charging_points"] == 2
     assert summary["bundle_station_coverage_ratio"] == 0.333333
     assert summary["bundle_charging_point_coverage_ratio"] == 0.25
+
+
+def test_match_static_sites_keeps_exact_duplicate_station_sites_for_evse_mapping():
+    chargers_df = pd.DataFrame(
+        [
+            {
+                "station_id": "station-a",
+                "operator": "Autohaus Elitzsch GmbH",
+                "charging_points_count": 2,
+                "lat": 51.284408,
+                "lon": 14.094724,
+                "postcode": "01917",
+                "city": "Kamenz",
+                "address": "An der Windmühle 3 01917 Kamenz Landkreis Bautzen",
+                "in_bundle": False,
+            }
+        ]
+    )
+    station_index = build_configs.build_station_spatial_index(chargers_df)
+    sites = [
+        build_configs.StaticSiteRecord(
+            site_id="static-site-a",
+            station_ids=("static-station-a",),
+            evse_ids=("EVSE-A",),
+            lat=51.284408,
+            lon=14.094724,
+            postcode="01917",
+            city="Kamenz",
+            address="An der Windmühle 3",
+            total_evses=2,
+            operator_name="Autohaus Elitzsch GmbH",
+        ),
+        build_configs.StaticSiteRecord(
+            site_id="static-site-b",
+            station_ids=("static-station-b",),
+            evse_ids=("EVSE-B",),
+            lat=51.284408,
+            lon=14.094724,
+            postcode="01917",
+            city="Kamenz",
+            address="An der Windmühle 3",
+            total_evses=2,
+            operator_name="Autohaus Elitzsch GmbH",
+        ),
+    ]
+
+    matches, rows = build_configs.match_static_sites(
+        chargers_df,
+        station_index,
+        sites=sites,
+        publisher="Volkswagen Group Charging",
+        provider_uid="volkswagencharginggroup",
+        static_publication_id="983008874583728128",
+    )
+
+    assert matches == {"static-site-a": "station-a", "static-site-b": "station-a"}
+    assert [row["station_id"] for row in rows] == ["station-a", "station-a"]
 
 
 def test_supports_eliso_generic_json_feed_accepts_model_other_application_json():

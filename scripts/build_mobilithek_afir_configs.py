@@ -105,6 +105,16 @@ GENERIC_OPERATOR_WORDS = GENERIC_STEM_WORDS | {
     "de",
 }
 
+CANONICAL_PROVIDER_UID_BY_PUBLICATION_ID = {
+    # Mobilithek publishers occasionally retitle offers or reorder brand words.
+    # Keep these internal UIDs stable because they key live history, mappings,
+    # static detail sources, and provider quality reports.
+    "983006934617260032": "volkswagencharginggroup",
+    "983008874583728128": "volkswagencharginggroup",
+    "998567365272563712": "broker_audi_hub_energy_statuses",
+    "998571342932365312": "broker_audi_hub_energy_tables",
+}
+
 
 @dataclass(frozen=True)
 class StaticSiteRecord:
@@ -193,6 +203,14 @@ def derive_provider_stem(title: str, publisher: str) -> str:
         return "_".join(publisher_words)
 
     return slugify(title or publisher or "mobilithek_offer")
+
+
+def canonical_provider_uid_for_offer(offer: dict[str, Any]) -> str:
+    publication_id = str(offer.get("publication_id") or "").strip()
+    if publication_id in CANONICAL_PROVIDER_UID_BY_PUBLICATION_ID:
+        return CANONICAL_PROVIDER_UID_BY_PUBLICATION_ID[publication_id]
+
+    return slugify(offer["provider_stem"]) or slugify(offer["publisher"]) or publication_id
 
 
 def operator_tokens(*values: str) -> set[str]:
@@ -546,6 +564,33 @@ def score_site_to_station(
     return accepted, score, distance_m, details
 
 
+def split_pipe_set(value: Any) -> set[str]:
+    return {item.strip() for item in str(value or "").split("|") if item.strip()}
+
+
+def allow_duplicate_station_match(row: dict[str, Any], existing_rows: list[dict[str, Any]]) -> bool:
+    if not existing_rows:
+        return False
+    if float(row.get("distance_m") or 0.0) > 5.0:
+        return False
+    if not bool(row.get("address_match")) or float(row.get("operator_similarity") or 0.0) < 1.0:
+        return False
+
+    row_charge_points = split_pipe_set(row.get("datex_charge_point_ids"))
+    if not row_charge_points:
+        return False
+
+    existing_charge_points: set[str] = set()
+    for existing_row in existing_rows:
+        if float(existing_row.get("distance_m") or 0.0) > 5.0:
+            return False
+        if not bool(existing_row.get("address_match")) or float(existing_row.get("operator_similarity") or 0.0) < 1.0:
+            return False
+        existing_charge_points.update(split_pipe_set(existing_row.get("datex_charge_point_ids")))
+
+    return bool(existing_charge_points) and row_charge_points.isdisjoint(existing_charge_points)
+
+
 def match_static_sites(
     df: pd.DataFrame,
     station_index: dict[tuple[int, int], list[dict[str, Any]]],
@@ -606,13 +651,20 @@ def match_static_sites(
     scored_pairs.sort(key=lambda item: (item[0], item[1], item[2], item[3]))
     matches: dict[str, str] = {}
     used_stations: set[str] = set()
+    rows_by_station: dict[str, list[dict[str, Any]]] = {}
     rows: list[dict[str, Any]] = []
 
     for _, _, site_id, station_id, row in scored_pairs:
-        if site_id in matches or station_id in used_stations:
+        if site_id in matches:
+            continue
+        if station_id in used_stations and not allow_duplicate_station_match(
+            row,
+            rows_by_station.get(station_id, []),
+        ):
             continue
         matches[site_id] = station_id
         used_stations.add(station_id)
+        rows_by_station.setdefault(station_id, []).append(row)
         rows.append(row)
 
     return matches, rows
@@ -935,7 +987,7 @@ def write_matches_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
     fieldnames = list(rows[0].keys())
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -1023,7 +1075,7 @@ def main() -> None:
 
     provider_map: dict[str, dict[str, Any]] = {}
     for offer in detailed_offers:
-        provider_uid = slugify(offer["provider_stem"]) or slugify(offer["publisher"]) or offer["publication_id"]
+        provider_uid = canonical_provider_uid_for_offer(offer)
         entry = provider_map.setdefault(
             provider_uid,
             {

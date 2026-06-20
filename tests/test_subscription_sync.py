@@ -362,6 +362,58 @@ def test_build_live_subscription_registry_applies_push_overrides_for_qwello_and_
     assert registry["ladenetz_de_ladestationsdaten"]["push_fallback_after_seconds"] == 300
 
 
+def test_build_live_subscription_registry_enables_supported_noauth_mtls_provider():
+    offers = [
+        SubscriptionOffer(
+            provider_uid="flavia",
+            display_name="flavia",
+            publisher="Grid & Co. GmbH",
+            publication_id="1004756865530970112",
+            offer_title="AFIR-recharging-dyn-Flavia",
+            feed_kind="dynamic",
+            access_mode="noauth",
+        ),
+        SubscriptionOffer(
+            provider_uid="flavia",
+            display_name="flavia",
+            publisher="Grid & Co. GmbH",
+            publication_id="1004450433724211200",
+            offer_title="AFIR-recharging-stat-Flavia",
+            feed_kind="static",
+            access_mode="noauth",
+        ),
+        SubscriptionOffer(
+            provider_uid="grid",
+            display_name="grid",
+            publisher="Grid & Co. GmbH",
+            publication_id="984103903968534528",
+            offer_title="AFIR-recharging-dyn-Grid&Co",
+            feed_kind="dynamic",
+            access_mode="noauth",
+        ),
+    ]
+
+    registry = build_live_subscription_registry(
+        offers,
+        [
+            {"id": "flavia-dynamic-subscription", "dataOfferId": "1004756865530970112", "contractStatus": "ACTIVE"},
+            {"id": "flavia-static-subscription", "dataOfferId": "1004450433724211200", "contractStatus": "ACTIVE"},
+            {"id": "grid-dynamic-subscription", "dataOfferId": "984103903968534528", "contractStatus": "ACTIVE"},
+        ],
+    )
+
+    assert registry["flavia"]["subscription_id"] == "flavia-dynamic-subscription"
+    assert registry["flavia"]["static_subscription_id"] == "flavia-static-subscription"
+    assert registry["flavia"]["fetch_kind"] == "mtls_subscription"
+    assert registry["flavia"]["enabled"] is True
+    assert registry["flavia"]["delivery_mode"] == "push_with_poll_fallback"
+    assert registry["flavia"]["push_fallback_after_seconds"] == 300
+
+    assert registry["grid"]["subscription_id"] == "grid-dynamic-subscription"
+    assert "fetch_kind" not in registry["grid"]
+    assert "enabled" not in registry["grid"]
+
+
 def test_build_live_subscription_registry_applies_push_overrides_for_remaining_push_providers():
     offers = [
         SubscriptionOffer(
