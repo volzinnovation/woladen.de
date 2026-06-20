@@ -51,12 +51,15 @@ export function getUserRating(ratings, stationId) {
   return normalizeRating(ratings.get(id));
 }
 
-export function formatRatingValue(rating) {
+export function formatRatingValue(rating, locale = "de-DE") {
   const numeric = Number(rating);
   if (!Number.isFinite(numeric) || numeric < 1 || numeric > 5) {
     return "";
   }
-  return numeric.toFixed(1).replace(".", ",");
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(numeric);
 }
 
 export function normalizeRatingSummary(value) {

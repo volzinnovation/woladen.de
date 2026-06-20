@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Stazioni di ricarica affidabili in Europa, senza attese noiose | woladen.de",
+    "description": "Trova stazioni di ricarica affidabili in Europa con dati live, prezzi e luoghi utili nelle vicinanze. Evita problemi e attese.",
+    "ogTitle": "Ricarica affidabile. In tutta Europa. Senza attese noiose.",
+    "ogDescription": "Trova stazioni di ricarica affidabili in Europa con dati live, prezzi e luoghi utili nelle vicinanze. Evita problemi e attese.",
+    "socialAlt": "Anteprima di woladen.de con una mappa dell’Europa e lo slogan: Ricarica affidabile. In tutta Europa. Senza attese noiose."
+  },
+  "languageName": "Italiano",
+  "nav": {
+    "list": "Lista",
+    "map": "Mappa",
+    "favorites": "Preferiti",
+    "stats": "Stats",
+    "info": "Info",
+    "label": "Navigazione principale"
+  },
+  "language": {
+    "label": "Lingua"
+  },
+  "search": {
+    "label": "Cerca luogo o indirizzo",
+    "placeholder": "Cerca luogo o indirizzo"
+  },
+  "list": {
+    "title": "Punti di ricarica vicini",
+    "loading": "Caricamento stazioni...",
+    "empty": "Nessuna stazione trovata."
+  },
+  "favorites": {
+    "title": "Preferiti",
+    "sort": "Ordina",
+    "distance": "Distanza",
+    "rating": "Stelle",
+    "empty": "Nessun preferito salvato."
+  },
+  "filters": {
+    "title": "Filtri",
+    "operator": "Operatore",
+    "allOperators": "Tutti gli operatori",
+    "amenityName": "Nome del luogo vicino",
+    "currentlyOpen": "Aperto ora",
+    "amenities": "Luoghi vicini",
+    "apply": "Applica",
+    "reset": "Reimposta"
+  },
+  "info": {
+    "title": "Info e aiuto",
+    "aboutTitle": "Informazioni su woladen.de",
+    "countriesTitle": "Copertura attuale dei paesi",
+    "country": "Paese",
+    "stations": "Stazioni",
+    "loadingCountries": "Caricamento paesi...",
+    "dataSourcesTitle": "Fonti dati e licenze"
+  },
+  "amenity": {
+    "generic": "Luogo vicino",
+    "open": "Aperto ora",
+    "closed": "Chiuso",
+    "unknownHours": "Orari sconosciuti"
+  },
+  "station": {
+    "chargingPointOne": "{count} punto di ricarica",
+    "chargingPointMany": "{count} punti di ricarica",
+    "unknownOperator": "Operatore sconosciuto",
+    "chargingStation": "Stazione di ricarica",
+    "note": "Nota",
+    "details": "Dettagli",
+    "live": "Live",
+    "stationStatus": "Stato della stazione",
+    "liveDataAvailable": "Dati live disponibili",
+    "evse": "Punto di ricarica {index}",
+    "notInLiveFeed": "Non incluso nel feed live",
+    "detailsSource": "Dettagli via {source} · aggiornato {date}",
+    "detailsSourceOnly": "Dettagli via {source}",
+    "liveVia": "Live via {source}",
+    "liveViaUpdated": "Live via {source} · aggiornato {date}",
+    "updated": "Aggiornato {date}",
+    "maxPower": "{power} kW max / {points}",
+    "nextSlot": "Prossimo slot",
+    "supplementalStatus": "Stato supplementare"
+  },
+  "availability": {
+    "free": "Libero",
+    "occupied": "Occupato",
+    "out_of_order": "Fuori servizio",
+    "unknown": "Sconosciuto",
+    "summaryUnknown": "Occupazione sconosciuta",
+    "available": "{count} liberi",
+    "occupiedCount": "{count} occupati",
+    "outOfOrderCount": "{count} fuori servizio",
+    "unknownCount": "{count} sconosciuti"
+  }
+}

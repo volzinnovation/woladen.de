@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Uzticamas uzlādes stacijas Eiropā bez garlaicīgas gaidīšanas | woladen.de",
+    "description": "Atrodiet uzticamas uzlādes stacijas Eiropā ar tiešsaistes datiem, cenām un noderīgām vietām tuvumā. Izvairieties no raizēm un gaidīšanas.",
+    "ogTitle": "Uzticama uzlāde. Visā Eiropā. Bez garlaicīgas gaidīšanas.",
+    "ogDescription": "Atrodiet uzticamas uzlādes stacijas Eiropā ar tiešsaistes datiem, cenām un noderīgām vietām tuvumā.",
+    "socialAlt": "woladen.de priekšskatījums ar Eiropas karti un saukli: Uzticama uzlāde. Visā Eiropā. Bez garlaicīgas gaidīšanas."
+  },
+  "languageName": "Latviešu",
+  "nav": {
+    "list": "Saraksts",
+    "map": "Karte",
+    "favorites": "Izlase",
+    "stats": "Statistika",
+    "info": "Info",
+    "label": "Galvenā navigācija"
+  },
+  "language": {
+    "label": "Valoda"
+  },
+  "search": {
+    "label": "Meklēt vietu vai adresi",
+    "placeholder": "Meklēt vietu vai adresi"
+  },
+  "list": {
+    "title": "Uzlādes punkti tuvumā",
+    "loading": "Ielādē uzlādes stacijas...",
+    "empty": "Uzlādes stacijas nav atrastas."
+  },
+  "favorites": {
+    "title": "Izlase",
+    "sort": "Kārtot",
+    "distance": "Attālums",
+    "rating": "Zvaigznes",
+    "empty": "Nav saglabātu izlases vietu."
+  },
+  "filters": {
+    "title": "Filtri",
+    "operator": "Operators",
+    "allOperators": "Visi operatori",
+    "amenityName": "Tuvumā esošas vietas nosaukums",
+    "currentlyOpen": "Atvērts tagad",
+    "amenities": "Vietas tuvumā",
+    "apply": "Lietot",
+    "reset": "Atiestatīt"
+  },
+  "info": {
+    "title": "Info un palīdzība",
+    "aboutTitle": "Par woladen.de",
+    "countriesTitle": "Pašreizējais valstu pārklājums",
+    "country": "Valsts",
+    "stations": "Stacijas",
+    "loadingCountries": "Ielādē valstis...",
+    "dataSourcesTitle": "Datu avoti un licences"
+  },
+  "amenity": {
+    "generic": "Vieta tuvumā",
+    "open": "Atvērts tagad",
+    "closed": "Slēgts",
+    "unknownHours": "Darba laiks nav zināms"
+  },
+  "station": {
+    "chargingPointOne": "{count} uzlādes punkts",
+    "chargingPointMany": "{count} uzlādes punkti",
+    "unknownOperator": "Nezināms operators",
+    "chargingStation": "Uzlādes stacija",
+    "note": "Piezīme",
+    "details": "Detaļas",
+    "live": "Tiešsaistē",
+    "stationStatus": "Stacijas statuss",
+    "liveDataAvailable": "Tiešsaistes dati pieejami",
+    "evse": "Uzlādes punkts {index}",
+    "notInLiveFeed": "Nav iekļauts tiešsaistes plūsmā",
+    "detailsSource": "Detaļas caur {source} · atjaunināts {date}",
+    "detailsSourceOnly": "Detaļas caur {source}",
+    "liveVia": "Tiešsaistē caur {source}",
+    "liveViaUpdated": "Tiešsaistē caur {source} · atjaunināts {date}",
+    "updated": "Atjaunināts {date}",
+    "maxPower": "{power} kW maks. / {points}",
+    "nextSlot": "Nākamais laiks",
+    "supplementalStatus": "Papildu statuss"
+  },
+  "availability": {
+    "free": "Brīvs",
+    "occupied": "Aizņemts",
+    "out_of_order": "Nedarbojas",
+    "unknown": "Nezināms",
+    "summaryUnknown": "Noslogojums nezināms",
+    "available": "{count} brīvi",
+    "occupiedCount": "{count} aizņemti",
+    "outOfOrderCount": "{count} nedarbojas",
+    "unknownCount": "{count} nezināmi"
+  }
+}

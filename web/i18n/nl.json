@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Betrouwbare laadstations zonder laadverveling in Europa | woladen.de",
+    "description": "Vind betrouwbare laadstations in Europa met live data, prijzen en handige plekken in de buurt. Vermijd gedoe en wachten.",
+    "ogTitle": "Betrouwbaar laden. In heel Europa. Geen laadverveling.",
+    "ogDescription": "Vind betrouwbare laadstations in Europa met live data, prijzen en handige plekken in de buurt. Vermijd gedoe en wachten.",
+    "socialAlt": "woladen.de-preview met een kaart van Europa en de slogan: Betrouwbaar laden. In heel Europa. Geen laadverveling."
+  },
+  "languageName": "Nederlands",
+  "nav": {
+    "list": "Lijst",
+    "map": "Kaart",
+    "favorites": "Favorieten",
+    "stats": "Stats",
+    "info": "Info",
+    "label": "Hoofdnavigatie"
+  },
+  "language": {
+    "label": "Taal"
+  },
+  "search": {
+    "label": "Plaats of adres zoeken",
+    "placeholder": "Plaats of adres zoeken"
+  },
+  "list": {
+    "title": "Laadpunten in de buurt",
+    "loading": "Laadstations laden...",
+    "empty": "Geen laadstations gevonden."
+  },
+  "favorites": {
+    "title": "Favorieten",
+    "sort": "Sorteren",
+    "distance": "Afstand",
+    "rating": "Sterren",
+    "empty": "Nog geen favorieten opgeslagen."
+  },
+  "filters": {
+    "title": "Filters",
+    "operator": "Aanbieder",
+    "allOperators": "Alle aanbieders",
+    "amenityName": "Naam van plek in de buurt",
+    "currentlyOpen": "Nu open",
+    "amenities": "Plekken in de buurt",
+    "apply": "Toepassen",
+    "reset": "Resetten"
+  },
+  "info": {
+    "title": "Info en hulp",
+    "aboutTitle": "Over woladen.de",
+    "countriesTitle": "Huidige landendekking",
+    "country": "Land",
+    "stations": "Stations",
+    "loadingCountries": "Landen laden...",
+    "dataSourcesTitle": "Gegevensbronnen en licenties"
+  },
+  "amenity": {
+    "generic": "Plek in de buurt",
+    "open": "Nu open",
+    "closed": "Gesloten",
+    "unknownHours": "Openingstijden onbekend"
+  },
+  "station": {
+    "chargingPointOne": "{count} laadpunt",
+    "chargingPointMany": "{count} laadpunten",
+    "unknownOperator": "Onbekende aanbieder",
+    "chargingStation": "Laadstation",
+    "note": "Notitie",
+    "details": "Details",
+    "live": "Live",
+    "stationStatus": "Stationstatus",
+    "liveDataAvailable": "Livegegevens beschikbaar",
+    "evse": "Laadpunt {index}",
+    "notInLiveFeed": "Niet opgenomen in de livefeed",
+    "detailsSource": "Details via {source} · bijgewerkt {date}",
+    "detailsSourceOnly": "Details via {source}",
+    "liveVia": "Live via {source}",
+    "liveViaUpdated": "Live via {source} · bijgewerkt {date}",
+    "updated": "Bijgewerkt {date}",
+    "maxPower": "{power} kW max / {points}",
+    "nextSlot": "Volgende tijd",
+    "supplementalStatus": "Aanvullende status"
+  },
+  "availability": {
+    "free": "Vrij",
+    "occupied": "Bezet",
+    "out_of_order": "Buiten werking",
+    "unknown": "Onbekend",
+    "summaryUnknown": "Bezetting onbekend",
+    "available": "{count} vrij",
+    "occupiedCount": "{count} bezet",
+    "outOfOrderCount": "{count} buiten werking",
+    "unknownCount": "{count} onbekend"
+  }
+}

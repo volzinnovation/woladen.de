@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Niezawodne stacje ładowania bez nudy przy ładowaniu w Europie | woladen.de",
+    "description": "Znajdź niezawodne stacje ładowania w Europie z danymi na żywo, cenami i przydatnymi miejscami w pobliżu. Unikaj problemów i czekania.",
+    "ogTitle": "Niezawodne ładowanie. W całej Europie. Bez nudy przy ładowaniu.",
+    "ogDescription": "Znajdź niezawodne stacje ładowania w Europie z danymi na żywo, cenami i przydatnymi miejscami w pobliżu.",
+    "socialAlt": "Podgląd woladen.de z mapą Europy i hasłem: Niezawodne ładowanie. W całej Europie. Bez nudy przy ładowaniu."
+  },
+  "languageName": "Polski",
+  "nav": {
+    "list": "Lista",
+    "map": "Mapa",
+    "favorites": "Ulubione",
+    "stats": "Statystyki",
+    "info": "Info",
+    "label": "Nawigacja główna"
+  },
+  "language": {
+    "label": "Język"
+  },
+  "search": {
+    "label": "Szukaj miejsca lub adresu",
+    "placeholder": "Szukaj miejsca lub adresu"
+  },
+  "list": {
+    "title": "Punkty ładowania w pobliżu",
+    "loading": "Ładowanie stacji...",
+    "empty": "Nie znaleziono stacji ładowania."
+  },
+  "favorites": {
+    "title": "Ulubione",
+    "sort": "Sortuj",
+    "distance": "Odległość",
+    "rating": "Gwiazdki",
+    "empty": "Brak zapisanych ulubionych."
+  },
+  "filters": {
+    "title": "Filtry",
+    "operator": "Operator",
+    "allOperators": "Wszyscy operatorzy",
+    "amenityName": "Nazwa pobliskiego miejsca",
+    "currentlyOpen": "Otwarte teraz",
+    "amenities": "Miejsca w pobliżu",
+    "apply": "Zastosuj",
+    "reset": "Resetuj"
+  },
+  "info": {
+    "title": "Info i pomoc",
+    "aboutTitle": "O woladen.de",
+    "countriesTitle": "Aktualny zasięg krajów",
+    "country": "Kraj",
+    "stations": "Stacje",
+    "loadingCountries": "Ładowanie krajów...",
+    "dataSourcesTitle": "Źródła danych i licencje"
+  },
+  "amenity": {
+    "generic": "Miejsce w pobliżu",
+    "open": "Otwarte teraz",
+    "closed": "Zamknięte",
+    "unknownHours": "Godziny nieznane"
+  },
+  "station": {
+    "chargingPointOne": "{count} punkt ładowania",
+    "chargingPointMany": "{count} punkty ładowania",
+    "unknownOperator": "Nieznany operator",
+    "chargingStation": "Stacja ładowania",
+    "note": "Notatka",
+    "details": "Szczegóły",
+    "live": "Na żywo",
+    "stationStatus": "Status stacji",
+    "liveDataAvailable": "Dane na żywo dostępne",
+    "evse": "Punkt ładowania {index}",
+    "notInLiveFeed": "Nie ma w danych na żywo",
+    "detailsSource": "Szczegóły przez {source} · aktualizacja {date}",
+    "detailsSourceOnly": "Szczegóły przez {source}",
+    "liveVia": "Na żywo przez {source}",
+    "liveViaUpdated": "Na żywo przez {source} · aktualizacja {date}",
+    "updated": "Aktualizacja {date}",
+    "maxPower": "{power} kW maks. / {points}",
+    "nextSlot": "Następny termin",
+    "supplementalStatus": "Status dodatkowy"
+  },
+  "availability": {
+    "free": "Wolne",
+    "occupied": "Zajęte",
+    "out_of_order": "Uszkodzone",
+    "unknown": "Nieznane",
+    "summaryUnknown": "Zajętość nieznana",
+    "available": "{count} wolne",
+    "occupiedCount": "{count} zajęte",
+    "outOfOrderCount": "{count} uszkodzone",
+    "unknownCount": "{count} nieznane"
+  }
+}

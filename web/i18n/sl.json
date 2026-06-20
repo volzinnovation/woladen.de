@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Zanesljive polnilne postaje v Evropi brez dolgočasnega čakanja | woladen.de",
+    "description": "Poiščite zanesljive polnilne postaje v Evropi z živimi podatki, cenami in koristnimi kraji v bližini. Izognite se težavam in čakanju.",
+    "ogTitle": "Zanesljivo polnjenje. Po vsej Evropi. Brez dolgočasnega čakanja.",
+    "ogDescription": "Poiščite zanesljive polnilne postaje v Evropi z živimi podatki, cenami in koristnimi kraji v bližini.",
+    "socialAlt": "Predogled woladen.de z zemljevidom Evrope in sloganom: Zanesljivo polnjenje. Po vsej Evropi. Brez dolgočasnega čakanja."
+  },
+  "languageName": "Slovenščina",
+  "nav": {
+    "list": "Seznam",
+    "map": "Zemljevid",
+    "favorites": "Priljubljene",
+    "stats": "Statistika",
+    "info": "Info",
+    "label": "Glavna navigacija"
+  },
+  "language": {
+    "label": "Jezik"
+  },
+  "search": {
+    "label": "Iskanje kraja ali naslova",
+    "placeholder": "Iskanje kraja ali naslova"
+  },
+  "list": {
+    "title": "Polnilne točke v bližini",
+    "loading": "Nalaganje polnilnic...",
+    "empty": "Ni najdenih polnilnic."
+  },
+  "favorites": {
+    "title": "Priljubljene",
+    "sort": "Razvrsti",
+    "distance": "Razdalja",
+    "rating": "Zvezdice",
+    "empty": "Ni shranjenih priljubljenih."
+  },
+  "filters": {
+    "title": "Filtri",
+    "operator": "Operater",
+    "allOperators": "Vsi operaterji",
+    "amenityName": "Ime bližnjega kraja",
+    "currentlyOpen": "Odprto zdaj",
+    "amenities": "Kraji v bližini",
+    "apply": "Uporabi",
+    "reset": "Ponastavi"
+  },
+  "info": {
+    "title": "Info in pomoč",
+    "aboutTitle": "O woladen.de",
+    "countriesTitle": "Trenutna pokritost držav",
+    "country": "Država",
+    "stations": "Postaje",
+    "loadingCountries": "Nalaganje držav...",
+    "dataSourcesTitle": "Viri podatkov in licence"
+  },
+  "amenity": {
+    "generic": "Kraj v bližini",
+    "open": "Odprto zdaj",
+    "closed": "Zaprto",
+    "unknownHours": "Delovni čas ni znan"
+  },
+  "station": {
+    "chargingPointOne": "{count} polnilno mesto",
+    "chargingPointMany": "{count} polnilnih mest",
+    "unknownOperator": "Neznan operater",
+    "chargingStation": "Polnilna postaja",
+    "note": "Opomba",
+    "details": "Podrobnosti",
+    "live": "V živo",
+    "stationStatus": "Stanje postaje",
+    "liveDataAvailable": "Podatki v živo so na voljo",
+    "evse": "Polnilno mesto {index}",
+    "notInLiveFeed": "Ni vključeno v vir v živo",
+    "detailsSource": "Podrobnosti prek {source} · posodobljeno {date}",
+    "detailsSourceOnly": "Podrobnosti prek {source}",
+    "liveVia": "V živo prek {source}",
+    "liveViaUpdated": "V živo prek {source} · posodobljeno {date}",
+    "updated": "Posodobljeno {date}",
+    "maxPower": "{power} kW max / {points}",
+    "nextSlot": "Naslednji termin",
+    "supplementalStatus": "Dodatno stanje"
+  },
+  "availability": {
+    "free": "Prosto",
+    "occupied": "Zasedeno",
+    "out_of_order": "V okvari",
+    "unknown": "Neznano",
+    "summaryUnknown": "Zasedenost neznana",
+    "available": "{count} prosto",
+    "occupiedCount": "{count} zasedeno",
+    "outOfOrderCount": "{count} v okvari",
+    "unknownCount": "{count} neznano"
+  }
+}

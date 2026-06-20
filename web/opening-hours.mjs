@@ -9,6 +9,31 @@ const GERMAN_DAY_LABELS = {
   Sa: "Sa",
   Su: "So",
 };
+const ENGLISH_DAY_LABELS = {
+  Mo: "Mo",
+  Tu: "Tu",
+  We: "We",
+  Th: "Th",
+  Fr: "Fr",
+  Sa: "Sa",
+  Su: "Su",
+};
+const DISPLAY_OPTIONS_BY_LANGUAGE = {
+  de: {
+    dayLabels: GERMAN_DAY_LABELS,
+    fromPrefix: "ab",
+    closed: "geschlossen",
+    open: "geöffnet",
+    publicHolidayOpen: "an Feiertagen geöffnet",
+  },
+  default: {
+    dayLabels: ENGLISH_DAY_LABELS,
+    fromPrefix: "from",
+    closed: "closed",
+    open: "open",
+    publicHolidayOpen: "open on public holidays",
+  },
+};
 const WEEKDAY_TO_KEY = {
   Mon: "Mo",
   Tue: "Tu",
@@ -61,7 +86,8 @@ export function getGermanNowParts(date = new Date()) {
   };
 }
 
-export function formatOpeningHoursForGermanDisplay(openingHours) {
+export function formatOpeningHoursForDisplay(openingHours, locale = "en") {
+  const options = displayOptionsForLocale(locale);
   const holidayStates = new Set();
   const dayClausesByBody = new Map();
   const fallbackClauses = [];
@@ -74,7 +100,7 @@ export function formatOpeningHoursForGermanDisplay(openingHours) {
 
     const dayMatch = DAY_SELECTOR_RE.exec(trimmed);
     if (!dayMatch) {
-      fallbackClauses.push(formatOpeningHoursClause(trimmed));
+      fallbackClauses.push(formatOpeningHoursClause(trimmed, options));
       continue;
     }
 
@@ -91,7 +117,7 @@ export function formatOpeningHoursForGermanDisplay(openingHours) {
       continue;
     }
 
-    const bodyDisplay = formatOpeningHoursClause(body);
+    const bodyDisplay = formatOpeningHoursClause(body, options);
     if (!dayClausesByBody.has(bodyDisplay)) {
       dayClausesByBody.set(bodyDisplay, {
         bodyDisplay,
@@ -103,15 +129,24 @@ export function formatOpeningHoursForGermanDisplay(openingHours) {
 
   const clauses = Array.from(dayClausesByBody.values())
     .sort((a, b) => firstDayIndex(a.days) - firstDayIndex(b.days))
-    .map((item) => `${formatDisplayDays(item.days)} ${item.bodyDisplay}`);
+    .map((item) => `${formatDisplayDays(item.days, options)} ${item.bodyDisplay}`);
 
   clauses.push(...fallbackClauses.filter(Boolean));
 
   if (holidayStates.has("open")) {
-    clauses.push("an Feiertagen geöffnet");
+    clauses.push(options.publicHolidayOpen);
   }
 
   return clauses.join("; ");
+}
+
+export function formatOpeningHoursForGermanDisplay(openingHours) {
+  return formatOpeningHoursForDisplay(openingHours, "de");
+}
+
+function displayOptionsForLocale(locale) {
+  const language = String(locale || "").trim().toLowerCase().split("-")[0];
+  return DISPLAY_OPTIONS_BY_LANGUAGE[language] || DISPLAY_OPTIONS_BY_LANGUAGE.default;
 }
 
 function parseDisplayDaySelector(selector) {
@@ -145,7 +180,7 @@ function firstDayIndex(days) {
   return indexes.length > 0 ? Math.min(...indexes) : DAY_KEYS.length;
 }
 
-function formatDisplayDays(days) {
+function formatDisplayDays(days, options = DISPLAY_OPTIONS_BY_LANGUAGE.de) {
   const ordered = DAY_KEYS.filter((day) => days.has(day));
   const ranges = [];
   for (let index = 0; index < ordered.length; index += 1) {
@@ -160,22 +195,22 @@ function formatDisplayDays(days) {
     }
     ranges.push(
       start === end
-        ? GERMAN_DAY_LABELS[start]
-        : `${GERMAN_DAY_LABELS[start]}-${GERMAN_DAY_LABELS[end]}`,
+        ? options.dayLabels[start]
+        : `${options.dayLabels[start]}-${options.dayLabels[end]}`,
     );
   }
   return ranges.join(", ");
 }
 
-function formatOpeningHoursClause(value) {
+function formatOpeningHoursClause(value, options = DISPLAY_OPTIONS_BY_LANGUAGE.de) {
   return String(value || "")
     .trim()
-    .replace(/\b(\d{1,2}:\d{2})\s*-\s*\d{1,2}:\d{2}\+/g, "ab $1")
-    .replace(/\b(\d{1,2}:\d{2})\+/g, "ab $1")
-    .replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su)\b/g, (token) => GERMAN_DAY_LABELS[token])
-    .replace(/\boff\b/gi, "geschlossen")
-    .replace(/\bclosed\b/gi, "geschlossen")
-    .replace(/\bopen\b/gi, "geöffnet")
+    .replace(/\b(\d{1,2}:\d{2})\s*-\s*\d{1,2}:\d{2}\+/g, `${options.fromPrefix} $1`)
+    .replace(/\b(\d{1,2}:\d{2})\+/g, `${options.fromPrefix} $1`)
+    .replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su)\b/g, (token) => options.dayLabels[token])
+    .replace(/\boff\b/gi, options.closed)
+    .replace(/\bclosed\b/gi, options.closed)
+    .replace(/\bopen\b/gi, options.open)
     .replace(/,\s*/g, ", ");
 }
 

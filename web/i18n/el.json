@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Αξιόπιστοι σταθμοί φόρτισης χωρίς ανία φόρτισης στην Ευρώπη | woladen.de",
+    "description": "Βρείτε αξιόπιστους σταθμούς φόρτισης στην Ευρώπη με ζωντανά δεδομένα, τιμές και χρήσιμα μέρη κοντά. Αποφύγετε τα προβλήματα και την αναμονή.",
+    "ogTitle": "Αξιόπιστη φόρτιση. Σε όλη την Ευρώπη. Χωρίς ανία φόρτισης.",
+    "ogDescription": "Βρείτε αξιόπιστους σταθμούς φόρτισης στην Ευρώπη με ζωντανά δεδομένα, τιμές και χρήσιμα μέρη κοντά.",
+    "socialAlt": "Προεπισκόπηση woladen.de με χάρτη της Ευρώπης και σύνθημα: Αξιόπιστη φόρτιση. Σε όλη την Ευρώπη. Χωρίς ανία φόρτισης."
+  },
+  "languageName": "Ελληνικά",
+  "nav": {
+    "list": "Λίστα",
+    "map": "Χάρτης",
+    "favorites": "Αγαπημένα",
+    "stats": "Στατιστικά",
+    "info": "Πληροφορίες",
+    "label": "Κύρια πλοήγηση"
+  },
+  "language": {
+    "label": "Γλώσσα"
+  },
+  "search": {
+    "label": "Αναζήτηση τόπου ή διεύθυνσης",
+    "placeholder": "Αναζήτηση τόπου ή διεύθυνσης"
+  },
+  "list": {
+    "title": "Σημεία φόρτισης κοντά",
+    "loading": "Φόρτωση σταθμών φόρτισης...",
+    "empty": "Δεν βρέθηκαν σταθμοί φόρτισης."
+  },
+  "favorites": {
+    "title": "Αγαπημένα",
+    "sort": "Ταξινόμηση",
+    "distance": "Απόσταση",
+    "rating": "Αστέρια",
+    "empty": "Δεν έχουν αποθηκευτεί αγαπημένα."
+  },
+  "filters": {
+    "title": "Φίλτρα",
+    "operator": "Πάροχος",
+    "allOperators": "Όλοι οι πάροχοι",
+    "amenityName": "Όνομα κοντινού μέρους",
+    "currentlyOpen": "Ανοιχτά τώρα",
+    "amenities": "Κοντινά μέρη",
+    "apply": "Εφαρμογή",
+    "reset": "Επαναφορά"
+  },
+  "info": {
+    "title": "Πληροφορίες και βοήθεια",
+    "aboutTitle": "Σχετικά με το woladen.de",
+    "countriesTitle": "Τρέχουσα κάλυψη χωρών",
+    "country": "Χώρα",
+    "stations": "Σταθμοί",
+    "loadingCountries": "Φόρτωση χωρών...",
+    "dataSourcesTitle": "Πηγές δεδομένων και άδειες"
+  },
+  "amenity": {
+    "generic": "Κοντινό μέρος",
+    "open": "Ανοιχτά τώρα",
+    "closed": "Κλειστά",
+    "unknownHours": "Άγνωστο ωράριο"
+  },
+  "station": {
+    "chargingPointOne": "{count} σημείο φόρτισης",
+    "chargingPointMany": "{count} σημεία φόρτισης",
+    "unknownOperator": "Άγνωστος πάροχος",
+    "chargingStation": "Σταθμός φόρτισης",
+    "note": "Σημείωση",
+    "details": "Λεπτομέρειες",
+    "live": "Ζωντανά",
+    "stationStatus": "Κατάσταση σταθμού",
+    "liveDataAvailable": "Διαθέσιμα ζωντανά δεδομένα",
+    "evse": "Σημείο φόρτισης {index}",
+    "notInLiveFeed": "Δεν περιλαμβάνεται στη ζωντανή ροή",
+    "detailsSource": "Λεπτομέρειες μέσω {source} · ενημερώθηκε {date}",
+    "detailsSourceOnly": "Λεπτομέρειες μέσω {source}",
+    "liveVia": "Ζωντανά μέσω {source}",
+    "liveViaUpdated": "Ζωντανά μέσω {source} · ενημερώθηκε {date}",
+    "updated": "Ενημερώθηκε {date}",
+    "maxPower": "{power} kW μέγ. / {points}",
+    "nextSlot": "Επόμενη θέση",
+    "supplementalStatus": "Συμπληρωματική κατάσταση"
+  },
+  "availability": {
+    "free": "Ελεύθερο",
+    "occupied": "Κατειλημμένο",
+    "out_of_order": "Εκτός λειτουργίας",
+    "unknown": "Άγνωστο",
+    "summaryUnknown": "Άγνωστη πληρότητα",
+    "available": "{count} ελεύθερα",
+    "occupiedCount": "{count} κατειλημμένα",
+    "outOfOrderCount": "{count} εκτός λειτουργίας",
+    "unknownCount": "{count} άγνωστα"
+  }
+}

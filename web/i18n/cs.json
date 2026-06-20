@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Spolehlivé nabíjecí stanice bez nudy při nabíjení v Evropě | woladen.de",
+    "description": "Najděte spolehlivé nabíjecí stanice v Evropě s živými daty, cenami a užitečnými místy v okolí. Vyhněte se problémům a čekání.",
+    "ogTitle": "Spolehlivé nabíjení. Po celé Evropě. Bez nudy při nabíjení.",
+    "ogDescription": "Najděte spolehlivé nabíjecí stanice v Evropě s živými daty, cenami a místy v okolí. Vyhněte se problémům a čekání.",
+    "socialAlt": "Náhled woladen.de s mapou Evropy a sloganem: Spolehlivé nabíjení. Po celé Evropě. Bez nudy při nabíjení."
+  },
+  "languageName": "Čeština",
+  "nav": {
+    "list": "Seznam",
+    "map": "Mapa",
+    "favorites": "Oblíbené",
+    "stats": "Statistiky",
+    "info": "Info",
+    "label": "Hlavní navigace"
+  },
+  "language": {
+    "label": "Jazyk"
+  },
+  "search": {
+    "label": "Hledat místo nebo adresu",
+    "placeholder": "Hledat místo nebo adresu"
+  },
+  "list": {
+    "title": "Nabíjecí body poblíž",
+    "loading": "Načítání stanic...",
+    "empty": "Nebyly nalezeny žádné stanice."
+  },
+  "favorites": {
+    "title": "Oblíbené",
+    "sort": "Seřadit",
+    "distance": "Vzdálenost",
+    "rating": "Hvězdy",
+    "empty": "Zatím nejsou uloženy oblíbené."
+  },
+  "filters": {
+    "title": "Filtry",
+    "operator": "Provozovatel",
+    "allOperators": "Všichni provozovatelé",
+    "amenityName": "Název místa poblíž",
+    "currentlyOpen": "Nyní otevřeno",
+    "amenities": "Místa poblíž",
+    "apply": "Použít",
+    "reset": "Resetovat"
+  },
+  "info": {
+    "title": "Info a pomoc",
+    "aboutTitle": "O woladen.de",
+    "countriesTitle": "Aktuální pokrytí zemí",
+    "country": "Země",
+    "stations": "Stanice",
+    "loadingCountries": "Načítání zemí...",
+    "dataSourcesTitle": "Zdroje dat a licence"
+  },
+  "amenity": {
+    "generic": "Místo poblíž",
+    "open": "Nyní otevřeno",
+    "closed": "Zavřeno",
+    "unknownHours": "Otevírací doba neznámá"
+  },
+  "station": {
+    "chargingPointOne": "{count} nabíjecí bod",
+    "chargingPointMany": "{count} nabíjecích bodů",
+    "unknownOperator": "Neznámý provozovatel",
+    "chargingStation": "Nabíjecí stanice",
+    "note": "Poznámka",
+    "details": "Detaily",
+    "live": "Živě",
+    "stationStatus": "Stav stanice",
+    "liveDataAvailable": "Živá data dostupná",
+    "evse": "Nabíjecí bod {index}",
+    "notInLiveFeed": "Není v živém feedu",
+    "detailsSource": "Detaily přes {source} · aktualizováno {date}",
+    "detailsSourceOnly": "Detaily přes {source}",
+    "liveVia": "Živě přes {source}",
+    "liveViaUpdated": "Živě přes {source} · aktualizováno {date}",
+    "updated": "Aktualizováno {date}",
+    "maxPower": "{power} kW max / {points}",
+    "nextSlot": "Další termín",
+    "supplementalStatus": "Doplňkový stav"
+  },
+  "availability": {
+    "free": "Volno",
+    "occupied": "Obsazeno",
+    "out_of_order": "Mimo provoz",
+    "unknown": "Neznámé",
+    "summaryUnknown": "Obsazenost neznámá",
+    "available": "{count} volno",
+    "occupiedCount": "{count} obsazeno",
+    "outOfOrderCount": "{count} mimo provoz",
+    "unknownCount": "{count} neznámé"
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Stazzjonijiet tal-iċċarġjar affidabbli fl-Ewropa bla stennija tedjanti | woladen.de",
+    "description": "Sib stazzjonijiet tal-iċċarġjar affidabbli fl-Ewropa b’dejta live, prezzijiet u postijiet utli fil-qrib. Evita problemi u stennija.",
+    "ogTitle": "Iċċarġjar affidabbli. Madwar l-Ewropa. Bla stennija tedjanti.",
+    "ogDescription": "Sib stazzjonijiet tal-iċċarġjar affidabbli fl-Ewropa b’dejta live, prezzijiet u postijiet utli fil-qrib.",
+    "socialAlt": "Previżjoni ta’ woladen.de b’mappa tal-Ewropa u s-slogan: Iċċarġjar affidabbli. Madwar l-Ewropa. Bla stennija tedjanti."
+  },
+  "languageName": "Malti",
+  "nav": {
+    "list": "Lista",
+    "map": "Mappa",
+    "favorites": "Favoriti",
+    "stats": "Stats",
+    "info": "Info",
+    "label": "Navigazzjoni prinċipali"
+  },
+  "language": {
+    "label": "Lingwa"
+  },
+  "search": {
+    "label": "Fittex post jew indirizz",
+    "placeholder": "Fittex post jew indirizz"
+  },
+  "list": {
+    "title": "Punti tal-iċċarġjar qrib",
+    "loading": "Qed jitgħabbew l-istazzjonijiet...",
+    "empty": "Ma nstabux stazzjonijiet."
+  },
+  "favorites": {
+    "title": "Favoriti",
+    "sort": "Issortja",
+    "distance": "Distanza",
+    "rating": "Stilel",
+    "empty": "L-ebda favorit salvat."
+  },
+  "filters": {
+    "title": "Filtri",
+    "operator": "Operatur",
+    "allOperators": "L-operaturi kollha",
+    "amenityName": "Isem ta’ post qrib",
+    "currentlyOpen": "Miftuħ issa",
+    "amenities": "Postijiet qrib",
+    "apply": "Applika",
+    "reset": "Irrisettja"
+  },
+  "info": {
+    "title": "Info u għajnuna",
+    "aboutTitle": "Dwar woladen.de",
+    "countriesTitle": "Kopertura attwali tal-pajjiżi",
+    "country": "Pajjiż",
+    "stations": "Stazzjonijiet",
+    "loadingCountries": "Qed jitgħabbew il-pajjiżi...",
+    "dataSourcesTitle": "Sorsi tad-data u liċenzji"
+  },
+  "amenity": {
+    "generic": "Post qrib",
+    "open": "Miftuħ issa",
+    "closed": "Magħluq",
+    "unknownHours": "Ħinijiet mhux magħrufa"
+  },
+  "station": {
+    "chargingPointOne": "{count} punt tal-iċċarġjar",
+    "chargingPointMany": "{count} punti tal-iċċarġjar",
+    "unknownOperator": "Operatur mhux magħruf",
+    "chargingStation": "Stazzjon tal-iċċarġjar",
+    "note": "Nota",
+    "details": "Dettalji",
+    "live": "Live",
+    "stationStatus": "Status tal-istazzjon",
+    "liveDataAvailable": "Dejta live disponibbli",
+    "evse": "Punt tal-iċċarġjar {index}",
+    "notInLiveFeed": "Mhux inkluż fil-feed live",
+    "detailsSource": "Dettalji permezz ta’ {source} · aġġornat {date}",
+    "detailsSourceOnly": "Dettalji permezz ta’ {source}",
+    "liveVia": "Live permezz ta’ {source}",
+    "liveViaUpdated": "Live permezz ta’ {source} · aġġornat {date}",
+    "updated": "Aġġornat {date}",
+    "maxPower": "{power} kW mass. / {points}",
+    "nextSlot": "Ħin li jmiss",
+    "supplementalStatus": "Status addizzjonali"
+  },
+  "availability": {
+    "free": "Ħieles",
+    "occupied": "Okkupat",
+    "out_of_order": "Barra mis-servizz",
+    "unknown": "Mhux magħruf",
+    "summaryUnknown": "Okkupanza mhux magħrufa",
+    "available": "{count} ħielsa",
+    "occupiedCount": "{count} okkupati",
+    "outOfOrderCount": "{count} barra mis-servizz",
+    "unknownCount": "{count} mhux magħrufa"
+  }
+}

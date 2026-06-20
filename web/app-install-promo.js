@@ -21,16 +21,16 @@
     return `
       <div class="app-install-head">
         <div class="app-install-copy">
-          <p class="app-install-kicker">Auch als App</p>
-          <h2>Wo laden? Immer dabei</h2>
+          <p class="app-install-kicker">Also as an app</p>
+          <h2>Where to charge? Always with you</h2>
           <p>
-            Kostenfrei für
-            <a class="app-install-copy-link" href="${IOS_LINK}">iPhone im App Store</a>
-            und
+            Free for
+            <a class="app-install-copy-link" href="${IOS_LINK}">iPhone on the App Store</a>
+            and
             <a
               class="app-install-copy-link"
               href="${isAndroid() ? ANDROID_STORE_LINK : ANDROID_WEB_LINK}"
-              >Android bei Google Play</a
+              >Android on Google Play</a
             >.
           </p>
         </div>
@@ -38,13 +38,13 @@
           <a
             class="app-install-link"
             href="${IOS_LINK}"
-            aria-label="wo-laden im App Store öffnen"
-            title="Im App Store öffnen"
+            aria-label="Open wo-laden in the App Store"
+            title="Open in the App Store"
           >
             <img
               class="app-install-store-badge app-install-store-badge--apple"
               src="img/app-store-badge.svg"
-              alt="Laden im App Store"
+              alt="Download on the App Store"
               width="250"
               height="83"
               decoding="async"
@@ -53,13 +53,13 @@
           <a
             class="app-install-link"
             href="${isAndroid() ? ANDROID_STORE_LINK : ANDROID_WEB_LINK}"
-            aria-label="wo-laden bei Google Play öffnen"
-            title="Bei Google Play öffnen"
+            aria-label="Open wo-laden on Google Play"
+            title="Open on Google Play"
           >
             <img
               class="app-install-store-badge app-install-store-badge--google"
               src="img/google-play-badge.png"
-              alt="Jetzt bei Google Play"
+              alt="Get it on Google Play"
               width="646"
               height="250"
               decoding="async"
@@ -69,7 +69,7 @@
         <button
           class="app-install-dismiss"
           type="button"
-          aria-label="App-Hinweis ausblenden"
+          aria-label="Hide app note"
         >
           ×
         </button>
@@ -86,7 +86,7 @@
     const promo = document.createElement("section");
     promo.id = PROMO_ID;
     promo.className = "app-install-promo";
-    promo.setAttribute("aria-label", "wo-laden als App");
+    promo.setAttribute("aria-label", "wo-laden app");
     promo.innerHTML = promoMarkup();
     container.prepend(promo);
 

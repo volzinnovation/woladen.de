@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Pålitelige ladestasjoner uten kjedelig venting i Europa | woladen.de",
+    "description": "Finn pålitelige ladestasjoner i Europa med livedata, priser og nyttige steder i nærheten. Unngå trøbbel og venting.",
+    "ogTitle": "Pålitelig lading. I hele Europa. Uten kjedelig venting.",
+    "ogDescription": "Finn pålitelige ladestasjoner i Europa med livedata, priser og nyttige steder i nærheten. Unngå trøbbel og venting.",
+    "socialAlt": "woladen.de-forhåndsvisning med Europakart og slagordet: Pålitelig lading. I hele Europa. Uten kjedelig venting."
+  },
+  "languageName": "Norsk bokmål",
+  "nav": {
+    "list": "Liste",
+    "map": "Kart",
+    "favorites": "Favoritter",
+    "stats": "Statistikk",
+    "info": "Info",
+    "label": "Hovednavigasjon"
+  },
+  "language": {
+    "label": "Språk"
+  },
+  "search": {
+    "label": "Søk etter sted eller adresse",
+    "placeholder": "Søk etter sted eller adresse"
+  },
+  "list": {
+    "title": "Ladepunkter i nærheten",
+    "loading": "Laster ladestasjoner...",
+    "empty": "Ingen ladestasjoner funnet."
+  },
+  "favorites": {
+    "title": "Favoritter",
+    "sort": "Sorter",
+    "distance": "Avstand",
+    "rating": "Stjerner",
+    "empty": "Ingen favoritter lagret ennå."
+  },
+  "filters": {
+    "title": "Filtre",
+    "operator": "Operatør",
+    "allOperators": "Alle operatører",
+    "amenityName": "Navn på sted i nærheten",
+    "currentlyOpen": "Åpent nå",
+    "amenities": "Steder i nærheten",
+    "apply": "Bruk",
+    "reset": "Tilbakestill"
+  },
+  "info": {
+    "title": "Info og hjelp",
+    "aboutTitle": "Om woladen.de",
+    "countriesTitle": "Nåværende landdekning",
+    "country": "Land",
+    "stations": "Stasjoner",
+    "loadingCountries": "Laster land...",
+    "dataSourcesTitle": "Datakilder og lisenser"
+  },
+  "amenity": {
+    "generic": "Sted i nærheten",
+    "open": "Åpent nå",
+    "closed": "Stengt",
+    "unknownHours": "Åpningstider ukjent"
+  },
+  "station": {
+    "chargingPointOne": "{count} ladepunkt",
+    "chargingPointMany": "{count} ladepunkter",
+    "unknownOperator": "Ukjent operatør",
+    "chargingStation": "Ladestasjon",
+    "note": "Notat",
+    "details": "Detaljer",
+    "live": "Live",
+    "stationStatus": "Stasjonsstatus",
+    "liveDataAvailable": "Livedata tilgjengelig",
+    "evse": "Ladepunkt {index}",
+    "notInLiveFeed": "Ikke inkludert i livefeeden",
+    "detailsSource": "Detaljer via {source} · oppdatert {date}",
+    "detailsSourceOnly": "Detaljer via {source}",
+    "liveVia": "Live via {source}",
+    "liveViaUpdated": "Live via {source} · oppdatert {date}",
+    "updated": "Oppdatert {date}",
+    "maxPower": "{power} kW maks / {points}",
+    "nextSlot": "Neste tidsrom",
+    "supplementalStatus": "Tilleggsstatus"
+  },
+  "availability": {
+    "free": "Ledig",
+    "occupied": "Opptatt",
+    "out_of_order": "Ute av drift",
+    "unknown": "Ukjent",
+    "summaryUnknown": "Belegg ukjent",
+    "available": "{count} ledig",
+    "occupiedCount": "{count} opptatt",
+    "outOfOrderCount": "{count} ute av drift",
+    "unknownCount": "{count} ukjent"
+  }
+}

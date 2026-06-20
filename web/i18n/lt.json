@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Patikimos įkrovimo stotelės Europoje be nuobodaus laukimo | woladen.de",
+    "description": "Raskite patikimas įkrovimo stoteles Europoje su gyvais duomenimis, kainomis ir naudingomis vietomis netoliese. Išvenkite rūpesčių ir laukimo.",
+    "ogTitle": "Patikimas įkrovimas. Visoje Europoje. Be nuobodaus laukimo.",
+    "ogDescription": "Raskite patikimas įkrovimo stoteles Europoje su gyvais duomenimis, kainomis ir naudingomis vietomis netoliese.",
+    "socialAlt": "woladen.de peržiūra su Europos žemėlapiu ir šūkiu: Patikimas įkrovimas. Visoje Europoje. Be nuobodaus laukimo."
+  },
+  "languageName": "Lietuvių",
+  "nav": {
+    "list": "Sąrašas",
+    "map": "Žemėlapis",
+    "favorites": "Mėgstamiausi",
+    "stats": "Statistika",
+    "info": "Info",
+    "label": "Pagrindinė navigacija"
+  },
+  "language": {
+    "label": "Kalba"
+  },
+  "search": {
+    "label": "Ieškoti vietos ar adreso",
+    "placeholder": "Ieškoti vietos ar adreso"
+  },
+  "list": {
+    "title": "Įkrovimo taškai netoliese",
+    "loading": "Įkeliamos stotelės...",
+    "empty": "Įkrovimo stotelių nerasta."
+  },
+  "favorites": {
+    "title": "Mėgstamiausi",
+    "sort": "Rikiuoti",
+    "distance": "Atstumas",
+    "rating": "Žvaigždutės",
+    "empty": "Mėgstamiausių dar nėra."
+  },
+  "filters": {
+    "title": "Filtrai",
+    "operator": "Operatorius",
+    "allOperators": "Visi operatoriai",
+    "amenityName": "Netoliese esančios vietos pavadinimas",
+    "currentlyOpen": "Dabar atidaryta",
+    "amenities": "Vietos netoliese",
+    "apply": "Taikyti",
+    "reset": "Atstatyti"
+  },
+  "info": {
+    "title": "Info ir pagalba",
+    "aboutTitle": "Apie woladen.de",
+    "countriesTitle": "Dabartinė šalių aprėptis",
+    "country": "Šalis",
+    "stations": "Stotelės",
+    "loadingCountries": "Įkeliamos šalys...",
+    "dataSourcesTitle": "Duomenų šaltiniai ir licencijos"
+  },
+  "amenity": {
+    "generic": "Vieta netoliese",
+    "open": "Dabar atidaryta",
+    "closed": "Uždaryta",
+    "unknownHours": "Darbo laikas nežinomas"
+  },
+  "station": {
+    "chargingPointOne": "{count} įkrovimo taškas",
+    "chargingPointMany": "{count} įkrovimo taškai",
+    "unknownOperator": "Nežinomas operatorius",
+    "chargingStation": "Įkrovimo stotelė",
+    "note": "Pastaba",
+    "details": "Informacija",
+    "live": "Tiesiogiai",
+    "stationStatus": "Stotelės būsena",
+    "liveDataAvailable": "Tiesioginiai duomenys pasiekiami",
+    "evse": "Įkrovimo taškas {index}",
+    "notInLiveFeed": "Neįtraukta į tiesioginį srautą",
+    "detailsSource": "Informacija per {source} · atnaujinta {date}",
+    "detailsSourceOnly": "Informacija per {source}",
+    "liveVia": "Tiesiogiai per {source}",
+    "liveViaUpdated": "Tiesiogiai per {source} · atnaujinta {date}",
+    "updated": "Atnaujinta {date}",
+    "maxPower": "{power} kW maks. / {points}",
+    "nextSlot": "Kitas laikas",
+    "supplementalStatus": "Papildoma būsena"
+  },
+  "availability": {
+    "free": "Laisva",
+    "occupied": "Užimta",
+    "out_of_order": "Neveikia",
+    "unknown": "Nežinoma",
+    "summaryUnknown": "Užimtumas nežinomas",
+    "available": "{count} laisva",
+    "occupiedCount": "{count} užimta",
+    "outOfOrderCount": "{count} neveikia",
+    "unknownCount": "{count} nežinoma"
+  }
+}

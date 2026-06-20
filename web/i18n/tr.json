@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Avrupa'da sıkıcı beklemeler olmadan güvenilir şarj istasyonları | woladen.de",
+    "description": "Avrupa'da canlı veriler, fiyatlar ve yakındaki faydalı yerlerle güvenilir şarj istasyonları bulun. Sorunları ve beklemeyi önleyin.",
+    "ogTitle": "Güvenilir şarj. Avrupa çapında. Sıkıcı bekleme yok.",
+    "ogDescription": "Avrupa'da canlı veriler, fiyatlar ve yakındaki faydalı yerlerle güvenilir şarj istasyonları bulun.",
+    "socialAlt": "Avrupa haritası ve 'Güvenilir şarj. Avrupa çapında. Sıkıcı bekleme yok.' sloganıyla woladen.de önizlemesi."
+  },
+  "languageName": "Türkçe",
+  "nav": {
+    "list": "Liste",
+    "map": "Harita",
+    "favorites": "Favoriler",
+    "stats": "İstatistik",
+    "info": "Bilgi",
+    "label": "Ana gezinme"
+  },
+  "language": {
+    "label": "Dil"
+  },
+  "search": {
+    "label": "Yer veya adres ara",
+    "placeholder": "Yer veya adres ara"
+  },
+  "list": {
+    "title": "Yakındaki şarj noktaları",
+    "loading": "Şarj istasyonları yükleniyor...",
+    "empty": "Şarj istasyonu bulunamadı."
+  },
+  "favorites": {
+    "title": "Favoriler",
+    "sort": "Sırala",
+    "distance": "Mesafe",
+    "rating": "Yıldız",
+    "empty": "Henüz favori kaydedilmedi."
+  },
+  "filters": {
+    "title": "Filtreler",
+    "operator": "Operatör",
+    "allOperators": "Tüm operatörler",
+    "amenityName": "Yakındaki yerin adı",
+    "currentlyOpen": "Şu an açık",
+    "amenities": "Yakındaki yerler",
+    "apply": "Uygula",
+    "reset": "Sıfırla"
+  },
+  "info": {
+    "title": "Bilgi ve yardım",
+    "aboutTitle": "woladen.de hakkında",
+    "countriesTitle": "Güncel ülke kapsamı",
+    "country": "Ülke",
+    "stations": "İstasyonlar",
+    "loadingCountries": "Ülkeler yükleniyor...",
+    "dataSourcesTitle": "Veri kaynakları ve lisanslar"
+  },
+  "amenity": {
+    "generic": "Yakındaki yer",
+    "open": "Şu an açık",
+    "closed": "Kapalı",
+    "unknownHours": "Açılış saatleri bilinmiyor"
+  },
+  "station": {
+    "chargingPointOne": "{count} şarj noktası",
+    "chargingPointMany": "{count} şarj noktası",
+    "unknownOperator": "Bilinmeyen işletmeci",
+    "chargingStation": "Şarj istasyonu",
+    "note": "Not",
+    "details": "Ayrıntılar",
+    "live": "Canlı",
+    "stationStatus": "İstasyon durumu",
+    "liveDataAvailable": "Canlı veri mevcut",
+    "evse": "Şarj noktası {index}",
+    "notInLiveFeed": "Canlı akışta yok",
+    "detailsSource": "Ayrıntılar {source} üzerinden · güncellendi {date}",
+    "detailsSourceOnly": "Ayrıntılar {source} üzerinden",
+    "liveVia": "Canlı {source} üzerinden",
+    "liveViaUpdated": "Canlı {source} üzerinden · güncellendi {date}",
+    "updated": "Güncellendi {date}",
+    "maxPower": "{power} kW maks. / {points}",
+    "nextSlot": "Sonraki zaman",
+    "supplementalStatus": "Ek durum"
+  },
+  "availability": {
+    "free": "Boş",
+    "occupied": "Dolu",
+    "out_of_order": "Arızalı",
+    "unknown": "Bilinmiyor",
+    "summaryUnknown": "Doluluk bilinmiyor",
+    "available": "{count} boş",
+    "occupiedCount": "{count} dolu",
+    "outOfOrderCount": "{count} arızalı",
+    "unknownCount": "{count} bilinmiyor"
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Staziuns da chargiar fidablas en l'Europa senza spetga lungurusa | woladen.de",
+    "description": "Chattai staziuns da chargiar fidablas en l'Europa cun datas live, pretschs e lieus utils damanaivel. Evitai problems e spetga.",
+    "ogTitle": "Chargiar fidabel. En tut l'Europa. Senza spetga lungurusa.",
+    "ogDescription": "Chattai staziuns da chargiar fidablas en l'Europa cun datas live, pretschs e lieus utils damanaivel.",
+    "socialAlt": "Prevista da woladen.de cun ina charta da l'Europa ed il slogan: Chargiar fidabel. En tut l'Europa. Senza spetga lungurusa."
+  },
+  "languageName": "Rumantsch",
+  "nav": {
+    "list": "Glista",
+    "map": "Charta",
+    "favorites": "Favorits",
+    "stats": "Statistica",
+    "info": "Info",
+    "label": "Navigaziun principala"
+  },
+  "language": {
+    "label": "Lingua"
+  },
+  "search": {
+    "label": "Tschertgar lieu u adressa",
+    "placeholder": "Tschertgar lieu u adressa"
+  },
+  "list": {
+    "title": "Puncts da chargiar en vischinanza",
+    "loading": "Chargiar staziuns...",
+    "empty": "Naginas staziuns chattadas."
+  },
+  "favorites": {
+    "title": "Favorits",
+    "sort": "Zavrar",
+    "distance": "Distanza",
+    "rating": "Stailas",
+    "empty": "Nagins favorits memorisads."
+  },
+  "filters": {
+    "title": "Filters",
+    "operator": "Operatur",
+    "allOperators": "Tuts operaturs",
+    "amenityName": "Num dal lieu vischin",
+    "currentlyOpen": "Avert ussa",
+    "amenities": "Lieus vischins",
+    "apply": "Applitgar",
+    "reset": "Resetar"
+  },
+  "info": {
+    "title": "Info ed agid",
+    "aboutTitle": "Davart woladen.de",
+    "countriesTitle": "Cuvernanza actuala dals pajais",
+    "country": "Pajais",
+    "stations": "Staziuns",
+    "loadingCountries": "Chargiar pajais...",
+    "dataSourcesTitle": "Funtaunas da datas e licenzas"
+  },
+  "amenity": {
+    "generic": "Lieu vischin",
+    "open": "Avert ussa",
+    "closed": "Serrà",
+    "unknownHours": "Uras d’avertura nunenconuschentas"
+  },
+  "station": {
+    "chargingPointOne": "{count} punct da chargiar",
+    "chargingPointMany": "{count} puncts da chargiar",
+    "unknownOperator": "Operatur nunenconuschent",
+    "chargingStation": "Staziun da chargiar",
+    "note": "Notizia",
+    "details": "Detagls",
+    "live": "Live",
+    "stationStatus": "Status da la staziun",
+    "liveDataAvailable": "Datas live disponiblas",
+    "evse": "Punct da chargiar {index}",
+    "notInLiveFeed": "Betg inclus en il feed live",
+    "detailsSource": "Detagls via {source} · actualisà {date}",
+    "detailsSourceOnly": "Detagls via {source}",
+    "liveVia": "Live via {source}",
+    "liveViaUpdated": "Live via {source} · actualisà {date}",
+    "updated": "Actualisà {date}",
+    "maxPower": "{power} kW max / {points}",
+    "nextSlot": "Proxim termin",
+    "supplementalStatus": "Status supplementar"
+  },
+  "availability": {
+    "free": "Liber",
+    "occupied": "Occupà",
+    "out_of_order": "Or da funcziun",
+    "unknown": "Nunenconuschent",
+    "summaryUnknown": "Occupaziun nunenconuschenta",
+    "available": "{count} liber",
+    "occupiedCount": "{count} occupà",
+    "outOfOrderCount": "{count} or da funcziun",
+    "unknownCount": "{count} nunenconuschent"
+  }
+}

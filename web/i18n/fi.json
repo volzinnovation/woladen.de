@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Luotettavat latausasemat ilman latausodottelua Euroopassa | woladen.de",
+    "description": "Löydä luotettavat latausasemat Euroopassa reaaliaikaisilla tiedoilla, hinnoilla ja hyödyllisillä lähipaikoilla. Vältä vaiva ja odottelu.",
+    "ogTitle": "Luotettavaa latausta. Koko Euroopassa. Ei latausodottelua.",
+    "ogDescription": "Löydä luotettavat latausasemat Euroopassa reaaliaikaisilla tiedoilla, hinnoilla ja hyödyllisillä lähipaikoilla.",
+    "socialAlt": "woladen.de-esikatselu Euroopan kartalla ja sloganilla: Luotettavaa latausta. Koko Euroopassa. Ei latausodottelua."
+  },
+  "languageName": "Suomi",
+  "nav": {
+    "list": "Lista",
+    "map": "Kartta",
+    "favorites": "Suosikit",
+    "stats": "Tilastot",
+    "info": "Info",
+    "label": "Päänavigaatio"
+  },
+  "language": {
+    "label": "Kieli"
+  },
+  "search": {
+    "label": "Etsi paikkaa tai osoitetta",
+    "placeholder": "Etsi paikkaa tai osoitetta"
+  },
+  "list": {
+    "title": "Latauspisteet lähellä",
+    "loading": "Ladataan latausasemia...",
+    "empty": "Latausasemia ei löytynyt."
+  },
+  "favorites": {
+    "title": "Suosikit",
+    "sort": "Lajittele",
+    "distance": "Etäisyys",
+    "rating": "Tähdet",
+    "empty": "Suosikkeja ei ole tallennettu."
+  },
+  "filters": {
+    "title": "Suodattimet",
+    "operator": "Operaattori",
+    "allOperators": "Kaikki operaattorit",
+    "amenityName": "Lähellä olevan paikan nimi",
+    "currentlyOpen": "Auki nyt",
+    "amenities": "Paikat lähellä",
+    "apply": "Käytä",
+    "reset": "Nollaa"
+  },
+  "info": {
+    "title": "Info ja ohje",
+    "aboutTitle": "Tietoa woladen.de:stä",
+    "countriesTitle": "Nykyinen maapeitto",
+    "country": "Maa",
+    "stations": "Asemat",
+    "loadingCountries": "Ladataan maita...",
+    "dataSourcesTitle": "Tietolähteet ja lisenssit"
+  },
+  "amenity": {
+    "generic": "Paikka lähellä",
+    "open": "Auki nyt",
+    "closed": "Suljettu",
+    "unknownHours": "Aukioloajat tuntemattomat"
+  },
+  "station": {
+    "chargingPointOne": "{count} latauspiste",
+    "chargingPointMany": "{count} latauspistettä",
+    "unknownOperator": "Tuntematon operaattori",
+    "chargingStation": "Latausasema",
+    "note": "Huomautus",
+    "details": "Tiedot",
+    "live": "Live",
+    "stationStatus": "Aseman tila",
+    "liveDataAvailable": "Live-tiedot saatavilla",
+    "evse": "Latauspiste {index}",
+    "notInLiveFeed": "Ei mukana live-syötteessä",
+    "detailsSource": "Tiedot lähteestä {source} · päivitetty {date}",
+    "detailsSourceOnly": "Tiedot lähteestä {source}",
+    "liveVia": "Live lähteestä {source}",
+    "liveViaUpdated": "Live lähteestä {source} · päivitetty {date}",
+    "updated": "Päivitetty {date}",
+    "maxPower": "{power} kW max / {points}",
+    "nextSlot": "Seuraava aika",
+    "supplementalStatus": "Lisätila"
+  },
+  "availability": {
+    "free": "Vapaa",
+    "occupied": "Varattu",
+    "out_of_order": "Pois käytöstä",
+    "unknown": "Tuntematon",
+    "summaryUnknown": "Varaustilanne tuntematon",
+    "available": "{count} vapaata",
+    "occupiedCount": "{count} varattua",
+    "outOfOrderCount": "{count} pois käytöstä",
+    "unknownCount": "{count} tuntematonta"
+  }
+}

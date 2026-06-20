@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Bornes de recharge fiables en Europe, sans attente inutile | woladen.de",
+    "description": "Trouvez des bornes de recharge fiables en Europe avec données en direct, prix et lieux utiles à proximité. Évitez les galères et l’attente.",
+    "ogTitle": "Recharge fiable. Partout en Europe. Sans attente inutile.",
+    "ogDescription": "Trouvez des bornes de recharge fiables en Europe avec données en direct, prix et lieux utiles à proximité. Évitez les galères et l’attente.",
+    "socialAlt": "Aperçu woladen.de avec une carte de l’Europe et le slogan : Recharge fiable. Partout en Europe. Sans attente inutile."
+  },
+  "languageName": "Français",
+  "nav": {
+    "list": "Liste",
+    "map": "Carte",
+    "favorites": "Favoris",
+    "stats": "Stats",
+    "info": "Info",
+    "label": "Navigation principale"
+  },
+  "language": {
+    "label": "Langue"
+  },
+  "search": {
+    "label": "Rechercher un lieu ou une adresse",
+    "placeholder": "Rechercher un lieu ou une adresse"
+  },
+  "list": {
+    "title": "Points de charge à proximité",
+    "loading": "Chargement des stations...",
+    "empty": "Aucune station trouvée."
+  },
+  "favorites": {
+    "title": "Favoris",
+    "sort": "Trier",
+    "distance": "Distance",
+    "rating": "Étoiles",
+    "empty": "Aucun favori enregistré."
+  },
+  "filters": {
+    "title": "Filtres",
+    "operator": "Opérateur",
+    "allOperators": "Tous les opérateurs",
+    "amenityName": "Nom du lieu à proximité",
+    "currentlyOpen": "Ouvert maintenant",
+    "amenities": "Lieux à proximité",
+    "apply": "Appliquer",
+    "reset": "Réinitialiser"
+  },
+  "info": {
+    "title": "Infos et aide",
+    "aboutTitle": "À propos de woladen.de",
+    "countriesTitle": "Couverture actuelle des pays",
+    "country": "Pays",
+    "stations": "Stations",
+    "loadingCountries": "Chargement des pays...",
+    "dataSourcesTitle": "Sources de données et licences"
+  },
+  "amenity": {
+    "generic": "Lieu à proximité",
+    "open": "Ouvert maintenant",
+    "closed": "Fermé",
+    "unknownHours": "Horaires inconnus"
+  },
+  "station": {
+    "chargingPointOne": "{count} point de charge",
+    "chargingPointMany": "{count} points de charge",
+    "unknownOperator": "Opérateur inconnu",
+    "chargingStation": "Borne de recharge",
+    "note": "Note",
+    "details": "Détails",
+    "live": "Direct",
+    "stationStatus": "État de la station",
+    "liveDataAvailable": "Données en direct disponibles",
+    "evse": "Point de charge {index}",
+    "notInLiveFeed": "Non inclus dans le flux en direct",
+    "detailsSource": "Détails via {source} · mis à jour {date}",
+    "detailsSourceOnly": "Détails via {source}",
+    "liveVia": "Direct via {source}",
+    "liveViaUpdated": "Direct via {source} · mis à jour {date}",
+    "updated": "Mis à jour {date}",
+    "maxPower": "{power} kW max / {points}",
+    "nextSlot": "Prochain créneau",
+    "supplementalStatus": "État complémentaire"
+  },
+  "availability": {
+    "free": "Libre",
+    "occupied": "Occupé",
+    "out_of_order": "Hors service",
+    "unknown": "Inconnu",
+    "summaryUnknown": "Occupation inconnue",
+    "available": "{count} libres",
+    "occupiedCount": "{count} occupés",
+    "outOfOrderCount": "{count} hors service",
+    "unknownCount": "{count} inconnus"
+  }
+}

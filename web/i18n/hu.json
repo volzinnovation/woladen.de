@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Megbízható töltőállomások Európában, unalmas várakozás nélkül | woladen.de",
+    "description": "Találj megbízható töltőállomásokat Európában élő adatokkal, árakkal és hasznos közeli helyekkel. Kerüld el a bosszúságot és a várakozást.",
+    "ogTitle": "Megbízható töltés. Európa-szerte. Unalmas várakozás nélkül.",
+    "ogDescription": "Találj megbízható töltőállomásokat Európában élő adatokkal, árakkal és hasznos közeli helyekkel.",
+    "socialAlt": "woladen.de előnézet Európa-térképpel és szlogennel: Megbízható töltés. Európa-szerte. Unalmas várakozás nélkül."
+  },
+  "languageName": "Magyar",
+  "nav": {
+    "list": "Lista",
+    "map": "Térkép",
+    "favorites": "Kedvencek",
+    "stats": "Statisztika",
+    "info": "Infó",
+    "label": "Fő navigáció"
+  },
+  "language": {
+    "label": "Nyelv"
+  },
+  "search": {
+    "label": "Hely vagy cím keresése",
+    "placeholder": "Hely vagy cím keresése"
+  },
+  "list": {
+    "title": "Közeli töltőpontok",
+    "loading": "Töltőállomások betöltése...",
+    "empty": "Nem találhatók töltőállomások."
+  },
+  "favorites": {
+    "title": "Kedvencek",
+    "sort": "Rendezés",
+    "distance": "Távolság",
+    "rating": "Csillagok",
+    "empty": "Még nincsenek kedvencek."
+  },
+  "filters": {
+    "title": "Szűrők",
+    "operator": "Üzemeltető",
+    "allOperators": "Minden üzemeltető",
+    "amenityName": "Közeli hely neve",
+    "currentlyOpen": "Most nyitva",
+    "amenities": "Közeli helyek",
+    "apply": "Alkalmaz",
+    "reset": "Visszaállítás"
+  },
+  "info": {
+    "title": "Infó és segítség",
+    "aboutTitle": "A woladen.de névjegye",
+    "countriesTitle": "Jelenlegi ország lefedettség",
+    "country": "Ország",
+    "stations": "Állomások",
+    "loadingCountries": "Országok betöltése...",
+    "dataSourcesTitle": "Adatforrások és licencek"
+  },
+  "amenity": {
+    "generic": "Közeli hely",
+    "open": "Most nyitva",
+    "closed": "Zárva",
+    "unknownHours": "Nyitvatartás ismeretlen"
+  },
+  "station": {
+    "chargingPointOne": "{count} töltőpont",
+    "chargingPointMany": "{count} töltőpont",
+    "unknownOperator": "Ismeretlen üzemeltető",
+    "chargingStation": "Töltőállomás",
+    "note": "Jegyzet",
+    "details": "Részletek",
+    "live": "Élő",
+    "stationStatus": "Állomás állapota",
+    "liveDataAvailable": "Élő adatok elérhetők",
+    "evse": "Töltőpont {index}",
+    "notInLiveFeed": "Nem szerepel az élő feedben",
+    "detailsSource": "Részletek: {source} · frissítve {date}",
+    "detailsSourceOnly": "Részletek: {source}",
+    "liveVia": "Élő: {source}",
+    "liveViaUpdated": "Élő: {source} · frissítve {date}",
+    "updated": "Frissítve {date}",
+    "maxPower": "{power} kW max / {points}",
+    "nextSlot": "Következő időpont",
+    "supplementalStatus": "Kiegészítő állapot"
+  },
+  "availability": {
+    "free": "Szabad",
+    "occupied": "Foglalt",
+    "out_of_order": "Üzemen kívül",
+    "unknown": "Ismeretlen",
+    "summaryUnknown": "Kihasználtság ismeretlen",
+    "available": "{count} szabad",
+    "occupiedCount": "{count} foglalt",
+    "outOfOrderCount": "{count} üzemen kívül",
+    "unknownCount": "{count} ismeretlen"
+  }
+}

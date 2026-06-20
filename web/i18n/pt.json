@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Postos de carregamento fiáveis na Europa, sem esperas aborrecidas | woladen.de",
+    "description": "Encontre postos de carregamento fiáveis na Europa com dados em direto, preços e locais úteis por perto. Evite problemas e esperas.",
+    "ogTitle": "Carregamento fiável. Em toda a Europa. Sem esperas aborrecidas.",
+    "ogDescription": "Encontre postos de carregamento fiáveis na Europa com dados em direto, preços e locais úteis por perto.",
+    "socialAlt": "Pré-visualização do woladen.de com um mapa da Europa e o slogan: Carregamento fiável. Em toda a Europa. Sem esperas aborrecidas."
+  },
+  "languageName": "Português",
+  "nav": {
+    "list": "Lista",
+    "map": "Mapa",
+    "favorites": "Favoritos",
+    "stats": "Stats",
+    "info": "Info",
+    "label": "Navegação principal"
+  },
+  "language": {
+    "label": "Idioma"
+  },
+  "search": {
+    "label": "Pesquisar local ou morada",
+    "placeholder": "Pesquisar local ou morada"
+  },
+  "list": {
+    "title": "Pontos de carregamento próximos",
+    "loading": "A carregar estações...",
+    "empty": "Nenhuma estação encontrada."
+  },
+  "favorites": {
+    "title": "Favoritos",
+    "sort": "Ordenar",
+    "distance": "Distância",
+    "rating": "Estrelas",
+    "empty": "Ainda não há favoritos guardados."
+  },
+  "filters": {
+    "title": "Filtros",
+    "operator": "Operador",
+    "allOperators": "Todos os operadores",
+    "amenityName": "Nome do local próximo",
+    "currentlyOpen": "Aberto agora",
+    "amenities": "Locais próximos",
+    "apply": "Aplicar",
+    "reset": "Repor"
+  },
+  "info": {
+    "title": "Info e ajuda",
+    "aboutTitle": "Sobre woladen.de",
+    "countriesTitle": "Cobertura atual por país",
+    "country": "País",
+    "stations": "Estações",
+    "loadingCountries": "A carregar países...",
+    "dataSourcesTitle": "Fontes de dados e licenças"
+  },
+  "amenity": {
+    "generic": "Local próximo",
+    "open": "Aberto agora",
+    "closed": "Fechado",
+    "unknownHours": "Horário desconhecido"
+  },
+  "station": {
+    "chargingPointOne": "{count} ponto de carregamento",
+    "chargingPointMany": "{count} pontos de carregamento",
+    "unknownOperator": "Operador desconhecido",
+    "chargingStation": "Posto de carregamento",
+    "note": "Nota",
+    "details": "Detalhes",
+    "live": "Em direto",
+    "stationStatus": "Estado do posto",
+    "liveDataAvailable": "Dados em direto disponíveis",
+    "evse": "Ponto de carregamento {index}",
+    "notInLiveFeed": "Não incluído no feed em direto",
+    "detailsSource": "Detalhes via {source} · atualizado {date}",
+    "detailsSourceOnly": "Detalhes via {source}",
+    "liveVia": "Em direto via {source}",
+    "liveViaUpdated": "Em direto via {source} · atualizado {date}",
+    "updated": "Atualizado {date}",
+    "maxPower": "{power} kW máx. / {points}",
+    "nextSlot": "Próximo período",
+    "supplementalStatus": "Estado adicional"
+  },
+  "availability": {
+    "free": "Livre",
+    "occupied": "Ocupado",
+    "out_of_order": "Fora de serviço",
+    "unknown": "Desconhecido",
+    "summaryUnknown": "Ocupação desconhecida",
+    "available": "{count} livres",
+    "occupiedCount": "{count} ocupados",
+    "outOfOrderCount": "{count} fora de serviço",
+    "unknownCount": "{count} desconhecidos"
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Zouverlässeg Opluedstatiounen an Europa ouni Laangweil beim Lueden | woladen.de",
+    "description": "Fannt zouverlässeg Opluedstatiounen an Europa mat Live-Donnéeën, Präisser an nëtzleche Plazen an der Géigend. Vermeit Ierger a Waarden.",
+    "ogTitle": "Zouverlässeg lueden. A ganz Europa. Ouni Laangweil beim Lueden.",
+    "ogDescription": "Fannt zouverlässeg Opluedstatiounen an Europa mat Live-Donnéeën, Präisser an nëtzleche Plazen an der Géigend.",
+    "socialAlt": "woladen.de Virschau mat Europakaart an dem Slogan: Zouverlässeg lueden. A ganz Europa. Ouni Laangweil beim Lueden."
+  },
+  "languageName": "Lëtzebuergesch",
+  "nav": {
+    "list": "Lëscht",
+    "map": "Kaart",
+    "favorites": "Favoritten",
+    "stats": "Statistiken",
+    "info": "Info",
+    "label": "Haaptnavigatioun"
+  },
+  "language": {
+    "label": "Sprooch"
+  },
+  "search": {
+    "label": "Plaz oder Adress sichen",
+    "placeholder": "Plaz oder Adress sichen"
+  },
+  "list": {
+    "title": "Luedpunkten an der Géigend",
+    "loading": "Luedstatioune ginn gelueden...",
+    "empty": "Keng Luedstatioune fonnt."
+  },
+  "favorites": {
+    "title": "Favoritten",
+    "sort": "Sortéieren",
+    "distance": "Distanz",
+    "rating": "Stären",
+    "empty": "Nach keng Favoritte gespäichert."
+  },
+  "filters": {
+    "title": "Filteren",
+    "operator": "Bedreiwer",
+    "allOperators": "All Bedreiwer",
+    "amenityName": "Numm vun enger Plaz an der Géigend",
+    "currentlyOpen": "Elo op",
+    "amenities": "Plazen an der Géigend",
+    "apply": "Uwenden",
+    "reset": "Zrécksetzen"
+  },
+  "info": {
+    "title": "Info an Hëllef",
+    "aboutTitle": "Iwwer woladen.de",
+    "countriesTitle": "Aktuell Lännerofdeckung",
+    "country": "Land",
+    "stations": "Statiounen",
+    "loadingCountries": "Länner lueden...",
+    "dataSourcesTitle": "Datequellen a Lizenzen"
+  },
+  "amenity": {
+    "generic": "Plaz an der Géigend",
+    "open": "Elo op",
+    "closed": "Zou",
+    "unknownHours": "Ëffnungszäiten onbekannt"
+  },
+  "station": {
+    "chargingPointOne": "{count} Opluedpunkt",
+    "chargingPointMany": "{count} Opluedpunkten",
+    "unknownOperator": "Onbekannten Operateur",
+    "chargingStation": "Opluedstatioun",
+    "note": "Notiz",
+    "details": "Detailer",
+    "live": "Live",
+    "stationStatus": "Status vun der Statioun",
+    "liveDataAvailable": "Live-Donnéeën disponibel",
+    "evse": "Opluedpunkt {index}",
+    "notInLiveFeed": "Net am Live-Feed enthalen",
+    "detailsSource": "Detailer via {source} · aktualiséiert {date}",
+    "detailsSourceOnly": "Detailer via {source}",
+    "liveVia": "Live via {source}",
+    "liveViaUpdated": "Live via {source} · aktualiséiert {date}",
+    "updated": "Aktualiséiert {date}",
+    "maxPower": "{power} kW max / {points}",
+    "nextSlot": "Nächste Slot",
+    "supplementalStatus": "Zousazstatus"
+  },
+  "availability": {
+    "free": "Fräi",
+    "occupied": "Besat",
+    "out_of_order": "Ausser Betrib",
+    "unknown": "Onbekannt",
+    "summaryUnknown": "Belaaschtung onbekannt",
+    "available": "{count} fräi",
+    "occupiedCount": "{count} besat",
+    "outOfOrderCount": "{count} ausser Betrib",
+    "unknownCount": "{count} onbekannt"
+  }
+}

@@ -8,18 +8,30 @@ function normalizeSourceUrl(value) {
   return String(value || "").trim().replace(/\/+$/, "");
 }
 
-function sortMappedCountries(left, right) {
-  const nameCompare = (left.name || left.code).localeCompare(
-    right.name || right.code,
-    "de",
-  );
-  return nameCompare || left.code.localeCompare(right.code, "de");
+function countrySortName(country, locale) {
+  const code = country.code || "";
+  if (code && typeof Intl.DisplayNames === "function") {
+    try {
+      return new Intl.DisplayNames([locale, "en"], { type: "region" }).of(code) || country.name || code;
+    } catch {
+      return country.name || code;
+    }
+  }
+  return country.name || code;
 }
 
-function sortBundleSources(left, right) {
+function sortMappedCountries(left, right, locale = "de") {
+  const nameCompare = countrySortName(left, locale).localeCompare(
+    countrySortName(right, locale),
+    locale,
+  );
+  return nameCompare || left.code.localeCompare(right.code, locale);
+}
+
+function sortBundleSources(left, right, locale = "de") {
   const leftKey = `${left.countryCode || "ZZ"}:${left.displayName || left.sourceUid}`;
   const rightKey = `${right.countryCode || "ZZ"}:${right.displayName || right.sourceUid}`;
-  return leftKey.localeCompare(rightKey, "de");
+  return leftKey.localeCompare(rightKey, locale);
 }
 
 function escapeRegExp(value) {
@@ -37,7 +49,7 @@ function stripLeadingCountryCode(label, countryCode) {
   return label.replace(duplicatePrefix, "").trim();
 }
 
-export function normalizeMappedCountries(summaryData) {
+export function normalizeMappedCountries(summaryData, locale = "de") {
   const countries = Array.isArray(summaryData)
     ? summaryData
     : Array.isArray(summaryData?.countries)
@@ -61,10 +73,10 @@ export function normalizeMappedCountries(summaryData) {
       ) || 0,
     }))
     .filter((country) => country.code)
-    .sort(sortMappedCountries);
+    .sort((left, right) => sortMappedCountries(left, right, locale));
 }
 
-export function normalizeBundleSources(summaryData) {
+export function normalizeBundleSources(summaryData, locale = "de") {
   const sources = Array.isArray(summaryData)
     ? summaryData
     : Array.isArray(summaryData?.sources)
@@ -103,7 +115,7 @@ export function normalizeBundleSources(summaryData) {
       seen.add(key);
       return true;
     })
-    .sort(sortBundleSources);
+    .sort((left, right) => sortBundleSources(left, right, locale));
 }
 
 export function formatBundleSourceTitle(source) {

@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "title": "Pålitliga laddstationer utan laddtristess i Europa | woladen.de",
+    "description": "Hitta pålitliga laddstationer i Europa med livedata, priser och användbara platser i närheten. Undvik krångel och väntan.",
+    "ogTitle": "Pålitlig laddning. I hela Europa. Ingen laddtristess.",
+    "ogDescription": "Hitta pålitliga laddstationer i Europa med livedata, priser och användbara platser i närheten. Undvik krångel och väntan.",
+    "socialAlt": "woladen.de-förhandsvisning med Europakarta och sloganen: Pålitlig laddning. I hela Europa. Ingen laddtristess."
+  },
+  "languageName": "Svenska",
+  "nav": {
+    "list": "Lista",
+    "map": "Karta",
+    "favorites": "Favoriter",
+    "stats": "Statistik",
+    "info": "Info",
+    "label": "Huvudnavigation"
+  },
+  "language": {
+    "label": "Språk"
+  },
+  "search": {
+    "label": "Sök plats eller adress",
+    "placeholder": "Sök plats eller adress"
+  },
+  "list": {
+    "title": "Laddpunkter nära dig",
+    "loading": "Laddar laddstationer...",
+    "empty": "Inga laddstationer hittades."
+  },
+  "favorites": {
+    "title": "Favoriter",
+    "sort": "Sortera",
+    "distance": "Avstånd",
+    "rating": "Stjärnor",
+    "empty": "Inga favoriter sparade ännu."
+  },
+  "filters": {
+    "title": "Filter",
+    "operator": "Operatör",
+    "allOperators": "Alla operatörer",
+    "amenityName": "Namn på plats i närheten",
+    "currentlyOpen": "Öppet nu",
+    "amenities": "Platser i närheten",
+    "apply": "Använd",
+    "reset": "Återställ"
+  },
+  "info": {
+    "title": "Info och hjälp",
+    "aboutTitle": "Om woladen.de",
+    "countriesTitle": "Aktuell landstäckning",
+    "country": "Land",
+    "stations": "Stationer",
+    "loadingCountries": "Laddar länder...",
+    "dataSourcesTitle": "Datakällor och licenser"
+  },
+  "amenity": {
+    "generic": "Plats i närheten",
+    "open": "Öppet nu",
+    "closed": "Stängt",
+    "unknownHours": "Öppettider okända"
+  },
+  "station": {
+    "chargingPointOne": "{count} laddpunkt",
+    "chargingPointMany": "{count} laddpunkter",
+    "unknownOperator": "Okänd operatör",
+    "chargingStation": "Laddstation",
+    "note": "Anteckning",
+    "details": "Detaljer",
+    "live": "Live",
+    "stationStatus": "Stationsstatus",
+    "liveDataAvailable": "Livedata tillgänglig",
+    "evse": "Laddpunkt {index}",
+    "notInLiveFeed": "Ingår inte i liveflödet",
+    "detailsSource": "Detaljer via {source} · uppdaterad {date}",
+    "detailsSourceOnly": "Detaljer via {source}",
+    "liveVia": "Live via {source}",
+    "liveViaUpdated": "Live via {source} · uppdaterad {date}",
+    "updated": "Uppdaterad {date}",
+    "maxPower": "{power} kW max / {points}",
+    "nextSlot": "Nästa tid",
+    "supplementalStatus": "Kompletterande status"
+  },
+  "availability": {
+    "free": "Ledig",
+    "occupied": "Upptagen",
+    "out_of_order": "Ur funktion",
+    "unknown": "Okänd",
+    "summaryUnknown": "Beläggning okänd",
+    "available": "{count} lediga",
+    "occupiedCount": "{count} upptagna",
+    "outOfOrderCount": "{count} ur funktion",
+    "unknownCount": "{count} okända"
+  }
+}
