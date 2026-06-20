@@ -999,7 +999,7 @@ def render_seo_shell(page: SeoPage, bundles: dict[str, dict[str, str]], structur
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260411" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260411" />
     <link rel="apple-touch-icon" sizes="180x180" href="/img/touch-icon.png?v=20260411" />
-    <link rel="stylesheet" href="/styles.css?v=20260620-eu-filter-constraints1" />
+    <link rel="stylesheet" href="/styles.css?v=20260620-seo-cta-fullwidth1" />
     {structured_blocks}
   </head>
   <body class="seo-page legal-page">
