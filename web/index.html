@@ -108,7 +108,7 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css?v=20260620-eu-i18n5" />
+    <link rel="stylesheet" href="./styles.css?v=20260620-eu-i18n6" />
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -199,7 +199,7 @@
         <!-- LIST VIEW -->
         <div id="view-list" class="view active">
           <div class="view-header" data-nosnippet>
-            <h2 data-i18n="list.title">Charging points nearby</h2>
+            <h2 data-i18n="list.title">Charging stations nearby</h2>
             <div class="header-actions">
               <button id="btn-list-filter" class="text-btn" type="button" data-i18n="filters.title">
                 Filters
@@ -251,18 +251,74 @@
             </div>
           </div>
           <div class="content-container">
-            <div class="info-card">
+            <div class="info-card info-card-wide" data-nosnippet>
+              <h3 data-i18n="info.legendTitle">Legend</h3>
+              <div class="info-subsections info-subsections-two">
+                <section class="info-subsection">
+                  <h4 data-i18n="info.cardBackgroundTitle">Card backgrounds</h4>
+                  <ul class="legend-list">
+                    <li>
+                      <span class="status-swatch status-swatch-one-free"></span>
+                      <span data-i18n="info.legendOneFreeLeft">Light yellow: one charging point left</span>
+                    </li>
+                    <li>
+                      <span class="status-swatch status-swatch-occupied"></span>
+                      <span data-i18n="info.legendFullyOccupied">Grey: fully occupied</span>
+                    </li>
+                    <li>
+                      <span class="status-swatch status-swatch-out-of-order"></span>
+                      <span data-i18n="info.legendOutOfOrder">Light red: currently out of order</span>
+                    </li>
+                    <li>
+                      <span class="status-swatch status-swatch-often-broken"></span>
+                      <span data-i18n="info.legendOftenBroken">Lighter red: often broken in analytics</span>
+                    </li>
+                    <li>
+                      <span class="status-swatch status-swatch-often-occupied"></span>
+                      <span data-i18n="info.legendOftenOccupied">Lighter grey: often occupied in analytics</span>
+                    </li>
+                  </ul>
+                </section>
+                <section class="info-subsection">
+                  <h4 data-i18n="info.mapMarkerTitle">Map markers</h4>
+                  <ul class="legend-list">
+                    <li>
+                      <span class="dot gold"></span>
+                      <span data-i18n="info.legendGold">More than 10 nearby places</span>
+                    </li>
+                    <li>
+                      <span class="dot silver"></span>
+                      <span data-i18n="info.legendSilver">More than 5 nearby places</span>
+                    </li>
+                    <li>
+                      <span class="dot bronze"></span>
+                      <span data-i18n="info.legendBronze">At least 1 nearby place</span>
+                    </li>
+                    <li>
+                      <span class="dot grey"></span>
+                      <span data-i18n="info.legendGrey">No nearby places</span>
+                    </li>
+                    <li>
+                      <span class="dot live-out-of-order"></span>
+                      <span data-i18n="info.legendMarkerOutOfOrder">Live marker: out of order</span>
+                    </li>
+                    <li>
+                      <span class="dot live-fully-occupied"></span>
+                      <span data-i18n="info.legendMarkerFullyOccupied">Live marker: fully occupied</span>
+                    </li>
+                  </ul>
+                </section>
+              </div>
+            </div>
+
+            <div class="info-card info-card-wide">
               <h3><span data-nosnippet data-i18n="info.aboutTitle">About woladen.de</span></h3>
               <p>
-                Find charging points with better waiting-time quality, often
-                with live availability and pricing. woladen.de knows
-                <span id="bundle-station-count">...</span> stations with
-                <span id="bundle-charger-count">...</span> charging points in
-                many countries and shows them within 20 km of your location or
-                selected map position. By default, woladen.de searches fast
-                chargers from 50 kW; the power filter can include normal
-                chargers below 50 kW. Nearby places such as supermarkets,
-                bakeries, or restaurants help avoid charging boredom.
+                <span data-i18n="info.aboutIntro">Find charging stations with better waiting-time quality, often with live availability and pricing. woladen.de knows</span>
+                <span id="bundle-station-count">...</span>
+                <span data-i18n="info.aboutStationCountJoin">stations with</span>
+                <span id="bundle-charger-count">...</span>
+                <span data-i18n="info.aboutOutro">charging points in many countries and shows them within 20 km of your location or selected map position. By default, woladen.de searches fast chargers from 50 kW; the power filter can include normal chargers below 50 kW. Nearby places such as supermarkets, bakeries, or restaurants help avoid charging boredom.</span>
               </p>
               <h4 data-i18n="info.countriesTitle">Current country coverage</h4>
               <table class="country-table" data-nosnippet>
@@ -270,127 +326,94 @@
                   <col class="country-name-col" />
                   <col class="country-code-col" />
                   <col class="country-stations-col" />
+                  <col class="country-source-col" />
                 </colgroup>
                 <thead>
                   <tr>
                     <th colspan="2" scope="colgroup" data-i18n="info.country">Country</th>
                     <th scope="col" class="station-count" data-i18n="info.stations">Stations</th>
+                    <th scope="col" class="country-source" data-i18n="info.source">Data source</th>
                   </tr>
                 </thead>
                 <tbody id="mapped-country-list">
                   <tr>
-                    <td colspan="3" data-i18n="info.loadingCountries">Loading countries...</td>
+                    <td colspan="4" data-i18n="info.loadingCountries">Loading countries...</td>
                   </tr>
                 </tbody>
               </table>
               <div id="app-meta" class="meta-block" data-nosnippet></div>
+              <div class="info-subsection info-subsection-licenses" data-nosnippet>
+                <h4 data-i18n="info.licensesTitle">Map data & licenses</h4>
+                <p class="data-source-note" data-i18n="info.osmNote">
+                  Map data and POI data © OpenStreetMap contributors, available under ODbL v1.0.
+                </p>
+                <p class="data-source-note">
+                  <a
+                    href="https://www.openstreetmap.org/copyright"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-i18n="info.osmCopyright">OpenStreetMap: copyright and license notes</a
+                  ><br />
+                  <a
+                    href="https://opendatacommons.org/licenses/odbl/1.0/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-i18n="info.odblLicense">ODbL v1.0: full license text</a
+                  >
+                </p>
+              </div>
             </div>
 
-            <div class="info-card" data-nosnippet>
-              <h3 data-i18n="info.legendTitle">Legend</h3>
-              <ul class="legend-list">
-                <li>
-                  <span class="dot gold"></span> &gt;10 nearby places (gold)
-                </li>
-                <li>
-                  <span class="dot silver"></span> &gt;5 nearby places (silver)
-                </li>
-                <li><span class="dot bronze"></span> &gt;=1 nearby place (bronze)</li>
-                <li><span class="dot grey"></span> No nearby places</li>
-                <li>
-                  <span class="dot live-out-of-order"></span> Live status:
-                  out of order
-                </li>
-                <li>
-                  <span class="dot live-fully-occupied"></span> Live status:
-                  fully occupied
-                </li>
-              </ul>
-            </div>
-
-            <div class="info-card" data-nosnippet>
+            <div class="info-card info-card-wide info-card-compact" data-nosnippet>
               <h3 data-i18n="info.contactTitle">Contact & Code</h3>
-              <p>
-                Entwickelt von Prof. Dr. Raphael Volz<br />
-                Hochschule Pforzheim
-              </p>
-              <a
-                href="https://github.com/volzinnovation/woladen.de"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="link-btn"
-                data-i18n="info.github">GitHub project</a
-              >
-              <p style="margin-top: 1rem">
-                Vertrieben von:
-                <a
-                  href="https://studios.moonshots.gmbh/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  >Moonshots Studios GmbH</a
-                >
-              </p>
-              <a
-                href="https://studios.moonshots.gmbh/"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="link-btn"
-                >Moonshots Studios GmbH</a
-              >
-            </div>
-
-            <div class="info-card" data-nosnippet>
-              <h3 data-i18n="info.contributorsTitle">Contributors</h3>
-              <h4>Studis der HS Pforzheim</h4>
-              <h5>SS26</h5>
-              <ul>
-                <li>Ramona Fleischer</li>
-                <li>Johanna Thiele</li>
-                <li>Greta Reutter</li>
-                <li>Tara Golle</li>
-                <li>Benedikt Schulz</li>
-              </ul>
-            </div>
-
-            <div class="info-card" data-nosnippet>
-              <h3 data-i18n="info.privacyTitle">Privacy</h3>
-              <p>
-                Location access is optional. When you use it, it focuses the
-                map on your surroundings and sorts nearby chargers. Favorites
-                stay locally on your device.
-              </p>
-              <a
-                href="./privacy.html"
-                class="link-btn"
-                style="margin-right: 0.5rem"
-                data-i18n="info.privacyLink">Privacy policy</a
-              >
-              <a href="./imprint.html" class="link-btn" data-i18n="info.imprintLink">Imprint</a>
-            </div>
-
-            <div class="info-card" data-nosnippet>
-              <h3 data-i18n="info.dataSourcesTitle">Data Sources & Licenses</h3>
-              <ul id="data-source-list" class="source-list">
-                <li data-i18n="info.loadingSources">Loading data sources...</li>
-              </ul>
-              <p class="data-source-note">
-                Kartendaten und POI-Daten © OpenStreetMap-Mitwirkende, verfügbar
-                unter ODbL v1.0.
-              </p>
-              <p class="data-source-note">
-                <a
-                  href="https://www.openstreetmap.org/copyright"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  >OpenStreetMap: Copyright und Lizenzhinweise</a
-                ><br />
-                <a
-                  href="https://opendatacommons.org/licenses/odbl/1.0/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  >ODbL v1.0: Vollständiger Lizenztext</a
-                >
-              </p>
+              <div class="info-subsections info-subsections-three">
+                <section class="info-subsection">
+                  <p data-i18n="info.developedBy">
+                    Developed by Prof. Dr. Raphael Volz, Hochschule Pforzheim
+                  </p>
+                  <a
+                    href="https://github.com/volzinnovation/woladen.de"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="link-btn"
+                    data-i18n="info.github">GitHub project</a
+                  >
+                  <p class="info-distribution">
+                    <span data-i18n="info.distributedBy">Distributed by</span><br />
+                    <a
+                      href="https://studios.moonshots.gmbh/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >Moonshots Studios GmbH</a
+                    >
+                  </p>
+                </section>
+                <section class="info-subsection">
+                  <h4 data-i18n="info.contributorsTitle">Contributors</h4>
+                  <p class="info-muted" data-i18n="info.studentsGroup">Students of Hochschule Pforzheim, SS26</p>
+                  <ul class="compact-list">
+                    <li>Ramona Fleischer</li>
+                    <li>Johanna Thiele</li>
+                    <li>Greta Reutter</li>
+                    <li>Tara Golle</li>
+                    <li>Benedikt Schulz</li>
+                  </ul>
+                </section>
+                <section class="info-subsection">
+                  <h4 data-i18n="info.privacyTitle">Privacy</h4>
+                  <p data-i18n="info.privacyBody">
+                    Location access is optional. When you use it, it focuses the map on your surroundings and sorts nearby stations. Favorites stay locally on your device.
+                  </p>
+                  <div class="info-link-row">
+                    <a
+                      href="./privacy.html"
+                      class="link-btn"
+                      data-i18n="info.privacyLink">Privacy policy</a
+                    >
+                    <a href="./imprint.html" class="link-btn" data-i18n="info.imprintLink">Imprint</a>
+                  </div>
+                </section>
+              </div>
             </div>
           </div>
         </div>
@@ -850,7 +873,7 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script src="./app-install-promo.js?v=20260620-eu-i18n5"></script>
-    <script src="./app.js?v=20260620-eu-i18n5" type="module"></script>
+    <script src="./app-install-promo.js?v=20260620-eu-i18n6"></script>
+    <script src="./app.js?v=20260620-eu-i18n6" type="module"></script>
   </body>
 </html>

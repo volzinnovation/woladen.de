@@ -138,7 +138,7 @@ export function getLocationLookupViewModel({
     return {
       kind: LOCATION_REQUEST_PENDING,
       title: "Standort wird ermittelt",
-      message: "Ladepunkte im Umkreis von 20 km werden geladen.",
+      message: "Ladestationen im Umkreis von 20 km werden geladen.",
       actionLabel: "",
       blocksStationList: true,
     };
@@ -148,7 +148,7 @@ export function getLocationLookupViewModel({
     return {
       kind: LOCATION_REQUEST_ERROR,
       title: "Standortfreigabe benötigt",
-      message: "Aktiviere den Standortzugriff, um Ladepunkte im Umkreis von 20 km zu laden.",
+      message: "Aktiviere den Standortzugriff, um Ladestationen im Umkreis von 20 km zu laden.",
       actionLabel: "Erneut versuchen",
       blocksStationList: true,
     };
@@ -158,7 +158,7 @@ export function getLocationLookupViewModel({
     return {
       kind: LOCATION_REQUEST_ERROR,
       title: "Standortsuche dauert zu lange",
-      message: "Versuche es erneut, um Ladepunkte im Umkreis von 20 km zu laden.",
+      message: "Versuche es erneut, um Ladestationen im Umkreis von 20 km zu laden.",
       actionLabel: "Erneut versuchen",
       blocksStationList: true,
     };
@@ -178,7 +178,7 @@ export function getLocationLookupViewModel({
     return {
       kind: LOCATION_REQUEST_ERROR,
       title: "Standort konnte nicht ermittelt werden",
-      message: "Bitte versuche es erneut, um Ladepunkte im Umkreis von 20 km zu laden.",
+      message: "Bitte versuche es erneut, um Ladestationen im Umkreis von 20 km zu laden.",
       actionLabel: "Erneut versuchen",
       blocksStationList: true,
     };
@@ -186,8 +186,8 @@ export function getLocationLookupViewModel({
 
   return {
     kind: LOCATION_REQUEST_IDLE,
-    title: "Ladepunkte in deiner Nähe finden",
-    message: "Gib deinen Standort frei, um Ladepunkte im Umkreis von 20 km zu laden.",
+    title: "Ladestationen in deiner Nähe finden",
+    message: "Gib deinen Standort frei, um Ladestationen im Umkreis von 20 km zu laden.",
     actionLabel: "Standort freigeben",
     blocksStationList: true,
   };
