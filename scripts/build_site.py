@@ -54,6 +54,13 @@ LIVE_MATCH_CANDIDATES = (
     ROOT.parent / "Woladen.de-analytics" / "data" / "mobilithek_afir_static_matches.csv",
     ROOT.parent / "woladen.de-analytics" / "data" / "mobilithek_afir_static_matches.csv",
 )
+MANAGEMENT_INDEX_ENV = "WOLADEN_MANAGEMENT_INDEX_PATH"
+MANAGEMENT_INDEX_CANDIDATES = (
+    DATA_DIR / "management" / "index.json",
+    ROOT.parent / "Woladen.de-analytics" / "commercial_web" / "data" / "management" / "index.json",
+    ROOT.parent / "woladen.de-analytics" / "commercial_web" / "data" / "management" / "index.json",
+)
+MANAGEMENT_SNAPSHOT_ENV = "WOLADEN_MANAGEMENT_SNAPSHOT_PATH"
 COUNTRY_STATION_ID_RE = re.compile(r"^([A-Za-z]{2}):(.*)$")
 
 REQUIRED_DATA = [
@@ -896,14 +903,83 @@ def load_reviewed_match_station_ids_by_country(match_path: Path | None = None) -
     return station_ids
 
 
+def latest_management_snapshot_path(index_path: Path) -> Path | None:
+    payload = load_json(index_path)
+    latest_date = str(payload.get("latest_date") or "").strip()
+    if not latest_date:
+        available_dates = payload.get("available_dates")
+        if isinstance(available_dates, list):
+            latest_date = max((str(item).strip() for item in available_dates if str(item).strip()), default="")
+    if not latest_date:
+        return None
+
+    snapshot_paths = payload.get("snapshot_paths")
+    if isinstance(snapshot_paths, dict):
+        snapshot_path = str(snapshot_paths.get(latest_date) or "").strip()
+        if snapshot_path:
+            return index_path.parent / snapshot_path
+
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", latest_date):
+        year, month, day = latest_date.split("-")
+        return index_path.parent / "days" / year / month / day / "snapshot.json"
+    return None
+
+
+def station_count_from_management_summary(value: object) -> int | None:
+    if not isinstance(value, dict) or "afir_stations_observed" not in value:
+        return None
+    return max(0, to_int(value.get("afir_stations_observed")))
+
+
+def load_management_station_counts_by_country(
+    index_path: Path | None = None,
+    snapshot_path: Path | None = None,
+) -> dict[str, int]:
+    snapshot_paths = existing_source_paths((), MANAGEMENT_SNAPSHOT_ENV, snapshot_path)
+    payloads: list[dict[str, object]] = []
+    if snapshot_paths:
+        payloads = [load_json(path) for path in snapshot_paths]
+    else:
+        snapshot_entries: list[tuple[str, int, dict[str, object]]] = []
+        for sequence, path in enumerate(existing_source_paths(MANAGEMENT_INDEX_CANDIDATES, MANAGEMENT_INDEX_ENV, index_path)):
+            candidate = latest_management_snapshot_path(path)
+            if candidate and candidate.exists():
+                payload = load_json(candidate)
+                snapshot_date = str(payload.get("snapshot_date") or "").strip()
+                snapshot_entries.append((snapshot_date, sequence, payload))
+        if snapshot_entries:
+            latest_date = max(entry[0] for entry in snapshot_entries)
+            payloads = [payload for date, _, payload in snapshot_entries if date == latest_date]
+
+    counts: dict[str, int] = {}
+    for payload in payloads:
+        country_summaries = payload.get("country_summaries")
+        if isinstance(country_summaries, dict):
+            for raw_code, summary in country_summaries.items():
+                code = str(raw_code or "").strip().upper()
+                count = station_count_from_management_summary(summary)
+                if code in COUNTRY_SEO and count is not None:
+                    counts[code] = count
+            continue
+
+        count = station_count_from_management_summary(payload.get("summary"))
+        if count is not None:
+            counts["DE"] = count
+    return counts
+
+
 def load_dynamic_station_counts_by_country(
     live_state_path: Path | None = None,
     match_path: Path | None = None,
+    management_index_path: Path | None = None,
+    management_snapshot_path: Path | None = None,
 ) -> dict[str, int]:
     station_ids = load_live_state_station_ids_by_country(live_state_path)
     for country_code, ids in load_reviewed_match_station_ids_by_country(match_path).items():
         station_ids.setdefault(country_code, set()).update(ids)
-    return {country_code: len(ids) for country_code, ids in station_ids.items()}
+    counts = {country_code: len(ids) for country_code, ids in station_ids.items()}
+    counts.update(load_management_station_counts_by_country(management_index_path, management_snapshot_path))
+    return counts
 
 
 def load_seo_countries(

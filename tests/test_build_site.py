@@ -176,10 +176,73 @@ def test_load_dynamic_station_counts_uses_prefixed_live_state_and_reviewed_match
         encoding="utf-8",
     )
 
-    assert build_site.load_dynamic_station_counts_by_country(live_db, match_csv) == {
+    assert build_site.load_dynamic_station_counts_by_country(
+        live_db,
+        match_csv,
+        management_index_path=tmp_path / "missing-management-index.json",
+    ) == {
         "DE": 1,
         "FR": 1,
         "NL": 1,
+    }
+
+
+def test_load_dynamic_station_counts_prefers_management_snapshot_for_germany(tmp_path: Path):
+    live_db = tmp_path / "live_state.sqlite3"
+    conn = sqlite3.connect(live_db)
+    try:
+        conn.execute("create table station_current_state (station_id text)")
+        conn.execute("insert into station_current_state (station_id) values (?)", ("de:live-fallback",))
+        conn.commit()
+    finally:
+        conn.close()
+
+    match_csv = tmp_path / "mobilithek_afir_static_matches.csv"
+    match_csv.write_text("station_id,station_in_bundle\nlocal-de-station,1\n", encoding="utf-8")
+
+    snapshot_path = tmp_path / "management" / "days" / "2026" / "06" / "19" / "snapshot.json"
+    snapshot_path.parent.mkdir(parents=True)
+    snapshot_path.write_text(
+        json.dumps({"summary": {"afir_stations_observed": 32828}}),
+        encoding="utf-8",
+    )
+    index_path = tmp_path / "management" / "index.json"
+    index_path.write_text(
+        json.dumps(
+            {
+                "latest_date": "2026-06-19",
+                "snapshot_paths": {"2026-06-19": "days/2026/06/19/snapshot.json"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert build_site.load_dynamic_station_counts_by_country(
+        live_db,
+        match_csv,
+        management_index_path=index_path,
+    ) == {"DE": 32828}
+
+
+def test_load_management_station_counts_uses_country_summaries(tmp_path: Path):
+    snapshot_path = tmp_path / "snapshot.json"
+    snapshot_path.write_text(
+        json.dumps(
+            {
+                "country_summaries": {
+                    "de": {"afir_stations_observed": 32828},
+                    "nl": {"afir_stations_observed": 123},
+                    "xx": {"afir_stations_observed": 999},
+                },
+                "summary": {"afir_stations_observed": 99999},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert build_site.load_management_station_counts_by_country(snapshot_path=snapshot_path) == {
+        "DE": 32828,
+        "NL": 123,
     }
 
 
