@@ -5,8 +5,7 @@ import vm from "node:vm";
 
 const I18N_MODULE_URL = new URL("./i18n.mjs", import.meta.url);
 const INDEX_HTML_URL = new URL("./index.html", import.meta.url);
-const I18N_DIR_URL = new URL("./i18n/", import.meta.url);
-const CANONICAL_META = {
+const DEFAULT_META = {
   title: "woladen - Smart EV Stops in Europe",
   description: "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. Because charging time should be time well spent.",
   ogTitle: "woladen - Smart EV Stops in Europe",
@@ -57,28 +56,39 @@ test("occupancy history note is bound to the translation bundle", () => {
 test("app shell uses the canonical woladen brand SEO copy", () => {
   const indexHtml = readText(INDEX_HTML_URL);
   assert.match(indexHtml, /<title>woladen - Smart EV Stops in Europe<\/title>/);
-  assert.match(indexHtml, /data-i18n="seo\.seoName"/);
+  assert.doesNotMatch(indexHtml, /data-i18n="seo\.seoName"/);
+  assert.match(indexHtml, /class="brand-intro-icon"/);
+  assert.match(indexHtml, /class="brand-intro-brand">woladen:<\/span>/);
   assert.match(indexHtml, /data-i18n="seo\.primaryTagline"/);
   assert.match(indexHtml, /data-i18n="seo\.humanHook"/);
   assert.match(indexHtml, /data-i18n="seo\.timeLine"/);
+  assert.match(indexHtml, /class="brand-intro-hook"[\s\S]*data-i18n="seo\.humanHook"[\s\S]*data-i18n="seo\.timeLine"/);
+  const listIntro = indexHtml.match(/<div id="view-list"[\s\S]*?<\/section>/)?.[0] || "";
+  const infoIntro = indexHtml.match(/<div id="view-info"[\s\S]*?<\/section>/)?.[0] || "";
+  assert.doesNotMatch(listIntro, /data-i18n="seo\.productMessage"/);
+  assert.match(infoIntro, /data-i18n="seo\.productMessage"/);
   assert.doesNotMatch(indexHtml, /charging boredom|No charging boredom|Reliable charging/i);
 });
 
-test("language metadata keeps the canonical woladen brand copy", () => {
+test("fallback metadata keeps the canonical English title", () => {
   assert.deepEqual(
     JSON.parse(JSON.stringify(fallbackBundle().meta)),
-    CANONICAL_META,
+    DEFAULT_META,
     "fallback metadata is stale",
   );
-  const languages = fs
-    .readdirSync(I18N_DIR_URL)
-    .filter((fileName) => fileName.endsWith(".json"))
-    .sort();
-  assert.ok(languages.length > 0, "language bundles should exist");
-  for (const fileName of languages) {
-    const bundle = JSON.parse(readText(new URL(fileName, I18N_DIR_URL)));
-    if (bundle.meta) {
-      assert.deepEqual(bundle.meta, CANONICAL_META, `${fileName} has stale metadata`);
-    }
+});
+
+test("localized bundles translate the SEO title fields", () => {
+  const expectedTitles = {
+    de: "woladen - Smarte EV-Stopps in Europa",
+    fr: "woladen - Arrêts de recharge intelligents en Europe",
+    nl: "woladen - Slimme EV-stops in Europa",
+  };
+  for (const [language, expectedTitle] of Object.entries(expectedTitles)) {
+    const bundle = readBundle(language);
+    assert.equal(bundle.meta.title, expectedTitle, `${language}.json meta title`);
+    assert.equal(bundle.meta.ogTitle, expectedTitle, `${language}.json og title`);
+    assert.equal(bundle.seo.seoName, expectedTitle, `${language}.json SEO name`);
+    assert.equal(bundle.seo.homeTitle, expectedTitle, `${language}.json home title`);
   }
 });

@@ -135,49 +135,67 @@ body {
   padding: 1.2rem 1rem 1rem;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
+  text-align: center;
 }
 
 .brand-intro-secondary {
   padding-bottom: 0.8rem;
 }
 
-.brand-intro-name {
-  margin: 0 0 0.35rem;
-  color: var(--color-primary);
-  font-size: 0.86rem;
-  font-weight: 800;
-}
-
 .brand-intro h1,
-.brand-intro h2,
 .brand-intro p {
-  max-width: 48rem;
+  max-width: 64rem;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .brand-intro h1 {
-  margin: 0;
+  margin: 0 auto;
   color: var(--color-text-main);
   font-size: 1.62rem;
   line-height: 1.06;
 }
 
-.brand-intro h2 {
-  margin: 0.45rem 0 0;
-  color: var(--color-text-main);
-  font-size: 1.08rem;
-  line-height: 1.2;
+.brand-intro-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
 }
 
-.brand-intro-time {
-  margin: 0.25rem 0 0;
-  color: var(--color-text-muted);
-  font-size: 0.98rem;
+.brand-intro-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+}
+
+.brand-intro-title-text {
+  min-width: 0;
+  text-align: center;
+}
+
+.brand-intro-brand {
+  color: var(--color-primary);
+}
+
+.brand-intro-hook {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+  margin: 0.5rem auto 0;
+  color: var(--color-text-main);
+  font-size: 1.08rem;
+  font-style: italic;
   font-weight: 700;
-  line-height: 1.28;
+  line-height: 1.25;
 }
 
 .brand-intro-message {
-  margin: 0.75rem 0 0;
+  margin: 0.75rem auto 0;
   color: var(--color-text-muted);
   font-size: 0.96rem;
   line-height: 1.45;
@@ -2976,7 +2994,7 @@ select:focus-visible {
     font-size: 2rem;
   }
 
-  .brand-intro h2 {
+  .brand-intro-hook {
     font-size: 1.18rem;
   }
 
@@ -3730,11 +3748,47 @@ select:focus-visible {
 }
 
 @media (min-width: 768px) {
+  .management-page {
+    padding-left: 5.5rem;
+  }
+
+  .management-page .management-shell {
+    max-width: min(1280px, calc(100vw - 5.5rem - 2.4rem));
+  }
+
   .management-bottom-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 5.5rem;
+    height: 100dvh;
     max-width: none;
-    border: 1px solid rgba(19, 32, 41, 0.08);
-    border-radius: 24px;
+    margin: 0;
+    padding: 0.75rem 0.45rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0.25rem;
+    border-top: 0;
+    border-right: 1px solid rgba(19, 32, 41, 0.08);
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 0;
     background: rgba(255, 255, 255, 0.82);
+    box-shadow: 8px 0 24px rgba(19, 32, 41, 0.08);
+    z-index: 50;
+  }
+
+  .management-bottom-nav .nav-item {
+    width: 100%;
+    height: auto;
+    min-height: 72px;
+    border-radius: 14px;
+    padding: 0.55rem 0.35rem;
+  }
+
+  .management-bottom-nav .nav-item.active {
+    background: rgba(15, 118, 110, 0.1);
   }
 }
 
