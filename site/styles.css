@@ -131,6 +131,58 @@ body {
   font-weight: 600;
 }
 
+.brand-intro {
+  padding: 1.2rem 1rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.brand-intro-secondary {
+  padding-bottom: 0.8rem;
+}
+
+.brand-intro-name {
+  margin: 0 0 0.35rem;
+  color: var(--color-primary);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.brand-intro h1,
+.brand-intro h2,
+.brand-intro p {
+  max-width: 48rem;
+}
+
+.brand-intro h1 {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 1.62rem;
+  line-height: 1.06;
+}
+
+.brand-intro h2 {
+  margin: 0.45rem 0 0;
+  color: var(--color-text-main);
+  font-size: 1.08rem;
+  line-height: 1.2;
+}
+
+.brand-intro-time {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.28;
+}
+
+.brand-intro-message {
+  margin: 0.75rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.96rem;
+  line-height: 1.45;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -2087,11 +2139,16 @@ input[type="search"]::placeholder {
 
 .occupancy-history-bar {
   width: 100%;
+  height: var(--occupancy-percent, 0%);
   border-radius: 999px 999px 0 0;
   background: linear-gradient(180deg, var(--color-primary), var(--color-primary-dark));
 }
 
-@media (max-width: 420px) {
+.occupancy-history-value {
+  display: none;
+}
+
+@media (max-width: 640px) {
   .sort-control > span {
     display: none;
   }
@@ -2102,12 +2159,53 @@ input[type="search"]::placeholder {
 
   .occupancy-history-chart {
     padding-inline: 0.65rem;
-    overflow-x: auto;
+    overflow-x: visible;
   }
 
   .occupancy-history-bars {
-    grid-template-columns: repeat(24, 18px);
-    min-width: max-content;
+    grid-template-columns: 1fr;
+    gap: 0.42rem;
+    min-width: 0;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  .occupancy-history-hour {
+    grid-template-columns: 2.5rem minmax(0, 1fr) 3rem;
+    grid-template-rows: auto;
+    align-items: center;
+    gap: 0.55rem;
+    height: auto;
+    min-height: 22px;
+    font-size: 0.74rem;
+    text-align: left;
+  }
+
+  .occupancy-history-label {
+    color: var(--color-text-muted);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .occupancy-history-track {
+    align-items: stretch;
+    justify-content: flex-start;
+    height: 0.78rem;
+    min-height: 0;
+  }
+
+  .occupancy-history-bar {
+    width: var(--occupancy-percent, 0%);
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-primary-dark));
+  }
+
+  .occupancy-history-value {
+    display: block;
+    color: var(--color-text-main);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
   }
 }
 
@@ -2868,6 +2966,18 @@ select:focus-visible {
 
   .view-header {
     padding: 1rem 1.25rem;
+  }
+
+  .brand-intro {
+    padding: 1.35rem 1.25rem 1.15rem;
+  }
+
+  .brand-intro h1 {
+    font-size: 2rem;
+  }
+
+  .brand-intro h2 {
+    font-size: 1.18rem;
   }
 
   .list-container {

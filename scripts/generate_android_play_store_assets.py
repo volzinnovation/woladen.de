@@ -87,17 +87,17 @@ def generate_feature_graphic() -> Path:
     subtitle_font = load_font(26)
     chip_font = load_font(22, bold=True)
 
-    draw.text((82, 92), "Woladen", font=title_font, fill="#0e2e2c")
-    draw.text((82, 164), "Zuverlässig laden. Europaweit.", font=subtitle_font, fill="#163d3a")
+    draw.text((82, 92), "woladen", font=title_font, fill="#0e2e2c")
+    draw.text((82, 164), "Plugs for Cars. Perks for People.", font=subtitle_font, fill="#163d3a")
     draw.text(
         (82, 208),
-        "Ladestationen ohne Ladeweile:\nÄrger und Warten vermeiden.",
+        "The human side of charging.\nBecause charging time is your time.",
         font=subtitle_font,
         fill="#163d3a",
         spacing=8,
     )
 
-    chips = ["Europa", "Live-Daten", "Preise", "Orte vor Ort"]
+    chips = ["Bäckereien", "Restaurants", "Cafés"]
     x = 268
     y = 308
     for chip in chips:
@@ -145,18 +145,18 @@ def generate_feature_graphic() -> Path:
 def write_metadata() -> None:
     PLAY_METADATA_DIR.mkdir(parents=True, exist_ok=True)
     METADATA_DIR.mkdir(parents=True, exist_ok=True)
-    title = "Woladen"
-    short_description = "Zuverlässige Ladestationen in Europa ohne Ladeweile"
-    full_description = """Woladen zeigt dir Ladestationen in Europa und hilft dir, gute Ladepausen zu finden. So findest du nicht nur den passenden Ladepunkt, sondern auch Orte, an denen sich das Warten lohnt.
+    title = "woladen"
+    short_description = "woladen - Smart EV Stops in Europe"
+    full_description = """woladen zeigt dir verfügbare Ladestationen in Europa und hilft dir, gute Ladepausen zu finden. So findest du nicht nur den passenden Ladepunkt, sondern auch Bäckereien, Restaurants, Läden, Spielplätze und Cafés in der Nähe.
 
-Mit Woladen kannst du:
-- zuverlässige Ladestationen in vielen europäischen Ländern finden
+Mit woladen kannst du:
+- verfügbare Ladestationen in vielen europäischen Ländern finden
 - Ladepunkte in Karte und Liste durchsuchen
-- nach Anbieter und Annehmlichkeiten filtern
+- nach Anbieter, Verfügbarkeit und Annehmlichkeiten filtern
 - Favoriten lokal auf deinem Gerät speichern
 - deinen Standort optional nutzen, um Ladepunkte in der Nähe schneller zu sehen
 
-Woladen kombiniert offene europäische Ladeinfrastruktur-Daten, Live-Daten wo verfügbar und Informationen aus OpenStreetMap. Dadurch siehst du zu vielen Standorten direkt, was es in der Umgebung gibt, zum Beispiel Gastronomie, Einkauf, Toiletten oder weitere nützliche Stopps.
+woladen kombiniert offene europäische Ladeinfrastruktur-Daten, Live-Daten wo verfügbar und Informationen aus OpenStreetMap. Dadurch siehst du zu vielen Standorten direkt, was es in der Umgebung gibt, zum Beispiel Gastronomie, Einkauf, Toiletten oder weitere nützliche Stopps.
 
 Die App ist bewusst schlank gehalten:
 - kein Nutzerkonto
@@ -165,8 +165,8 @@ Die App ist bewusst schlank gehalten:
 
 Wenn du deinen Standort freigibst, wird er verwendet, um die Karte auf deine Umgebung zu fokussieren und nahe Schnelllader zu sortieren. Favoriten bleiben lokal auf deinem Gerät.
 
-Woladen ist ideal für alle, die unterwegs schnell laden und die Ladepause sinnvoll nutzen möchten."""
-    release_notes = """Erstveröffentlichung von Woladen für Android.
+woladen ist ideal für alle, die unterwegs schnell laden und die Ladepause sinnvoll nutzen möchten."""
+    release_notes = """Erstveröffentlichung von woladen für Android.
 
 - Schnelllader ab 50 kW in ganz Deutschland
 - Karte, Liste, Filter und Favoriten

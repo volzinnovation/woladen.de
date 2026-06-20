@@ -9,40 +9,58 @@
 
   const COPY = {
     en: {
-      aria: "wo-laden app",
+      aria: "woladen app",
       kicker: "Also as an app",
-      title: "Where to charge? Always with you",
+      title: "woladen, always with you",
       beforeIos: "Free for",
       iosLink: "iPhone on the App Store",
       betweenLinks: "and",
       androidLink: "Android on Google Play",
       afterAndroid: ".",
       linksLabel: "Store links",
-      iosAria: "Open wo-laden in the App Store",
+      iosAria: "Open woladen in the App Store",
       iosTitle: "Open in the App Store",
       iosAlt: "Download on the App Store",
-      androidAria: "Open wo-laden on Google Play",
+      androidAria: "Open woladen on Google Play",
       androidTitle: "Open on Google Play",
       androidAlt: "Get it on Google Play",
       dismiss: "Hide app note",
     },
     de: {
-      aria: "wo-laden App",
+      aria: "woladen App",
       kicker: "Auch als App",
-      title: "Wo laden? Immer dabei",
+      title: "woladen, immer dabei",
       beforeIos: "Kostenlos für",
       iosLink: "iPhone im App Store",
       betweenLinks: "und",
       androidLink: "Android bei Google Play",
       afterAndroid: ".",
       linksLabel: "Store-Links",
-      iosAria: "wo-laden im App Store öffnen",
+      iosAria: "woladen im App Store öffnen",
       iosTitle: "Im App Store öffnen",
       iosAlt: "Im App Store laden",
-      androidAria: "wo-laden bei Google Play öffnen",
+      androidAria: "woladen bei Google Play öffnen",
       androidTitle: "Bei Google Play öffnen",
       androidAlt: "Jetzt bei Google Play",
       dismiss: "App-Hinweis ausblenden",
+    },
+    nl: {
+      aria: "woladen app",
+      kicker: "Ook als app",
+      title: "woladen, altijd bij je",
+      beforeIos: "Gratis voor",
+      iosLink: "iPhone in de App Store",
+      betweenLinks: "en",
+      androidLink: "Android op Google Play",
+      afterAndroid: ".",
+      linksLabel: "Store-links",
+      iosAria: "woladen in de App Store openen",
+      iosTitle: "Openen in de App Store",
+      iosAlt: "Download in de App Store",
+      androidAria: "woladen op Google Play openen",
+      androidTitle: "Openen op Google Play",
+      androidAlt: "Ontdek het op Google Play",
+      dismiss: "App-melding verbergen",
     },
   };
 
@@ -52,7 +70,8 @@
 
   function normalizeLanguage(value) {
     const raw = String(value || "").trim().toLowerCase().replace("_", "-");
-    return raw.split("-")[0] === "de" ? "de" : "en";
+    const base = raw.split("-")[0];
+    return COPY[base] ? base : "en";
   }
 
   function activeLanguage() {

@@ -26,12 +26,12 @@ SITE_DATA_DIR = SITE_DIR / "data"
 STATION_DIR = SITE_DIR / "station"
 SITE_ORIGIN = "https://woladen.de"
 SITEMAP_MAX_URLS = 45_000
-SOCIAL_IMAGE_VERSION = "20260620-eu"
+SOCIAL_IMAGE_VERSION = "20260620-brand1"
 SOCIAL_IMAGE_PATH = f"img/social-card-home.png?v={SOCIAL_IMAGE_VERSION}"
 SOCIAL_IMAGE_WIDTH = "1200"
 SOCIAL_IMAGE_HEIGHT = "630"
 SOCIAL_IMAGE_ALT = (
-    "woladen.de preview with a Europe map and the slogan: Zuverlässig laden. Europaweit. Ohne Ladeweile."
+    "woladen preview with a Europe map and the tagline: Plugs for Cars. Perks for People."
 )
 IOS_APP_LINK = "https://apps.apple.com/de/app/wo-laden/id6759499459"
 ANDROID_APP_LINK = "https://play.google.com/store/apps/details?id=de.woladen.android"
@@ -1727,7 +1727,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
       <section class="legal-card">
         <h2>Station overview</h2>
         <p class="legal-intro">
-          woladen.de helps you find reliable charging stations across Europe with useful nearby places, static registry data, and live data where available.
+          woladen helps you find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. Because charging time should be time well spent.
         </p>
         <h3>Address</h3>
         <p>{format_text(address)}<br />{format_text(postcode)} {format_text(city)}</p>

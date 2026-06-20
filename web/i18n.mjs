@@ -66,11 +66,19 @@ const OG_LOCALES = {
 const FALLBACK_BUNDLE = {
   languageName: "English",
   meta: {
-    title: "Reliable charging stations without charging boredom in Europe | woladen.de",
-    description: "Find reliable charging stations in Europe with live data, prices, and useful places nearby. Avoid hassle and waiting without charging boredom.",
-    ogTitle: "Reliable charging. Across Europe. No charging boredom.",
-    ogDescription: "Find reliable charging stations in Europe with live data, prices, and useful places nearby. Avoid hassle and waiting.",
-    socialAlt: "woladen.de preview with a Europe map and the slogan: Reliable charging. Across Europe. No charging boredom.",
+    title: "woladen - Smart EV Stops in Europe",
+    description: "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. Because charging time should be time well spent.",
+    ogTitle: "woladen - Smart EV Stops in Europe",
+    ogDescription: "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. Because charging time should be time well spent.",
+    socialAlt: "woladen preview with a Europe map and the tagline: Plugs for Cars. Perks for People.",
+  },
+  seo: {
+    brandName: "woladen",
+    seoName: "woladen - Smart EV Stops in Europe",
+    primaryTagline: "Plugs for Cars. Perks for People.",
+    humanHook: "The human side of charging.",
+    timeLine: "Because charging time is your time.",
+    productMessage: "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. Because charging time should be time well spent.",
   },
   language: {
     label: "Language",
@@ -169,9 +177,9 @@ const FALLBACK_BUNDLE = {
     legendGrey: "No nearby places",
     legendMarkerOutOfOrder: "Live marker: out of order",
     legendMarkerFullyOccupied: "Live marker: fully occupied",
-    aboutIntro: "Find charging stations with better waiting-time quality, often with live availability and pricing. woladen.de knows",
+    aboutIntro: "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. woladen knows",
     aboutStationCountJoin: "stations with",
-    aboutOutro: "charging points in many countries and shows them within 20 km of your location or selected map position. By default, woladen.de searches fast chargers from 50 kW; the power filter can include normal chargers below 50 kW. Nearby places such as supermarkets, bakeries, or restaurants help avoid charging boredom.",
+    aboutOutro: "charging points in many countries and shows them within 20 km of your location or selected map position. Because charging time should be time well spent. By default, woladen searches fast chargers from 50 kW; the power filter can include normal chargers below 50 kW.",
     sourceUnknown: "Data source",
     licensesTitle: "Map data & licenses",
     osmNote: "Map data and POI data © OpenStreetMap contributors, available under ODbL v1.0.",
@@ -294,6 +302,9 @@ const FALLBACK_BUNDLE = {
   },
   rating: {
     label: "Rating",
+    ariaLabel: "Rate charging station",
+    starOne: "{count} star",
+    starMany: "{count} stars",
     unrated: "Not rated yet",
     save: "Saving rating...",
     serverError: "Rating saved locally. Server currently unavailable.",
@@ -459,7 +470,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260620-i18n7`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260620-i18n9`, import.meta.url));
     if (!response.ok) {
       return {};
     }

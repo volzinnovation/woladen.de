@@ -73,27 +73,35 @@ def main() -> None:
     canvas.alpha_composite(icon, (84, 70))
 
     brand_font = font(FONT_BOLD, 42)
-    headline_font = font(FONT_BOLD, 63)
+    headline_font = font(FONT_BOLD, 60)
     sub_font = font(FONT_REGULAR, 30)
+    message_font = font(FONT_REGULAR, 24)
     chip_font = font(FONT_SEMIBOLD, 22)
     small_font = font(FONT_SEMIBOLD, 24)
 
-    draw.text((184, 82), "woladen.de", fill="#0f2f2d", font=brand_font)
-    draw.text((84, 182), "Zuverlässig laden.\nEuropaweit.\nOhne Ladeweile.", fill="#102a28", font=headline_font, spacing=4)
+    draw.text((184, 82), "woladen", fill="#0f2f2d", font=brand_font)
+    draw.text((84, 178), "Plugs for Cars.\nPerks for People.", fill="#102a28", font=headline_font, spacing=4)
     draw.text(
-        (88, 412),
-        "Zuverlässige Ladestationen in Europa.\nÄrger und Warten vermeiden.",
+        (88, 370),
+        "The human side of charging.\nBecause charging time is your time.",
         fill="#31514e",
         font=sub_font,
         spacing=6,
     )
+    draw.text(
+        (88, 466),
+        "Find available chargers near bakeries,\nrestaurants, shops, playgrounds and cafés.",
+        fill="#31514e",
+        font=message_font,
+        spacing=5,
+    )
 
     x = 88
-    for chip in ("Live-Daten", "Preise", "Orte vor Ort", "Europa"):
-        x = draw_chip(draw, chip, x, 518, chip_font)
+    for chip in ("Bakeries", "Restaurants", "Cafés"):
+        x = draw_chip(draw, chip, x, 548, chip_font)
 
-    rounded_rect(draw, (812, 64, 1130, 132), 34, "#ffffff")
-    draw.text((842, 84), "ohne Ladeweile", fill="#0f766e", font=small_font)
+    rounded_rect(draw, (780, 64, 1130, 132), 34, "#ffffff")
+    draw.text((810, 84), "Smart EV Stops", fill="#0f766e", font=small_font)
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     canvas.convert("RGB").save(OUTPUT_PATH, quality=92, optimize=True)

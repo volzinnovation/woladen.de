@@ -16,7 +16,7 @@ import {
   getLocationLookupViewModel,
   normalizeLocationPermissionState,
   requestBrowserLocation,
-} from "./location.mjs?v=20260620-eu-i18n6";
+} from "./location.mjs?v=20260620-eu-i18n8";
 import {
   resolveGermanLiveApiBaseUrl as computeGermanLiveApiBaseUrl,
   resolveLiveApiBaseUrl as computeLiveApiBaseUrl,
@@ -60,7 +60,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260620-i18n7";
+} from "./i18n.mjs?v=20260620-i18n9";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -4618,6 +4618,17 @@ function normalizeOccupancyHistory(history) {
   return { ...history, hourly };
 }
 
+function formatOccupancyHistoryValue(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return "0";
+  }
+  return new Intl.NumberFormat(getLocale(), {
+    minimumFractionDigits: Number.isInteger(numeric) ? 0 : 1,
+    maximumFractionDigits: 1,
+  }).format(numeric);
+}
+
 function safeOccupancyHistoryStationId(stationId) {
   const rawStationId = String(stationId || "").trim();
   const namespacedMatch = rawStationId.match(NAMESPACED_STATION_ID_RE);
@@ -4680,12 +4691,16 @@ function renderOccupancyHistoryChart(history, feature) {
     const percent = Math.max(0, Math.min(100, (item.value / scale) * 100));
     const visiblePercent = item.value > 0 ? Math.max(percent, 3) : 0;
     const hourLabel = `${String(item.hour).padStart(2, "0")}:00`;
+    const shortHourLabel = String(item.hour).padStart(2, "0");
+    const valueLabel = formatOccupancyHistoryValue(item.value);
+    const occupiedLabel = t("availability.occupied").toLocaleLowerCase(getLocale());
     return `
-      <div class="occupancy-history-hour" title="${escapeHtml(hourLabel)}: ${item.value.toFixed(1)} ${escapeHtml(t("availability.occupied").toLowerCase())}">
+      <div class="occupancy-history-hour" style="--occupancy-percent: ${visiblePercent.toFixed(1)}%" title="${escapeHtml(hourLabel)}: ${escapeHtml(valueLabel)} ${escapeHtml(occupiedLabel)}">
+        <span class="occupancy-history-label">${shortHourLabel}</span>
         <div class="occupancy-history-track" aria-hidden="true">
-          <div class="occupancy-history-bar" style="height: ${visiblePercent.toFixed(1)}%"></div>
+          <div class="occupancy-history-bar"></div>
         </div>
-        <span>${String(item.hour).padStart(2, "0")}</span>
+        <span class="occupancy-history-value">${escapeHtml(valueLabel)}</span>
       </div>
     `;
   }).join("");
@@ -4812,6 +4827,10 @@ function updateDetailRating(props) {
     const buttonRating = normalizeRating(button.dataset.rating);
     const isActive = rating > 0 && buttonRating <= rating;
     button.classList.toggle("active", isActive);
+    button.setAttribute(
+      "aria-label",
+      t(buttonRating === 1 ? "rating.starOne" : "rating.starMany", { count: buttonRating }),
+    );
     button.setAttribute("aria-checked", buttonRating === rating ? "true" : "false");
     button.disabled = Boolean(isSubmitting);
   });
