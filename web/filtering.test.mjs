@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   countActiveFilters,
+  hasAvailableChargingPoint,
   matchesAmenityNameQuery,
   matchesFeatureFilters,
 } from "./filtering.mjs";
@@ -50,6 +51,66 @@ test("active filter count includes amenity-name query", () => {
   };
 
   assert.equal(countActiveFilters(filters), 6);
+});
+
+test("availability filter keeps stations with at least one free charging point", () => {
+  const baseFilters = {
+    minPower: 50,
+    amenities: new Set(),
+    amenityNameQuery: "",
+    availableOnly: true,
+  };
+  const freeFeature = {
+    properties: {
+      max_power_kw: 150,
+      occupancy_total_evses: 4,
+      occupancy_available_evses: 1,
+      occupancy_occupied_evses: 3,
+    },
+  };
+  const occupiedFeature = {
+    properties: {
+      max_power_kw: 150,
+      occupancy_total_evses: 4,
+      occupancy_available_evses: 0,
+      occupancy_occupied_evses: 4,
+    },
+  };
+  const unknownFeature = {
+    properties: {
+      max_power_kw: 150,
+      occupancy_total_evses: 0,
+      occupancy_available_evses: 0,
+    },
+  };
+
+  assert.equal(hasAvailableChargingPoint(freeFeature.properties), true);
+  assert.equal(matchesFeatureFilters(freeFeature, baseFilters), true);
+  assert.equal(matchesFeatureFilters(occupiedFeature, baseFilters), false);
+  assert.equal(matchesFeatureFilters(unknownFeature, baseFilters), false);
+  assert.equal(matchesFeatureFilters(unknownFeature, { ...baseFilters, availableOnly: false }), true);
+});
+
+test("availability filter supports live summary fields", () => {
+  const feature = {
+    properties: {
+      max_power_kw: 150,
+      live_total_evses: 2,
+      live_available_evses: 1,
+      live_occupied_evses: 1,
+      live_source_observed_at: "2026-06-20T12:00:00Z",
+    },
+  };
+
+  assert.equal(matchesFeatureFilters(feature, {
+    minPower: 50,
+    amenities: new Set(),
+    availableOnly: true,
+  }), true);
+});
+
+test("availability filter counts as an active default filter", () => {
+  assert.equal(countActiveFilters({ minPower: 50, amenities: new Set(), availableOnly: true }), 1);
 });
 
 test("feature matcher filters for stations with a currently open amenity", () => {

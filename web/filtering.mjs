@@ -44,9 +44,44 @@ export function countActiveFilters(filters) {
     (filters?.operator ? 1 : 0) +
     (Number.isFinite(minPower) && minPower !== 50 ? 1 : 0) +
     selectedAmenities +
+    (filters?.availableOnly ? 1 : 0) +
     (filters?.currentlyOpenOnly ? 1 : 0) +
     (normalizeAmenityNameQuery(filters?.amenityNameQuery).length > 0 ? 1 : 0)
   );
+}
+
+function numericCount(value) {
+  const number = Number(value || 0);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function hasLiveAvailabilitySummary(properties) {
+  const total = numericCount(properties?.live_total_evses);
+  const fetchedAt = String(
+    properties?.live_source_observed_at ||
+      properties?.live_fetched_at ||
+      properties?.live_ingested_at ||
+      "",
+  ).trim();
+  return Boolean(fetchedAt) || total > 0;
+}
+
+function availabilityCounts(properties) {
+  if (hasLiveAvailabilitySummary(properties)) {
+    return {
+      total: numericCount(properties?.live_total_evses),
+      available: numericCount(properties?.live_available_evses),
+    };
+  }
+  return {
+    total: numericCount(properties?.occupancy_total_evses),
+    available: numericCount(properties?.occupancy_available_evses),
+  };
+}
+
+export function hasAvailableChargingPoint(properties) {
+  const counts = availabilityCounts(properties);
+  return counts.total > 0 && counts.available > 0;
 }
 
 export function matchesFeatureFilters(feature, filters, options = {}) {
@@ -65,6 +100,10 @@ export function matchesFeatureFilters(feature, filters, options = {}) {
   }
 
   if (filters?.currentlyOpenOnly && !hasOpenAmenity(properties, options.now ?? new Date())) {
+    return false;
+  }
+
+  if (filters?.availableOnly && !hasAvailableChargingPoint(properties)) {
     return false;
   }
 

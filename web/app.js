@@ -1,4 +1,4 @@
-import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs";
+import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs?v=20260620-availability1";
 import {
   formatOpeningHoursForDisplay,
   getAmenityOpenStatus,
@@ -1032,6 +1032,7 @@ const state = {
     minPower: DEFAULT_MIN_POWER_KW,
     amenities: new Set(),
     amenityNameQuery: "",
+    availableOnly: true,
     currentlyOpenOnly: false,
   },
   live: {
@@ -1146,6 +1147,7 @@ const els = {
     activeLabel: document.getElementById("filter-active-label"),
     operator: document.getElementById("filter-operator"),
     amenityName: document.getElementById("filter-amenity-name"),
+    availableOnly: document.getElementById("filter-available-only"),
     currentlyOpen: document.getElementById("filter-currently-open"),
     power: document.getElementById("filter-power"),
     powerLabel: document.getElementById("filter-power-label"),
@@ -1391,6 +1393,7 @@ async function loadData() {
     await syncLocationPermissionState();
 
     applyFilters(); // Initial location gate render
+    updateFilterLabel();
     syncDetailModalWithUrl();
 
     // Request location once after data is ready, but only when the page is visible.
@@ -2004,6 +2007,7 @@ async function loadCatalogStationsForCurrentCenter({ force = false } = {}) {
       populateOperators();
       renderAmenityFilters();
       applyFilters();
+      updateFilterLabel();
       syncDetailModalWithUrl();
     }
   }
@@ -3431,6 +3435,13 @@ function initFilters() {
     updateFilters();
   });
 
+  // Available charging points
+  els.filter.availableOnly.checked = Boolean(state.filters.availableOnly);
+  els.filter.availableOnly.addEventListener("change", (e) => {
+    state.filters.availableOnly = e.target.checked;
+    updateFilters();
+  });
+
   // Currently open offers
   els.filter.currentlyOpen.addEventListener("change", (e) => {
     state.filters.currentlyOpenOnly = e.target.checked;
@@ -3611,6 +3622,9 @@ function getActiveFilterLabels() {
   if (amenityNameQuery) {
     labels.push(t("filters.namePrefix", { value: amenityNameQuery }));
   }
+  if (state.filters.availableOnly) {
+    labels.push(t("filters.availableOnly"));
+  }
   if (state.filters.currentlyOpenOnly) {
     labels.push(t("filters.currentlyOpen"));
   }
@@ -3630,9 +3644,11 @@ function clearFilters() {
   state.filters.minPower = DEFAULT_MIN_POWER_KW;
   state.filters.amenities.clear();
   state.filters.amenityNameQuery = "";
+  state.filters.availableOnly = false;
   state.filters.currentlyOpenOnly = false;
   els.filter.operator.value = "";
   els.filter.amenityName.value = "";
+  els.filter.availableOnly.checked = false;
   els.filter.currentlyOpen.checked = false;
   els.filter.power.value = String(DEFAULT_MIN_POWER_KW);
   els.filter.powerVal.textContent = String(DEFAULT_MIN_POWER_KW);

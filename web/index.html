@@ -108,7 +108,7 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css?v=20260620-eu-i18n6" />
+    <link rel="stylesheet" href="./styles.css?v=20260620-eu-availability1" />
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -255,7 +255,7 @@
               <h3 data-i18n="info.legendTitle">Legend</h3>
               <div class="info-subsections info-subsections-two">
                 <section class="info-subsection">
-                  <h4 data-i18n="info.cardBackgroundTitle">Card backgrounds</h4>
+                  <h4 data-i18n="info.cardBackgroundTitle">Station tile backgrounds</h4>
                   <ul class="legend-list">
                     <li>
                       <span class="status-swatch status-swatch-one-free"></span>
@@ -552,6 +552,16 @@
                 data-i18n-placeholder="filters.amenityNamePlaceholder"
                 spellcheck="false"
               />
+            </label>
+
+            <label class="filter-switch">
+              <input type="checkbox" id="filter-available-only" checked />
+              <span class="filter-switch-body">
+                <span class="filter-switch-title" data-i18n="filters.availableOnly">Available now</span>
+                <span class="filter-switch-note"
+                  data-i18n="filters.availableOnlyNote">Only stations with known availability and at least one free charging point</span
+                >
+              </span>
             </label>
 
             <label class="filter-switch">
@@ -874,6 +884,6 @@
       crossorigin=""
     ></script>
     <script src="./app-install-promo.js?v=20260620-eu-i18n6"></script>
-    <script src="./app.js?v=20260620-eu-i18n6" type="module"></script>
+    <script src="./app.js?v=20260620-eu-availability1" type="module"></script>
   </body>
 </html>
