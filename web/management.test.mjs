@@ -31,7 +31,7 @@ test("snapshotPathForDate builds the dated management JSON path", () => {
 test("buildManagementSubtitle renders weekday and date for the selected day", () => {
   assert.equal(
     buildManagementSubtitle("2026-04-17"),
-    "Störungen und Auslastung der öffentlichen Ladesäulen in Deutschland am Freitag, 17.04.2026",
+    "Störungen und Auslastung öffentlicher Ladestationen in angebundenen europäischen Ländern am Freitag, 17.04.2026",
   );
 });
 

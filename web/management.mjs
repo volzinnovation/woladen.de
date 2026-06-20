@@ -6,7 +6,7 @@ const ANDROID_STORE_LINK = "market://details?id=de.woladen.android";
 export const OVERVIEW_METRICS = {
   afir_stations_observed: {
     label: "Stationen mit Live-Daten gemäß AFIR",
-    description: "Stationen mit Live-Daten gemäß AFIR in Deutschland an diesem Tag.",
+    description: "Stationen mit Live-Daten gemäß AFIR in angebundenen Ländern an diesem Tag.",
     kind: "count",
   },
   stations_with_disruptions: {
@@ -201,11 +201,11 @@ export function snapshotPathForDate(dateText) {
 export function buildManagementSubtitle(dateText) {
   const normalized = normalizeManagementDate(dateText);
   if (!normalized) {
-    return "Störungen und Auslastung der öffentlichen Ladesäulen in Deutschland.";
+    return "Störungen und Auslastung öffentlicher Ladestationen in angebundenen europäischen Ländern.";
   }
   const label = WEEKDAY_DATE_LABEL_FORMAT.format(new Date(`${normalized}T00:00:00Z`));
   const capitalizedLabel = label.charAt(0).toUpperCase() + label.slice(1);
-  return `Störungen und Auslastung der öffentlichen Ladesäulen in Deutschland am ${capitalizedLabel}`;
+  return `Störungen und Auslastung öffentlicher Ladestationen in angebundenen europäischen Ländern am ${capitalizedLabel}`;
 }
 
 export function buildOverviewSeries(trends, metricKey) {
@@ -226,7 +226,7 @@ export function buildSummaryCards(snapshot) {
     {
       label: "Stationen mit Live-Daten gemäß AFIR",
       value: numberFormat(summary.afir_stations_observed),
-      detail: "Insgesamt Stationen mit Live-Daten gemäß AFIR in Deutschland an diesem Tag.",
+      detail: "Insgesamt Stationen mit Live-Daten gemäß AFIR in angebundenen Ländern an diesem Tag.",
     },
     {
       label: "Stationen mit Störungen",

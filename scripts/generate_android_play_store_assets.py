@@ -88,16 +88,16 @@ def generate_feature_graphic() -> Path:
     chip_font = load_font(22, bold=True)
 
     draw.text((82, 92), "Woladen", font=title_font, fill="#0e2e2c")
-    draw.text((82, 164), "Schnellladen ohne Ladeweile", font=subtitle_font, fill="#163d3a")
+    draw.text((82, 164), "Zuverlässig laden. Europaweit.", font=subtitle_font, fill="#163d3a")
     draw.text(
         (82, 208),
-        "Deutschlands Schnelllader mit Karte,\nFiltern und Aufenthaltsqualität.",
+        "Ladestationen ohne Ladeweile:\nÄrger und Warten vermeiden.",
         font=subtitle_font,
         fill="#163d3a",
         spacing=8,
     )
 
-    chips = ["50+ kW", "Karte", "Favoriten", "OSM-Annehmlichkeiten"]
+    chips = ["Europa", "Live-Daten", "Preise", "Orte vor Ort"]
     x = 268
     y = 308
     for chip in chips:
@@ -146,17 +146,17 @@ def write_metadata() -> None:
     PLAY_METADATA_DIR.mkdir(parents=True, exist_ok=True)
     METADATA_DIR.mkdir(parents=True, exist_ok=True)
     title = "Woladen"
-    short_description = "Deutschlands Schnelllader mit Karte, Filtern und Tipps gegen Ladeweile"
-    full_description = """Woladen zeigt dir Schnellladesäulen in Deutschland und hilft dir, gute Ladepausen zu finden. So findest du nicht nur den passenden Schnelllader, sondern auch Orte, an denen sich das Warten lohnt.
+    short_description = "Zuverlässige Ladestationen in Europa ohne Ladeweile"
+    full_description = """Woladen zeigt dir Ladestationen in Europa und hilft dir, gute Ladepausen zu finden. So findest du nicht nur den passenden Ladepunkt, sondern auch Orte, an denen sich das Warten lohnt.
 
 Mit Woladen kannst du:
-- Schnelllader ab 50 kW in ganz Deutschland finden
+- zuverlässige Ladestationen in vielen europäischen Ländern finden
 - Ladepunkte in Karte und Liste durchsuchen
 - nach Anbieter und Annehmlichkeiten filtern
 - Favoriten lokal auf deinem Gerät speichern
 - deinen Standort optional nutzen, um Ladepunkte in der Nähe schneller zu sehen
 
-Woladen kombiniert das offizielle Ladesäulenregister der Bundesnetzagentur mit Informationen aus OpenStreetMap. Dadurch siehst du zu vielen Standorten direkt, was es in der Umgebung gibt, zum Beispiel Gastronomie, Einkauf, Toiletten oder weitere nützliche Stopps.
+Woladen kombiniert offene europäische Ladeinfrastruktur-Daten, Live-Daten wo verfügbar und Informationen aus OpenStreetMap. Dadurch siehst du zu vielen Standorten direkt, was es in der Umgebung gibt, zum Beispiel Gastronomie, Einkauf, Toiletten oder weitere nützliche Stopps.
 
 Die App ist bewusst schlank gehalten:
 - kein Nutzerkonto
