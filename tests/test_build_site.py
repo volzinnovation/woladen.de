@@ -145,6 +145,7 @@ def test_build_seo_pages_generates_language_paths_and_served_countries_only():
     assert 'class="link-btn seo-primary-cta" href="/?lang=en"' in germany_page.body_html
     assert 'class="app-install-link" href="https://apps.apple.com/de/app/wo-laden/id6759499459"' in germany_page.body_html
     assert 'class="app-install-promo seo-data-box"' in germany_page.body_html
+    assert germany_page.body_html.count('class="seo-cta-pointer" aria-hidden="true"') == 8
     assert germany_page.body_html.count('class="link-btn seo-secondary-cta" href="/?lang=en"') == 3
     assert ">7</strong><span>en-liveInfoStationsMetric</span>" in germany_page.body_html
 

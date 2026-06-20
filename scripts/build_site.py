@@ -1039,8 +1039,17 @@ def seo_app_href(language: str, station_id: str = "") -> str:
     return f"/?{query}"
 
 
+def render_seo_cta_text(label: str) -> str:
+    return (
+        '<span class="seo-cta-pointer" aria-hidden="true">👉</span>'
+        f'<span class="seo-cta-text">{format_text(label)}</span>'
+        '<span class="seo-cta-pointer" aria-hidden="true">👈</span>'
+    )
+
+
 def render_seo_cta(language: str, bundle: dict[str, str], station_id: str = "") -> str:
     app_href = seo_app_href(language, station_id)
+    cta_label = bundle["primaryCtaLabel"]
     return (
         '<div class="seo-action-panel">'
         '<div class="seo-action-copy">'
@@ -1048,7 +1057,7 @@ def render_seo_cta(language: str, bundle: dict[str, str], station_id: str = "") 
         f'<p>{format_text(bundle["seoCtaBody"])}</p>'
         "</div>"
         '<div class="seo-action-links">'
-        f'<a class="link-btn seo-primary-cta" href="{html.escape(app_href)}">{format_text(bundle["primaryCtaLabel"])}</a>'
+        f'<a class="link-btn seo-primary-cta" href="{html.escape(app_href)}" aria-label="{format_text(cta_label)}">{render_seo_cta_text(cta_label)}</a>'
         f'<span>{format_text(bundle["appDownloadLabel"])}</span>'
         '<div class="seo-store-links">'
         f'<a class="app-install-link" href="{html.escape(IOS_APP_LINK)}" aria-label="{format_text(bundle["appStoreAlt"])}">'
@@ -1064,10 +1073,11 @@ def render_seo_cta(language: str, bundle: dict[str, str], station_id: str = "") 
 
 
 def render_seo_section_cta(language: str, bundle: dict[str, str]) -> str:
+    cta_label = bundle["primaryCtaLabel"]
     return (
         '<p class="station-note seo-section-cta">'
-        f'<a class="link-btn seo-secondary-cta" href="{html.escape(seo_app_href(language))}">'
-        f'{format_text(bundle["primaryCtaLabel"])}</a>'
+        f'<a class="link-btn seo-secondary-cta" href="{html.escape(seo_app_href(language))}" aria-label="{format_text(cta_label)}">'
+        f'{render_seo_cta_text(cta_label)}</a>'
         "</p>"
     )
 

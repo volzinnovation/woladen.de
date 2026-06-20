@@ -2527,13 +2527,17 @@ input[type="search"]::placeholder {
   display: grid;
   gap: 10px;
   align-items: center;
-  justify-items: start;
+  justify-items: stretch;
+  width: 100%;
 }
 
 .seo-primary-cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  box-sizing: border-box;
   min-height: 52px;
   padding: 0 22px;
   border-radius: 8px;
@@ -2549,6 +2553,7 @@ input[type="search"]::placeholder {
 }
 
 .seo-action-links > span {
+  justify-self: center;
   color: var(--color-text-muted);
   font-size: 0.82rem;
   font-weight: 700;
@@ -2559,6 +2564,7 @@ input[type="search"]::placeholder {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  justify-content: center;
 }
 
 .seo-section-cta {
@@ -2569,6 +2575,9 @@ input[type="search"]::placeholder {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  box-sizing: border-box;
   min-height: 44px;
   padding: 0 16px;
   border-radius: 8px;
@@ -2580,6 +2589,17 @@ input[type="search"]::placeholder {
 
 .seo-secondary-cta:hover {
   background: var(--color-primary-dark);
+}
+
+.seo-cta-pointer {
+  flex: 0 0 auto;
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.seo-cta-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .seo-data-box {
@@ -2784,19 +2804,6 @@ select:focus-visible {
   .app-install-links {
     justify-content: flex-end;
     padding-top: 0;
-  }
-
-  .seo-action-panel {
-    grid-template-columns: minmax(0, 1fr) minmax(21rem, auto);
-    column-gap: 28px;
-  }
-
-  .seo-action-links {
-    justify-items: end;
-  }
-
-  .seo-store-links {
-    justify-content: flex-end;
   }
 
   .seo-data-box .app-install-head {
