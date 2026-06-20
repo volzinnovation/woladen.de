@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 import html
+import ast
 import json
 import math
+import os
 import re
 import shutil
+import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -20,14 +23,22 @@ SITE_DIR = ROOT / "site"
 SITE_DATA_DIR = SITE_DIR / "data"
 STATION_DIR = SITE_DIR / "station"
 SITE_ORIGIN = "https://woladen.de"
-SOCIAL_IMAGE_VERSION = "20260411"
+SITEMAP_MAX_URLS = 45_000
+SOCIAL_IMAGE_VERSION = "20260620-eu"
 SOCIAL_IMAGE_PATH = f"img/social-card-home.png?v={SOCIAL_IMAGE_VERSION}"
 SOCIAL_IMAGE_WIDTH = "1200"
 SOCIAL_IMAGE_HEIGHT = "630"
 SOCIAL_IMAGE_ALT = (
-    "Vorschau der woladen.de Web-App mit Schnellladesäulen und Angeboten vor Ort."
+    "woladen.de preview with a Europe map and the slogan: Zuverlässig laden. Europaweit. Ohne Ladeweile."
 )
 STATION_ID_NAMESPACE = "DE:"
+STATIC_BUNDLE_ENV = "WOLADEN_STATIC_BUNDLE_PATH"
+STATIC_BUNDLE_CANDIDATES = (
+    DATA_DIR / "eu27_ch_static" / "open_static.sqlite3",
+    ROOT.parent / "Woladen.de-analytics" / "data" / "eu27_ch_static" / "open_static.sqlite3",
+    ROOT.parent / "woladen.de-analytics" / "data" / "eu27_ch_static" / "open_static.sqlite3",
+)
+COUNTRY_STATION_ID_RE = re.compile(r"^([A-Za-z]{2}):(.*)$")
 
 REQUIRED_DATA = [
     "chargers_fast.geojson",
@@ -46,27 +57,27 @@ ROOT_URLS = [
 ]
 
 AMENITY_LABELS = {
-    "bakery": "Bäckerei",
-    "cafe": "Café",
-    "convenience": "Kiosk",
+    "bakery": "Bakery",
+    "cafe": "Cafe",
+    "convenience": "Convenience store",
     "fast_food": "Fast Food",
     "hotel": "Hotel",
-    "ice_cream": "Eis",
+    "ice_cream": "Ice cream",
     "museum": "Museum",
     "park": "Park",
-    "pharmacy": "Apotheke",
-    "playground": "Spielplatz",
+    "pharmacy": "Pharmacy",
+    "playground": "Playground",
     "restaurant": "Restaurant",
-    "supermarket": "Supermarkt",
-    "toilets": "Toiletten",
+    "supermarket": "Supermarket",
+    "toilets": "Toilets",
 }
 
 AMENITY_GROUPS = (
-    ("Essen & Trinken", ("restaurant", "cafe", "fast_food", "ice_cream", "bakery")),
-    ("Einkaufsmöglichkeiten", ("supermarket", "convenience", "pharmacy")),
-    ("Freizeit & Natur", ("museum", "playground", "park")),
-    ("Unterkunft", ("hotel",)),
-    ("Sonstiges", ()),
+    ("Food & drink", ("restaurant", "cafe", "fast_food", "ice_cream", "bakery")),
+    ("Shopping", ("supermarket", "convenience", "pharmacy")),
+    ("Leisure & nature", ("museum", "playground", "park")),
+    ("Accommodation", ("hotel",)),
+    ("Other", ()),
 )
 AMENITY_GROUP_BY_CATEGORY = {
     category: label
@@ -86,12 +97,12 @@ def format_opening_hours_display(value: object) -> str:
     day_keys = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
     replacements = {
         "Mo": "Mo",
-        "Tu": "Di",
-        "We": "Mi",
-        "Th": "Do",
+        "Tu": "Tu",
+        "We": "We",
+        "Th": "Th",
         "Fr": "Fr",
         "Sa": "Sa",
-        "Su": "So",
+        "Su": "Su",
     }
     holiday_states: set[str] = set()
     fallback_clauses: list[str] = []
@@ -153,16 +164,16 @@ def format_opening_hours_display(value: object) -> str:
         return ", ".join(ranges)
 
     def format_clause(clause: str) -> str:
-        clause = re.sub(r"\b(\d{1,2}:\d{2})\s*-\s*\d{1,2}:\d{2}\+", r"ab \1", clause.strip())
-        clause = re.sub(r"\b(\d{1,2}:\d{2})\+", r"ab \1", clause)
+        clause = re.sub(r"\b(\d{1,2}:\d{2})\s*-\s*\d{1,2}:\d{2}\+", r"from \1", clause.strip())
+        clause = re.sub(r"\b(\d{1,2}:\d{2})\+", r"from \1", clause)
         formatted = re.sub(
             r"\b(Mo|Tu|We|Th|Fr|Sa|Su)\b",
             lambda match: replacements[match.group(1)],
             clause,
         )
-        formatted = re.sub(r"\boff\b", "geschlossen", formatted, flags=re.IGNORECASE)
-        formatted = re.sub(r"\bclosed\b", "geschlossen", formatted, flags=re.IGNORECASE)
-        formatted = re.sub(r"\bopen\b", "geöffnet", formatted, flags=re.IGNORECASE)
+        formatted = re.sub(r"\boff\b", "closed", formatted, flags=re.IGNORECASE)
+        formatted = re.sub(r"\bclosed\b", "closed", formatted, flags=re.IGNORECASE)
+        formatted = re.sub(r"\bopen\b", "open", formatted, flags=re.IGNORECASE)
         return re.sub(r",\s*", ", ", formatted)
 
     for clause in text.split(";"):
@@ -195,7 +206,7 @@ def format_opening_hours_display(value: object) -> str:
     clauses.extend(clause for clause in fallback_clauses if clause)
 
     if "open" in holiday_states:
-        clauses.append("an Feiertagen geöffnet")
+        clauses.append("open on public holidays")
 
     return "; ".join(clauses)
 
@@ -219,7 +230,7 @@ def to_int(value: object, default: int = 0) -> int:
 
 
 def format_amenity_count(count: int) -> str:
-    label = "Angebot vor Ort" if count == 1 else "Angebote vor Ort"
+    label = "nearby amenity" if count == 1 else "nearby amenities"
     return f"{count} {label}"
 
 
@@ -241,8 +252,9 @@ def public_station_id(value: object) -> str:
     station_id = str(value or "").strip()
     if not station_id:
         return ""
-    if station_id.lower().startswith(STATION_ID_NAMESPACE.lower()):
-        return f"{STATION_ID_NAMESPACE}{station_id[len(STATION_ID_NAMESPACE):]}"
+    country_match = COUNTRY_STATION_ID_RE.match(station_id)
+    if country_match:
+        return f"{country_match.group(1).upper()}:{country_match.group(2)}"
     return f"{STATION_ID_NAMESPACE}{station_id}"
 
 
@@ -284,6 +296,186 @@ def public_bundle_value(value: object, key: str = "") -> object:
     return value
 
 
+def resolve_static_bundle_path() -> Path:
+    configured = os.environ.get(STATIC_BUNDLE_ENV)
+    candidates = [Path(configured).expanduser()] if configured else []
+    candidates.extend(STATIC_BUNDLE_CANDIDATES)
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    searched = ", ".join(str(path) for path in candidates)
+    raise FileNotFoundError(
+        f"Europe static bundle not found. Set {STATIC_BUNDLE_ENV} or place open_static.sqlite3 at one of: {searched}"
+    )
+
+
+def parse_json_object(value: object) -> dict[str, object]:
+    text = str(value or "").strip()
+    if not text:
+        return {}
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def parse_json_list(value: object) -> list[object]:
+    text = str(value or "").strip()
+    if not text:
+        return []
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return []
+    return payload if isinstance(payload, list) else []
+
+
+def parse_boolean(value: object) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    text = str(value or "").strip().lower()
+    if text in {"1", "true", "yes", "y"}:
+        return True
+    if text in {"0", "false", "no", "n"}:
+        return False
+    return None
+
+
+def format_static_list_value(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    items: list[str] = []
+    if text.startswith("["):
+        try:
+            literal = ast.literal_eval(text)
+        except (SyntaxError, ValueError):
+            literal = None
+        if isinstance(literal, list):
+            items = [str(item or "").strip() for item in literal]
+    if not items:
+        items = re.split(r"\s*[;|]\s*", text)
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for item in items:
+        normalized = re.sub(r"\s+", " ", str(item or "").strip())
+        if not normalized or normalized.lower() in seen:
+            continue
+        seen.add(normalized.lower())
+        deduped.append(normalized)
+    return "; ".join(deduped[:12])
+
+
+def source_name_from_attribution(value: object, fallback: object = "") -> str:
+    attribution = parse_json_object(value)
+    for key in ("source_name", "display_name", "attribution", "source_uid"):
+        text = str(attribution.get(key) or "").strip()
+        if text:
+            return text
+    return str(fallback or "").strip()
+
+
+def static_station_feature(row: sqlite3.Row) -> dict[str, object]:
+    amenity_counts = parse_json_object(row["amenity_category_counts_json"])
+    amenity_examples = parse_json_list(row["amenity_examples_json"])
+    source_name = source_name_from_attribution(row["source_attribution_json"], row["source_uid"])
+    station_name = str(row["station_name"] or "").strip()
+    operator_name = str(row["operator_name"] or "").strip()
+    operator = operator_name or station_name or "Unknown operator"
+    connector_types = format_static_list_value(row["connector_types"])
+    max_power_kw = row["max_power_kw"]
+    charger_count = to_int(row["charger_count"], default=1)
+    green_energy = parse_boolean(row["green_energy"])
+    properties: dict[str, object] = {
+        "country_code": str(row["country_code"] or "").strip().upper(),
+        "station_id": public_station_id(row["station_id"]),
+        "source_station_id": str(row["source_station_id"] or "").strip(),
+        "operator": operator,
+        "station_name": station_name,
+        "address": str(row["address"] or "").strip(),
+        "postcode": str(row["postal_code"] or "").strip(),
+        "city": str(row["city"] or "").strip(),
+        "max_power_kw": max_power_kw,
+        "charging_points_count": charger_count,
+        "connector_count": charger_count,
+        "connector_types_display": connector_types,
+        "payment_methods_display": format_static_list_value(row["payment_methods"]),
+        "auth_methods_display": format_static_list_value(row["auth_methods"]),
+        "opening_hours_display": str(row["opening_hours"] or "").strip(),
+        "price_display": str(row["price_display"] or "").strip(),
+        "helpdesk_phone": str(row["helpdesk_phone"] or "").strip(),
+        "amenities_total": to_int(row["amenities_total"], default=0),
+        "amenity_examples": amenity_examples,
+        "detail_source_name": source_name,
+        "detail_source_url": str(row["station_source_url"] or row["source_url"] or "").strip(),
+        "detail_last_updated": str(row["detail_last_updated"] or "").strip(),
+    }
+    if green_energy is not None:
+        properties["green_energy"] = green_energy
+    for category, count in amenity_counts.items():
+        properties[f"amenity_{category}"] = count
+    return {
+        "type": "Feature",
+        "geometry": {
+            "type": "Point",
+            "coordinates": [row["longitude"], row["latitude"]],
+        },
+        "properties": properties,
+    }
+
+
+def iter_static_station_features() -> object:
+    bundle_path = resolve_static_bundle_path()
+    conn = sqlite3.connect(bundle_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        rows = conn.execute(
+            """
+            SELECT
+              s.country_code,
+              s.station_id,
+              s.source_uid,
+              s.source_station_id,
+              s.operator_name,
+              s.station_name,
+              s.address,
+              s.postal_code,
+              s.city,
+              s.latitude,
+              s.longitude,
+              s.charger_count,
+              s.max_power_kw,
+              s.connector_types,
+              s.source_url AS station_source_url,
+              s.opening_hours,
+              s.payment_methods,
+              s.auth_methods,
+              s.green_energy,
+              s.helpdesk_phone,
+              s.price_display,
+              s.detail_last_updated,
+              COALESCE(a.amenities_total, 0) AS amenities_total,
+              COALESCE(a.amenity_category_counts_json, '{}') AS amenity_category_counts_json,
+              COALESCE(a.amenity_examples_json, '[]') AS amenity_examples_json,
+              src.source_url,
+              src.attribution_json AS source_attribution_json
+            FROM stations s
+            LEFT JOIN station_amenities a ON a.station_uid = s.station_uid
+            LEFT JOIN sources src ON src.source_uid = s.source_uid
+            WHERE s.station_id IS NOT NULL
+              AND TRIM(s.station_id) != ''
+              AND s.latitude IS NOT NULL
+              AND s.longitude IS NOT NULL
+            ORDER BY s.country_code, s.station_id
+            """
+        )
+        for row in rows:
+            yield static_station_feature(row)
+    finally:
+        conn.close()
+
+
 def station_page_path(station_id: str) -> str:
     public_id = public_station_id(station_id)
     if ":" in public_id:
@@ -319,7 +511,7 @@ def amenity_summary(properties: dict[str, object]) -> list[str]:
 
 
 def amenity_group_label(category: str) -> str:
-    return AMENITY_GROUP_BY_CATEGORY.get(category, "Sonstiges")
+    return AMENITY_GROUP_BY_CATEGORY.get(category, "Other")
 
 
 def amenity_example_sort_key(example: dict[str, object]) -> tuple[float, str, str]:
@@ -335,13 +527,13 @@ def amenity_example_sort_key(example: dict[str, object]) -> tuple[float, str, st
 
 def render_amenity_example_item(example: dict[str, object]) -> str:
     category = str(example.get("category") or "").strip()
-    label = AMENITY_LABELS.get(category, category.replace("_", " ").title() or "Angebot vor Ort")
+    label = AMENITY_LABELS.get(category, category.replace("_", " ").title() or "Nearby amenity")
     name = str(example.get("name") or "").strip() or label
     meta_parts = [label]
     distance = example.get("distance_m")
     if distance not in (None, ""):
         try:
-            meta_parts.append(f"{round(float(distance))} m entfernt")
+            meta_parts.append(f"{round(float(distance))} m away")
         except (TypeError, ValueError):
             pass
     return (
@@ -383,14 +575,14 @@ def render_amenity_items(properties: dict[str, object]) -> str:
     if not summary:
         return (
             "<li>"
-            "<strong>Keine Details hinterlegt</strong>"
-            "Zu dieser Station liegen noch keine POI-Beispiele vor."
+            "<strong>No nearby details yet</strong>"
+            "This station does not have mapped amenity examples yet."
             "</li>"
         )
     return "".join(
         "<li>"
         f"<strong>{html.escape(label)}</strong>"
-        "In der Nähe dieser Station vorhanden."
+        "Available near this station."
         "</li>"
         for label in summary
     )
@@ -404,40 +596,41 @@ def build_static_detail_rows(properties: dict[str, object]) -> list[tuple[str, s
         if value:
             rows.append((label, value))
 
-    add_row("Bezahlen", "payment_methods_display")
-    add_row("Zugang", "auth_methods_display")
-    add_row("Stecker", "connector_types_display")
-    add_row("Stromart", "current_types_display")
+    add_row("Payment", "payment_methods_display")
+    add_row("Access", "auth_methods_display")
+    add_row("Connectors", "connector_types_display")
+    add_row("Current type", "current_types_display")
     connector_count = to_int(properties.get("connector_count"), default=0)
     if connector_count > 0:
-        rows.append(("Anschlüsse", f"{connector_count} Steckplätze"))
+        rows.append(("Connectors", f"{connector_count} sockets"))
     add_row("Service", "service_types_display")
 
     green_energy = properties.get("green_energy")
     if isinstance(green_energy, bool):
-        rows.append(("Strom", "100 % erneuerbar" if green_energy else "Nicht als erneuerbar markiert"))
+        rows.append(("Energy", "100% renewable" if green_energy else "Not marked as renewable"))
 
     return rows
 
 
 def build_station_description(properties: dict[str, object]) -> str:
-    operator = str(properties.get("operator") or "Unbekannt").strip()
+    operator = str(properties.get("operator") or "Unknown operator").strip()
     address = str(properties.get("address") or "").strip()
     city = str(properties.get("city") or "").strip()
     power = format_power_kw(properties.get("max_power_kw"))
     amenities_total = to_int(properties.get("amenities_total"))
     summary = amenity_summary(properties)
     amenity_count = format_amenity_count(amenities_total)
-    place = city or address or "Deutschland"
+    place = city or address or "Europe"
+    station_label = "fast charging station" if to_int(properties.get("max_power_kw")) >= 50 else "charging station"
     if summary:
         amenity_text = ", ".join(summary[:3])
         return (
-            f"Schnellladesäule von {operator} in {place}. "
-            f"Bis zu {power} kW, {amenity_count}, darunter {amenity_text}."
+            f"{station_label.title()} by {operator} in {place}. "
+            f"Up to {power} kW, {amenity_count}, including {amenity_text}."
         )
     return (
-        f"Schnellladesäule von {operator} in {place}. "
-        f"Bis zu {power} kW und {amenity_count}."
+        f"{station_label.title()} by {operator} in {place}. "
+        f"Up to {power} kW and {amenity_count}."
     )
 
 
@@ -456,17 +649,19 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
         properties = {}
 
     station_id = public_station_id(properties.get("station_id"))
-    operator = str(properties.get("operator") or "Unbekannt").strip()
+    operator = str(properties.get("operator") or "Unknown operator").strip()
     address = str(properties.get("address") or "").strip()
     postcode = str(properties.get("postcode") or "").strip()
     city = str(properties.get("city") or "").strip()
-    title_city = city or postcode or "Deutschland"
+    country_code = str(properties.get("country_code") or "").strip().upper()
+    title_city = city or postcode or country_code or "Europe"
     max_power = format_power_kw(properties.get("max_power_kw"))
     charging_points = to_int(properties.get("charging_points_count"), default=1)
     amenities_total = to_int(properties.get("amenities_total"))
     description = build_station_description(properties)
     amenity_text = ", ".join(amenity_summary(properties)[:4])
-    social_title = f"{operator} in {title_city} | {max_power} kW Schnelllader | woladen.de"
+    station_type = "Fast charger" if to_int(properties.get("max_power_kw")) >= 50 else "Charging station"
+    social_title = f"{operator} in {title_city} | {max_power} kW {station_type.lower()} | woladen.de"
     social_image_url = absolute_url(SOCIAL_IMAGE_PATH)
 
     page_path = station_page_path(station_id)
@@ -486,25 +681,25 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
     detail_last_updated = str(properties.get("detail_last_updated") or "").strip()
     detail_source_text = ""
     if detail_source_name and detail_last_updated:
-        detail_source_text = f"Details via {html.escape(detail_source_name)} • Stand {html.escape(detail_last_updated)}"
+        detail_source_text = f"Details via {html.escape(detail_source_name)} • updated {html.escape(detail_last_updated)}"
     elif detail_source_name:
         detail_source_text = f"Details via {html.escape(detail_source_name)}"
     elif detail_last_updated:
-        detail_source_text = f"Stand {html.escape(detail_last_updated)}"
+        detail_source_text = f"Updated {html.escape(detail_last_updated)}"
     amenity_paragraph = (
-        f"Vor Ort findest du unter anderem {html.escape(amenity_text)}."
+        f"Nearby you can find {html.escape(amenity_text)}."
         if amenity_text
-        else "Diese Station ist als Direktlink in der woladen.de Web-App hinterlegt."
+        else "This station is available as a direct link in the woladen.de web app."
     )
     price_chip = str(properties.get("price_display") or "").strip()
     opening_hours_chip = format_opening_hours_display(properties.get("opening_hours_display"))
 
     page_html = f"""<!doctype html>
-<html lang="de">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{format_text(operator)} in {format_text(title_city)} | {format_text(max_power)} kW Schnelllader | woladen.de</title>
+    <title>{format_text(operator)} in {format_text(title_city)} | {format_text(max_power)} kW {format_text(station_type)} | woladen.de</title>
     <meta name="description" content="{format_text(description)}" />
     <link rel="canonical" href="{canonical_url}" />
     <meta property="og:type" content="website" />
@@ -512,7 +707,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
     <meta property="og:description" content="{format_text(description)}" />
     <meta property="og:url" content="{canonical_url}" />
     <meta property="og:site_name" content="woladen.de" />
-    <meta property="og:locale" content="de_DE" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:image" content="{social_image_url}" />
     <meta property="og:image:width" content="{SOCIAL_IMAGE_WIDTH}" />
     <meta property="og:image:height" content="{SOCIAL_IMAGE_HEIGHT}" />
@@ -530,40 +725,40 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
   </head>
   <body class="station-page">
     <main class="station-shell">
-      <a href="{app_url}" class="legal-back">Zur Web-App</a>
+      <a href="{app_url}" class="legal-back">Open web app</a>
       <section class="station-hero">
-        <p class="legal-kicker">Direktlink Schnellladesäule</p>
+        <p class="legal-kicker">{format_text(station_type)} direct link</p>
         <h1>{format_text(operator)}</h1>
         <p class="station-summary">{format_text(address)}<br />{format_text(postcode)} {format_text(city)}</p>
         <div class="station-chip-row">
           <span class="station-chip">⚡ {format_text(max_power)} kW max</span>
-          <span class="station-chip">🔌 {charging_points} Ladepunkte</span>
+          <span class="station-chip">🔌 {charging_points} charging points</span>
           <span class="station-chip">🏪 {format_amenity_count(amenities_total)}</span>
           {f'<span class="station-chip">€ {format_text(price_chip)}</span>' if price_chip else ''}
           {f'<span class="station-chip">🕒 {format_text(opening_hours_chip)}</span>' if opening_hours_chip else ''}
         </div>
         <p class="station-summary">{amenity_paragraph}</p>
         <div class="station-actions">
-          <a href="{app_url}" class="link-btn">In Web-App öffnen</a>
-          <a href="{google_maps_url}" target="_blank" rel="noopener noreferrer" class="link-btn secondary-link">Navigation</a>
+          <a href="{app_url}" class="link-btn">Open in web app</a>
+          <a href="{google_maps_url}" target="_blank" rel="noopener noreferrer" class="link-btn secondary-link">Navigate</a>
         </div>
       </section>
 
       <section class="legal-card">
-        <h2>Station im Überblick</h2>
+        <h2>Station overview</h2>
         <p class="legal-intro">
-          woladen.de zeigt Schnellladesäulen mit Aufenthaltsqualität. Diese Stationsseite ist für direkte Links und bessere Auffindbarkeit in Suchmaschinen gedacht.
+          woladen.de helps you find reliable charging stations across Europe with useful nearby places, static registry data, and live data where available.
         </p>
-        <h3>Adresse</h3>
+        <h3>Address</h3>
         <p>{format_text(address)}<br />{format_text(postcode)} {format_text(city)}</p>
-        <h3>Angebote vor Ort</h3>
+        <h3>Nearby amenities</h3>
         <ul class="station-list">
           {amenity_items}
         </ul>
         {f'<h3>Details</h3><ul class="station-list">{static_detail_items}</ul>' if static_detail_items else ''}
         {f'<p class="station-note">{detail_source_text}</p>' if detail_source_text else ''}
         <p class="station-note">
-          Datenquelle: Bundesnetzagentur Ladesäulenregister und OpenStreetMap. Karten- und POI-Daten © OpenStreetMap-Mitwirkende.
+          Data sources: European open static charging registry bundle and OpenStreetMap. Map and POI data © OpenStreetMap contributors.
         </p>
       </section>
     </main>
@@ -574,18 +769,9 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
 
 
 def write_station_pages() -> list[str]:
-    geojson_path = DATA_DIR / "chargers_fast.geojson"
-    if not geojson_path.exists():
-        return []
-
-    payload = sanitize_json_value(json.loads(geojson_path.read_text(encoding="utf-8")))
-    features = payload.get("features")
-    if not isinstance(features, list):
-        return []
-
     STATION_DIR.mkdir(parents=True, exist_ok=True)
     page_paths: list[str] = []
-    for feature in features:
+    for feature in iter_static_station_features():
         if not isinstance(feature, dict):
             continue
         properties = feature.get("properties")
@@ -602,17 +788,56 @@ def write_station_pages() -> list[str]:
     return page_paths
 
 
-def write_sitemap(page_paths: list[str]) -> None:
+def write_urlset_sitemap(relative_path: str, paths: list[str]) -> None:
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     ]
-    for path in ROOT_URLS + page_paths:
+    for path in paths:
         lines.append("  <url>")
         lines.append(f"    <loc>{html.escape(absolute_url(path))}</loc>")
         lines.append("  </url>")
     lines.append("</urlset>")
+    (SITE_DIR / relative_path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def chunk_paths(paths: list[str], chunk_size: int | None = None) -> list[list[str]]:
+    chunk_size = chunk_size or SITEMAP_MAX_URLS
+    return [paths[index:index + chunk_size] for index in range(0, len(paths), chunk_size)]
+
+
+def write_sitemap(page_paths: list[str]) -> None:
+    sitemap_paths: list[str] = []
+    write_urlset_sitemap("sitemap-pages.xml", ROOT_URLS)
+    sitemap_paths.append("sitemap-pages.xml")
+
+    for index, chunk in enumerate(chunk_paths(page_paths), start=1):
+        relative_path = f"sitemap-stations-{index}.xml"
+        write_urlset_sitemap(relative_path, chunk)
+        sitemap_paths.append(relative_path)
+
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
+    for path in sitemap_paths:
+        lines.append("  <sitemap>")
+        lines.append(f"    <loc>{html.escape(absolute_url(path))}</loc>")
+        lines.append("  </sitemap>")
+    lines.append("</sitemapindex>")
     (SITE_DIR / "sitemap.xml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def write_robots_txt() -> None:
+    (SITE_DIR / "robots.txt").write_text(
+        "\n".join([
+            "User-agent: *",
+            "Allow: /",
+            f"Sitemap: {absolute_url('sitemap.xml')}",
+            "",
+        ]),
+        encoding="utf-8",
+    )
 
 
 def copy_management_data_tree() -> None:
@@ -705,6 +930,7 @@ def main() -> None:
 
     station_page_paths = write_station_pages()
     write_sitemap(station_page_paths)
+    write_robots_txt()
 
 
 if __name__ == "__main__":

@@ -31,6 +31,11 @@ def test_station_page_path_uses_cross_platform_namespace_directory():
     assert build_site.station_page_path("DE:47d719c1b62c750") == "station/DE/47d719c1b62c750.html"
 
 
+def test_station_page_path_preserves_non_de_country_namespace():
+    assert build_site.public_station_id("at:econtrol:at-002") == "AT:econtrol:at-002"
+    assert build_site.station_page_path("at:econtrol:at-002") == "station/AT/econtrol%3Aat-002.html"
+
+
 def test_public_bundle_value_projects_station_ids_and_urls_only():
     payload = {
         "station_id": "47d719c1b62c750",
@@ -62,3 +67,21 @@ def test_copy_station_occupancy_tree_uses_data_source(tmp_path: Path, monkeypatc
         encoding="utf-8"
     ) == '{"ok":true}'
     assert not stale_file.exists()
+
+
+def test_write_sitemap_splits_large_station_url_sets(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(build_site, "SITE_DIR", tmp_path)
+    monkeypatch.setattr(build_site, "SITEMAP_MAX_URLS", 2)
+    build_site.write_sitemap([
+        "station/AT/one.html",
+        "station/BE/two.html",
+        "station/CH/three.html",
+    ])
+
+    sitemap_index = (tmp_path / "sitemap.xml").read_text(encoding="utf-8")
+    assert "<sitemapindex" in sitemap_index
+    assert "https://woladen.de/sitemap-pages.xml" in sitemap_index
+    assert "https://woladen.de/sitemap-stations-1.xml" in sitemap_index
+    assert "https://woladen.de/sitemap-stations-2.xml" in sitemap_index
+    assert (tmp_path / "sitemap-stations-1.xml").read_text(encoding="utf-8").count("<url>") == 2
+    assert (tmp_path / "sitemap-stations-2.xml").read_text(encoding="utf-8").count("<url>") == 1
