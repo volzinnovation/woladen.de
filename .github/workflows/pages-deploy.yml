@@ -52,6 +52,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Download open static SQLite bundle
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/download_latest_open_static_release.py --tag open-static-ios-regional-latest --require-checksum
+
       - name: Build static site bundle
         run: python scripts/build_site.py
 

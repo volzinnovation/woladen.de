@@ -64,3 +64,15 @@ def test_onboarded_static_catalog_workflow_is_public_repo_artifact_only():
     assert "data/onboarded_static" in workflow
     assert "git push" not in workflow
     assert "requirements-commercial.txt" not in workflow
+
+
+def test_pages_deploy_downloads_open_static_bundle_before_build():
+    workflow = Path(".github/workflows/pages-deploy.yml").read_text(encoding="utf-8")
+
+    assert "Download open static SQLite bundle" in workflow
+    assert "GITHUB_TOKEN: ${{ github.token }}" in workflow
+    assert (
+        "python scripts/download_latest_open_static_release.py "
+        "--tag open-static-ios-regional-latest --require-checksum"
+    ) in workflow
+    assert workflow.index("Download open static SQLite bundle") < workflow.index("Build static site bundle")
