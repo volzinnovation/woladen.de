@@ -16,7 +16,7 @@ import {
   getLocationLookupViewModel,
   normalizeLocationPermissionState,
   requestBrowserLocation,
-} from "./location.mjs?v=20260618-live-eu-catalog-search";
+} from "./location.mjs?v=20260620-eu-i18n6";
 import {
   resolveGermanLiveApiBaseUrl as computeGermanLiveApiBaseUrl,
   resolveLiveApiBaseUrl as computeLiveApiBaseUrl,
@@ -60,7 +60,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260620-i18n5";
+} from "./i18n.mjs?v=20260620-i18n6";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -107,6 +107,10 @@ const STATION_ID_NAMESPACE = "DE:";
 const LEGACY_STATION_ID_RE = /^[0-9a-f]{16}$/i;
 const NAMESPACED_STATION_ID_RE = /^DE:([0-9a-f]{16})$/i;
 const COUNTRY_STATION_ID_RE = /^([A-Z]{2}):(.+)$/i;
+const DE_MOBILITHEK_SOURCE = {
+  label: "Mobilithek",
+  url: "https://mobilithek.info/offers/842113170303512576",
+};
 const LIVE_STATION_FIELDS = [
   "availability_status",
   "available_evses",
@@ -1065,6 +1069,10 @@ const state = {
   mapInteraction: {
     hasUserInteracted: false,
   },
+  analytics: {
+    oftenBrokenStationIds: new Set(),
+    oftenOccupiedStationIds: new Set(),
+  },
   easterEgg: {
     active: false,
     overlay: null,
@@ -1095,6 +1103,7 @@ const state = {
     geoData: null,
     summaryData: null,
     openStaticSummaryData: null,
+    managementSnapshotData: null,
   },
   views: {
     map: null, // Leaflet map instance
@@ -1322,18 +1331,57 @@ async function fetchOptionalJson(path) {
   }
 }
 
+function latestManagementSnapshotPath(indexData) {
+  const snapshotPaths = indexData?.snapshot_paths;
+  if (!snapshotPaths || typeof snapshotPaths !== "object") {
+    return "";
+  }
+  const latestDate = String(indexData?.latest_date || "").trim() ||
+    [...(Array.isArray(indexData?.available_dates) ? indexData.available_dates : [])].pop();
+  const relativePath = latestDate ? snapshotPaths[latestDate] : "";
+  return String(relativePath || "").trim();
+}
+
+async function loadLatestManagementSnapshot(indexData) {
+  const relativePath = latestManagementSnapshotPath(indexData);
+  if (!relativePath || relativePath.includes("..")) {
+    return null;
+  }
+  return fetchOptionalJson(`./data/management/${relativePath}`);
+}
+
+function stationIdsFromAnalyticsRows(rows) {
+  if (!Array.isArray(rows)) {
+    return new Set();
+  }
+  return new Set(
+    rows
+      .map((row) => normalizeStationId(row?.station_id || row?.stationId || ""))
+      .filter(Boolean),
+  );
+}
+
+function setAnalyticsStationStates(snapshotData) {
+  state.analytics.oftenBrokenStationIds = stationIdsFromAnalyticsRows(snapshotData?.broken_stations);
+  state.analytics.oftenOccupiedStationIds = stationIdsFromAnalyticsRows(snapshotData?.busiest_stations);
+}
+
 async function loadData() {
   try {
-    const [summaryRes, openStaticSummaryData, staticGeoData] = await Promise.all([
+    const [summaryRes, openStaticSummaryData, staticGeoData, managementIndexData] = await Promise.all([
       fetch("./data/summary.json"),
       fetchOptionalJson("./data/open_static_summary.json"),
       fetchOptionalJson("./data/chargers_fast.geojson"),
+      fetchOptionalJson("./data/management/index.json"),
     ]);
     if (!summaryRes.ok) throw new Error("Network response was not ok");
     const summaryData = await summaryRes.json();
+    const managementSnapshotData = await loadLatestManagementSnapshot(managementIndexData);
     state.data.geoData = staticGeoData;
     state.data.summaryData = summaryData;
     state.data.openStaticSummaryData = openStaticSummaryData;
+    state.data.managementSnapshotData = managementSnapshotData;
+    setAnalyticsStationStates(managementSnapshotData);
     state.staticFeatures = normalizeStaticFallbackFeatures(staticGeoData);
 
     populateOperators();
@@ -2647,6 +2695,73 @@ function formatCountryName(countryCode, fallback = "") {
   }
 }
 
+function countrySourcesByCode(openStaticSummaryData) {
+  const sourcesByCode = new Map();
+  normalizeBundleSources(openStaticSummaryData, getLocale()).forEach((source) => {
+    const code = String(source.countryCode || "").trim().toUpperCase();
+    if (!code) {
+      return;
+    }
+    const sources = sourcesByCode.get(code) || [];
+    sources.push(source);
+    sourcesByCode.set(code, sources);
+  });
+  return sourcesByCode;
+}
+
+function compactCountrySourceLabel(source) {
+  const code = String(source?.countryCode || "").trim().toUpperCase();
+  const label = String(source?.displayName || formatBundleSourceTitle(source) || "").trim();
+  if (!label) {
+    return t("info.sourceUnknown");
+  }
+  return code
+    ? label.replace(new RegExp(`^${code}\\s*:?\\s*`, "i"), "").trim() || label
+    : label;
+}
+
+function countrySourceLinks(countryCode, sourcesByCode) {
+  const code = String(countryCode || "").trim().toUpperCase();
+  if (code === "DE") {
+    return [DE_MOBILITHEK_SOURCE];
+  }
+  const seen = new Set();
+  return (sourcesByCode.get(code) || [])
+    .map((source) => ({
+      label: compactCountrySourceLabel(source),
+      url: String(source.sourceUrl || "").trim(),
+    }))
+    .filter((source) => {
+      const key = `${source.label}\u0001${source.url}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return Boolean(source.label);
+    });
+}
+
+function appendCountrySourceLinks(cell, countryCode, sourcesByCode) {
+  const links = countrySourceLinks(countryCode, sourcesByCode);
+  if (!links.length) {
+    cell.textContent = t("info.sourceUnknown");
+    return;
+  }
+  const list = document.createElement("div");
+  list.className = "country-source-list";
+  links.forEach((source) => {
+    const item = document.createElement(source.url ? "a" : "span");
+    item.textContent = source.label;
+    if (source.url) {
+      item.href = source.url;
+      item.target = "_blank";
+      item.rel = "noopener noreferrer";
+    }
+    list.appendChild(item);
+  });
+  cell.appendChild(list);
+}
+
 function renderBundleCounts(openStaticSummaryData, summaryData) {
   const countryTotals = normalizeMappedCountries(openStaticSummaryData, getLocale()).reduce(
     (totals, country) => ({
@@ -2677,11 +2792,12 @@ function renderMappedCountries(openStaticSummaryData) {
     return;
   }
   const displayCountries = normalizeMappedCountries(openStaticSummaryData, getLocale());
+  const sourcesByCode = countrySourcesByCode(openStaticSummaryData);
   container.replaceChildren();
   if (!displayCountries.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
-    cell.colSpan = 3;
+    cell.colSpan = 4;
     cell.textContent = t("info.countryLoadError");
     row.appendChild(cell);
     container.appendChild(row);
@@ -2692,12 +2808,15 @@ function renderMappedCountries(openStaticSummaryData) {
     const name = document.createElement("td");
     const code = document.createElement("td");
     const count = document.createElement("td");
+    const source = document.createElement("td");
     name.textContent = formatCountryName(country.code, country.name);
     code.textContent = country.code ? `(${country.code})` : "";
     code.className = "country-code";
     count.className = "station-count";
     count.textContent = formatInteger(country.stationCount) || "...";
-    row.append(name, code, count);
+    source.className = "country-source";
+    appendCountrySourceLinks(source, country.code, sourcesByCode);
+    row.append(name, code, count, source);
     container.appendChild(row);
   });
 }
@@ -2905,19 +3024,37 @@ function isStationOneFreeLeft(props) {
   return counts.total > 1 && counts.available === 1;
 }
 
+function stationHasAnalyticsState(props, stateKey) {
+  const stationId = normalizeStationId(getStationIdFromProps(props));
+  return Boolean(stationId && state.analytics[stateKey]?.has(stationId));
+}
+
+function isStationOftenBroken(props) {
+  return stationHasAnalyticsState(props, "oftenBrokenStationIds");
+}
+
+function isStationOftenOccupied(props) {
+  return stationHasAnalyticsState(props, "oftenOccupiedStationIds");
+}
+
 function getStationCardStateClass(props) {
-  if (!hasAvailabilitySummary(props)) {
-    return "";
+  if (hasAvailabilitySummary(props)) {
+    const counts = getAvailabilityCounts(props);
+    if ((counts.total > 0 && counts.outOfOrder >= counts.total) || isStationOutOfOrder(props)) {
+      return "station-card-out-of-order";
+    }
+    if ((counts.total > 0 && counts.occupied >= counts.total) || isStationFullyOccupied(props)) {
+      return "station-card-occupied";
+    }
+    if (isStationOneFreeLeft(props)) {
+      return "station-card-one-free-left";
+    }
   }
-  const counts = getAvailabilityCounts(props);
-  if ((counts.total > 0 && counts.outOfOrder >= counts.total) || isStationOutOfOrder(props)) {
-    return "station-card-out-of-order";
+  if (isStationOftenBroken(props)) {
+    return "station-card-often-broken";
   }
-  if ((counts.total > 0 && counts.occupied >= counts.total) || isStationFullyOccupied(props)) {
-    return "station-card-occupied";
-  }
-  if (isStationOneFreeLeft(props)) {
-    return "station-card-one-free-left";
+  if (isStationOftenOccupied(props)) {
+    return "station-card-often-occupied";
   }
   return "";
 }
@@ -3765,7 +3902,14 @@ function createStationCard(feature, options = {}) {
     .filter((k) => p[k] > 0)
     .sort((a, b) => p[b] - p[a]) // Most frequent first
     .slice(0, 3)
-    .map((k) => `<span class="badge">${escapeHtml(getAmenityLabel(k))}</span>`)
+    .map((k) => {
+      const label = getAmenityLabel(k);
+      const iconPath = getAmenityIconPath(k);
+      const icon = iconPath
+        ? `<img src="${iconPath}" alt="" loading="lazy">`
+        : `<span class="badge-amenity-fallback" aria-hidden="true"></span>`;
+      return `<span class="badge badge-amenity" title="${escapeHtml(label)}">${icon}<span>${escapeHtml(label)}</span></span>`;
+    })
     .join("");
   const liveBadge = occupancySummary
     ? `<span class="badge badge-live ${escapeHtml(getAvailabilityToneClass(availabilityStatus))}">${escapeHtml(occupancySummary)}</span>`
