@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -118,7 +119,14 @@ def _seo_bundles() -> dict[str, dict[str, str]]:
 
 def test_build_seo_pages_generates_language_paths_and_served_countries_only():
     countries = [
-        build_site.SeoCountry("DE", station_count=10, charger_count=20, fast_station_count=5, source_name="Deutschland"),
+        build_site.SeoCountry(
+            "DE",
+            station_count=10,
+            charger_count=20,
+            fast_station_count=5,
+            source_name="Deutschland",
+            live_station_count=7,
+        ),
         build_site.SeoCountry("FR", station_count=12, charger_count=24, fast_station_count=6, source_name="Frankreich"),
     ]
 
@@ -132,6 +140,79 @@ def test_build_seo_pages_generates_language_paths_and_served_countries_only():
     assert "en/france/index.html" in paths
     assert "en/italy/index.html" not in paths
     assert len([page for page in pages if page.sitemap_group == "sitemap-seo-countries.xml"]) == 8
+
+    germany_page = next(page for page in pages if page.path == "en/germany/index.html")
+    assert 'class="link-btn seo-primary-cta" href="/?lang=en"' in germany_page.body_html
+    assert 'class="app-install-link" href="https://apps.apple.com/de/app/wo-laden/id6759499459"' in germany_page.body_html
+    assert 'class="app-install-promo seo-data-box"' in germany_page.body_html
+    assert germany_page.body_html.count('class="link-btn seo-secondary-cta" href="/?lang=en"') == 3
+    assert ">7</strong><span>en-liveInfoStationsMetric</span>" in germany_page.body_html
+
+
+def test_load_dynamic_station_counts_uses_prefixed_live_state_and_reviewed_match_csv(tmp_path: Path):
+    live_db = tmp_path / "live_state.sqlite3"
+    conn = sqlite3.connect(live_db)
+    try:
+        conn.execute("create table station_current_state (station_id text)")
+        conn.executemany(
+            "insert into station_current_state (station_id) values (?)",
+            [
+                ("nl:ndw:one",),
+                ("fr:irve:duplicate",),
+                ("raw-internal-hash",),
+            ],
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    match_csv = tmp_path / "mobilithek_afir_static_matches.csv"
+    match_csv.write_text(
+        "station_id,station_in_bundle\n"
+        "local-de-station,1\n"
+        "fr:irve:duplicate,1\n"
+        "ignored-station,0\n",
+        encoding="utf-8",
+    )
+
+    assert build_site.load_dynamic_station_counts_by_country(live_db, match_csv) == {
+        "DE": 1,
+        "FR": 1,
+        "NL": 1,
+    }
+
+
+def test_load_seo_countries_attaches_live_station_counts(tmp_path: Path):
+    summary_path = tmp_path / "open_static_summary.json"
+    summary_path.write_text(
+        json.dumps(
+            {
+                "generated_at": "2026-06-20T00:00:00Z",
+                "countries": [
+                    {
+                        "code": "DE",
+                        "name": "Deutschland",
+                        "station_count": 10,
+                        "charger_count": 20,
+                        "fast_station_count": 5,
+                    },
+                    {
+                        "code": "FR",
+                        "name": "Frankreich",
+                        "station_count": 12,
+                        "charger_count": 24,
+                        "fast_station_count": 6,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    countries, generated_at = build_site.load_seo_countries(summary_path, {"DE": 7})
+
+    assert generated_at == "2026-06-20T00:00:00Z"
+    assert {country.code: country.live_station_count for country in countries} == {"DE": 7, "FR": 0}
 
 
 def test_render_seo_shell_uses_self_canonical_hreflang_and_root_relative_assets():

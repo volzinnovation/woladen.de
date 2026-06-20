@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import html
 import ast
+import csv
 import json
 import math
 import os
@@ -32,12 +33,26 @@ SOCIAL_IMAGE_HEIGHT = "630"
 SOCIAL_IMAGE_ALT = (
     "woladen.de preview with a Europe map and the slogan: Zuverlässig laden. Europaweit. Ohne Ladeweile."
 )
+IOS_APP_LINK = "https://apps.apple.com/de/app/wo-laden/id6759499459"
+ANDROID_APP_LINK = "https://play.google.com/store/apps/details?id=de.woladen.android"
 STATION_ID_NAMESPACE = "DE:"
 STATIC_BUNDLE_ENV = "WOLADEN_STATIC_BUNDLE_PATH"
 STATIC_BUNDLE_CANDIDATES = (
     DATA_DIR / "eu27_ch_static" / "open_static.sqlite3",
     ROOT.parent / "Woladen.de-analytics" / "data" / "eu27_ch_static" / "open_static.sqlite3",
     ROOT.parent / "woladen.de-analytics" / "data" / "eu27_ch_static" / "open_static.sqlite3",
+)
+LIVE_STATE_ENV = "WOLADEN_LIVE_STATE_PATH"
+LIVE_STATE_CANDIDATES = (
+    ROOT.parent / "Woladen.de-analytics" / "data" / "live_state.sqlite3",
+    ROOT.parent / "woladen.de-analytics" / "data" / "live_state.sqlite3",
+    DATA_DIR / "live_state.sqlite3",
+)
+LIVE_MATCH_ENV = "WOLADEN_LIVE_MATCH_PATH"
+LIVE_MATCH_CANDIDATES = (
+    DATA_DIR / "mobilithek_afir_static_matches.csv",
+    ROOT.parent / "Woladen.de-analytics" / "data" / "mobilithek_afir_static_matches.csv",
+    ROOT.parent / "woladen.de-analytics" / "data" / "mobilithek_afir_static_matches.csv",
 )
 COUNTRY_STATION_ID_RE = re.compile(r"^([A-Za-z]{2}):(.*)$")
 
@@ -75,6 +90,12 @@ SEO_REQUIRED_KEYS = (
     "coverageDescription",
     "coverageIntro",
     "coverageLinkLabel",
+    "primaryCtaLabel",
+    "appDownloadLabel",
+    "appStoreAlt",
+    "googlePlayAlt",
+    "seoCtaTitle",
+    "seoCtaBody",
     "countryTitle",
     "countryH1",
     "countryDescription",
@@ -83,6 +104,13 @@ SEO_REQUIRED_KEYS = (
     "stationsLabel",
     "chargingPointsLabel",
     "fastStationsLabel",
+    "countryDataBoxKicker",
+    "countryDataBoxTitle",
+    "countryDataBoxBody",
+    "staticStationsMetric",
+    "liveInfoStationsMetric",
+    "staticStationsDescription",
+    "liveInfoStationsDescription",
     "dataFreshness",
     "openApp",
     "exploreCoverage",
@@ -265,6 +293,7 @@ class SeoCountry:
     charger_count: int
     fast_station_count: int
     source_name: str
+    live_station_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -434,6 +463,10 @@ def to_int(value: object, default: int = 0) -> int:
         return default
 
 
+def is_truthy(value: object) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y"}
+
+
 def format_amenity_count(count: int) -> str:
     label = "nearby amenity" if count == 1 else "nearby amenities"
     return f"{count} {label}"
@@ -461,6 +494,27 @@ def public_station_id(value: object) -> str:
     if country_match:
         return f"{country_match.group(1).upper()}:{country_match.group(2)}"
     return f"{STATION_ID_NAMESPACE}{station_id}"
+
+
+def station_country_code(value: object, assume_default_namespace: bool = False) -> str:
+    station_id = str(value or "").strip()
+    if not station_id:
+        return ""
+    country_match = COUNTRY_STATION_ID_RE.match(station_id)
+    if country_match:
+        code = country_match.group(1).upper()
+        return code if code in COUNTRY_SEO else ""
+    if assume_default_namespace:
+        code = STATION_ID_NAMESPACE.rstrip(":").upper()
+        return code if code in COUNTRY_SEO else ""
+    return ""
+
+
+def grouped_station_key(value: object, assume_default_namespace: bool = False) -> tuple[str, str]:
+    code = station_country_code(value, assume_default_namespace)
+    if not code:
+        return "", ""
+    return code, public_station_id(value)
 
 
 def station_url_query(query: str) -> str:
@@ -512,6 +566,29 @@ def resolve_static_bundle_path() -> Path:
     raise FileNotFoundError(
         f"Europe static bundle not found. Set {STATIC_BUNDLE_ENV} or place open_static.sqlite3 at one of: {searched}"
     )
+
+
+def existing_source_paths(candidates: tuple[Path, ...], env_var: str, explicit_path: Path | None = None) -> list[Path]:
+    raw_candidates: list[Path] = []
+    if explicit_path is not None:
+        raw_candidates.append(explicit_path)
+    else:
+        configured = os.environ.get(env_var)
+        if configured:
+            raw_candidates.append(Path(configured).expanduser())
+        raw_candidates.extend(candidates)
+
+    paths: list[Path] = []
+    seen: set[str] = set()
+    for candidate in raw_candidates:
+        if not candidate.exists():
+            continue
+        resolved = str(candidate.resolve())
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        paths.append(candidate)
+    return paths
 
 
 def parse_json_object(value: object) -> dict[str, object]:
@@ -775,8 +852,66 @@ def page_url(path: str) -> str:
     return absolute_url(public_path(path))
 
 
-def load_seo_countries(summary_path: Path | None = None) -> tuple[list[SeoCountry], str]:
+def load_live_state_station_ids_by_country(live_state_path: Path | None = None) -> dict[str, set[str]]:
+    station_ids: dict[str, set[str]] = {}
+    paths = existing_source_paths(LIVE_STATE_CANDIDATES, LIVE_STATE_ENV, live_state_path)
+    for path in paths:
+        conn: sqlite3.Connection | None = None
+        try:
+            conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+            conn.execute("PRAGMA query_only=ON")
+            rows = conn.execute(
+                """
+                SELECT station_id
+                FROM station_current_state
+                WHERE station_id IS NOT NULL
+                  AND TRIM(station_id) != ''
+                """
+            )
+            for row in rows:
+                country_code, station_id = grouped_station_key(row[0])
+                if country_code and station_id:
+                    station_ids.setdefault(country_code, set()).add(station_id)
+        except sqlite3.DatabaseError:
+            if live_state_path is not None or os.environ.get(LIVE_STATE_ENV):
+                raise
+            continue
+        finally:
+            if conn is not None:
+                conn.close()
+    return station_ids
+
+
+def load_reviewed_match_station_ids_by_country(match_path: Path | None = None) -> dict[str, set[str]]:
+    station_ids: dict[str, set[str]] = {}
+    paths = existing_source_paths(LIVE_MATCH_CANDIDATES, LIVE_MATCH_ENV, match_path)
+    for path in paths:
+        with path.open(newline="", encoding="utf-8") as handle:
+            for row in csv.DictReader(handle):
+                if not is_truthy(row.get("station_in_bundle")):
+                    continue
+                country_code, station_id = grouped_station_key(row.get("station_id"), assume_default_namespace=True)
+                if country_code and station_id:
+                    station_ids.setdefault(country_code, set()).add(station_id)
+    return station_ids
+
+
+def load_dynamic_station_counts_by_country(
+    live_state_path: Path | None = None,
+    match_path: Path | None = None,
+) -> dict[str, int]:
+    station_ids = load_live_state_station_ids_by_country(live_state_path)
+    for country_code, ids in load_reviewed_match_station_ids_by_country(match_path).items():
+        station_ids.setdefault(country_code, set()).update(ids)
+    return {country_code: len(ids) for country_code, ids in station_ids.items()}
+
+
+def load_seo_countries(
+    summary_path: Path | None = None,
+    live_counts_by_country: dict[str, int] | None = None,
+) -> tuple[list[SeoCountry], str]:
     summary_path = summary_path or DATA_DIR / "open_static_summary.json"
+    live_counts_by_country = live_counts_by_country or {}
     payload = load_json(summary_path)
     generated_at = str(payload.get("generated_at") or "").strip()
     rows = payload.get("countries")
@@ -794,13 +929,15 @@ def load_seo_countries(summary_path: Path | None = None) -> tuple[list[SeoCountr
         if code not in COUNTRY_SEO:
             missing_codes.append(code)
             continue
+        station_count = to_int(row.get("station_count"))
         countries.append(
             SeoCountry(
                 code=code,
-                station_count=to_int(row.get("station_count")),
+                station_count=station_count,
                 charger_count=to_int(row.get("charger_count")),
                 fast_station_count=to_int(row.get("fast_station_count")),
                 source_name=str(row.get("name") or "").strip(),
+                live_station_count=min(to_int(live_counts_by_country.get(code)), station_count),
             )
         )
     if missing_codes:
@@ -892,6 +1029,81 @@ def country_stat_items(country: SeoCountry, language: str, bundle: dict[str, str
         f'{format_text(label)}'
         '</li>'
         for label, value in stats
+    )
+
+
+def seo_app_href(language: str, station_id: str = "") -> str:
+    query = f"lang={quote(language)}"
+    if station_id:
+        query = f"{query}&station={quote(public_station_id(station_id), safe=':')}"
+    return f"/?{query}"
+
+
+def render_seo_cta(language: str, bundle: dict[str, str], station_id: str = "") -> str:
+    app_href = seo_app_href(language, station_id)
+    return (
+        '<div class="seo-action-panel">'
+        '<div class="seo-action-copy">'
+        f'<h2>{format_text(bundle["seoCtaTitle"])}</h2>'
+        f'<p>{format_text(bundle["seoCtaBody"])}</p>'
+        "</div>"
+        '<div class="seo-action-links">'
+        f'<a class="link-btn seo-primary-cta" href="{html.escape(app_href)}">{format_text(bundle["primaryCtaLabel"])}</a>'
+        f'<span>{format_text(bundle["appDownloadLabel"])}</span>'
+        '<div class="seo-store-links">'
+        f'<a class="app-install-link" href="{html.escape(IOS_APP_LINK)}" aria-label="{format_text(bundle["appStoreAlt"])}">'
+        f'<img class="app-install-store-badge app-install-store-badge--apple" src="/img/app-store-badge.svg" alt="{format_text(bundle["appStoreAlt"])}" width="250" height="83" decoding="async" />'
+        "</a>"
+        f'<a class="app-install-link" href="{html.escape(ANDROID_APP_LINK)}" aria-label="{format_text(bundle["googlePlayAlt"])}">'
+        f'<img class="app-install-store-badge app-install-store-badge--google" src="/img/google-play-badge.png" alt="{format_text(bundle["googlePlayAlt"])}" width="646" height="250" decoding="async" />'
+        "</a>"
+        "</div>"
+        "</div>"
+        "</div>"
+    )
+
+
+def render_seo_section_cta(language: str, bundle: dict[str, str]) -> str:
+    return (
+        '<p class="station-note seo-section-cta">'
+        f'<a class="link-btn seo-secondary-cta" href="{html.escape(seo_app_href(language))}">'
+        f'{format_text(bundle["primaryCtaLabel"])}</a>'
+        "</p>"
+    )
+
+
+def render_country_data_box(country: SeoCountry, language: str, bundle: dict[str, str]) -> str:
+    metrics = (
+        (
+            country.station_count,
+            bundle["staticStationsMetric"],
+            bundle["staticStationsDescription"],
+        ),
+        (
+            country.live_station_count,
+            bundle["liveInfoStationsMetric"],
+            bundle["liveInfoStationsDescription"],
+        ),
+    )
+    metric_cards = "".join(
+        '<div class="seo-data-metric">'
+        f"<strong>{html.escape(format_count(value, language))}</strong>"
+        f"<span>{format_text(label)}</span>"
+        f"<small>{format_text(description)}</small>"
+        "</div>"
+        for value, label, description in metrics
+    )
+    return (
+        '<aside class="app-install-promo seo-data-box">'
+        '<div class="app-install-head">'
+        '<div class="app-install-copy">'
+        f'<p class="app-install-kicker">{format_text(bundle["countryDataBoxKicker"])}</p>'
+        f'<h2>{format_text(bundle["countryDataBoxTitle"])}</h2>'
+        f'<p>{format_text(bundle["countryDataBoxBody"])}</p>'
+        "</div>"
+        f'<div class="app-install-links seo-data-metrics">{metric_cards}</div>'
+        "</div>"
+        "</aside>"
     )
 
 
@@ -1053,12 +1265,11 @@ def build_seo_pages(
         coverage_href = "/" + public_path(seo_coverage_path(language, bundles))
         home_body = (
             f'<p class="legal-intro">{format_text(bundle["homeIntro"])}</p>'
-            '<div class="station-actions">'
-            f'<a class="link-btn" href="/?lang={html.escape(language)}">{format_text(bundle["openApp"])}</a>'
-            f'<a class="link-btn secondary-link" href="{html.escape(coverage_href)}">{format_text(bundle["exploreCoverage"])}</a>'
-            '</div>'
+            f'{render_seo_cta(language, bundle)}'
+            f'<p class="station-note"><a href="{html.escape(coverage_href)}">{format_text(bundle["exploreCoverage"])}</a></p>'
             f'<h2>{format_text(bundle["homeCountryListTitle"])}</h2>'
             f'<ul class="station-list seo-country-list">{country_links(countries, language)}</ul>'
+            f'{render_seo_section_cta(language, bundle)}'
         )
         pages.append(
             SeoPage(
@@ -1076,6 +1287,7 @@ def build_seo_pages(
 
         coverage_body = (
             f'<p class="legal-intro">{format_text(bundle["coverageIntro"])}</p>'
+            f'{render_seo_cta(language, bundle)}'
             '<table class="country-table seo-country-table"><thead><tr>'
             f'<th scope="col">{format_text(bundle["countriesLabel"])}</th>'
             '<th scope="col">ISO</th>'
@@ -1086,6 +1298,7 @@ def build_seo_pages(
             f'{coverage_country_rows(countries, language, bundle)}'
             '</tbody></table>'
             f'<p class="station-note">{format_text(interpolate(bundle["dataFreshness"], {"date": generated_at or "unknown"}))}</p>'
+            f'{render_seo_section_cta(language, bundle)}'
         )
         pages.append(
             SeoPage(
@@ -1112,12 +1325,17 @@ def build_seo_pages(
             coverage_href = "/" + public_path(seo_coverage_path(language, bundles))
             body = (
                 f'<p class="legal-intro">{format_text(interpolate(bundle["countryIntro"], {"country": country_name}))}</p>'
+                f'{render_seo_cta(language, bundle)}'
+                f'{render_country_data_box(country, language, bundle)}'
                 f'<ul class="station-list seo-stat-list">{country_stat_items(country, language, bundle)}</ul>'
+                f'{render_seo_section_cta(language, bundle)}'
                 f'<h2>{format_text(bundle["topStopsTitle"])}</h2>'
                 f'<p>{format_text(bundle["topStopsIntro"])}</p>'
                 f'<ul class="station-list">{render_station_summary_list(top_stations.get(country.code, []), language, bundle)}</ul>'
+                f'{render_seo_section_cta(language, bundle)}'
                 f'<h2>{format_text(bundle["majorOperatorsTitle"])}</h2>'
                 f'<ul class="station-list">{render_operator_list(operators.get(country.code, []), language)}</ul>'
+                f'{render_seo_section_cta(language, bundle)}'
                 f'<p class="station-note"><a href="{html.escape(coverage_href)}">{format_text(bundle["backToCoverage"])}</a></p>'
             )
             pages.append(
@@ -1156,7 +1374,8 @@ def structured_data_for_page(page: SeoPage) -> list[dict[str, object]]:
 
 def write_seo_pages() -> dict[str, list[str]]:
     bundles = load_seo_bundles()
-    countries, generated_at = load_seo_countries()
+    live_counts_by_country = load_dynamic_station_counts_by_country()
+    countries, generated_at = load_seo_countries(live_counts_by_country=live_counts_by_country)
     top_stations, operators = load_seo_station_summaries()
     pages = build_seo_pages(countries, generated_at, bundles, top_stations, operators)
     groups: dict[str, list[str]] = {}
