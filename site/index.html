@@ -735,6 +735,13 @@
               Musterstraße 1, 12345 Berlin
             </p>
 
+            <div class="amenity-list-section">
+              <h3 id="detail-amenities-title">5 nearby places</h3>
+              <div id="detail-amenities-list" class="amenity-list">
+                <!-- List items -->
+              </div>
+            </div>
+
             <div id="detail-live-section" class="details-list-section detail-live-primary" hidden>
               <div class="detail-section-head">
                 <h3 id="detail-live-title" data-i18n="station.live">Live</h3>
@@ -746,6 +753,18 @@
             <p id="detail-occupancy-source" class="detail-subnote detail-live-source-note" hidden>
               Live via MobiData BW
             </p>
+
+            <label class="detail-note" for="detail-note-input" data-nosnippet>
+              <span class="detail-note-label" data-i18n="detail.personalNote">Personal note</span>
+              <textarea
+                id="detail-note-input"
+                rows="3"
+                maxlength="600"
+                placeholder="e.g. well lit, tight parking, bakery around the corner"
+                data-i18n-placeholder="detail.notePlaceholder"
+              ></textarea>
+              <span id="detail-note-status" class="detail-note-status" data-i18n="detail.noteDeviceOnly">Stored only on this device</span>
+            </label>
 
             <div id="detail-rating" class="detail-rating" data-nosnippet>
               <div class="detail-rating-copy">
@@ -766,18 +785,6 @@
                 <button type="button" class="rating-star-btn" data-rating="5" role="radio" aria-label="5 stars" aria-checked="false">★</button>
               </div>
             </div>
-
-            <label class="detail-note" for="detail-note-input" data-nosnippet>
-              <span class="detail-note-label" data-i18n="detail.personalNote">Personal note</span>
-              <textarea
-                id="detail-note-input"
-                rows="3"
-                maxlength="600"
-                placeholder="e.g. well lit, tight parking, bakery around the corner"
-                data-i18n-placeholder="detail.notePlaceholder"
-              ></textarea>
-              <span id="detail-note-status" class="detail-note-status" data-i18n="detail.noteDeviceOnly">Stored only on this device</span>
-            </label>
 
             <div class="detail-actions">
               <a
@@ -844,13 +851,6 @@
                 </svg>
                 <span data-i18n="detail.help">Help</span>
               </a>
-            </div>
-
-            <div class="amenity-list-section">
-              <h3 id="detail-amenities-title">5 nearby places</h3>
-              <div id="detail-amenities-list" class="amenity-list">
-                <!-- List items -->
-              </div>
             </div>
 
             <div id="detail-occupancy-history-section" class="details-list-section" hidden>

@@ -2145,7 +2145,14 @@ input[type="search"]::placeholder {
   text-align: center;
 }
 
+.occupancy-history-label {
+  grid-row: 2;
+}
+
 .occupancy-history-track {
+  grid-row: 1;
+  align-self: stretch;
+  height: 100%;
   display: flex;
   align-items: end;
   justify-content: center;
@@ -2160,10 +2167,6 @@ input[type="search"]::placeholder {
   height: var(--occupancy-percent, 0%);
   border-radius: 999px 999px 0 0;
   background: linear-gradient(180deg, var(--color-primary), var(--color-primary-dark));
-}
-
-.occupancy-history-value {
-  display: none;
 }
 
 @media (max-width: 640px) {
@@ -2189,7 +2192,7 @@ input[type="search"]::placeholder {
   }
 
   .occupancy-history-hour {
-    grid-template-columns: 2.5rem minmax(0, 1fr) 3rem;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
     grid-template-rows: auto;
     align-items: center;
     gap: 0.55rem;
@@ -2200,12 +2203,16 @@ input[type="search"]::placeholder {
   }
 
   .occupancy-history-label {
+    grid-column: 1;
+    grid-row: 1;
     color: var(--color-text-muted);
     font-variant-numeric: tabular-nums;
     text-align: right;
   }
 
   .occupancy-history-track {
+    grid-column: 2;
+    grid-row: 1;
     align-items: stretch;
     justify-content: flex-start;
     height: 0.78rem;
@@ -2217,13 +2224,6 @@ input[type="search"]::placeholder {
     height: 100%;
     border-radius: 999px;
     background: linear-gradient(90deg, var(--color-primary), var(--color-primary-dark));
-  }
-
-  .occupancy-history-value {
-    display: block;
-    color: var(--color-text-main);
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
   }
 }
 

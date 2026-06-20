@@ -4700,7 +4700,6 @@ function renderOccupancyHistoryChart(history, feature) {
         <div class="occupancy-history-track" aria-hidden="true">
           <div class="occupancy-history-bar"></div>
         </div>
-        <span class="occupancy-history-value">${escapeHtml(valueLabel)}</span>
       </div>
     `;
   }).join("");

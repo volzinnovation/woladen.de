@@ -5,6 +5,7 @@ import vm from "node:vm";
 
 const I18N_MODULE_URL = new URL("./i18n.mjs", import.meta.url);
 const INDEX_HTML_URL = new URL("./index.html", import.meta.url);
+const STYLES_URL = new URL("./styles.css", import.meta.url);
 const DEFAULT_META = {
   title: "woladen - Smart EV Stops in Europe",
   description: "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. Because charging time should be time well spent.",
@@ -49,8 +50,34 @@ test("German and Dutch app bundles cover all fallback UI keys", () => {
 
 test("occupancy history note is bound to the translation bundle", () => {
   const indexHtml = readText(INDEX_HTML_URL);
+  const appJs = readText(new URL("./app.js", import.meta.url));
   assert.match(indexHtml, /<p class="detail-subnote compact" data-i18n="station\.typicalOccupancyNote">/);
   assert.match(indexHtml, /data-i18n-aria-label="rating\.ariaLabel"/);
+  assert.doesNotMatch(appJs, /occupancy-history-value/);
+});
+
+test("occupancy history layout keeps desktop bars visible", () => {
+  const styles = readText(STYLES_URL);
+  assert.match(styles, /\.occupancy-history-label\s*\{[\s\S]*?grid-row:\s*2;/);
+  assert.match(styles, /\.occupancy-history-track\s*\{[\s\S]*?grid-row:\s*1;[\s\S]*?height:\s*100%;/);
+  const mobileBlock = styles.match(/@media \(max-width: 640px\) \{[\s\S]*?\/\* INFO VIEW \*\//)?.[0] || "";
+  assert.match(mobileBlock, /\.occupancy-history-label\s*\{[\s\S]*?grid-column:\s*1;[\s\S]*?grid-row:\s*1;/);
+  assert.match(mobileBlock, /\.occupancy-history-track\s*\{[\s\S]*?grid-column:\s*2;[\s\S]*?grid-row:\s*1;/);
+});
+
+test("detail view orders amenities, live status, notes, and details", () => {
+  const indexHtml = readText(INDEX_HTML_URL);
+  const amenitiesIndex = indexHtml.indexOf('id="detail-amenities-title"');
+  const liveIndex = indexHtml.indexOf('id="detail-live-section"');
+  const noteIndex = indexHtml.indexOf('class="detail-note"');
+  const detailsIndex = indexHtml.indexOf('id="detail-details-section"');
+  assert.ok(amenitiesIndex > -1, "amenities section exists");
+  assert.ok(liveIndex > -1, "live section exists");
+  assert.ok(noteIndex > -1, "note section exists");
+  assert.ok(detailsIndex > -1, "details section exists");
+  assert.ok(amenitiesIndex < liveIndex, "amenities should come before live status");
+  assert.ok(liveIndex < noteIndex, "personal note should come after live status");
+  assert.ok(noteIndex < detailsIndex, "personal note should come before details");
 });
 
 test("app shell uses the canonical woladen brand SEO copy", () => {
