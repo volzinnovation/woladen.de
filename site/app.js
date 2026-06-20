@@ -1,8 +1,8 @@
 import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs";
 import {
-  formatOpeningHoursForGermanDisplay,
+  formatOpeningHoursForDisplay,
   getAmenityOpenStatus,
-} from "./opening-hours.mjs";
+} from "./opening-hours.mjs?v=20260620-i18n";
 import {
   LOCATION_ERROR_PERMISSION_DENIED,
   LOCATION_PERMISSION_DENIED,
@@ -36,7 +36,6 @@ import {
   performMapKeyboardAction,
 } from "./map-keyboard.mjs?v=20260618-keyboard-restore";
 import {
-  formatRatingCount,
   formatRatingValue,
   getUserRating,
   normalizeRatingSummary,
@@ -50,6 +49,18 @@ import {
   parseStoredNotes,
   serializeStoredNotes,
 } from "./note.mjs";
+import {
+  applyDocumentTranslations,
+  formatDate,
+  formatDateTime,
+  formatInteger as formatLocalizedInteger,
+  getLocale,
+  initI18n,
+  onLanguageChange,
+  populateLanguageSelect,
+  setLanguage,
+  t,
+} from "./i18n.mjs?v=20260620-i18n4";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -95,6 +106,7 @@ const LIVE_FULLY_OCCUPIED_MARKER_SIZE = 18;
 const STATION_ID_NAMESPACE = "DE:";
 const LEGACY_STATION_ID_RE = /^[0-9a-f]{16}$/i;
 const NAMESPACED_STATION_ID_RE = /^DE:([0-9a-f]{16})$/i;
+const COUNTRY_STATION_ID_RE = /^([A-Z]{2}):(.+)$/i;
 const LIVE_STATION_FIELDS = [
   "availability_status",
   "available_evses",
@@ -181,32 +193,80 @@ const AMENITY_MAPPING = {
   shop_electronics: { label: "Elektronik", icon: "shop_electronics.png" },
 };
 
+const AMENITY_TRANSLATION_KEYS = {
+  amenity_restaurant: "restaurant",
+  amenity_cafe: "cafe",
+  amenity_fast_food: "fast_food",
+  amenity_toilets: "toilets",
+  amenity_supermarket: "supermarket",
+  amenity_bakery: "bakery",
+  amenity_convenience: "convenience",
+  amenity_pharmacy: "pharmacy",
+  amenity_hotel: "hotel",
+  amenity_museum: "museum",
+  amenity_playground: "playground",
+  amenity_park: "park",
+  amenity_ice_cream: "ice_cream",
+  amenity_bbq: "bbq",
+  amenity_biergarten: "biergarten",
+  amenity_cinema: "cinema",
+  amenity_library: "library",
+  amenity_theatre: "theatre",
+  amenity_atm: "atm",
+  amenity_bank: "bank",
+  amenity_bench: "bench",
+  amenity_bicycle_rental: "bicycle_rental",
+  amenity_car_sharing: "car_sharing",
+  amenity_fuel: "fuel",
+  amenity_hospital: "hospital",
+  amenity_police: "police",
+  amenity_post_box: "post_box",
+  amenity_post_office: "post_office",
+  amenity_pub: "pub",
+  amenity_school: "school",
+  amenity_taxi: "taxi",
+  amenity_waste_basket: "waste_basket",
+  amenity_swimming: "swimming",
+  amenity_gym: "gym",
+  amenity_camp_site: "camp_site",
+  amenity_viewpoint: "viewpoint",
+  amenity_zoo: "zoo",
+  shop_mall: "mall",
+  shop_doityourself: "doityourself",
+  shop_electronics: "electronics",
+};
+
 const AMENITY_GROUPS = [
   {
     label: "Essen & Trinken",
+    labelKey: "amenity.groups.food",
     categories: ["restaurant", "cafe", "fast_food", "ice_cream", "bakery"],
   },
   {
     label: "Einkaufsmöglichkeiten",
+    labelKey: "amenity.groups.shopping",
     categories: ["supermarket", "convenience", "pharmacy"],
   },
   {
     label: "Freizeit & Natur",
+    labelKey: "amenity.groups.leisure",
     categories: ["museum", "playground", "park"],
   },
   {
     label: "Unterkunft",
+    labelKey: "amenity.groups.lodging",
     categories: ["hotel"],
   },
   {
     label: "Sonstiges",
+    labelKey: "amenity.groups.other",
     categories: [],
   },
 ];
 
 const AMENITY_GROUP_BY_CATEGORY = new Map(
   AMENITY_GROUPS.flatMap((group) =>
-    group.categories.map((category) => [category, group.label]),
+    group.categories.map((category) => [category, group]),
   ),
 );
 
@@ -222,11 +282,24 @@ function getAmenityIconPath(key) {
 function formatAmenityCount(count) {
   const numeric = Number(count || 0);
   const rounded = Number.isFinite(numeric) ? Math.round(numeric) : 0;
-  return `${rounded} ${rounded === 1 ? "Angebot vor Ort" : "Angebote vor Ort"}`;
+  return t(rounded === 1 ? "amenity.one" : "amenity.many", { count: rounded });
+}
+
+function getAmenityLabel(keyOrCategory) {
+  const raw = String(keyOrCategory || "").trim();
+  const key = AMENITY_TRANSLATION_KEYS[raw] ||
+    AMENITY_TRANSLATION_KEYS[`amenity_${raw}`] ||
+    raw.replace(/^amenity_/, "");
+  const translated = t(`amenity.labels.${key}`);
+  if (translated && translated !== `amenity.labels.${key}`) {
+    return translated;
+  }
+  return AMENITY_MAPPING[raw]?.label || raw.replace(/_/g, " ") || t("amenity.generic");
 }
 
 function getAmenityGroupLabel(category) {
-  return AMENITY_GROUP_BY_CATEGORY.get(category || "") || "Sonstiges";
+  const group = AMENITY_GROUP_BY_CATEGORY.get(category || "");
+  return group ? t(group.labelKey) : t("amenity.groups.other");
 }
 function getAmenityDistance(item) {
   const distance = Number(item?.distance_m);
@@ -242,12 +315,12 @@ function compareAmenityExamples(a, b) {
 function formatAmenityOpenStatus(item, date = new Date()) {
   const status = getAmenityOpenStatus(item, date).state;
   if (status === "open") {
-    return { label: "Jetzt geöffnet", className: "open" };
+    return { label: t("amenity.open"), className: "open" };
   }
   if (status === "closed") {
-    return { label: "Geschlossen", className: "closed" };
+    return { label: t("amenity.closed"), className: "closed" };
   }
-  return { label: "Öffnungszeiten unbekannt", className: "unknown" };
+  return { label: t("amenity.unknownHours"), className: "unknown" };
 }
 function formatAmenityDistance(item) {
   const distance = Number(item?.distance_m);
@@ -255,15 +328,15 @@ function formatAmenityDistance(item) {
   return `${Math.round(distance)} m`;
 }
 function openAmenityDetailSheet(item, categoryLabel, now = new Date()) {
-  const name = item.name || categoryLabel || "Angebot vor Ort";
+  const name = item.name || categoryLabel || t("amenity.generic");
   const openStatus = formatAmenityOpenStatus(item, now);
-  const openingHoursText = formatOpeningHoursForGermanDisplay(item.opening_hours);
+  const openingHoursText = formatOpeningHoursForDisplay(item.opening_hours, getLocale());
 
-  els.amenitySheet.category.textContent = categoryLabel || "Angebot vor Ort";
+  els.amenitySheet.category.textContent = categoryLabel || t("amenity.generic");
   els.amenitySheet.title.textContent = name;
   els.amenitySheet.status.textContent = openStatus.label;
   els.amenitySheet.status.className = `amenity-sheet-status ${openStatus.className}`;
-  els.amenitySheet.hours.textContent = openingHoursText || "Öffnungszeiten unbekannt";
+  els.amenitySheet.hours.textContent = openingHoursText || t("amenity.unknownHours");
   openModal("amenityDetail");
 }
 
@@ -375,15 +448,15 @@ function getAvailabilityStatus(props) {
 
 function formatAvailabilityLabel(status) {
   if (status === "free") {
-    return "Frei";
+    return t("availability.free");
   }
   if (status === "occupied") {
-    return "Belegt";
+    return t("availability.occupied");
   }
   if (status === "out_of_order") {
-    return "Defekt";
+    return t("availability.out_of_order");
   }
-  return "Unbekannt";
+  return t("availability.unknown");
 }
 
 function getAvailabilityToneClass(status) {
@@ -414,18 +487,18 @@ function formatOccupancySummary(props) {
   }
   const parts = [];
   if (available > 0) {
-    parts.push(`${Math.round(available)} frei`);
+    parts.push(t("availability.available", { count: Math.round(available) }));
   }
   if (occupied > 0) {
-    parts.push(`${Math.round(occupied)} belegt`);
+    parts.push(t("availability.occupiedCount", { count: Math.round(occupied) }));
   }
   if (outOfOrder > 0) {
-    parts.push(`${Math.round(outOfOrder)} defekt`);
+    parts.push(t("availability.outOfOrderCount", { count: Math.round(outOfOrder) }));
   }
   if (unknown > 0) {
-    parts.push(`${Math.round(unknown)} unbekannt`);
+    parts.push(t("availability.unknownCount", { count: Math.round(unknown) }));
   }
-  return parts.length ? parts.join(", ") : "Belegung unbekannt";
+  return parts.length ? parts.join(", ") : t("availability.summaryUnknown");
 }
 
 function getOccupancyObservedAt(props) {
@@ -454,12 +527,12 @@ function buildAggregateLiveEvses(props) {
   const staticMissing = Math.max(0, displayTotal - observedTotal);
   const observedAt = getOccupancyObservedAt(props);
 
-  return [
+    return [
     ["free", available, ""],
     ["occupied", occupied, ""],
     ["out_of_order", outOfOrder, ""],
     ["unknown", observedUnknown, ""],
-    ["unknown", staticMissing, "Nicht im Live-Feed enthalten"],
+    ["unknown", staticMissing, t("station.notInLiveFeed")],
   ].flatMap(([availabilityStatus, count, statusNote]) =>
     Array.from({ length: Math.max(0, Number(count || 0)) }, () => ({
       availability_status: availabilityStatus,
@@ -473,6 +546,19 @@ function formatProviderLabel(value) {
   const raw = String(value || "").trim();
   if (!raw) {
     return "";
+  }
+  const normalized = raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  if (
+    normalized === "woladen_bnetza" ||
+    normalized === "de_woladen_bnetza" ||
+    normalized === "mobilithek_de_woladen_bnetza" ||
+    normalized.includes("_woladen_bnetza") ||
+    normalized.includes("_bnetza")
+  ) {
+    return "Mobilithek";
   }
   return raw
     .replace(/^mobilithek_/, "")
@@ -493,22 +579,80 @@ function getLiveSourceLabel(props) {
   return "";
 }
 
-function formatOccupancySource(props) {
-  if (hasLiveStationSummary(props)) {
+function parseLiveTimestamp(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return null;
+  }
+  const date = /^\d{11,}$/.test(raw) ? new Date(Number(raw)) : new Date(raw);
+  const time = date.getTime();
+  if (!Number.isFinite(time)) {
+    return null;
+  }
+  return { raw, time };
+}
+
+function latestLiveTimestamp(values) {
+  let latest = null;
+  let fallback = "";
+  values.forEach((value) => {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return;
+    }
+    if (!fallback) {
+      fallback = raw;
+    }
+    const parsed = parseLiveTimestamp(raw);
+    if (parsed && (!latest || parsed.time > latest.time)) {
+      latest = parsed;
+    }
+  });
+  return latest?.raw || fallback;
+}
+
+function getLatestLiveUpdateValue(props, liveDetail = null) {
+  const station = liveDetail?.station && typeof liveDetail.station === "object"
+    ? liveDetail.station
+    : {};
+  const evses = Array.isArray(liveDetail?.evses) ? liveDetail.evses : [];
+  return latestLiveTimestamp([
+    ...evses.flatMap((evse) => [
+      evse?.source_observed_at,
+      evse?.fetched_at,
+      evse?.ingested_at,
+    ]),
+    station.source_observed_at,
+    station.fetched_at,
+    station.ingested_at,
+    props.live_source_observed_at,
+    props.live_fetched_at,
+    props.live_ingested_at,
+    props.occupancy_last_updated,
+  ]);
+}
+
+function formatLiveSourceLine(source, timestamp) {
+  if (source && timestamp) {
+    return t("station.liveViaUpdated", { source, date: timestamp });
+  }
+  if (source) {
+    return t("station.liveVia", { source });
+  }
+  if (timestamp) {
+    return t("station.updated", { date: timestamp });
+  }
+  return "";
+}
+
+function formatOccupancySource(props, liveDetail = null) {
+  const hasLiveDetailRows = Array.isArray(liveDetail?.evses) && liveDetail.evses.length > 0;
+  if (hasLiveStationSummary(props) || hasLiveDetailRows) {
     const provider = getLiveSourceLabel(props);
     const timestamp = formatDetailTimestamp(
-      props.live_source_observed_at || props.live_fetched_at || props.live_ingested_at,
+      getLatestLiveUpdateValue(props, liveDetail),
     );
-    if (provider && timestamp) {
-      return `Live via ${provider} • Seit ${timestamp}`;
-    }
-    if (provider) {
-      return `Live via ${provider}`;
-    }
-    if (timestamp) {
-      return `Live seit ${timestamp}`;
-    }
-    return "Live via lokaler API";
+    return formatLiveSourceLine(provider, timestamp) || t("station.liveDataAvailable");
   }
 
   const counts = getAvailabilityCounts(props);
@@ -517,34 +661,27 @@ function formatOccupancySource(props) {
   }
   const sourceUid = String(props.occupancy_source_uid || "").trim();
   const sourceName = String(props.occupancy_source_name || "").trim();
+  const timestamp = formatDetailTimestamp(getLatestLiveUpdateValue(props, liveDetail) || getOccupancyObservedAt(props));
+  const formattedSourceName = formatProviderLabel(sourceName);
+  const formattedSourceUid = formatProviderLabel(sourceUid);
+  if (formattedSourceName === "Mobilithek" || formattedSourceUid === "Mobilithek") {
+    return formatLiveSourceLine("Mobilithek", timestamp);
+  }
   if (sourceName.startsWith("Mobilithek")) {
-    return `Live via ${sourceName}`;
+    return formatLiveSourceLine(sourceName, timestamp);
   }
   if (sourceUid.startsWith("mobilithek_")) {
-    return sourceName ? `Live via Mobilithek (${sourceName})` : "Live via Mobilithek";
+    const source = formattedSourceName ? `Mobilithek (${formattedSourceName})` : "Mobilithek";
+    return formatLiveSourceLine(source, timestamp);
   }
   if (sourceName) {
-    return `Live via MobiData BW (${sourceName})`;
+    return formatLiveSourceLine(`MobiData BW (${formattedSourceName})`, timestamp);
   }
-  return "Live via MobiData BW";
+  return formatLiveSourceLine("MobiData BW", timestamp);
 }
 
 function formatDetailTimestamp(value) {
-  const raw = String(value || "").trim();
-  if (!raw) {
-    return "";
-  }
-  const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) {
-    return raw;
-  }
-  return new Intl.DateTimeFormat("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+  return formatDateTime(value);
 }
 
 function formatStaticDetailSource(props) {
@@ -554,12 +691,12 @@ function formatStaticDetailSource(props) {
     return "";
   }
   if (sourceName && timestamp) {
-    return `Details via ${sourceName} • Stand ${timestamp}`;
+    return t("station.detailsSource", { source: sourceName, date: timestamp });
   }
   if (sourceName) {
-    return `Details via ${sourceName}`;
+    return t("station.detailsSourceOnly", { source: sourceName });
   }
-  return `Stand ${timestamp}`;
+  return t("station.updated", { date: timestamp });
 }
 
 function formatTelephoneHref(value) {
@@ -579,20 +716,20 @@ function buildStaticDetailRows(props) {
     rows.push({ label, value: text });
   };
 
-  pushRow("Bezahlen", props.payment_methods_display);
-  pushRow("Zugang", props.auth_methods_display);
-  pushRow("Stecker", props.connector_types_display);
-  pushRow("Stromart", props.current_types_display);
+  pushRow(t("staticDetails.payment"), props.payment_methods_display);
+  pushRow(t("staticDetails.access"), props.auth_methods_display);
+  pushRow(t("staticDetails.connectors"), props.connector_types_display);
+  pushRow(t("staticDetails.currentType"), props.current_types_display);
   const connectorCount = Number(props.connector_count || 0);
   if (Number.isFinite(connectorCount) && connectorCount > 0) {
-    pushRow("Anschlüsse", `${Math.round(connectorCount)} Steckplätze`);
+    pushRow(t("staticDetails.connectors"), t("staticDetails.sockets", { count: Math.round(connectorCount) }));
   }
-  pushRow("Service", props.service_types_display);
+  pushRow(t("staticDetails.service"), props.service_types_display);
 
   if (props.green_energy === true) {
-    pushRow("Strom", "100 % erneuerbar");
+    pushRow(t("staticDetails.energy"), t("staticDetails.renewable"));
   } else if (props.green_energy === false) {
-    pushRow("Strom", "Nicht als erneuerbar markiert");
+    pushRow(t("staticDetails.energy"), t("staticDetails.notRenewable"));
   }
 
   return rows;
@@ -779,7 +916,7 @@ function formatLiveDetailScalar(value) {
     return "";
   }
   if (typeof value === "boolean") {
-    return value ? "Ja" : "Nein";
+    return value ? t("common.yes") : t("common.no");
   }
   if (typeof value === "number") {
     return String(value);
@@ -855,11 +992,11 @@ function buildLiveDynamicNotes(evse) {
   const notes = [];
   const nextSlotText = formatLiveDetailCollection(evse.next_available_charging_slots);
   if (nextSlotText) {
-    notes.push({ label: "Nächster Slot", value: nextSlotText });
+    notes.push({ label: t("station.nextSlot"), value: nextSlotText });
   }
   const supplementalText = formatLiveDetailCollection(evse.supplemental_facility_status);
   if (supplementalText) {
-    notes.push({ label: "Zusatzstatus", value: supplementalText });
+    notes.push({ label: t("station.supplementalStatus"), value: supplementalText });
   }
   return notes;
 }
@@ -954,6 +1091,11 @@ const state = {
     pendingStationIds: new Set(),
     missingStationIds: new Set(),
   },
+  data: {
+    geoData: null,
+    summaryData: null,
+    openStaticSummaryData: null,
+  },
   views: {
     map: null, // Leaflet map instance
     detailMap: null, // Mini map in detail view
@@ -997,6 +1139,7 @@ const els = {
     amenityName: document.getElementById("filter-amenity-name"),
     currentlyOpen: document.getElementById("filter-currently-open"),
     power: document.getElementById("filter-power"),
+    powerLabel: document.getElementById("filter-power-label"),
     powerVal: document.getElementById("filter-power-val"),
     amenities: document.getElementById("filter-amenities"),
     applyBtn: document.getElementById("btn-apply-filter"),
@@ -1057,6 +1200,7 @@ const els = {
     closeAmenityDetail: document.querySelector('[data-close="modal-amenity-detail"]'),
   },
   meta: document.getElementById("app-meta"),
+  languageSelect: document.getElementById("language-select"),
   info: {
     stationCount: document.getElementById("bundle-station-count"),
     chargerCount: document.getElementById("bundle-charger-count"),
@@ -1081,6 +1225,7 @@ let hasAppliedInitialRequestedView = false;
 
 /* --- INITIALIZATION --- */
 async function init() {
+  initLanguageControls();
   loadFavorites();
   loadRatings();
   loadNotes();
@@ -1126,6 +1271,41 @@ async function init() {
   await loadData();
 }
 
+function initLanguageControls() {
+  applyDocumentTranslations();
+  populateLanguageSelect(els.languageSelect);
+  if (els.languageSelect) {
+    els.languageSelect.addEventListener("change", (event) => {
+      void setLanguage(event.target.value);
+    });
+  }
+  onLanguageChange(refreshLanguageSensitiveViews);
+}
+
+function refreshLanguageSensitiveViews() {
+  updatePowerFilterLabel();
+  populateOperators();
+  renderAmenityFilters();
+  setActiveNavItem(getActiveViewId());
+  if (els.views.list.classList.contains("active")) {
+    renderList();
+  }
+  if (els.views.favorites.classList.contains("active")) {
+    renderFavorites();
+  }
+  if (currentDetailFeature && !els.modals.detail.classList.contains("hidden")) {
+    const stationId = getStationIdFromProps(currentDetailFeature.properties);
+    populateDetailContent(currentDetailFeature, state.live.detailByStationId.get(stationId) || null);
+  }
+  if (state.data.summaryData) {
+    setAppMeta(
+      state.data.geoData,
+      state.data.summaryData,
+      state.data.openStaticSummaryData,
+    );
+  }
+}
+
 /* --- DATA LOADING --- */
 let catalogSearchSequence = 0;
 let catalogMapMoveTimer = 0;
@@ -1151,6 +1331,9 @@ async function loadData() {
     ]);
     if (!summaryRes.ok) throw new Error("Network response was not ok");
     const summaryData = await summaryRes.json();
+    state.data.geoData = staticGeoData;
+    state.data.summaryData = summaryData;
+    state.data.openStaticSummaryData = openStaticSummaryData;
     state.staticFeatures = normalizeStaticFallbackFeatures(staticGeoData);
 
     populateOperators();
@@ -1167,7 +1350,7 @@ async function loadData() {
     queueStartupLocationRequest();
   } catch (err) {
     console.error("Failed to load data", err);
-    els.lists.chargers.innerHTML = `<div class="empty-state">Fehler beim Laden der Daten.<br>${err.message}</div>`;
+    els.lists.chargers.innerHTML = `<div class="empty-state">${escapeHtml(t("errors.dataLoad"))}<br>${escapeHtml(err.message)}</div>`;
   }
 }
 
@@ -1334,7 +1517,7 @@ function renderLocationSearchResults(results) {
   }
   els.search.results.replaceChildren();
   if (!results.length) {
-    renderLocationSearchMessage("Keine Vorschläge gefunden.");
+    renderLocationSearchMessage(t("search.noResults"));
     return;
   }
   const list = document.createElement("div");
@@ -1369,14 +1552,14 @@ async function runLocationAutocomplete(rawQuery, options = {}) {
   const { selectFirst = false } = options;
   const query = String(rawQuery || "").trim();
   if (query.length < 2) {
-    renderLocationSearchMessage("Bitte mindestens zwei Zeichen eingeben.");
+    renderLocationSearchMessage(t("search.minChars"));
     return;
   }
 
   const requestId = ++state.search.requestSeq;
   state.search.loading = true;
   if (selectFirst) {
-    renderLocationSearchMessage("Suche Ort...");
+    renderLocationSearchMessage(t("search.searching"));
   }
   const focus = getLocationSearchFocus();
   const url = geocoderApiUrl("autocomplete", {
@@ -1387,7 +1570,7 @@ async function runLocationAutocomplete(rawQuery, options = {}) {
   });
   if (!url) {
     state.search.loading = false;
-    renderLocationSearchMessage("Ortssuche ist nicht konfiguriert.", "error");
+    renderLocationSearchMessage(t("search.notConfigured"), "error");
     return;
   }
 
@@ -1401,7 +1584,7 @@ async function runLocationAutocomplete(rawQuery, options = {}) {
     state.search.results = payload.results;
     state.search.loading = false;
     if (!payload.ok) {
-      renderLocationSearchMessage("Ortssuche ist gerade nicht erreichbar.", "error");
+      renderLocationSearchMessage(t("search.unavailable"), "error");
       return;
     }
     if (selectFirst && payload.results.length > 0) {
@@ -1414,7 +1597,7 @@ async function runLocationAutocomplete(rawQuery, options = {}) {
       return;
     }
     state.search.loading = false;
-    renderLocationSearchMessage("Ortssuche ist gerade nicht erreichbar.", "error");
+    renderLocationSearchMessage(t("search.unavailable"), "error");
   }
 }
 
@@ -1540,7 +1723,7 @@ function catalogStationToFeature(station) {
     : {};
   const props = {
     station_id: normalizeStationId(station?.station_id || ""),
-    operator: firstText(station?.operator_name, station?.operator, station?.station_name, "Unbekannt"),
+    operator: firstText(station?.operator_name, station?.operator, station?.station_name, t("station.unknownOperator")),
     station_name: firstText(station?.station_name),
     address: firstText(station?.address),
     postcode: firstText(station?.postal_code, station?.postcode),
@@ -2088,13 +2271,66 @@ function updateLocationState(patch = {}) {
 }
 
 function getLocationListViewModel() {
-  return getLocationLookupViewModel({
+  const viewModel = getLocationLookupViewModel({
     hasLocation: hasResolvedUserLocation(),
     isRequesting: state.location.requestState === LOCATION_REQUEST_PENDING,
     permissionState: state.location.permissionState,
     errorCode: state.location.errorCode,
     geolocationSupported: Boolean(navigator.geolocation),
   });
+  return localizeLocationViewModel(viewModel);
+}
+
+function localizeLocationViewModel(viewModel) {
+  if (!viewModel || viewModel.kind === LOCATION_REQUEST_READY) {
+    return viewModel;
+  }
+  if (viewModel.kind === LOCATION_REQUEST_PENDING) {
+    return {
+      ...viewModel,
+      title: t("location.pendingTitle"),
+      message: t("location.pendingMessage"),
+      actionLabel: "",
+    };
+  }
+  if (viewModel.kind === LOCATION_REQUEST_IDLE) {
+    return {
+      ...viewModel,
+      title: t("location.idleTitle"),
+      message: t("location.idleMessage"),
+      actionLabel: t("location.idleAction"),
+    };
+  }
+  if (state.location.errorCode === LOCATION_ERROR_PERMISSION_DENIED || state.location.permissionState === LOCATION_PERMISSION_DENIED) {
+    return {
+      ...viewModel,
+      title: t("location.deniedTitle"),
+      message: t("location.deniedMessage"),
+      actionLabel: t("location.retry"),
+    };
+  }
+  if (state.location.errorCode === "timeout") {
+    return {
+      ...viewModel,
+      title: t("location.timeoutTitle"),
+      message: t("location.timeoutMessage"),
+      actionLabel: t("location.retry"),
+    };
+  }
+  if (state.location.errorCode === "position_unavailable") {
+    return {
+      ...viewModel,
+      title: t("location.positionTitle"),
+      message: t("location.positionMessage"),
+      actionLabel: t("location.retry"),
+    };
+  }
+  return {
+    ...viewModel,
+    title: t("location.unavailableTitle"),
+    message: viewModel.actionLabel ? t("location.unknownMessage") : t("location.unavailableMessage"),
+    actionLabel: viewModel.actionLabel ? t("location.retry") : "",
+  };
 }
 
 function renderLocationGate(container, viewModel) {
@@ -2107,15 +2343,15 @@ function createCatalogErrorPanel() {
   panel.className = "location-gate location-gate-error";
   panel.setAttribute("data-nosnippet", "");
   panel.innerHTML = `
-    <h3 class="location-gate-title">Ladepunkte konnten nicht geladen werden</h3>
-    <p class="location-gate-copy">Die Live-Suche ist gerade nicht erreichbar. Bitte versuche es erneut.</p>
+    <h3 class="location-gate-title">${escapeHtml(t("errors.catalogTitle"))}</h3>
+    <p class="location-gate-copy">${escapeHtml(t("errors.catalogMessage"))}</p>
   `;
   const actions = document.createElement("div");
   actions.className = "location-gate-actions";
   const button = document.createElement("button");
   button.type = "button";
   button.className = "primary-btn";
-  button.textContent = "Erneut laden";
+  button.textContent = t("errors.reload");
   button.addEventListener("click", () => {
     void loadCatalogStationsForCurrentCenter({ force: true });
   });
@@ -2163,7 +2399,7 @@ function createLocationPanel(viewModel) {
       const searchButton = document.createElement("button");
       searchButton.type = "button";
       searchButton.className = "text-btn location-gate-secondary";
-      searchButton.textContent = "Ort auf Karte suchen";
+      searchButton.textContent = t("location.searchMap");
       searchButton.addEventListener("click", () => {
         switchView("view-map");
         window.setTimeout(focusLocationSearchInput, 0);
@@ -2379,20 +2615,16 @@ function setAppMeta(geoData, summaryData, openStaticSummaryData = null) {
     null;
 
   if (els.meta && generatedAt) {
-    const parsed = new Date(generatedAt);
-    const date = Number.isNaN(parsed.getTime()) ? generatedAt : parsed.toLocaleString("de-DE", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const date = formatDateTime(generatedAt);
     const stationTotal = Number(openStaticSummaryData?.bundle?.station_count || 0);
     const chargerTotal = Number(openStaticSummaryData?.bundle?.charger_count || 0);
     const countSuffix = stationTotal && chargerTotal
-      ? ` · ${formatInteger(stationTotal)} Stationen · ${formatInteger(chargerTotal)} Ladepunkte`
+      ? t("info.countSuffix", {
+          stations: formatInteger(stationTotal),
+          chargers: formatInteger(chargerTotal),
+        })
       : "";
-    els.meta.textContent = `Datenstand: ${date}${countSuffix}`;
+    els.meta.textContent = t("info.dataUpdated", { date, counts: countSuffix });
   }
   renderBundleCounts(openStaticSummaryData, summaryData);
   renderMappedCountries(openStaticSummaryData);
@@ -2400,15 +2632,23 @@ function setAppMeta(geoData, summaryData, openStaticSummaryData = null) {
 }
 
 function formatInteger(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric <= 0) {
-    return "";
+  return formatLocalizedInteger(value);
+}
+
+function formatCountryName(countryCode, fallback = "") {
+  const code = String(countryCode || "").trim().toUpperCase();
+  if (!code || typeof Intl.DisplayNames !== "function") {
+    return fallback || code;
   }
-  return new Intl.NumberFormat("de-DE").format(numeric);
+  try {
+    return new Intl.DisplayNames([getLocale(), "en"], { type: "region" }).of(code) || fallback || code;
+  } catch {
+    return fallback || code;
+  }
 }
 
 function renderBundleCounts(openStaticSummaryData, summaryData) {
-  const countryTotals = normalizeMappedCountries(openStaticSummaryData).reduce(
+  const countryTotals = normalizeMappedCountries(openStaticSummaryData, getLocale()).reduce(
     (totals, country) => ({
       stations: totals.stations + (Number(country.stationCount) || 0),
       chargers: totals.chargers + (Number(country.chargerCount) || 0),
@@ -2436,13 +2676,13 @@ function renderMappedCountries(openStaticSummaryData) {
   if (!container) {
     return;
   }
-  const displayCountries = normalizeMappedCountries(openStaticSummaryData);
+  const displayCountries = normalizeMappedCountries(openStaticSummaryData, getLocale());
   container.replaceChildren();
   if (!displayCountries.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
     cell.colSpan = 3;
-    cell.textContent = "Länderabdeckung konnte nicht geladen werden.";
+    cell.textContent = t("info.countryLoadError");
     row.appendChild(cell);
     container.appendChild(row);
     return;
@@ -2452,7 +2692,7 @@ function renderMappedCountries(openStaticSummaryData) {
     const name = document.createElement("td");
     const code = document.createElement("td");
     const count = document.createElement("td");
-    name.textContent = country.name || country.code;
+    name.textContent = formatCountryName(country.code, country.name);
     code.textContent = country.code ? `(${country.code})` : "";
     code.className = "country-code";
     count.className = "station-count";
@@ -2467,7 +2707,7 @@ function renderDataSources(openStaticSummaryData) {
   if (!container) {
     return;
   }
-  const displaySources = normalizeBundleSources(openStaticSummaryData);
+  const displaySources = normalizeBundleSources(openStaticSummaryData, getLocale());
   container.replaceChildren();
   let renderedSourceCount = 0;
 
@@ -2497,7 +2737,7 @@ function renderDataSources(openStaticSummaryData) {
 
   if (!renderedSourceCount) {
     const item = document.createElement("li");
-    item.textContent = "Datenquellen konnten nicht geladen werden.";
+    item.textContent = t("info.sourceLoadError");
     container.appendChild(item);
   }
 
@@ -2508,7 +2748,7 @@ function renderDataSources(openStaticSummaryData) {
   geocoderLink.href = "https://openrouteservice.org/dev/#/api-docs/geocode/autocomplete/get";
   geocoderLink.target = "_blank";
   geocoderLink.rel = "noopener noreferrer";
-  geocoderLink.textContent = "GEO: openrouteservice Geocoding Autocomplete (Pelias)";
+  geocoderLink.textContent = t("sources.geocoder");
   geocoderTitle.appendChild(geocoderLink);
   geocoderItem.appendChild(geocoderTitle);
   container.appendChild(geocoderItem);
@@ -2520,7 +2760,7 @@ function renderDataSources(openStaticSummaryData) {
   easterEggLink.href = "https://hellmood.111mb.de//wake_up_16b_writeup.html";
   easterEggLink.target = "_blank";
   easterEggLink.rel = "noopener noreferrer";
-  easterEggLink.textContent = "Easter Egg: wake up! 16b by HellMood (Port)";
+  easterEggLink.textContent = t("sources.easterEgg");
   easterEggTitle.appendChild(easterEggLink);
   easterEggItem.appendChild(easterEggTitle);
   container.appendChild(easterEggItem);
@@ -2657,9 +2897,34 @@ function isStationFullyOccupied(props) {
   return hasAvailabilitySummary(props) && getAvailabilityStatus(props) === "occupied";
 }
 
+function isStationOneFreeLeft(props) {
+  if (!hasAvailabilitySummary(props)) {
+    return false;
+  }
+  const counts = getAvailabilityCounts(props);
+  return counts.total > 1 && counts.available === 1;
+}
+
+function getStationCardStateClass(props) {
+  if (!hasAvailabilitySummary(props)) {
+    return "";
+  }
+  const counts = getAvailabilityCounts(props);
+  if ((counts.total > 0 && counts.outOfOrder >= counts.total) || isStationOutOfOrder(props)) {
+    return "station-card-out-of-order";
+  }
+  if ((counts.total > 0 && counts.occupied >= counts.total) || isStationFullyOccupied(props)) {
+    return "station-card-occupied";
+  }
+  if (isStationOneFreeLeft(props)) {
+    return "station-card-one-free-left";
+  }
+  return "";
+}
+
 function formatStationMarkerLabel(feature) {
   const props = feature?.properties || {};
-  const name = firstText(props.operator, props.station_name, "Ladestation");
+  const name = firstText(props.operator, props.station_name, t("station.chargingStation"));
   const city = firstText(props.city);
   const power = Math.round(getDisplayedMaxPowerKw(props));
   const powerText = power > 0 ? `${power} kW` : "";
@@ -2668,7 +2933,7 @@ function formatStationMarkerLabel(feature) {
   const parts = [name, city, powerText, amenityText, occupancyText]
     .map((part) => String(part || "").trim())
     .filter(Boolean);
-  return `Details öffnen: ${parts.join(", ")}`;
+  return `${t("aria.detailsOpen")}: ${parts.join(", ")}`;
 }
 
 function enhanceStationMarkerElement(marker, feature) {
@@ -3027,8 +3292,21 @@ function initFilters() {
   els.filter.power.addEventListener("input", (e) => {
     state.filters.minPower = Number(e.target.value);
     els.filter.powerVal.textContent = state.filters.minPower;
+    updatePowerFilterLabel();
     updateFilters({ reloadCatalog: true });
   });
+  updatePowerFilterLabel();
+}
+
+function updatePowerFilterLabel() {
+  if (els.filter.powerLabel) {
+    els.filter.powerLabel.textContent = t("filters.minPower", {
+      value: Math.round(Number(state.filters.minPower || DEFAULT_MIN_POWER_KW)),
+    });
+  }
+  if (els.filter.powerVal) {
+    els.filter.powerVal.textContent = String(Math.round(Number(state.filters.minPower || DEFAULT_MIN_POWER_KW)));
+  }
 }
 
 function renderAmenityFilters() {
@@ -3047,13 +3325,14 @@ function renderAmenityFilters() {
 
   // Sort by name for better UX
   const sortedKeys = Array.from(availableAmenities).sort((a, b) => {
-    const labelA = AMENITY_MAPPING[a].label;
-    const labelB = AMENITY_MAPPING[b].label;
-    return labelA.localeCompare(labelB);
+    const labelA = getAmenityLabel(a);
+    const labelB = getAmenityLabel(b);
+    return labelA.localeCompare(labelB, getLocale());
   });
 
   sortedKeys.forEach((key) => {
     const config = AMENITY_MAPPING[key];
+    const label = getAmenityLabel(key);
     const path = getAmenityIconPath(key);
 
     const button = document.createElement("button");
@@ -3065,13 +3344,15 @@ function renderAmenityFilters() {
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
     button.setAttribute(
       "aria-label",
-      isActive ? `${config.label} Filter aktiv` : `${config.label} filtern`,
+      isActive
+        ? t("filters.activeAmenity", { label })
+        : t("filters.filterAmenity", { label }),
     );
 
     if (path) {
-      button.innerHTML = `<img src="${path}" alt="" loading="lazy"><span class="amenity-name">${config.label}</span>`;
+      button.innerHTML = `<img src="${path}" alt="" loading="lazy"><span class="amenity-name">${escapeHtml(label)}</span>`;
     } else {
-      button.innerHTML = `<span class="amenity-icon-fallback" aria-hidden="true">?</span><span class="amenity-name">${config.label}</span>`;
+      button.innerHTML = `<span class="amenity-icon-fallback" aria-hidden="true">?</span><span class="amenity-name">${escapeHtml(label)}</span>`;
     }
 
     button.addEventListener("click", () => {
@@ -3113,7 +3394,7 @@ function updateFilterLabel() {
 
   if (els.filter.label) {
     els.filter.label.textContent =
-      filterCount > 0 ? `Filter (${filterCount})` : "Alle Filter";
+      filterCount > 0 ? `${t("filters.title")} (${filterCount})` : t("filters.all");
   }
   if (els.filter.activeLabel) {
     els.filter.activeLabel.hidden = labels.length === 0;
@@ -3123,8 +3404,8 @@ function updateFilterLabel() {
     els.filter.trigger.setAttribute(
       "aria-label",
       filterCount > 0
-        ? `Filter öffnen, ${filterCount} aktiv: ${labelSummary}`
-        : "Filter öffnen",
+        ? t("filters.openWithCount", { count: filterCount, labels: labelSummary })
+        : t("aria.filterOpen"),
     );
   }
   if (els.filter.count) {
@@ -3132,12 +3413,12 @@ function updateFilterLabel() {
     els.filter.count.textContent = String(filterCount);
   }
   if (els.filter.listFilterBtn) {
-    els.filter.listFilterBtn.textContent = filterCount > 0 ? `Filter (${filterCount})` : "Filter";
+    els.filter.listFilterBtn.textContent = filterCount > 0 ? `${t("filters.title")} (${filterCount})` : t("filters.title");
     els.filter.listFilterBtn.setAttribute(
       "aria-label",
       filterCount > 0
-        ? `Filter öffnen, ${filterCount} aktiv: ${labelSummary}`
-        : "Filter öffnen",
+        ? t("filters.openWithCount", { count: filterCount, labels: labelSummary })
+        : t("aria.filterOpen"),
     );
     els.filter.listFilterBtn.classList.toggle("active", filterCount > 0);
   }
@@ -3156,7 +3437,7 @@ function renderActiveFilterSummary(filterCount) {
     container.removeAttribute("aria-label");
     return;
   }
-  container.setAttribute("aria-label", `Aktive Filter: ${labels.join(", ")}`);
+  container.setAttribute("aria-label", t("aria.activeFilters", { labels: labels.join(", ") }));
 
   const summary = document.createElement("span");
   summary.className = "active-filter-summary-text";
@@ -3166,7 +3447,7 @@ function renderActiveFilterSummary(filterCount) {
   const clearButton = document.createElement("button");
   clearButton.type = "button";
   clearButton.className = "active-filter-clear";
-  clearButton.textContent = "Zurücksetzen";
+  clearButton.textContent = t("filters.reset");
   clearButton.addEventListener("click", clearFilters);
   container.appendChild(clearButton);
 }
@@ -3178,18 +3459,18 @@ function getActiveFilterLabels() {
   }
   const amenityNameQuery = String(state.filters.amenityNameQuery || "").trim();
   if (amenityNameQuery) {
-    labels.push(`Name: ${amenityNameQuery}`);
+    labels.push(t("filters.namePrefix", { value: amenityNameQuery }));
   }
   if (state.filters.currentlyOpenOnly) {
-    labels.push("Jetzt geöffnet");
+    labels.push(t("filters.currentlyOpen"));
   }
   const minPower = Number(state.filters.minPower);
   if (Number.isFinite(minPower) && minPower !== DEFAULT_MIN_POWER_KW) {
-    labels.push(`ab ${Math.round(minPower)} kW`);
+    labels.push(t("filters.minPowerLabel", { value: Math.round(minPower) }));
   }
   Array.from(state.filters.amenities)
-    .map((key) => AMENITY_MAPPING[key]?.label || key)
-    .sort((a, b) => a.localeCompare(b, "de"))
+    .map((key) => getAmenityLabel(key))
+    .sort((a, b) => a.localeCompare(b, getLocale()))
     .forEach((label) => labels.push(label));
   return labels;
 }
@@ -3205,6 +3486,7 @@ function clearFilters() {
   els.filter.currentlyOpen.checked = false;
   els.filter.power.value = String(DEFAULT_MIN_POWER_KW);
   els.filter.powerVal.textContent = String(DEFAULT_MIN_POWER_KW);
+  updatePowerFilterLabel();
   renderAmenityFilters();
   updateFilters({ reloadCatalog: true });
 }
@@ -3230,7 +3512,7 @@ function getRatingDisplayForProps(props) {
   if (summary) {
     return {
       value: summary.average_rating,
-      title: `Durchschnitt aus ${formatRatingCount(summary.rating_count)}`,
+      title: t("rating.average", { count: formatRatingCountLabel(summary.rating_count) }),
       count: summary.rating_count,
       localOnly: false,
     };
@@ -3240,7 +3522,7 @@ function getRatingDisplayForProps(props) {
   if (userRating > 0) {
     return {
       value: userRating,
-      title: "Deine lokale Bewertung",
+      title: t("rating.localTitle"),
       count: 0,
       localOnly: true,
     };
@@ -3248,11 +3530,25 @@ function getRatingDisplayForProps(props) {
   return null;
 }
 
+function formatRatingCountLabel(count) {
+  const numeric = Math.round(Number(count || 0));
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return "";
+  }
+  return t(numeric === 1 ? "rating.one" : "rating.many", {
+    count: formatInteger(numeric),
+  });
+}
+
+function formatRatingDisplayValue(value) {
+  return formatRatingValue(value, getLocale());
+}
+
 function renderRatingBadge(displayRating) {
   if (!displayRating) {
     return "";
   }
-  const value = formatRatingValue(displayRating.value);
+  const value = formatRatingDisplayValue(displayRating.value);
   if (!value) {
     return "";
   }
@@ -3299,7 +3595,7 @@ function renderList() {
   container.innerHTML = "";
 
   if (state.catalog.loading && state.features.length === 0 && state.staticFeatures.length === 0) {
-    container.innerHTML = `<div class="loading-state" data-nosnippet>Lade Ladestationen im Umkreis von 20 km...</div>`;
+    container.innerHTML = `<div class="loading-state" data-nosnippet>${escapeHtml(t("list.loadingRadius"))}</div>`;
     return;
   }
   if (state.catalog.error && state.staticFeatures.length === 0) {
@@ -3314,7 +3610,7 @@ function renderList() {
     const loading = document.createElement("div");
     loading.className = "loading-state";
     loading.setAttribute("data-nosnippet", "");
-    loading.textContent = "Live-Suche lädt. Bis dahin werden gespeicherte Schnelllader angezeigt.";
+    loading.textContent = t("list.loadingLiveFallback");
     container.appendChild(loading);
   }
 
@@ -3335,7 +3631,7 @@ function renderList() {
   if (displayItems.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.textContent = "Keine Ladestationen gefunden.";
+    empty.textContent = t("list.empty");
     container.appendChild(empty);
     return;
   }
@@ -3352,7 +3648,7 @@ function renderList() {
     more.style.textAlign = "center";
     more.style.padding = "1rem";
     more.style.color = "#888";
-    more.textContent = `...und ${state.filtered.length - LIST_VIEW_MAX_STATIONS} weitere`;
+    more.textContent = t("list.more", { count: state.filtered.length - LIST_VIEW_MAX_STATIONS });
     container.appendChild(more);
   }
 }
@@ -3363,14 +3659,14 @@ function renderFavorites() {
 
   if (state.favorites.size === 0) {
     container.innerHTML = `<div class="empty-state" style="text-align:center; padding:2rem; color:#888;">
-      Noch keine Favoriten gespeichert.<br>
-      Klicke auf den <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> Stern in der Detailansicht um Stationen zu merken.
+      ${escapeHtml(t("favorites.empty"))}<br>
+      ${escapeHtml(t("favorites.emptyHelp"))}
     </div>`;
     return;
   }
 
   if (state.catalog.loading && state.features.length === 0 && state.staticFeatures.length === 0) {
-    container.innerHTML = `<div class="loading-state" data-nosnippet>Lade Favoriten im aktuellen Suchumkreis...</div>`;
+    container.innerHTML = `<div class="loading-state" data-nosnippet>${escapeHtml(t("favorites.loading"))}</div>`;
     return;
   }
   if (state.catalog.error && state.staticFeatures.length === 0) {
@@ -3385,7 +3681,7 @@ function renderFavorites() {
     const loading = document.createElement("div");
     loading.className = "loading-state";
     loading.setAttribute("data-nosnippet", "");
-    loading.textContent = "Live-Suche lädt. Favoriten aus den gespeicherten Schnellladern bleiben sichtbar.";
+    loading.textContent = t("favorites.loadingFallback");
     container.appendChild(loading);
   }
 
@@ -3412,7 +3708,7 @@ function renderFavorites() {
     empty.style.textAlign = "center";
     empty.style.padding = "2rem";
     empty.style.color = "#888";
-    empty.textContent = "Deine Favoriten liegen nicht im aktuellen Suchumkreis.";
+    empty.textContent = t("favorites.outsideArea");
     container.appendChild(empty);
     return;
   }
@@ -3430,7 +3726,7 @@ function renderFavorites() {
     note.style.textAlign = "center";
     note.style.padding = "1rem";
     note.style.color = "#888";
-    note.textContent = "Einige Favoriten liegen außerhalb des aktuellen Suchumkreises.";
+    note.textContent = t("favorites.someOutsideArea");
     container.appendChild(note);
   }
 }
@@ -3440,10 +3736,17 @@ function createStationCard(feature, options = {}) {
   const stationId = getStationIdFromProps(p);
   const div = document.createElement("div");
   div.className = "station-card";
+  const stateClass = getStationCardStateClass(p);
+  if (stateClass) {
+    div.classList.add(stateClass);
+  }
   div.tabIndex = 0;
   div.setAttribute("role", "button");
   div.dataset.stationId = stationId;
-  div.setAttribute("aria-label", `Details öffnen: ${p.operator || "Ladestation"} ${p.city || ""}`.trim());
+  div.setAttribute(
+    "aria-label",
+    `${t("aria.detailsOpen")}: ${p.operator || t("station.chargingStation")} ${p.city || ""}`.trim(),
+  );
   if (stationId && state.keyboard.selectedStationId === stationId) {
     div.classList.add("keyboard-selected");
     div.setAttribute("aria-selected", "true");
@@ -3461,7 +3764,7 @@ function createStationCard(feature, options = {}) {
     .filter((k) => p[k] > 0)
     .sort((a, b) => p[b] - p[a]) // Most frequent first
     .slice(0, 3)
-    .map((k) => `<span class="badge">${AMENITY_MAPPING[k].label}</span>`)
+    .map((k) => `<span class="badge">${escapeHtml(getAmenityLabel(k))}</span>`)
     .join("");
   const liveBadge = occupancySummary
     ? `<span class="badge badge-live ${escapeHtml(getAvailabilityToneClass(availabilityStatus))}">${escapeHtml(occupancySummary)}</span>`
@@ -3483,7 +3786,7 @@ function createStationCard(feature, options = {}) {
     : "";
   const note = options.showNote ? getNoteForProps(p) : "";
   const noteMarkup = note
-    ? `<div class="card-note"><span class="card-note-label">Anmerkung</span><p>${escapeHtml(note)}</p></div>`
+    ? `<div class="card-note"><span class="card-note-label">${escapeHtml(t("station.note"))}</span><p>${escapeHtml(note)}</p></div>`
     : "";
 
   const markerColor = getMarkerColor(p);
@@ -3492,7 +3795,7 @@ function createStationCard(feature, options = {}) {
     <div class="card-header">
       <div class="card-title-row">
         <span class="amenity-dot" style="background-color: ${markerColor}"></span>
-        <h3 class="card-title">${escapeHtml(p.operator || "Unbekannt")}</h3>
+        <h3 class="card-title">${escapeHtml(p.operator || t("station.unknownOperator"))}</h3>
       </div>
       ${metricsMarkup}
     </div>
@@ -4001,7 +4304,9 @@ function getChargingPointCount(props) {
 
 function formatChargingPointCount(props) {
   const count = getChargingPointCount(props);
-  return `${count} ${count === 1 ? "Ladepunkt" : "Ladepunkte"}`;
+  return t(count === 1 ? "station.chargingPointOne" : "station.chargingPointMany", {
+    count,
+  });
 }
 
 /* --- DETAIL MODAL --- */
@@ -4012,16 +4317,16 @@ function renderDetailLiveState(feature, liveDetail = null) {
   const liveEvses = Array.isArray(liveDetail?.evses) ? liveDetail.evses : [];
   const evses = liveEvses.length > 0 ? liveEvses : buildAggregateLiveEvses(props);
   const hasLiveData = hasLiveStationSummary(props) || hasAggregateOccupancySummary(props) || evses.length > 0;
-  if (!hasLiveData) {
+    if (!hasLiveData) {
     els.detail.liveSection.hidden = true;
-    els.detail.liveTitle.textContent = "Live";
+    els.detail.liveTitle.textContent = t("station.live");
     els.detail.liveUpdated.hidden = true;
     els.detail.liveUpdated.textContent = "";
     els.detail.liveList.innerHTML = "";
     return;
   }
 
-  els.detail.liveTitle.textContent = "Live";
+  els.detail.liveTitle.textContent = t("station.live");
   els.detail.liveUpdated.textContent = "";
   els.detail.liveUpdated.hidden = true;
   els.detail.liveList.innerHTML = "";
@@ -4032,11 +4337,11 @@ function renderDetailLiveState(feature, liveDetail = null) {
     const priceDisplay = getDisplayPrice(props, liveDetail);
     summaryRow.innerHTML = `
       <div class="live-evse-row-head">
-        <strong class="live-evse-title">Stationsstatus</strong>
+        <strong class="live-evse-title">${escapeHtml(t("station.stationStatus"))}</strong>
         <span class="live-status-pill ${escapeHtml(getAvailabilityToneClass(getAvailabilityStatus(props)))}">${escapeHtml(formatAvailabilityLabel(getAvailabilityStatus(props)))}</span>
       </div>
       <div class="live-evse-row-meta">
-        <span>${escapeHtml(formatOccupancySummary(props) || "Live-Daten verfügbar")}</span>
+        <span>${escapeHtml(formatOccupancySummary(props) || t("station.liveDataAvailable"))}</span>
         ${priceDisplay ? `<span class="live-evse-price">${escapeHtml(priceDisplay)}</span>` : ""}
       </div>
     `;
@@ -4048,22 +4353,24 @@ function renderDetailLiveState(feature, liveDetail = null) {
   evses.forEach((evse, index) => {
     const row = document.createElement("div");
     const status = normalizeAvailabilityStatus(evse.availability_status);
-    const observedText = formatDetailTimestamp(
-      evse.source_observed_at || evse.fetched_at || evse.ingested_at,
-    );
     const metaParts = [];
     const evseCode = formatEvseCode(evse.provider_evse_id);
     if (evseCode) {
       metaParts.push(evseCode);
-    }
-    if (observedText) {
-      metaParts.push(`Stand ${observedText}`);
     }
     const statusNote = String(evse.status_note || "").trim();
     if (statusNote) {
       metaParts.push(statusNote);
     }
     const priceDisplay = String(evse.price_display || "").trim();
+    const metaMarkup = metaParts.length || priceDisplay
+      ? `
+      <div class="live-evse-row-meta">
+        ${metaParts.length ? `<span>${escapeHtml(metaParts.join(" • "))}</span>` : ""}
+        ${priceDisplay ? `<span class="live-evse-price">${escapeHtml(priceDisplay)}</span>` : ""}
+      </div>
+    `
+      : "";
     const dynamicNotes = buildLiveDynamicNotes(evse);
     const notesMarkup = dynamicNotes.length
       ? `
@@ -4080,13 +4387,10 @@ function renderDetailLiveState(feature, liveDetail = null) {
     row.className = "live-evse-row";
     row.innerHTML = `
       <div class="live-evse-row-head">
-        <strong class="live-evse-title">Ladepunkt ${index + 1}</strong>
+        <strong class="live-evse-title">${escapeHtml(t("station.evse", { index: index + 1 }))}</strong>
         <span class="live-status-pill ${escapeHtml(getAvailabilityToneClass(status))}">${escapeHtml(formatAvailabilityLabel(status))}</span>
       </div>
-      <div class="live-evse-row-meta">
-        <span>${escapeHtml(metaParts.join(" • ") || "Live-Daten verfügbar")}</span>
-        ${priceDisplay ? `<span class="live-evse-price">${escapeHtml(priceDisplay)}</span>` : ""}
-      </div>
+      ${metaMarkup}
       ${notesMarkup}
     `;
     els.detail.liveList.appendChild(row);
@@ -4096,22 +4400,14 @@ function renderDetailLiveState(feature, liveDetail = null) {
 }
 
 function formatHistoryDate(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  const parsed = new Date(`${raw}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return raw;
-  return new Intl.DateTimeFormat("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(parsed);
+  return formatDate(value);
 }
 
 function formatOccupancyHistoryRange(history) {
   const start = formatHistoryDate(history?.start_date);
   const end = formatHistoryDate(history?.end_date);
   const days = Number(history?.included_days || 0);
-  const dayLabel = days > 0 ? `${days} Tage` : "";
+  const dayLabel = days > 0 ? t("common.days", { count: days }) : "";
   if (start && end && start !== end) {
     return dayLabel ? `${start} - ${end} · ${dayLabel}` : `${start} - ${end}`;
   }
@@ -4194,9 +4490,9 @@ function renderOccupancyHistoryChart(history, feature) {
   const bars = normalized.hourly.map((item) => {
     const percent = Math.max(0, Math.min(100, (item.value / scale) * 100));
     const visiblePercent = item.value > 0 ? Math.max(percent, 3) : 0;
-    const hourLabel = `${String(item.hour).padStart(2, "0")} Uhr`;
+    const hourLabel = `${String(item.hour).padStart(2, "0")}:00`;
     return `
-      <div class="occupancy-history-hour" title="${escapeHtml(hourLabel)}: ${item.value.toFixed(1)} belegt">
+      <div class="occupancy-history-hour" title="${escapeHtml(hourLabel)}: ${item.value.toFixed(1)} ${escapeHtml(t("availability.occupied").toLowerCase())}">
         <div class="occupancy-history-track" aria-hidden="true">
           <div class="occupancy-history-bar" style="height: ${visiblePercent.toFixed(1)}%"></div>
         </div>
@@ -4207,7 +4503,7 @@ function renderOccupancyHistoryChart(history, feature) {
 
   els.detail.occupancyHistoryRange.textContent = formatOccupancyHistoryRange(normalized);
   els.detail.occupancyHistoryChart.innerHTML = `
-    <div class="occupancy-history-bars" role="img" aria-label="Typische Auslastung nach Uhrzeit">
+    <div class="occupancy-history-bars" role="img" aria-label="${escapeHtml(t("station.typicalOccupancy"))}">
       ${bars}
     </div>
   `;
@@ -4287,7 +4583,7 @@ function updateDetailRating(props) {
   const rating = getRatingForProps(props);
   const summary = getRatingSummaryForProps(props);
   const displayRating = getRatingDisplayForProps(props);
-  const ratingValue = formatRatingValue(displayRating?.value);
+  const ratingValue = formatRatingDisplayValue(displayRating?.value);
 
   if (ratingValue) {
     els.detail.ratingBadge.innerHTML = `<span aria-hidden="true">★</span>${escapeHtml(ratingValue)}`;
@@ -4298,26 +4594,29 @@ function updateDetailRating(props) {
   }
 
   const summaryText = summary
-    ? `Ø ${formatRatingValue(summary.average_rating)} aus ${formatRatingCount(summary.rating_count)}`
+    ? t("rating.summary", {
+        value: formatRatingDisplayValue(summary.average_rating),
+        count: formatRatingCountLabel(summary.rating_count),
+      })
     : "";
-  const userText = rating > 0 ? `Deine Bewertung: ${rating} von 5` : "";
+  const userText = rating > 0 ? t("rating.yourRating", { rating }) : "";
   const isSubmitting = stationId && state.pendingRatingSubmissions.has(stationId);
   const submissionError = stationId ? state.ratingSubmissionErrors.get(stationId) : "";
 
   if (isSubmitting) {
-    els.detail.ratingStatus.textContent = "Speichere Bewertung...";
+    els.detail.ratingStatus.textContent = t("rating.save");
   } else if (submissionError) {
-    els.detail.ratingStatus.textContent = "Bewertung lokal gespeichert. Server gerade nicht erreichbar.";
+    els.detail.ratingStatus.textContent = t("rating.serverError");
   } else if (userText && summaryText) {
     els.detail.ratingStatus.textContent = `${userText} · ${summaryText}`;
   } else if (userText) {
     els.detail.ratingStatus.textContent = SHARED_RATINGS_ENABLED && state.live.baseUrl
       ? userText
-      : `${userText} · nur auf diesem Gerät`;
+      : `${userText} · ${t("rating.localOnly")}`;
   } else if (summaryText) {
     els.detail.ratingStatus.textContent = summaryText;
   } else {
-    els.detail.ratingStatus.textContent = "Noch nicht bewertet";
+    els.detail.ratingStatus.textContent = t("rating.unrated");
   }
 
   els.detail.ratingStars.querySelectorAll(".rating-star-btn").forEach((button) => {
@@ -4335,21 +4634,24 @@ function updateDetailNote(props) {
   els.detail.noteInput.value = note;
   els.detail.noteInput.disabled = !stationId;
   els.detail.noteStatus.textContent = note
-    ? "Anmerkung lokal gespeichert"
-    : "Nur auf diesem Gerät gespeichert";
+    ? t("detail.noteSaved")
+    : t("detail.noteDeviceOnly");
 }
 
 function populateDetailContent(feature, liveDetail = null) {
   const p = feature.properties;
-  const powerDisplay = `${Math.round(getDisplayedMaxPowerKw(p))} kW max / ${formatChargingPointCount(p)}`;
+  const powerDisplay = t("station.maxPower", {
+    power: Math.round(getDisplayedMaxPowerKw(p)),
+    points: formatChargingPointCount(p),
+  });
 
-  els.detail.title.textContent = p.operator || "Unbekannt";
+  els.detail.title.textContent = p.operator || t("station.unknownOperator");
   els.detail.address.textContent = `${p.address || ""}, ${p.postcode || ""} ${p.city || ""}`;
   els.detail.power.textContent = powerDisplay;
   els.detail.powerChip.hidden = !powerDisplay;
 
   const occupancySummary = formatOccupancySummary(p);
-  const occupancySource = formatOccupancySource(p);
+  const occupancySource = formatOccupancySource(p, liveDetail);
   const availabilityStatus = getAvailabilityStatus(p);
   if (occupancySummary) {
     els.detail.occupancy.textContent = occupancySummary;
@@ -4361,7 +4663,7 @@ function populateDetailContent(feature, liveDetail = null) {
   }
 
   const priceDisplay = getDisplayPrice(p, liveDetail);
-  const openingHoursDisplay = formatOpeningHoursForGermanDisplay(p.opening_hours_display);
+  const openingHoursDisplay = formatOpeningHoursForDisplay(p.opening_hours_display, getLocale());
   const showPower = Boolean(powerDisplay);
   const showOccupancy = Boolean(occupancySummary);
   const showPrice = Boolean(priceDisplay);
@@ -4412,7 +4714,7 @@ function openDetail(feature, options = {}) {
     els.detail.helpdeskPhoneBtn.hidden = !phoneHref;
     if (phoneHref) {
       els.detail.helpdeskPhoneBtn.href = phoneHref;
-      els.detail.helpdeskPhoneBtn.title = `Hilfe ${p.helpdesk_phone}`;
+    els.detail.helpdeskPhoneBtn.title = t("detail.helpTitle", { phone: p.helpdesk_phone });
     } else {
       els.detail.helpdeskPhoneBtn.removeAttribute("href");
       els.detail.helpdeskPhoneBtn.removeAttribute("title");
@@ -4495,7 +4797,7 @@ function renderDetailAmenityMarkers(examples) {
     }
 
     const amenityKey = `amenity_${item.category || ""}`;
-    const amenityLabel = AMENITY_MAPPING[amenityKey]?.label || item.category || "Angebot vor Ort";
+  const amenityLabel = AMENITY_MAPPING[amenityKey] ? getAmenityLabel(amenityKey) : (item.category || t("amenity.generic"));
     const amenityName = item.name ? `${item.name}` : amenityLabel;
     const iconPath = getAmenityIconPath(amenityKey);
     const markerIcon = iconPath
@@ -4527,42 +4829,46 @@ function renderDetailAmenities(props) {
   const examples = props.amenity_examples || [];
 
   if (examples.length === 0) {
-    els.detail.amenityList.innerHTML = `<div style="color:#888">Keine Details verfügbar.</div>`;
+    els.detail.amenityList.innerHTML = `<div style="color:#888">${escapeHtml(t("amenity.noDetails"))}</div>`;
     return;
   }
 
   const now = new Date();
-  const groupedExamples = new Map(AMENITY_GROUPS.map((group) => [group.label, []]));
+  const groupedExamples = new Map(AMENITY_GROUPS.map((group) => [t(group.labelKey), []]));
   examples.slice(0, 15).forEach((item) => {
     const groupLabel = getAmenityGroupLabel(item?.category);
     groupedExamples.get(groupLabel).push(item);
   });
   AMENITY_GROUPS.forEach((group) => {
-    const groupItems = groupedExamples.get(group.label).sort(compareAmenityExamples);
+    const groupLabel = t(group.labelKey);
+    const groupItems = groupedExamples.get(groupLabel).sort(compareAmenityExamples);
     if (groupItems.length === 0) return;
     const groupElement = document.createElement("div");
     groupElement.className = "amenity-group";
     const title = document.createElement("h4");
     title.className = "amenity-group-title";
-    title.textContent = group.label;
+    title.textContent = groupLabel;
     groupElement.appendChild(title);
     const itemsElement = document.createElement("div");
     itemsElement.className = "amenity-group-items";
     groupItems.forEach((item) => {
       const catConfig = AMENITY_MAPPING[`amenity_${item.category}`] || {
-        label: item.category || "Angebot vor Ort",
+        label: item.category || t("amenity.generic"),
       };
       const iconPath = getAmenityIconPath(`amenity_${item.category}`);
-      const name = item.name || catConfig.label;
+      const categoryLabel = AMENITY_MAPPING[`amenity_${item.category}`]
+        ? getAmenityLabel(`amenity_${item.category}`)
+        : catConfig.label;
+      const name = item.name || categoryLabel;
       const openStatus = formatAmenityOpenStatus(item, now);
       const distance = formatAmenityDistance(item);
       const button = document.createElement("button");
       button.type = "button";
       button.className = "amenity-item";
-      button.addEventListener("click", () => openAmenityDetailSheet(item, catConfig.label, now));
+      button.addEventListener("click", () => openAmenityDetailSheet(item, categoryLabel, now));
       button.innerHTML = `
       ${iconPath
-        ? `<img src="${iconPath}" alt="${escapeHtml(catConfig.label)}" loading="lazy">`
+        ? `<img src="${iconPath}" alt="${escapeHtml(categoryLabel)}" loading="lazy">`
         : `<span class="amenity-item-icon-fallback" aria-hidden="true"></span>`}
       <div class="amenity-detail">
         <span class="amenity-detail-name">${escapeHtml(name)}</span>
@@ -4638,14 +4944,14 @@ function updateFavBtnState() {
   if (isFav) {
     els.detail.favBtn.classList.add("active");
     els.detail.favBtn.setAttribute("aria-pressed", "true");
-    els.detail.favBtn.setAttribute("aria-label", "Favorit entfernen");
+    els.detail.favBtn.setAttribute("aria-label", t("aria.removeFavorite"));
     els.detail.favBtn
       .querySelector("polygon")
       .setAttribute("fill", "currentColor");
   } else {
     els.detail.favBtn.classList.remove("active");
     els.detail.favBtn.setAttribute("aria-pressed", "false");
-    els.detail.favBtn.setAttribute("aria-label", "Favorit speichern");
+    els.detail.favBtn.setAttribute("aria-label", t("aria.saveFavorite"));
     els.detail.favBtn.querySelector("polygon").setAttribute("fill", "none");
   }
 }
@@ -4716,10 +5022,10 @@ function handleDetailNoteInput(event) {
   const note = normalizeNote(event.target.value);
   if (note) {
     state.notes.set(stationId, note);
-    els.detail.noteStatus.textContent = "Anmerkung lokal gespeichert";
+    els.detail.noteStatus.textContent = t("detail.noteSaved");
   } else {
     state.notes.delete(stationId);
-    els.detail.noteStatus.textContent = "Nur auf diesem Gerät gespeichert";
+    els.detail.noteStatus.textContent = t("detail.noteDeviceOnly");
   }
   saveNotes();
 
@@ -4788,6 +5094,10 @@ function normalizeStationId(value) {
   const namespacedMatch = stationId.match(NAMESPACED_STATION_ID_RE);
   if (namespacedMatch) {
     return `${STATION_ID_NAMESPACE}${namespacedMatch[1].toLowerCase()}`;
+  }
+  const countryMatch = stationId.match(COUNTRY_STATION_ID_RE);
+  if (countryMatch) {
+    return `${countryMatch[1].toUpperCase()}:${countryMatch[2]}`;
   }
   return stationId;
 }
@@ -5279,4 +5589,9 @@ function closeModal(name, options = {}) {
 }
 
 /* --- BOOTSTRAP --- */
-init();
+initI18n()
+  .then(init)
+  .catch((error) => {
+    console.error("Failed to initialize language bundle", error);
+    void init();
+  });
