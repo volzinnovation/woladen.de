@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -72,16 +73,113 @@ def test_copy_station_occupancy_tree_uses_data_source(tmp_path: Path, monkeypatc
 def test_write_sitemap_splits_large_station_url_sets(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(build_site, "SITE_DIR", tmp_path)
     monkeypatch.setattr(build_site, "SITEMAP_MAX_URLS", 2)
-    build_site.write_sitemap([
-        "station/AT/one.html",
-        "station/BE/two.html",
-        "station/CH/three.html",
-    ])
+    build_site.write_sitemap(
+        [
+            "station/AT/one.html",
+            "station/BE/two.html",
+            "station/CH/three.html",
+        ],
+        {"sitemap-seo-home.xml": ["en/index.html", "de/index.html"]},
+    )
 
     sitemap_index = (tmp_path / "sitemap.xml").read_text(encoding="utf-8")
     assert "<sitemapindex" in sitemap_index
     assert "https://woladen.de/sitemap-pages.xml" in sitemap_index
+    assert "https://woladen.de/sitemap-seo-home.xml" in sitemap_index
     assert "https://woladen.de/sitemap-stations-1.xml" in sitemap_index
     assert "https://woladen.de/sitemap-stations-2.xml" in sitemap_index
+    assert "https://woladen.de/en/" in (tmp_path / "sitemap-seo-home.xml").read_text(encoding="utf-8")
     assert (tmp_path / "sitemap-stations-1.xml").read_text(encoding="utf-8").count("<url>") == 2
     assert (tmp_path / "sitemap-stations-2.xml").read_text(encoding="utf-8").count("<url>") == 1
+
+
+def _seo_bundle(language: str) -> dict[str, str]:
+    values = {key: f"{language}-{key}" for key in build_site.SEO_REQUIRED_KEYS}
+    values.update(
+        {
+            "brandName": "woladen",
+            "primaryTagline": "Plugs for Cars. Perks for People.",
+            "humanHook": "The human side of charging.",
+            "timeLine": "Because charging time is your time.",
+            "coveragePath": "abdeckung" if language == "de" else "coverage",
+            "countryTitle": "{country} title",
+            "countryH1": "{country} h1",
+            "countryDescription": "{country} description",
+            "countryIntro": "{country} intro",
+            "dataFreshness": "Generated {date}",
+        }
+    )
+    return values
+
+
+def _seo_bundles() -> dict[str, dict[str, str]]:
+    return {language: _seo_bundle(language) for language in build_site.SEO_LANGUAGES}
+
+
+def test_build_seo_pages_generates_language_paths_and_served_countries_only():
+    countries = [
+        build_site.SeoCountry("DE", station_count=10, charger_count=20, fast_station_count=5, source_name="Deutschland"),
+        build_site.SeoCountry("FR", station_count=12, charger_count=24, fast_station_count=6, source_name="Frankreich"),
+    ]
+
+    pages = build_site.build_seo_pages(countries, "2026-06-20T00:00:00Z", _seo_bundles())
+    paths = {page.path for page in pages}
+
+    assert "en/index.html" in paths
+    assert "de/abdeckung/index.html" in paths
+    assert "en/germany/index.html" in paths
+    assert "de/deutschland/index.html" in paths
+    assert "en/france/index.html" in paths
+    assert "en/italy/index.html" not in paths
+    assert len([page for page in pages if page.sitemap_group == "sitemap-seo-countries.xml"]) == 8
+
+
+def test_render_seo_shell_uses_self_canonical_hreflang_and_root_relative_assets():
+    bundles = _seo_bundles()
+    page = build_site.SeoPage(
+        identity="country:DE",
+        language="de",
+        path="de/deutschland/index.html",
+        title="Ladestopps in Deutschland | woladen",
+        description="Deutschland description",
+        h1="Ladestopps in Deutschland",
+        alternate_paths={
+            "en": "en/germany/index.html",
+            "de": "de/deutschland/index.html",
+            "fr": "fr/allemagne/index.html",
+            "nl": "nl/duitsland/index.html",
+        },
+        body_html="<p>Body</p>",
+        sitemap_group="sitemap-seo-countries.xml",
+    )
+
+    html = build_site.render_seo_shell(page, bundles)
+
+    assert '<html lang="de">' in html
+    assert '<link rel="canonical" href="https://woladen.de/de/deutschland/" />' in html
+    assert 'hreflang="x-default" href="https://woladen.de/en/germany/"' in html
+    assert 'hreflang="fr" href="https://woladen.de/fr/allemagne/"' in html
+    assert 'href="/styles.css' in html
+    assert "./styles.css" not in html
+
+
+def test_load_seo_bundles_fails_when_required_translation_is_missing(tmp_path: Path, monkeypatch):
+    i18n_dir = tmp_path / "web" / "i18n"
+    i18n_dir.mkdir(parents=True)
+    complete = {"seo": _seo_bundle("en")}
+    for language in build_site.SEO_LANGUAGES:
+        payload = complete
+        if language == "fr":
+            incomplete = {"seo": _seo_bundle("fr")}
+            del incomplete["seo"]["homeTitle"]
+            payload = incomplete
+        (i18n_dir / f"{language}.json").write_text(json.dumps(payload), encoding="utf-8")
+
+    monkeypatch.setattr(build_site, "WEB_DIR", tmp_path / "web")
+
+    try:
+        build_site.load_seo_bundles()
+    except ValueError as exc:
+        assert "fr: missing seo.homeTitle" in str(exc)
+    else:
+        raise AssertionError("expected missing SEO translation to fail")

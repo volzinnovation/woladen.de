@@ -13,6 +13,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import parse_qsl, quote, urlsplit, urlunsplit
 
@@ -56,6 +57,177 @@ ROOT_URLS = [
     "imprint.html",
 ]
 
+SEO_LANGUAGES = ("en", "de", "fr", "nl")
+SEO_REQUIRED_KEYS = (
+    "brandName",
+    "seoName",
+    "primaryTagline",
+    "humanHook",
+    "timeLine",
+    "productMessage",
+    "homeTitle",
+    "homeDescription",
+    "homeIntro",
+    "homeCountryListTitle",
+    "coveragePath",
+    "coverageTitle",
+    "coverageH1",
+    "coverageDescription",
+    "coverageIntro",
+    "coverageLinkLabel",
+    "countryTitle",
+    "countryH1",
+    "countryDescription",
+    "countryIntro",
+    "countriesLabel",
+    "stationsLabel",
+    "chargingPointsLabel",
+    "fastStationsLabel",
+    "dataFreshness",
+    "openApp",
+    "exploreCoverage",
+    "topStopsTitle",
+    "topStopsIntro",
+    "majorOperatorsTitle",
+    "backToCoverage",
+    "stationChargingPoints",
+    "stationNearbyPlaces",
+)
+COUNTRY_SEO = {
+    "AT": {
+        "en": ("Austria", "austria"),
+        "de": ("Österreich", "oesterreich"),
+        "fr": ("Autriche", "autriche"),
+        "nl": ("Oostenrijk", "oostenrijk"),
+    },
+    "BE": {
+        "en": ("Belgium", "belgium"),
+        "de": ("Belgien", "belgien"),
+        "fr": ("Belgique", "belgique"),
+        "nl": ("België", "belgie"),
+    },
+    "CH": {
+        "en": ("Switzerland", "switzerland"),
+        "de": ("Schweiz", "schweiz"),
+        "fr": ("Suisse", "suisse"),
+        "nl": ("Zwitserland", "zwitserland"),
+    },
+    "CY": {
+        "en": ("Cyprus", "cyprus"),
+        "de": ("Zypern", "zypern"),
+        "fr": ("Chypre", "chypre"),
+        "nl": ("Cyprus", "cyprus"),
+    },
+    "CZ": {
+        "en": ("Czechia", "czechia"),
+        "de": ("Tschechien", "tschechien"),
+        "fr": ("Tchéquie", "tchequie"),
+        "nl": ("Tsjechië", "tsjechie"),
+    },
+    "DE": {
+        "en": ("Germany", "germany"),
+        "de": ("Deutschland", "deutschland"),
+        "fr": ("Allemagne", "allemagne"),
+        "nl": ("Duitsland", "duitsland"),
+    },
+    "DK": {
+        "en": ("Denmark", "denmark"),
+        "de": ("Dänemark", "daenemark"),
+        "fr": ("Danemark", "danemark"),
+        "nl": ("Denemarken", "denemarken"),
+    },
+    "ES": {
+        "en": ("Spain", "spain"),
+        "de": ("Spanien", "spanien"),
+        "fr": ("Espagne", "espagne"),
+        "nl": ("Spanje", "spanje"),
+    },
+    "FI": {
+        "en": ("Finland", "finland"),
+        "de": ("Finnland", "finnland"),
+        "fr": ("Finlande", "finlande"),
+        "nl": ("Finland", "finland"),
+    },
+    "FR": {
+        "en": ("France", "france"),
+        "de": ("Frankreich", "frankreich"),
+        "fr": ("France", "france"),
+        "nl": ("Frankrijk", "frankrijk"),
+    },
+    "GR": {
+        "en": ("Greece", "greece"),
+        "de": ("Griechenland", "griechenland"),
+        "fr": ("Grèce", "grece"),
+        "nl": ("Griekenland", "griekenland"),
+    },
+    "HU": {
+        "en": ("Hungary", "hungary"),
+        "de": ("Ungarn", "ungarn"),
+        "fr": ("Hongrie", "hongrie"),
+        "nl": ("Hongarije", "hongarije"),
+    },
+    "LT": {
+        "en": ("Lithuania", "lithuania"),
+        "de": ("Litauen", "litauen"),
+        "fr": ("Lituanie", "lituanie"),
+        "nl": ("Litouwen", "litouwen"),
+    },
+    "LU": {
+        "en": ("Luxembourg", "luxembourg"),
+        "de": ("Luxemburg", "luxemburg"),
+        "fr": ("Luxembourg", "luxembourg"),
+        "nl": ("Luxemburg", "luxemburg"),
+    },
+    "LV": {
+        "en": ("Latvia", "latvia"),
+        "de": ("Lettland", "lettland"),
+        "fr": ("Lettonie", "lettonie"),
+        "nl": ("Letland", "letland"),
+    },
+    "MT": {
+        "en": ("Malta", "malta"),
+        "de": ("Malta", "malta"),
+        "fr": ("Malte", "malte"),
+        "nl": ("Malta", "malta"),
+    },
+    "NL": {
+        "en": ("Netherlands", "netherlands"),
+        "de": ("Niederlande", "niederlande"),
+        "fr": ("Pays-Bas", "pays-bas"),
+        "nl": ("Nederland", "nederland"),
+    },
+    "NO": {
+        "en": ("Norway", "norway"),
+        "de": ("Norwegen", "norwegen"),
+        "fr": ("Norvège", "norvege"),
+        "nl": ("Noorwegen", "noorwegen"),
+    },
+    "PL": {
+        "en": ("Poland", "poland"),
+        "de": ("Polen", "polen"),
+        "fr": ("Pologne", "pologne"),
+        "nl": ("Polen", "polen"),
+    },
+    "PT": {
+        "en": ("Portugal", "portugal"),
+        "de": ("Portugal", "portugal"),
+        "fr": ("Portugal", "portugal"),
+        "nl": ("Portugal", "portugal"),
+    },
+    "SE": {
+        "en": ("Sweden", "sweden"),
+        "de": ("Schweden", "schweden"),
+        "fr": ("Suède", "suede"),
+        "nl": ("Zweden", "zweden"),
+    },
+    "SI": {
+        "en": ("Slovenia", "slovenia"),
+        "de": ("Slowenien", "slowenien"),
+        "fr": ("Slovénie", "slovenie"),
+        "nl": ("Slovenië", "slovenie"),
+    },
+}
+
 AMENITY_LABELS = {
     "bakery": "Bakery",
     "cafe": "Cafe",
@@ -84,6 +256,39 @@ AMENITY_GROUP_BY_CATEGORY = {
     for label, categories in AMENITY_GROUPS
     for category in categories
 }
+
+
+@dataclass(frozen=True)
+class SeoCountry:
+    code: str
+    station_count: int
+    charger_count: int
+    fast_station_count: int
+    source_name: str
+
+
+@dataclass(frozen=True)
+class SeoStationSummary:
+    country_code: str
+    station_id: str
+    operator: str
+    city: str
+    max_power_kw: float
+    charger_count: int
+    amenities_total: int
+
+
+@dataclass(frozen=True)
+class SeoPage:
+    identity: str
+    language: str
+    path: str
+    title: str
+    description: str
+    h1: str
+    alternate_paths: dict[str, str]
+    body_html: str
+    sitemap_group: str
 
 
 def format_text(value: object) -> str:
@@ -495,6 +700,476 @@ def absolute_url(path: str) -> str:
     return f"{SITE_ORIGIN}/{clean}"
 
 
+def load_json(path: Path) -> dict[str, object]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+    return payload
+
+
+def load_seo_bundles() -> dict[str, dict[str, str]]:
+    bundles: dict[str, dict[str, str]] = {}
+    missing: list[str] = []
+    for language in SEO_LANGUAGES:
+        path = WEB_DIR / "i18n" / f"{language}.json"
+        if not path.exists():
+            missing.append(f"{language}: missing {path.relative_to(ROOT)}")
+            continue
+        bundle = load_json(path)
+        seo = bundle.get("seo")
+        if not isinstance(seo, dict):
+            missing.append(f"{language}: missing seo namespace")
+            continue
+        values: dict[str, str] = {}
+        for key in SEO_REQUIRED_KEYS:
+            value = str(seo.get(key) or "").strip()
+            if not value:
+                missing.append(f"{language}: missing seo.{key}")
+            values[key] = value
+        bundles[language] = values
+    if missing:
+        raise ValueError("Incomplete SEO translations:\n" + "\n".join(f"- {item}" for item in missing))
+    return bundles
+
+
+def interpolate(template: str, values: dict[str, object]) -> str:
+    result = template
+    for key, value in values.items():
+        result = result.replace("{" + key + "}", str(value))
+    return result
+
+
+def country_display_name(country_code: str, language: str) -> str:
+    try:
+        return COUNTRY_SEO[country_code][language][0]
+    except KeyError as exc:
+        raise ValueError(f"Missing SEO country name for {country_code}/{language}") from exc
+
+
+def country_slug(country_code: str, language: str) -> str:
+    try:
+        return COUNTRY_SEO[country_code][language][1]
+    except KeyError as exc:
+        raise ValueError(f"Missing SEO country slug for {country_code}/{language}") from exc
+
+
+def seo_home_path(language: str) -> str:
+    return f"{language}/index.html"
+
+
+def seo_coverage_path(language: str, bundles: dict[str, dict[str, str]]) -> str:
+    return f"{language}/{bundles[language]['coveragePath'].strip('/')}/index.html"
+
+
+def seo_country_path(country_code: str, language: str) -> str:
+    return f"{language}/{country_slug(country_code, language)}/index.html"
+
+
+def public_path(path: str) -> str:
+    if path.endswith("index.html"):
+        return path.removesuffix("index.html")
+    return path
+
+
+def page_url(path: str) -> str:
+    return absolute_url(public_path(path))
+
+
+def load_seo_countries(summary_path: Path | None = None) -> tuple[list[SeoCountry], str]:
+    summary_path = summary_path or DATA_DIR / "open_static_summary.json"
+    payload = load_json(summary_path)
+    generated_at = str(payload.get("generated_at") or "").strip()
+    rows = payload.get("countries")
+    if not isinstance(rows, list):
+        raise ValueError(f"{summary_path} does not contain a countries array")
+
+    countries: list[SeoCountry] = []
+    missing_codes: list[str] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        code = str(row.get("code") or "").strip().upper()
+        if not code:
+            continue
+        if code not in COUNTRY_SEO:
+            missing_codes.append(code)
+            continue
+        countries.append(
+            SeoCountry(
+                code=code,
+                station_count=to_int(row.get("station_count")),
+                charger_count=to_int(row.get("charger_count")),
+                fast_station_count=to_int(row.get("fast_station_count")),
+                source_name=str(row.get("name") or "").strip(),
+            )
+        )
+    if missing_codes:
+        raise ValueError("Missing SEO country metadata for: " + ", ".join(sorted(set(missing_codes))))
+    countries.sort(key=lambda country: country.code)
+    return countries, generated_at
+
+
+def format_count(value: int, language: str) -> str:
+    separator = "." if language in {"de", "nl"} else "\u202f" if language == "fr" else ","
+    return f"{value:,}".replace(",", separator)
+
+
+def render_hreflang_links(alternate_paths: dict[str, str]) -> str:
+    lines = [
+        f'<link rel="alternate" hreflang="{html.escape(language)}" href="{html.escape(page_url(path))}" />'
+        for language, path in sorted(alternate_paths.items())
+    ]
+    if "en" in alternate_paths:
+        lines.insert(0, f'<link rel="alternate" hreflang="x-default" href="{html.escape(page_url(alternate_paths["en"]))}" />')
+    return "\n    ".join(lines)
+
+
+def render_json_ld(payload: dict[str, object]) -> str:
+    return html.escape(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), quote=False)
+
+
+def render_seo_shell(page: SeoPage, bundles: dict[str, dict[str, str]], structured_data: list[dict[str, object]] | None = None) -> str:
+    bundle = bundles[page.language]
+    canonical_url = page_url(page.path)
+    alternate_links = render_hreflang_links(page.alternate_paths)
+    structured_blocks = "\n    ".join(
+        f'<script type="application/ld+json">{render_json_ld(payload)}</script>'
+        for payload in structured_data or []
+    )
+    return f"""<!doctype html>
+<html lang="{html.escape(page.language)}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{format_text(page.title)}</title>
+    <meta name="description" content="{format_text(page.description)}" />
+    <link rel="canonical" href="{html.escape(canonical_url)}" />
+    {alternate_links}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="{format_text(page.title)}" />
+    <meta property="og:description" content="{format_text(page.description)}" />
+    <meta property="og:url" content="{html.escape(canonical_url)}" />
+    <meta property="og:site_name" content="woladen" />
+    <meta property="og:image" content="{html.escape(absolute_url(SOCIAL_IMAGE_PATH))}" />
+    <meta property="og:image:width" content="{SOCIAL_IMAGE_WIDTH}" />
+    <meta property="og:image:height" content="{SOCIAL_IMAGE_HEIGHT}" />
+    <meta property="og:image:alt" content="{format_text(bundle['seoName'])}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{format_text(page.title)}" />
+    <meta name="twitter:description" content="{format_text(page.description)}" />
+    <meta name="twitter:image" content="{html.escape(absolute_url(SOCIAL_IMAGE_PATH))}" />
+    <link rel="icon" href="/favicon.ico?v=20260411" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260411" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260411" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/touch-icon.png?v=20260411" />
+    <link rel="stylesheet" href="/styles.css?v=20260620-eu-filter-constraints1" />
+    {structured_blocks}
+  </head>
+  <body class="seo-page legal-page">
+    <main class="legal-shell seo-shell">
+      <a href="/?lang={html.escape(page.language)}" class="legal-back">{format_text(bundle['openApp'])}</a>
+      <section class="legal-card seo-hero">
+        <p class="legal-kicker">{format_text(bundle['primaryTagline'])}</p>
+        <h1>{format_text(page.h1)}</h1>
+        <p class="legal-intro">{format_text(bundle['humanHook'])} {format_text(bundle['timeLine'])}</p>
+        {page.body_html}
+      </section>
+    </main>
+  </body>
+</html>
+"""
+
+
+def country_stat_items(country: SeoCountry, language: str, bundle: dict[str, str]) -> str:
+    stats = (
+        (bundle["stationsLabel"], country.station_count),
+        (bundle["chargingPointsLabel"], country.charger_count),
+        (bundle["fastStationsLabel"], country.fast_station_count),
+    )
+    return "".join(
+        '<li>'
+        f'<strong>{html.escape(format_count(value, language))}</strong>'
+        f'{format_text(label)}'
+        '</li>'
+        for label, value in stats
+    )
+
+
+def country_links(countries: list[SeoCountry], language: str) -> str:
+    items = []
+    for country in countries:
+        path = "/" + public_path(seo_country_path(country.code, language))
+        items.append(
+            "<li>"
+            f'<a href="{html.escape(path)}">{format_text(country_display_name(country.code, language))}</a>'
+            "</li>"
+        )
+    return "".join(items)
+
+
+def coverage_country_rows(countries: list[SeoCountry], language: str, bundle: dict[str, str]) -> str:
+    rows: list[str] = []
+    for country in countries:
+        path = "/" + public_path(seo_country_path(country.code, language))
+        rows.append(
+            "<tr>"
+            f'<td><a href="{html.escape(path)}">{format_text(country_display_name(country.code, language))}</a></td>'
+            f'<td class="country-code">{html.escape(country.code)}</td>'
+            f'<td class="station-count">{html.escape(format_count(country.station_count, language))}</td>'
+            f'<td class="station-count">{html.escape(format_count(country.charger_count, language))}</td>'
+            f'<td class="station-count">{html.escape(format_count(country.fast_station_count, language))}</td>'
+            "</tr>"
+        )
+    return "".join(rows)
+
+
+def load_seo_station_summaries(limit_per_country: int = 6) -> tuple[dict[str, list[SeoStationSummary]], dict[str, list[tuple[str, int]]]]:
+    bundle_path = resolve_static_bundle_path()
+    conn = sqlite3.connect(bundle_path)
+    conn.row_factory = sqlite3.Row
+    top_stations: dict[str, list[SeoStationSummary]] = {}
+    operators: dict[str, list[tuple[str, int]]] = {}
+    try:
+        station_rows = conn.execute(
+            """
+            WITH ranked AS (
+              SELECT
+                s.country_code,
+                s.station_id,
+                COALESCE(NULLIF(TRIM(s.operator_name), ''), NULLIF(TRIM(s.station_name), ''), 'Unknown operator') AS operator,
+                COALESCE(NULLIF(TRIM(s.city), ''), NULLIF(TRIM(s.postal_code), ''), '') AS city,
+                COALESCE(s.max_power_kw, 0) AS max_power_kw,
+                COALESCE(s.charger_count, 0) AS charger_count,
+                COALESCE(a.amenities_total, 0) AS amenities_total,
+                ROW_NUMBER() OVER (
+                  PARTITION BY s.country_code
+                  ORDER BY COALESCE(a.amenities_total, 0) DESC,
+                           COALESCE(s.max_power_kw, 0) DESC,
+                           COALESCE(s.charger_count, 0) DESC,
+                           s.station_id ASC
+                ) AS rank
+              FROM stations s
+              LEFT JOIN station_amenities a ON a.station_uid = s.station_uid
+              WHERE s.station_id IS NOT NULL
+                AND TRIM(s.station_id) != ''
+                AND s.latitude IS NOT NULL
+                AND s.longitude IS NOT NULL
+                AND COALESCE(s.max_power_kw, 0) >= 50
+            )
+            SELECT *
+            FROM ranked
+            WHERE rank <= ?
+            ORDER BY country_code, rank
+            """,
+            (limit_per_country,),
+        )
+        for row in station_rows:
+            country_code = str(row["country_code"] or "").strip().upper()
+            top_stations.setdefault(country_code, []).append(
+                SeoStationSummary(
+                    country_code=country_code,
+                    station_id=public_station_id(row["station_id"]),
+                    operator=str(row["operator"] or "").strip(),
+                    city=str(row["city"] or "").strip(),
+                    max_power_kw=float(row["max_power_kw"] or 0),
+                    charger_count=to_int(row["charger_count"]),
+                    amenities_total=to_int(row["amenities_total"]),
+                )
+            )
+
+        operator_rows = conn.execute(
+            """
+            SELECT
+              country_code,
+              COALESCE(NULLIF(TRIM(operator_name), ''), NULLIF(TRIM(station_name), ''), 'Unknown operator') AS operator,
+              COUNT(*) AS station_count
+            FROM stations
+            WHERE station_id IS NOT NULL
+              AND TRIM(station_id) != ''
+              AND COALESCE(max_power_kw, 0) >= 50
+            GROUP BY country_code, operator
+            ORDER BY country_code, station_count DESC, operator ASC
+            """
+        )
+        for row in operator_rows:
+            country_code = str(row["country_code"] or "").strip().upper()
+            entries = operators.setdefault(country_code, [])
+            if len(entries) < 5:
+                entries.append((str(row["operator"] or "").strip(), to_int(row["station_count"])))
+    finally:
+        conn.close()
+    return top_stations, operators
+
+
+def render_station_summary_list(stations: list[SeoStationSummary], language: str, bundle: dict[str, str]) -> str:
+    if not stations:
+        return ""
+    items: list[str] = []
+    for station in stations:
+        href = "/" + station_page_path(station.station_id)
+        meta = [
+            f"{format_power_kw(station.max_power_kw)} kW",
+            f"{format_count(station.charger_count, language)} {bundle['stationChargingPoints']}",
+            f"{format_count(station.amenities_total, language)} {bundle['stationNearbyPlaces']}",
+        ]
+        if station.city:
+            meta.insert(0, station.city)
+        items.append(
+            "<li>"
+            f'<a href="{html.escape(href)}"><strong>{format_text(station.operator)}</strong></a>'
+            f"{format_text(' · '.join(meta))}"
+            "</li>"
+        )
+    return "".join(items)
+
+
+def render_operator_list(operators: list[tuple[str, int]], language: str) -> str:
+    return "".join(
+        "<li>"
+        f"<strong>{format_text(operator)}</strong>"
+        f"{format_text(format_count(count, language))}"
+        "</li>"
+        for operator, count in operators
+        if operator
+    )
+
+
+def build_seo_pages(
+    countries: list[SeoCountry],
+    generated_at: str,
+    bundles: dict[str, dict[str, str]],
+    top_stations: dict[str, list[SeoStationSummary]] | None = None,
+    operators: dict[str, list[tuple[str, int]]] | None = None,
+) -> list[SeoPage]:
+    top_stations = top_stations or {}
+    operators = operators or {}
+    pages: list[SeoPage] = []
+
+    home_alternates = {language: seo_home_path(language) for language in SEO_LANGUAGES}
+    coverage_alternates = {language: seo_coverage_path(language, bundles) for language in SEO_LANGUAGES}
+
+    for language in SEO_LANGUAGES:
+        bundle = bundles[language]
+        coverage_href = "/" + public_path(seo_coverage_path(language, bundles))
+        home_body = (
+            f'<p class="legal-intro">{format_text(bundle["homeIntro"])}</p>'
+            '<div class="station-actions">'
+            f'<a class="link-btn" href="/?lang={html.escape(language)}">{format_text(bundle["openApp"])}</a>'
+            f'<a class="link-btn secondary-link" href="{html.escape(coverage_href)}">{format_text(bundle["exploreCoverage"])}</a>'
+            '</div>'
+            f'<h2>{format_text(bundle["homeCountryListTitle"])}</h2>'
+            f'<ul class="station-list seo-country-list">{country_links(countries, language)}</ul>'
+        )
+        pages.append(
+            SeoPage(
+                identity="home",
+                language=language,
+                path=seo_home_path(language),
+                title=bundle["homeTitle"],
+                description=bundle["homeDescription"],
+                h1=bundle["brandName"],
+                alternate_paths=home_alternates,
+                body_html=home_body,
+                sitemap_group="sitemap-seo-home.xml",
+            )
+        )
+
+        coverage_body = (
+            f'<p class="legal-intro">{format_text(bundle["coverageIntro"])}</p>'
+            '<table class="country-table seo-country-table"><thead><tr>'
+            f'<th scope="col">{format_text(bundle["countriesLabel"])}</th>'
+            '<th scope="col">ISO</th>'
+            f'<th scope="col" class="station-count">{format_text(bundle["stationsLabel"])}</th>'
+            f'<th scope="col" class="station-count">{format_text(bundle["chargingPointsLabel"])}</th>'
+            f'<th scope="col" class="station-count">{format_text(bundle["fastStationsLabel"])}</th>'
+            '</tr></thead><tbody>'
+            f'{coverage_country_rows(countries, language, bundle)}'
+            '</tbody></table>'
+            f'<p class="station-note">{format_text(interpolate(bundle["dataFreshness"], {"date": generated_at or "unknown"}))}</p>'
+        )
+        pages.append(
+            SeoPage(
+                identity="coverage",
+                language=language,
+                path=seo_coverage_path(language, bundles),
+                title=bundle["coverageTitle"],
+                description=bundle["coverageDescription"],
+                h1=bundle["coverageH1"],
+                alternate_paths=coverage_alternates,
+                body_html=coverage_body,
+                sitemap_group="sitemap-seo-coverage.xml",
+            )
+        )
+
+    for country in countries:
+        country_alternates = {
+            language: seo_country_path(country.code, language)
+            for language in SEO_LANGUAGES
+        }
+        for language in SEO_LANGUAGES:
+            bundle = bundles[language]
+            country_name = country_display_name(country.code, language)
+            coverage_href = "/" + public_path(seo_coverage_path(language, bundles))
+            body = (
+                f'<p class="legal-intro">{format_text(interpolate(bundle["countryIntro"], {"country": country_name}))}</p>'
+                f'<ul class="station-list seo-stat-list">{country_stat_items(country, language, bundle)}</ul>'
+                f'<h2>{format_text(bundle["topStopsTitle"])}</h2>'
+                f'<p>{format_text(bundle["topStopsIntro"])}</p>'
+                f'<ul class="station-list">{render_station_summary_list(top_stations.get(country.code, []), language, bundle)}</ul>'
+                f'<h2>{format_text(bundle["majorOperatorsTitle"])}</h2>'
+                f'<ul class="station-list">{render_operator_list(operators.get(country.code, []), language)}</ul>'
+                f'<p class="station-note"><a href="{html.escape(coverage_href)}">{format_text(bundle["backToCoverage"])}</a></p>'
+            )
+            pages.append(
+                SeoPage(
+                    identity=f"country:{country.code}",
+                    language=language,
+                    path=seo_country_path(country.code, language),
+                    title=interpolate(bundle["countryTitle"], {"country": country_name}),
+                    description=interpolate(bundle["countryDescription"], {"country": country_name}),
+                    h1=interpolate(bundle["countryH1"], {"country": country_name}),
+                    alternate_paths=country_alternates,
+                    body_html=body,
+                    sitemap_group="sitemap-seo-countries.xml",
+                )
+            )
+
+    return pages
+
+
+def structured_data_for_page(page: SeoPage) -> list[dict[str, object]]:
+    payload: dict[str, object] = {
+        "@context": "https://schema.org",
+        "@type": "WebPage" if page.identity != "home" else "WebSite",
+        "name": page.title,
+        "description": page.description,
+        "url": page_url(page.path),
+    }
+    if page.identity != "home":
+        payload["isPartOf"] = {
+            "@type": "WebSite",
+            "name": "woladen",
+            "url": SITE_ORIGIN + "/",
+        }
+    return [payload]
+
+
+def write_seo_pages() -> dict[str, list[str]]:
+    bundles = load_seo_bundles()
+    countries, generated_at = load_seo_countries()
+    top_stations, operators = load_seo_station_summaries()
+    pages = build_seo_pages(countries, generated_at, bundles, top_stations, operators)
+    groups: dict[str, list[str]] = {}
+    for page in pages:
+        target = SITE_DIR / page.path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(render_seo_shell(page, bundles, structured_data_for_page(page)), encoding="utf-8")
+        groups.setdefault(page.sitemap_group, []).append(page.path)
+    for paths in groups.values():
+        paths.sort()
+    return groups
+
+
 def amenity_summary(properties: dict[str, object]) -> list[str]:
     counts: list[tuple[int, str]] = []
     for key, value in properties.items():
@@ -795,7 +1470,7 @@ def write_urlset_sitemap(relative_path: str, paths: list[str]) -> None:
     ]
     for path in paths:
         lines.append("  <url>")
-        lines.append(f"    <loc>{html.escape(absolute_url(path))}</loc>")
+        lines.append(f"    <loc>{html.escape(page_url(path))}</loc>")
         lines.append("  </url>")
     lines.append("</urlset>")
     (SITE_DIR / relative_path).write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -806,10 +1481,14 @@ def chunk_paths(paths: list[str], chunk_size: int | None = None) -> list[list[st
     return [paths[index:index + chunk_size] for index in range(0, len(paths), chunk_size)]
 
 
-def write_sitemap(page_paths: list[str]) -> None:
+def write_sitemap(page_paths: list[str], seo_groups: dict[str, list[str]] | None = None) -> None:
     sitemap_paths: list[str] = []
     write_urlset_sitemap("sitemap-pages.xml", ROOT_URLS)
     sitemap_paths.append("sitemap-pages.xml")
+
+    for relative_path, paths in sorted((seo_groups or {}).items()):
+        write_urlset_sitemap(relative_path, paths)
+        sitemap_paths.append(relative_path)
 
     for index, chunk in enumerate(chunk_paths(page_paths), start=1):
         relative_path = f"sitemap-stations-{index}.xml"
@@ -928,8 +1607,9 @@ def main() -> None:
     copy_management_data_tree()
     copy_station_occupancy_tree()
 
+    seo_groups = write_seo_pages()
     station_page_paths = write_station_pages()
-    write_sitemap(station_page_paths)
+    write_sitemap(station_page_paths, seo_groups)
     write_robots_txt()
 
 
