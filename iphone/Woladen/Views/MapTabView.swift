@@ -5,6 +5,7 @@ private let favoriteStarColor = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, 
 
 struct MapTabView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openURL) private var openURL
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
     @EnvironmentObject private var favoritesStore: FavoritesStore
@@ -20,6 +21,9 @@ struct MapTabView: View {
     @State private var centerOnNextLocationUpdate = false
     @State private var hasCenteredInitialLocation = false
     @State private var lastQueriedCenter: CLLocationCoordinate2D?
+    @State private var locationSearchQuery = ""
+    @State private var isSearchingLocation = false
+    @State private var locationSearchError: String?
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -32,6 +36,9 @@ struct MapTabView: View {
                             marker(for: feature)
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            stationContextMenu(for: feature)
+                        }
                     }
                 }
 
@@ -54,37 +61,7 @@ struct MapTabView: View {
                 viewModel.handleMapCenterChange(center)
             }
 
-            HStack(spacing: 12) {
-                Button {
-                    centerOnNextLocationUpdate = true
-                    if locationService.authorizationStatus == .notDetermined {
-                        locationService.requestAuthorization()
-                    } else {
-                        locationService.requestSingleLocation()
-                    }
-                    if let current = locationService.currentLocation {
-                        centerMap(on: current)
-                    }
-                } label: {
-                    Image(systemName: "location.fill")
-                        .font(.headline)
-                        .padding(10)
-                        .background(Color(.secondarySystemBackground), in: Circle())
-                }
-                .accessibilityLabel(Text(String(localized: "aria.locate")))
-
-                Button {
-                    showingFilter = true
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                        .font(.headline)
-                        .padding(10)
-                        .background(Color(.secondarySystemBackground), in: Circle())
-                }
-                .accessibilityLabel(Text(String(localized: "aria.filterOpen")))
-            }
-            .padding(.trailing, 16)
-            .padding(.top, 12)
+            mapControlsOverlay
 
             if viewModel.isLoading && viewModel.allFeatures.isEmpty {
                 ProgressView(String(localized: "list.loading"))
@@ -121,6 +98,132 @@ struct MapTabView: View {
 
     private func mapItems() -> [GeoJSONFeature] {
         viewModel.discoveredFeatures
+    }
+
+    private var mapControlsOverlay: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Button {
+                    requestCurrentLocation()
+                    if let current = locationService.currentLocation {
+                        centerMap(on: current)
+                    }
+                } label: {
+                    Image(systemName: "location.fill")
+                        .font(.headline)
+                        .frame(width: 40, height: 40)
+                        .background(Color(.systemBackground), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(String(localized: "aria.locate")))
+
+                TextField(String(localized: "search.placeholder"), text: $locationSearchQuery)
+                    .textInputAutocapitalization(.words)
+                    .disableAutocorrection(true)
+                    .submitLabel(.search)
+                    .onSubmit(searchLocation)
+                    .font(.subheadline)
+                    .padding(.horizontal, 12)
+                    .frame(height: 40)
+                    .background(Color(.secondarySystemBackground), in: Capsule())
+                    .accessibilityLabel(Text(String(localized: "search.label")))
+
+                if isSearchingLocation {
+                    ProgressView()
+                        .controlSize(.small)
+                        .frame(width: 24, height: 40)
+                        .accessibilityLabel(Text(String(localized: "search.searching")))
+                }
+
+                Button {
+                    showingFilter = true
+                } label: {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .font(.headline)
+                        .frame(width: 40, height: 40)
+                        .background(Color(.systemBackground), in: Circle())
+                        .overlay(alignment: .topTrailing) {
+                            filterCountBadge
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(String(localized: "aria.filterOpen")))
+            }
+            .padding(8)
+            .frame(maxWidth: 620)
+            .background(.regularMaterial, in: Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(Color(.separator).opacity(0.55), lineWidth: 1)
+            }
+            .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 5)
+
+            if let locationSearchError {
+                Text(locationSearchError)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(.regularMaterial, in: Capsule())
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    @ViewBuilder
+    private var filterCountBadge: some View {
+        if viewModel.filterState.activeCount > 0 {
+            Text("\(viewModel.filterState.activeCount)")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+                .frame(minWidth: 18, minHeight: 18)
+                .padding(.horizontal, 2)
+                .background(woladenBrandColor, in: Capsule())
+                .offset(x: 5, y: -5)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private func searchLocation() {
+        let query = locationSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty, !isSearchingLocation else { return }
+        isSearchingLocation = true
+        locationSearchError = nil
+
+        Task {
+            do {
+                let request = MKLocalSearch.Request()
+                request.naturalLanguageQuery = query
+                if let current = locationService.currentLocation {
+                    request.region = MKCoordinateRegion(
+                        center: current.coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
+                    )
+                }
+                let response = try await MKLocalSearch(request: request).start()
+                guard let item = response.mapItems.first else {
+                    locationSearchError = String(localized: "search.noResults")
+                    isSearchingLocation = false
+                    return
+                }
+                let coordinate = item.placemark.coordinate
+                cameraPosition = .region(
+                    MKCoordinateRegion(
+                        center: coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.12, longitudeDelta: 0.12)
+                    )
+                )
+                lastQueriedCenter = coordinate
+                hasCenteredInitialLocation = true
+                viewModel.handleMapCenterChange(coordinate)
+            } catch {
+                locationSearchError = String(localized: "search.unavailable")
+            }
+            isSearchingLocation = false
+        }
     }
 
     private func centerMap(on location: CLLocation) {
@@ -215,5 +318,43 @@ struct MapTabView: View {
         let stationLabel = String(localized: "station.chargingStation")
         let favoritePrefix = isFavorite ? "\(String(localized: "info.legendFavorite")): " : ""
         return "\(favoritePrefix)\(stationLabel), \(feature.properties.operatorName), \(feature.properties.city), \(Int(feature.properties.displayedMaxPowerKW.rounded())) kW"
+    }
+
+    @ViewBuilder
+    private func stationContextMenu(for feature: GeoJSONFeature) -> some View {
+        Button {
+            favoritesStore.toggle(feature.properties.stationID)
+        } label: {
+            let isFavorite = favoritesStore.isFavorite(feature.properties.stationID)
+            let title = isFavorite
+                ? String(localized: "aria.removeFavorite")
+                : String(localized: "aria.saveFavorite")
+            Label(
+                title,
+                systemImage: isFavorite ? "star.slash" : "star"
+            )
+        }
+
+        Button {
+            openNavigationLink(feature, google: true)
+        } label: {
+            Label("Google", systemImage: "location.north.line.fill")
+        }
+
+        Button {
+            openNavigationLink(feature, google: false)
+        } label: {
+            Label("Apple", systemImage: "location.north.line.fill")
+        }
+    }
+
+    private func openNavigationLink(_ feature: GeoJSONFeature, google: Bool) {
+        let lat = feature.coordinate.latitude
+        let lon = feature.coordinate.longitude
+        let urlString = google
+            ? "https://www.google.com/maps/dir/?api=1&destination=\(lat),\(lon)"
+            : "http://maps.apple.com/?daddr=\(lat),\(lon)"
+        guard let url = URL(string: urlString) else { return }
+        openURL(url)
     }
 }

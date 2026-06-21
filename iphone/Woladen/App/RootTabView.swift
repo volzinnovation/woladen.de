@@ -41,57 +41,50 @@ struct RootTabView: View {
 
     private var wideLayout: some View {
         GeometryReader { proxy in
-            let detailWidth = min(max(proxy.size.width * 0.36, 380), 520)
-
-            HStack(spacing: 0) {
-                sidebar
-                Divider()
-                currentTab
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ZStack {
+                HStack(spacing: 0) {
+                    wideNavigationRail
+                    Divider()
+                    currentTab
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
 
                 if shouldShowWideDetail, let selectedFeature = viewModel.selectedFeature {
-                    Divider()
-                    StationDetailView(stationID: selectedFeature.properties.stationID)
-                        .frame(width: detailWidth)
-                        .frame(maxHeight: .infinity)
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            viewModel.clearSelectedFeature()
+                        }
+
+                    StationDetailView(stationID: selectedFeature.properties.stationID, prefersWideLayout: true)
+                        .frame(
+                            width: min(1180, max(360, proxy.size.width - 64)),
+                            height: min(820, max(520, proxy.size.height - 48))
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                        .shadow(color: Color.black.opacity(0.24), radius: 24, x: 0, y: 14)
                 }
             }
         }
     }
 
-    private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Woladen")
-                    .font(.title2.bold())
-                Text(String(localized: "station.chargingStation"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top, 12)
-
-            VStack(spacing: 6) {
+    private var wideNavigationRail: some View {
+        VStack(spacing: 8) {
+            VStack(spacing: 8) {
                 wideTabButton(.list, title: String(localized: "nav.list"), systemImage: "list.bullet")
                 wideTabButton(.map, title: String(localized: "nav.map"), systemImage: "map")
                 wideTabButton(.favorites, title: String(localized: "nav.favorites"), systemImage: "star")
                 wideTabButton(.info, title: String(localized: "nav.info"), systemImage: "info.circle")
             }
+            .padding(.top, 12)
 
             Spacer()
-
-            Button {
-                showingFilter = true
-            } label: {
-                Label(String(localized: "filters.title"), systemImage: "line.3.horizontal.decrease.circle")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.bordered)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 16)
-        .frame(width: 220)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 14)
+        .frame(width: 108)
         .frame(maxHeight: .infinity, alignment: .top)
-        .background(Color(.secondarySystemBackground))
+        .background(Color(.systemBackground))
     }
 
     private var filterSheet: some View {
@@ -144,15 +137,15 @@ struct RootTabView: View {
         } label: {
             VStack(spacing: 4) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 22, weight: .semibold))
                 Text(title)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
             }
-            .frame(maxWidth: .infinity, minHeight: 54)
-            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+            .frame(maxWidth: .infinity, minHeight: 62)
+            .foregroundStyle(isSelected ? woladenBrandColor : StationVisualStyle.mutedForeground)
             .background {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(isSelected ? Color.accentColor.opacity(0.14) : Color.clear)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(isSelected ? StationVisualStyle.selectedControlSurface : Color.clear)
             }
         }
         .buttonStyle(.plain)
@@ -163,17 +156,24 @@ struct RootTabView: View {
         return Button {
             viewModel.selectedTab = tab
         } label: {
-            Label(title, systemImage: systemImage)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .padding(.horizontal, 12)
+            VStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 24, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+                .foregroundStyle(isSelected ? woladenBrandColor : StationVisualStyle.mutedForeground)
+                .frame(width: 78, height: 78)
                 .background {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(isSelected ? Color.accentColor.opacity(0.14) : Color.clear)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(isSelected ? StationVisualStyle.selectedControlSurface : Color.clear)
                 }
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(Text(title))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func availableAmenityKeys() -> [String] {

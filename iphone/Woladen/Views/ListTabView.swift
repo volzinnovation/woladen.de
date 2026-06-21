@@ -4,25 +4,64 @@ import UIKit
 
 private let favoriteStarColor = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
 
+private func woladenUIColor(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat, _ alpha: CGFloat = 1.0) -> UIColor {
+    UIColor(red: red / 255.0, green: green / 255.0, blue: blue / 255.0, alpha: alpha)
+}
+
+private func adaptiveColor(light: UIColor, dark: UIColor) -> Color {
+    Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark ? dark : light
+    })
+}
+
+let woladenBrandColor = adaptiveColor(light: woladenUIColor(15, 118, 110), dark: woladenUIColor(94, 234, 212))
+
+private let officialWoladenAppIconImage: UIImage? = {
+    let bundle = Bundle.main
+    let resourceNames = [
+        "AppIcon60x60@3x",
+        "AppIcon60x60@2x",
+        "AppIcon60x60",
+        "AppIcon76x76@2x",
+        "AppIcon76x76"
+    ]
+    for name in resourceNames {
+        if let url = bundle.url(forResource: name, withExtension: "png"),
+           let image = UIImage(contentsOfFile: url.path) {
+            return image
+        }
+    }
+    return nil
+}()
+
 enum StationVisualStyle {
     static let amenityGold = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
     static let amenitySilver = Color(red: 148.0 / 255.0, green: 163.0 / 255.0, blue: 184.0 / 255.0)
     static let amenityBronze = Color(red: 180.0 / 255.0, green: 83.0 / 255.0, blue: 9.0 / 255.0)
     static let amenityGrey = Color(red: 100.0 / 255.0, green: 116.0 / 255.0, blue: 139.0 / 255.0)
 
-    static let cardOutOfOrder = Color(red: 1.0, green: 241.0 / 255.0, blue: 242.0 / 255.0)
-    static let cardOccupied = Color(red: 241.0 / 255.0, green: 245.0 / 255.0, blue: 249.0 / 255.0)
-    static let cardOneFreeLeft = Color(red: 1.0, green: 251.0 / 255.0, blue: 235.0 / 255.0)
-    static let cardOftenBroken = Color(red: 1.0, green: 247.0 / 255.0, blue: 248.0 / 255.0)
-    static let cardOftenOccupied = Color(red: 248.0 / 255.0, green: 250.0 / 255.0, blue: 252.0 / 255.0)
-    static let cardDefault = Color(.secondarySystemBackground)
+    static let cardOutOfOrder = adaptiveColor(light: woladenUIColor(255, 241, 242), dark: woladenUIColor(59, 18, 28))
+    static let cardOccupied = adaptiveColor(light: woladenUIColor(226, 232, 240), dark: woladenUIColor(38, 50, 61))
+    static let cardOneFreeLeft = adaptiveColor(light: woladenUIColor(255, 251, 235), dark: woladenUIColor(51, 43, 18))
+    static let cardOftenBroken = adaptiveColor(light: woladenUIColor(255, 247, 248), dark: woladenUIColor(54, 22, 31))
+    static let cardOftenOccupied = adaptiveColor(light: woladenUIColor(248, 250, 252), dark: woladenUIColor(15, 30, 39))
+    static let cardUnknown = adaptiveColor(light: woladenUIColor(241, 245, 249), dark: woladenUIColor(22, 33, 43))
+    static let cardDefault = adaptiveColor(light: .systemBackground, dark: .secondarySystemBackground)
 
-    static let borderOutOfOrder = Color(red: 220.0 / 255.0, green: 38.0 / 255.0, blue: 38.0 / 255.0).opacity(0.28)
-    static let borderOccupied = Color(red: 100.0 / 255.0, green: 116.0 / 255.0, blue: 139.0 / 255.0).opacity(0.28)
-    static let borderOneFreeLeft = Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 6.0 / 255.0).opacity(0.28)
-    static let borderOftenBroken = Color(red: 244.0 / 255.0, green: 63.0 / 255.0, blue: 94.0 / 255.0).opacity(0.18)
-    static let borderOftenOccupied = Color(red: 100.0 / 255.0, green: 116.0 / 255.0, blue: 139.0 / 255.0).opacity(0.16)
+    static let borderOutOfOrder = adaptiveColor(light: woladenUIColor(220, 38, 38, 0.28), dark: woladenUIColor(248, 113, 113, 0.46))
+    static let borderOccupied = adaptiveColor(light: woladenUIColor(100, 116, 139, 0.38), dark: woladenUIColor(148, 163, 184, 0.46))
+    static let borderOneFreeLeft = adaptiveColor(light: woladenUIColor(217, 119, 6, 0.28), dark: woladenUIColor(251, 191, 36, 0.42))
+    static let borderOftenBroken = adaptiveColor(light: woladenUIColor(244, 63, 94, 0.18), dark: woladenUIColor(251, 113, 133, 0.36))
+    static let borderOftenOccupied = adaptiveColor(light: woladenUIColor(100, 116, 139, 0.16), dark: woladenUIColor(148, 163, 184, 0.28))
+    static let borderUnknown = adaptiveColor(light: woladenUIColor(100, 116, 139, 0.24), dark: woladenUIColor(148, 163, 184, 0.34))
     static let borderDefault = Color(.separator).opacity(0.35)
+
+    static let controlSurface = adaptiveColor(light: woladenUIColor(241, 245, 249), dark: woladenUIColor(22, 33, 43))
+    static let inputSurface = adaptiveColor(light: woladenUIColor(248, 250, 252), dark: woladenUIColor(15, 30, 39))
+    static let controlBorder = adaptiveColor(light: woladenUIColor(226, 232, 240), dark: woladenUIColor(51, 65, 85))
+    static let selectedControlSurface = adaptiveColor(light: woladenUIColor(15, 118, 110, 0.12), dark: woladenUIColor(94, 234, 212, 0.18))
+    static let selectedControlBorder = adaptiveColor(light: woladenUIColor(15, 118, 110, 0.38), dark: woladenUIColor(94, 234, 212, 0.46))
+    static let mutedForeground = adaptiveColor(light: woladenUIColor(100, 116, 139), dark: woladenUIColor(148, 163, 184))
 
     static let markerOutOfOrder = Color(red: 239.0 / 255.0, green: 68.0 / 255.0, blue: 68.0 / 255.0)
     static let markerFullyOccupied = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
@@ -46,10 +85,15 @@ extension GeoJSONFeature {
         return hasAvailabilitySummary && counts.total > 1 && counts.available == 1
     }
 
+    var isStationAvailabilityUnknown: Bool {
+        !hasAvailabilitySummary || availabilityStatus == .unknown
+    }
+
     var stationCardBackground: Color {
         if isStationOutOfOrder { return StationVisualStyle.cardOutOfOrder }
         if isStationFullyOccupied { return StationVisualStyle.cardOccupied }
         if isStationOneFreeLeft { return StationVisualStyle.cardOneFreeLeft }
+        if isStationAvailabilityUnknown { return StationVisualStyle.cardUnknown }
         return StationVisualStyle.cardDefault
     }
 
@@ -57,12 +101,14 @@ extension GeoJSONFeature {
         if isStationOutOfOrder { return StationVisualStyle.borderOutOfOrder }
         if isStationFullyOccupied { return StationVisualStyle.borderOccupied }
         if isStationOneFreeLeft { return StationVisualStyle.borderOneFreeLeft }
+        if isStationAvailabilityUnknown { return StationVisualStyle.borderUnknown }
         return StationVisualStyle.borderDefault
     }
 }
 
 struct ListTabView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openURL) private var openURL
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
     @EnvironmentObject private var favoritesStore: FavoritesStore
@@ -70,7 +116,14 @@ struct ListTabView: View {
     @Binding var showingFilter: Bool
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        VStack(spacing: 0) {
+            WoladenBrandIntroView(showProductMessage: false)
+            listHeader
+
+            if !activeFilterLabels.isEmpty {
+                activeFilterSummary
+            }
+
             Group {
                 if let error = viewModel.loadError {
                     ContentUnavailableView(String(localized: "errors.dataLoad"), systemImage: "exclamationmark.triangle", description: Text(error))
@@ -109,30 +162,151 @@ struct ListTabView: View {
                                     }
                                 }
                                 .buttonStyle(.plain)
+                                .contextMenu {
+                                    stationContextMenu(for: feature)
+                                }
                             }
                         }
                         .padding(.horizontal, 14)
-                        .padding(.top, 58)
+                        .padding(.top, 14)
                         .padding(.bottom, 12)
                     }
                 }
             }
-                Button {
-                    showingFilter = true
-                } label: {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                        .font(.title2)
-                        .padding(8)
-                        .background(Color(.secondarySystemBackground), in: Circle())
-                }
-                .padding(.trailing, 14)
-                .padding(.top, 10)
-                .accessibilityLabel(Text(String(localized: "aria.filterOpen")))
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
         .onAppear(perform: reloadForActiveLocation)
         .onChange(of: scenePhase) { _, newValue in
             guard newValue == .active else { return }
             reloadForActiveLocation()
+        }
+    }
+
+    private var listHeader: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Text(String(localized: "list.title"))
+                .font(.title3.weight(.semibold))
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                showingFilter = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                    Text(String(localized: "filters.title"))
+                }
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(StationVisualStyle.controlSurface, in: Capsule())
+                .overlay(alignment: .topTrailing) {
+                    filterCountBadge
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(String(localized: "aria.filterOpen")))
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color(.systemBackground))
+        .overlay(alignment: .bottom) {
+            Divider()
+        }
+    }
+
+    private var activeFilterSummary: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .accessibilityHidden(true)
+            Text(activeFilterSummaryText)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer()
+            if hasClearableFilters {
+                Button(String(localized: "filters.reset")) {
+                    viewModel.filterState = viewModel.filterState.clearableState
+                    viewModel.reloadCatalogForCurrentContext(userLocation: locationService.currentLocation)
+                }
+                .font(.subheadline.weight(.bold))
+                .buttonStyle(.plain)
+            }
+        }
+        .foregroundStyle(woladenBrandColor)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(woladenBrandColor.opacity(0.08))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(woladenBrandColor.opacity(0.18), lineWidth: 1)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 4)
+        }
+        .overlay(alignment: .bottom) {
+            Divider()
+        }
+    }
+
+    private var activeFilterLabels: [String] {
+        let filter = viewModel.filterState
+        var labels: [String] = []
+        if !filter.operatorName.isEmpty {
+            labels.append(filter.operatorName)
+        }
+        let query = filter.amenityNameQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !query.isEmpty {
+            labels.append(
+                String(localized: "filters.namePrefix")
+                    .replacingOccurrences(of: "{value}", with: query)
+            )
+        }
+        if filter.availableOnly {
+            labels.append(String(localized: "filters.availableOnly"))
+        }
+        if filter.currentlyOpenOnly {
+            labels.append(String(localized: "filters.currentlyOpen"))
+        }
+        if filter.minPowerKW > 0 {
+            labels.append(
+                String(localized: "filters.minPowerLabel")
+                    .replacingOccurrences(of: "{value}", with: "\(Int(filter.minPowerKW.rounded()))")
+            )
+        }
+        filter.selectedAmenities
+            .map { AmenityCatalog.label(for: $0) }
+            .sorted { $0.localizedCompare($1) == .orderedAscending }
+            .forEach { labels.append($0) }
+        return labels
+    }
+
+    private var activeFilterSummaryText: String {
+        String(localized: "filters.selectedOnly")
+            .replacingOccurrences(of: "{labels}", with: activeFilterLabels.joined(separator: " · "))
+    }
+
+    private var hasClearableFilters: Bool {
+        let filter = viewModel.filterState
+        return !filter.operatorName.isEmpty
+            || !filter.amenityNameQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || filter.availableOnly
+            || filter.currentlyOpenOnly
+            || !filter.selectedAmenities.isEmpty
+            || Int(filter.minPowerKW.rounded()) != 50
+    }
+
+    @ViewBuilder
+    private var filterCountBadge: some View {
+        if viewModel.filterState.activeCount > 0 {
+            Text("\(viewModel.filterState.activeCount)")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+                .frame(minWidth: 18, minHeight: 18)
+                .padding(.horizontal, 2)
+                .background(woladenBrandColor, in: Capsule())
+                .offset(x: 7, y: -7)
+                .accessibilityHidden(true)
         }
     }
 
@@ -159,6 +333,44 @@ struct ListTabView: View {
     private func requestLocationAccess() {
         locationService.requestAuthorization()
         viewModel.loadIfNeeded(userLocation: locationService.currentLocation)
+    }
+
+    @ViewBuilder
+    private func stationContextMenu(for feature: GeoJSONFeature) -> some View {
+        Button {
+            favoritesStore.toggle(feature.properties.stationID)
+        } label: {
+            let isFavorite = favoritesStore.isFavorite(feature.properties.stationID)
+            let title = isFavorite
+                ? String(localized: "aria.removeFavorite")
+                : String(localized: "aria.saveFavorite")
+            Label(
+                title,
+                systemImage: isFavorite ? "star.slash" : "star"
+            )
+        }
+
+        Button {
+            openNavigationLink(feature, google: true)
+        } label: {
+            Label("Google", systemImage: "location.north.line.fill")
+        }
+
+        Button {
+            openNavigationLink(feature, google: false)
+        } label: {
+            Label("Apple", systemImage: "location.north.line.fill")
+        }
+    }
+
+    private func openNavigationLink(_ feature: GeoJSONFeature, google: Bool) {
+        let lat = feature.coordinate.latitude
+        let lon = feature.coordinate.longitude
+        let urlString = google
+            ? "https://www.google.com/maps/dir/?api=1&destination=\(lat),\(lon)"
+            : "http://maps.apple.com/?daddr=\(lat),\(lon)"
+        guard let url = URL(string: urlString) else { return }
+        openURL(url)
     }
 }
 
@@ -357,7 +569,7 @@ private struct StationRowView: View {
                                 .lineLimit(1)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
-                                .background(Color(.secondarySystemBackground))
+                                .background(StationVisualStyle.controlSurface)
                                 .clipShape(Capsule())
                         }
                     }
@@ -387,5 +599,73 @@ private struct StationRowView: View {
             : String(localized: "station.chargingPointMany")
         return template
             .replacingOccurrences(of: "{count}", with: "\(count)")
+    }
+}
+
+struct WoladenBrandIntroView: View {
+    let showProductMessage: Bool
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack(alignment: .center, spacing: 10) {
+                OfficialWoladenAppIconView()
+
+                VStack(alignment: .leading, spacing: 2) {
+                    (
+                        Text("woladen:")
+                            .foregroundStyle(woladenBrandColor)
+                        + Text(" \(String(localized: "seo.primaryTagline"))")
+                    )
+                    .font(.title3.weight(.bold))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
+
+                    Text("\(String(localized: "seo.humanHook")) \(String(localized: "seo.timeLine"))")
+                        .font(.subheadline.weight(.semibold))
+                        .italic()
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.86)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+
+            if showProductMessage {
+                Text(String(localized: "seo.productMessage"))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .frame(maxWidth: 760)
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, showProductMessage ? 14 : 12)
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemBackground))
+        .overlay(alignment: .bottom) {
+            Divider()
+        }
+    }
+}
+
+private struct OfficialWoladenAppIconView: View {
+    var body: some View {
+        Group {
+            if let icon = officialWoladenAppIconImage {
+                Image(uiImage: icon)
+                    .resizable()
+                    .renderingMode(.original)
+                    .interpolation(.high)
+                    .scaledToFill()
+            } else {
+                Color.clear
+            }
+        }
+        .frame(width: 46, height: 46)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 5)
+        .accessibilityHidden(true)
     }
 }

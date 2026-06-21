@@ -2,19 +2,26 @@ package de.woladen.android.ui
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NearMe
 import androidx.compose.material.icons.outlined.Phone
@@ -28,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -70,7 +78,6 @@ fun StationDetailSheet(
     onToggleFavorite: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
     val detailPoints = remember(feature.id, isFavorite) { buildDetailMapPoints(feature, isFavorite) }
     var showMiniMap by remember(feature.id) { mutableStateOf(false) }
 
@@ -168,6 +175,8 @@ fun StationDetailSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
+                DetailActionRow(feature = feature)
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -182,44 +191,6 @@ fun StationDetailSheet(
                             modifier = Modifier.weight(1f),
                             tint = availabilityColor(feature.availabilityStatus)
                         )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Button(onClick = {
-                        openUri(
-                            context,
-                            "https://www.google.com/maps/dir/?api=1&destination=${feature.latitude},${feature.longitude}"
-                        )
-                    }, modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 52.dp)
-                        .testTag("detail-google-nav-button")) {
-                        Icon(Icons.Outlined.NearMe, contentDescription = null)
-                        Text("Google", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    OutlinedButton(onClick = {
-                        openUri(context, "geo:0,0?q=${feature.latitude},${feature.longitude}(${Uri.encode(feature.properties.operatorName)})")
-                    }, modifier = Modifier
-                        .weight(1f)
-                        .heightIn(min = 52.dp)
-                        .testTag("detail-system-nav-button")) {
-                        Icon(Icons.Outlined.NearMe, contentDescription = null)
-                        Text("Maps", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    if (feature.properties.helpdeskPhone.isNotBlank()) {
-                        OutlinedButton(onClick = {
-                            val phoneNumber = feature.properties.helpdeskPhone.filter { it.isDigit() || it == '+' }
-                            openUri(context, "tel:$phoneNumber")
-                        }, modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 52.dp)) {
-                            Icon(Icons.Outlined.Phone, contentDescription = stringResource(R.string.i18n_detail_help))
-                            Text(stringResource(R.string.i18n_detail_help), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
                     }
                 }
 
@@ -278,7 +249,6 @@ fun StationDetailPane(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val detailPoints = remember(feature.id, isFavorite) { buildDetailMapPoints(feature, isFavorite) }
     var showMiniMap by remember(feature.id) { mutableStateOf(false) }
 
@@ -358,6 +328,8 @@ fun StationDetailPane(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
+            DetailActionRow(feature = feature)
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -372,27 +344,6 @@ fun StationDetailPane(
                         modifier = Modifier.weight(1f),
                         tint = availabilityColor(feature.availabilityStatus)
                     )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Button(onClick = {
-                    openUri(
-                        context,
-                        "https://www.google.com/maps/dir/?api=1&destination=${feature.latitude},${feature.longitude}"
-                    )
-                }, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
-                    Icon(Icons.Outlined.NearMe, contentDescription = null)
-                    Text("Google", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                OutlinedButton(onClick = {
-                    openUri(context, "geo:0,0?q=${feature.latitude},${feature.longitude}(${Uri.encode(feature.properties.operatorName)})")
-                }, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
-                    Icon(Icons.Outlined.NearMe, contentDescription = null)
-                    Text("Maps", maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
 
@@ -423,6 +374,178 @@ fun StationDetailPane(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StationDetailWideDialog(
+    feature: GeoJsonFeature,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val detailPoints = remember(feature.id, isFavorite) { buildDetailMapPoints(feature, isFavorite) }
+    var showMiniMap by remember(feature.id) { mutableStateOf(false) }
+
+    LaunchedEffect(feature.id) {
+        showMiniMap = false
+        delay(150)
+        showMiniMap = true
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.40f))
+            .testTag("station-detail-wide-dialog"),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.86f)
+                .widthIn(max = 1180.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
+        ) {
+            Box {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(0.95f)
+                            .fillMaxHeight()
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        if (showMiniMap) {
+                            DetailMiniMapView(
+                                points = detailPoints,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1.05f)
+                            .fillMaxHeight()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 24.dp, vertical = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            IconButton(
+                                onClick = onToggleFavorite,
+                                modifier = Modifier.testTag("detail-favorite-button")
+                            ) {
+                                Icon(
+                                    imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
+                                    contentDescription = stringResource(
+                                        if (isFavorite) {
+                                            R.string.i18n_aria_removefavorite
+                                        } else {
+                                            R.string.i18n_aria_savefavorite
+                                        }
+                                    ),
+                                    tint = if (isFavorite) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = feature.properties.operatorName,
+                                style = MaterialTheme.typography.titleLarge,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        if (feature.hasPrimaryDetailHighlights) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (feature.displayPrice.isNotBlank()) {
+                                    DetailChip(
+                                        text = feature.displayPrice,
+                                        symbol = "€"
+                                    )
+                                }
+                                if (feature.properties.openingHoursDisplay.isNotBlank()) {
+                                    DetailChip(
+                                        text = feature.properties.openingHoursDisplay,
+                                        symbol = "◷"
+                                    )
+                                }
+                            }
+                        }
+
+                        Text(
+                            "${feature.properties.address}, ${feature.properties.postcode} ${feature.properties.city}",
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        DetailActionRow(feature = feature)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            SummaryStatCard(
+                                text = stationMaxPowerText(feature),
+                                modifier = Modifier.weight(1f)
+                            )
+                            feature.occupancySummaryLabel?.let { occupancy ->
+                                SummaryStatCard(
+                                    text = occupancy,
+                                    modifier = Modifier.weight(1f),
+                                    tint = availabilityColor(feature.availabilityStatus)
+                                )
+                            }
+                        }
+
+                        Text(formatAmenityCountLabel(feature.properties.amenitiesTotal), style = MaterialTheme.typography.titleMedium)
+                        if (feature.properties.amenityExamples.isEmpty()) {
+                            Text(stringResource(R.string.i18n_amenity_nodetails), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            for (item in feature.properties.amenityExamples) {
+                                AmenityRow(item)
+                            }
+                        }
+
+                        if (feature.liveEvseRows.isNotEmpty()) {
+                            Text(liveSectionTitle(feature), style = MaterialTheme.typography.titleMedium)
+                            for (row in feature.liveEvseRows) {
+                                LiveEvseRowCard(row)
+                            }
+                        }
+
+                        if (feature.properties.staticDetailRows.isNotEmpty() || feature.properties.detailSourceLabel != null) {
+                            Text(stringResource(R.string.i18n_station_details), style = MaterialTheme.typography.titleMedium)
+                            for (row in feature.properties.staticDetailRows) {
+                                DetailInfoRow(row)
+                            }
+                            feature.properties.detailSourceLabel?.let { source ->
+                                Text(
+                                    source,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .testTag("detail-close-button")
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp)
+                ) {
+                    Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.i18n_aria_closedetail))
                 }
             }
         }
@@ -480,6 +603,60 @@ private fun SummaryStatCard(
 }
 
 @Composable
+private fun DetailActionRow(feature: GeoJsonFeature) {
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Button(
+            onClick = {
+                openUri(
+                    context,
+                    "https://www.google.com/maps/dir/?api=1&destination=${feature.latitude},${feature.longitude}"
+                )
+            },
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 52.dp)
+                .testTag("detail-google-nav-button")
+        ) {
+            Icon(Icons.Outlined.NearMe, contentDescription = null)
+            Text("Google", maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        OutlinedButton(
+            onClick = {
+                openUri(
+                    context,
+                    "geo:0,0?q=${feature.latitude},${feature.longitude}(${Uri.encode(feature.properties.operatorName)})"
+                )
+            },
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 52.dp)
+                .testTag("detail-system-nav-button")
+        ) {
+            Icon(Icons.Outlined.NearMe, contentDescription = null)
+            Text("Maps", maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        if (feature.properties.helpdeskPhone.isNotBlank()) {
+            OutlinedButton(
+                onClick = {
+                    val phoneNumber = feature.properties.helpdeskPhone.filter { it.isDigit() || it == '+' }
+                    openUri(context, "tel:$phoneNumber")
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 52.dp)
+            ) {
+                Icon(Icons.Outlined.Phone, contentDescription = stringResource(R.string.i18n_detail_help))
+                Text(stringResource(R.string.i18n_detail_help), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+@Composable
 private fun DetailChip(text: String, symbol: String) {
     OutlinedCard {
         Row(
@@ -522,7 +699,7 @@ private fun LiveEvseRowCard(row: LiveEvseRow) {
                     Text(
                         text = row.price,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF15803D)
+                        color = detailPriceColor()
                     )
                 }
             }
@@ -622,14 +799,20 @@ private fun DetailInfoRow(row: DetailRow) {
     }
 }
 
+@Composable
 private fun availabilityColor(status: AvailabilityStatus): Color {
+    val isDarkMode = isSystemInDarkTheme()
     return when (status) {
-        AvailabilityStatus.FREE -> Color(0xFF0F766E)
-        AvailabilityStatus.OCCUPIED -> Color(0xFFB45309)
-        AvailabilityStatus.OUT_OF_ORDER -> Color(0xFFB91C1C)
-        AvailabilityStatus.UNKNOWN -> Color.Gray
+        AvailabilityStatus.FREE -> if (isDarkMode) Color(0xFF5EEAD4) else Color(0xFF0F766E)
+        AvailabilityStatus.OCCUPIED -> if (isDarkMode) Color(0xFFFBBF24) else Color(0xFFB45309)
+        AvailabilityStatus.OUT_OF_ORDER -> if (isDarkMode) Color(0xFFF87171) else Color(0xFFB91C1C)
+        AvailabilityStatus.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 }
+
+@Composable
+private fun detailPriceColor(): Color =
+    if (isSystemInDarkTheme()) Color(0xFF86EFAC) else Color(0xFF15803D)
 
 private fun liveSectionTitle(feature: GeoJsonFeature): String {
     val provider = compactLiveProvider(feature.occupancySourceLabel)

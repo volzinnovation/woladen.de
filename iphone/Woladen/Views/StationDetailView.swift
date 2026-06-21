@@ -10,6 +10,12 @@ struct StationDetailView: View {
     @Environment(\.openURL) private var openURL
 
     let stationID: String
+    let prefersWideLayout: Bool
+
+    init(stationID: String, prefersWideLayout: Bool = false) {
+        self.stationID = stationID
+        self.prefersWideLayout = prefersWideLayout
+    }
 
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
@@ -25,20 +31,10 @@ struct StationDetailView: View {
     var body: some View {
         Group {
             if let feature {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        mapSection(feature)
-                        VStack(alignment: .leading, spacing: 14) {
-                            headerSection(feature)
-                            amenitySection(feature)
-                            liveSection(feature)
-                            staticDetailsSection(feature)
-                            sourceFooterSection(feature)
-                        }
-                        .padding(.horizontal)
-                        .padding(.top, 12)
-                        .padding(.bottom, 20)
-                    }
+                if prefersWideLayout {
+                    wideDetail(feature)
+                } else {
+                    compactDetail(feature)
                 }
             } else {
                 ContentUnavailableView(String(localized: "errors.catalogTitle"), systemImage: "bolt.slash")
@@ -62,7 +58,66 @@ struct StationDetailView: View {
         return template.replacingOccurrences(of: "{count}", with: "\(count)")
     }
 
+    private func compactDetail(_ feature: GeoJSONFeature) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                mapSection(feature, showsBackButton: true)
+                detailContent(feature)
+                    .padding(.horizontal)
+                    .padding(.top, 12)
+                    .padding(.bottom, 20)
+            }
+        }
+    }
+
+    private func wideDetail(_ feature: GeoJSONFeature) -> some View {
+        HStack(spacing: 0) {
+            mapContent(feature)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(StationVisualStyle.controlSurface)
+
+            Divider()
+
+            ScrollView {
+                detailContent(feature)
+                    .padding(24)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemBackground))
+        }
+        .overlay(alignment: .topTrailing) {
+            Button {
+                viewModel.clearSelectedFeature()
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(Color(red: 30.0 / 255.0, green: 41.0 / 255.0, blue: 59.0 / 255.0))
+                    .frame(width: 42, height: 42)
+                    .background(Color(.systemBackground).opacity(0.94), in: Circle())
+                    .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 4)
+            }
+            .buttonStyle(.plain)
+            .padding(14)
+            .accessibilityLabel(Text(String(localized: "aria.closeDetail")))
+        }
+    }
+
+    private func detailContent(_ feature: GeoJSONFeature) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            headerSection(feature)
+            amenitySection(feature)
+            liveSection(feature)
+            staticDetailsSection(feature)
+            sourceFooterSection(feature)
+        }
+    }
+
     private func mapSection(_ feature: GeoJSONFeature) -> some View {
+        mapSection(feature, showsBackButton: true)
+    }
+
+    private func mapContent(_ feature: GeoJSONFeature) -> some View {
         Map(position: $cameraPosition) {
             ForEach(mapItems(for: feature)) { item in
                 Annotation("", coordinate: item.coordinate) {
@@ -78,21 +133,27 @@ struct StationDetailView: View {
                 }
             }
         }
+    }
+
+    private func mapSection(_ feature: GeoJSONFeature, showsBackButton: Bool) -> some View {
+        mapContent(feature)
         .frame(height: 260)
         .overlay(alignment: .topLeading) {
-            Button {
-                viewModel.clearSelectedFeature()
-                dismiss()
-            } label: {
-                Label("", systemImage: "chevron.backward")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemBackground).opacity(0.9), in: Capsule())
+            if showsBackButton {
+                Button {
+                    viewModel.clearSelectedFeature()
+                    dismiss()
+                } label: {
+                    Label("", systemImage: "chevron.backward")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color(.systemBackground).opacity(0.9), in: Capsule())
+                }
+                .padding(.leading, 12)
+                .padding(.top, 12)
+                .accessibilityLabel(Text(String(localized: "aria.closeDetail")))
             }
-            .padding(.leading, 12)
-            .padding(.top, 12)
-            .accessibilityLabel(Text("aria.closeDetail"))
         }
     }
 
@@ -140,20 +201,6 @@ struct StationDetailView: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(alignment: .top, spacing: 10) {
-                detailStatCard(
-                    text: maxPowerLabel(for: feature),
-                    systemImage: "bolt.fill"
-                )
-                if let occupancy {
-                    detailStatCard(
-                        text: occupancy,
-                        systemImage: "dot.radiowaves.left.and.right",
-                        tint: statusColor(for: feature.availabilityStatus)
-                    )
-                }
-            }
-
             HStack(spacing: 6) {
                 Button {
                     openNavigationLink(feature, google: true)
@@ -182,6 +229,20 @@ struct StationDetailView: View {
                 }
             }
             .font(.subheadline.weight(.semibold))
+
+            HStack(alignment: .top, spacing: 10) {
+                detailStatCard(
+                    text: maxPowerLabel(for: feature),
+                    systemImage: "bolt.fill"
+                )
+                if let occupancy {
+                    detailStatCard(
+                        text: occupancy,
+                        systemImage: "dot.radiowaves.left.and.right",
+                        tint: statusColor(for: feature.availabilityStatus)
+                    )
+                }
+            }
         }
     }
 

@@ -23,19 +23,11 @@ struct InfoTabView: View {
     @EnvironmentObject private var locationService: LocationService
 
     var body: some View {
-        List {
-            Section(String(localized: "info.title")) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("woladen: \(String(localized: "seo.primaryTagline"))")
-                        .font(.title3.weight(.semibold))
-                    Text("\(String(localized: "seo.humanHook")) \(String(localized: "seo.timeLine"))")
-                        .foregroundStyle(.secondary)
-                    Text(String(localized: "seo.productMessage"))
-                }
-                .padding(.vertical, 2)
-            }
+        VStack(spacing: 0) {
+            WoladenBrandIntroView(showProductMessage: false)
 
-            Section(String(localized: "info.legendTitle")) {
+            List {
+                Section(String(localized: "info.legendTitle")) {
                 Text(String(localized: "info.cardBackgroundTitle"))
                     .font(.headline)
                 statusSwatch(color: StationVisualStyle.cardOneFreeLeft, border: StationVisualStyle.borderOneFreeLeft, text: String(localized: "info.legendOneFreeLeft"))
@@ -81,18 +73,8 @@ struct InfoTabView: View {
             }
 
             Section(String(localized: "info.dataSourcesTitle")) {
-                if viewModel.isLoadingInfoSummary && viewModel.infoSummary == nil {
-                    ProgressView(String(localized: "info.loadingSources"))
-                } else if let summary = viewModel.infoSummary {
-                    ForEach(summary.dataSourceLinks()) { source in
-                        sourceLink(source)
-                    }
-                    Link(String(localized: "sources.geocoder"), destination: geocoderURL)
-                    Link(String(localized: "sources.easterEgg"), destination: easterEggURL)
-                } else {
-                    Text(viewModel.infoSummaryError ?? String(localized: "info.sourceLoadError"))
-                        .foregroundStyle(.secondary)
-                }
+                Link(String(localized: "sources.geocoder"), destination: geocoderURL)
+                Link(String(localized: "sources.easterEgg"), destination: easterEggURL)
             }
 
             Section(String(localized: "info.licensesTitle")) {
@@ -131,11 +113,14 @@ struct InfoTabView: View {
                 Link(String(localized: "info.privacyLink"), destination: privacyPolicyURL)
             }
 
-            Section(String(localized: "location.idleTitle")) {
-                Text(locationStatusText)
-                Button(locationActionTitle) {
-                    handleLocationAction()
+            if shouldShowLocationSection {
+                Section(locationSectionTitle) {
+                    Text(locationStatusText)
+                    Button(locationActionTitle) {
+                        handleLocationAction()
+                    }
                 }
+            }
             }
         }
         .task {
@@ -324,15 +309,37 @@ struct InfoTabView: View {
     private var locationStatusText: String {
         switch locationService.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
-            return locationService.currentLocation == nil
-                ? String(localized: "location.pendingMessage")
-                : String(localized: "location.positionTitle")
+            return locationService.lastError ?? String(localized: "location.pendingMessage")
         case .denied, .restricted:
             return String(localized: "location.settingsMessage")
         case .notDetermined:
             return String(localized: "location.idleMessage")
         @unknown default:
             return String(localized: "location.unknownMessage")
+        }
+    }
+
+    private var locationSectionTitle: String {
+        switch locationService.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse:
+            return String(localized: "location.pendingTitle")
+        case .denied, .restricted:
+            return String(localized: "location.deniedTitle")
+        case .notDetermined:
+            return String(localized: "location.idleTitle")
+        @unknown default:
+            return String(localized: "location.unavailableTitle")
+        }
+    }
+
+    private var shouldShowLocationSection: Bool {
+        switch locationService.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse:
+            return locationService.currentLocation == nil
+        case .denied, .restricted, .notDetermined:
+            return true
+        @unknown default:
+            return true
         }
     }
 

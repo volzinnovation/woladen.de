@@ -3,6 +3,7 @@ package de.woladen.android.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -122,6 +123,7 @@ private fun FavoriteRow(
                 )
                 val occupancy = feature.occupancySummaryLabel
                 val priceDisplay = feature.displayPrice
+                val priceColor = favoritePriceChipColor()
                 if (occupancy != null || priceDisplay.isNotBlank()) {
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -138,8 +140,8 @@ private fun FavoriteRow(
                             FavoriteChip(
                                 text = priceDisplay,
                                 prefix = "€",
-                                containerColor = Color(0x1F15803D),
-                                contentColor = Color(0xFF15803D)
+                                containerColor = priceColor.copy(alpha = 0.14f),
+                                contentColor = priceColor
                             )
                         }
                     }
@@ -194,11 +196,17 @@ private fun FavoriteChip(
     }
 }
 
+@Composable
 private fun favoriteOccupancyColor(feature: GeoJsonFeature): Color {
+    val isDarkMode = isSystemInDarkTheme()
     return when (feature.availabilityStatus) {
-        de.woladen.android.model.AvailabilityStatus.FREE -> Color(0xFF0F766E)
-        de.woladen.android.model.AvailabilityStatus.OCCUPIED -> Color(0xFFB45309)
-        de.woladen.android.model.AvailabilityStatus.OUT_OF_ORDER -> Color(0xFFB91C1C)
-        de.woladen.android.model.AvailabilityStatus.UNKNOWN -> Color.Gray
+        de.woladen.android.model.AvailabilityStatus.FREE -> if (isDarkMode) Color(0xFF5EEAD4) else Color(0xFF0F766E)
+        de.woladen.android.model.AvailabilityStatus.OCCUPIED -> if (isDarkMode) Color(0xFFFBBF24) else Color(0xFFB45309)
+        de.woladen.android.model.AvailabilityStatus.OUT_OF_ORDER -> if (isDarkMode) Color(0xFFF87171) else Color(0xFFB91C1C)
+        de.woladen.android.model.AvailabilityStatus.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 }
+
+@Composable
+private fun favoritePriceChipColor(): Color =
+    if (isSystemInDarkTheme()) Color(0xFF86EFAC) else Color(0xFF15803D)
