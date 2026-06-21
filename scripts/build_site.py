@@ -14,6 +14,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import parse_qsl, quote, urlsplit, urlunsplit
@@ -79,7 +80,31 @@ ROOT_URLS = [
     "imprint.html",
 ]
 
-SEO_LANGUAGES = ("en", "de", "fr", "nl")
+SEO_LANGUAGES = (
+    "en",
+    "de",
+    "fr",
+    "nl",
+    "da",
+    "fi",
+    "sv",
+    "el",
+    "lv",
+    "lt",
+    "lb",
+    "mt",
+    "nb",
+    "nn",
+    "pl",
+    "pt",
+    "es",
+    "cs",
+    "hu",
+    "sl",
+    "it",
+    "rm",
+    "tr",
+)
 SEO_REQUIRED_KEYS = (
     "brandName",
     "seoName",
@@ -125,6 +150,17 @@ SEO_REQUIRED_KEYS = (
     "topStopsIntro",
     "majorOperatorsTitle",
     "backToCoverage",
+    "cityTitle",
+    "cityH1",
+    "cityDescription",
+    "cityIntro",
+    "cityListTitle",
+    "amenityTitle",
+    "amenityH1",
+    "amenityDescription",
+    "amenityIntro",
+    "amenityListTitle",
+    "backToCountry",
     "stationChargingPoints",
     "stationNearbyPlaces",
 )
@@ -278,6 +314,345 @@ AMENITY_LABELS = {
     "supermarket": "Supermarket",
     "toilets": "Toilets",
 }
+AMENITY_LABELS_BY_LANGUAGE = {
+    "en": AMENITY_LABELS,
+    "de": {
+        "bakery": "Bäckereien",
+        "cafe": "Cafés",
+        "convenience": "Kioske",
+        "fast_food": "Fast Food",
+        "hotel": "Hotels",
+        "ice_cream": "Eis",
+        "museum": "Museen",
+        "park": "Parks",
+        "pharmacy": "Apotheken",
+        "playground": "Spielplätze",
+        "restaurant": "Restaurants",
+        "supermarket": "Supermärkte",
+        "toilets": "Toiletten",
+    },
+    "fr": {
+        "bakery": "boulangeries",
+        "cafe": "cafés",
+        "convenience": "commerces de proximité",
+        "fast_food": "restauration rapide",
+        "hotel": "hôtels",
+        "ice_cream": "glaciers",
+        "museum": "musées",
+        "park": "parcs",
+        "pharmacy": "pharmacies",
+        "playground": "aires de jeux",
+        "restaurant": "restaurants",
+        "supermarket": "supermarchés",
+        "toilets": "toilettes",
+    },
+    "nl": {
+        "bakery": "bakkerijen",
+        "cafe": "cafés",
+        "convenience": "buurtwinkels",
+        "fast_food": "fastfood",
+        "hotel": "hotels",
+        "ice_cream": "ijs",
+        "museum": "musea",
+        "park": "parken",
+        "pharmacy": "apotheken",
+        "playground": "speeltuinen",
+        "restaurant": "restaurants",
+        "supermarket": "supermarkten",
+        "toilets": "toiletten",
+    },
+    "da": {
+        "bakery": "bagerier",
+        "cafe": "caféer",
+        "convenience": "nærbutikker",
+        "fast_food": "fastfood",
+        "hotel": "hoteller",
+        "ice_cream": "is",
+        "museum": "museer",
+        "park": "parker",
+        "pharmacy": "apoteker",
+        "playground": "legepladser",
+        "restaurant": "restauranter",
+        "supermarket": "supermarkeder",
+        "toilets": "toiletter",
+    },
+    "fi": {
+        "bakery": "leipomot",
+        "cafe": "kahvilat",
+        "convenience": "lähikaupat",
+        "fast_food": "pikaruoka",
+        "hotel": "hotellit",
+        "ice_cream": "jäätelö",
+        "museum": "museot",
+        "park": "puistot",
+        "pharmacy": "apteekit",
+        "playground": "leikkipaikat",
+        "restaurant": "ravintolat",
+        "supermarket": "supermarketit",
+        "toilets": "WC:t",
+    },
+    "sv": {
+        "bakery": "bagerier",
+        "cafe": "kaféer",
+        "convenience": "närbutiker",
+        "fast_food": "snabbmat",
+        "hotel": "hotell",
+        "ice_cream": "glass",
+        "museum": "museer",
+        "park": "parker",
+        "pharmacy": "apotek",
+        "playground": "lekplatser",
+        "restaurant": "restauranger",
+        "supermarket": "stormarknader",
+        "toilets": "toaletter",
+    },
+    "el": {
+        "bakery": "φούρνοι",
+        "cafe": "καφέ",
+        "convenience": "παντοπωλεία",
+        "fast_food": "γρήγορο φαγητό",
+        "hotel": "ξενοδοχεία",
+        "ice_cream": "παγωτό",
+        "museum": "μουσεία",
+        "park": "πάρκα",
+        "pharmacy": "φαρμακεία",
+        "playground": "παιδικές χαρές",
+        "restaurant": "εστιατόρια",
+        "supermarket": "σούπερ μάρκετ",
+        "toilets": "τουαλέτες",
+    },
+    "lv": {
+        "bakery": "maiznīcas",
+        "cafe": "kafejnīcas",
+        "convenience": "nelieli veikali",
+        "fast_food": "ātrā ēdināšana",
+        "hotel": "viesnīcas",
+        "ice_cream": "saldējums",
+        "museum": "muzeji",
+        "park": "parki",
+        "pharmacy": "aptiekas",
+        "playground": "rotaļu laukumi",
+        "restaurant": "restorāni",
+        "supermarket": "lielveikali",
+        "toilets": "tualetes",
+    },
+    "lt": {
+        "bakery": "kepyklos",
+        "cafe": "kavinės",
+        "convenience": "parduotuvės",
+        "fast_food": "greitas maistas",
+        "hotel": "viešbučiai",
+        "ice_cream": "ledai",
+        "museum": "muziejai",
+        "park": "parkai",
+        "pharmacy": "vaistinės",
+        "playground": "žaidimų aikštelės",
+        "restaurant": "restoranai",
+        "supermarket": "prekybos centrai",
+        "toilets": "tualetai",
+    },
+    "lb": {
+        "bakery": "Bäckereien",
+        "cafe": "Caféen",
+        "convenience": "Kiosken",
+        "fast_food": "Fast Food",
+        "hotel": "Hotellen",
+        "ice_cream": "Glace",
+        "museum": "Muséeën",
+        "park": "Parken",
+        "pharmacy": "Apdikten",
+        "playground": "Spillplazen",
+        "restaurant": "Restauranten",
+        "supermarket": "Supermarchéen",
+        "toilets": "Toiletten",
+    },
+    "mt": {
+        "bakery": "fran",
+        "cafe": "kafetteriji",
+        "convenience": "ħwienet tal-konvenjenza",
+        "fast_food": "ikel ta' malajr",
+        "hotel": "lukandi",
+        "ice_cream": "ġelat",
+        "museum": "mużewijiet",
+        "park": "parks",
+        "pharmacy": "spiżeriji",
+        "playground": "żoni tal-logħob",
+        "restaurant": "ristoranti",
+        "supermarket": "supermarkets",
+        "toilets": "toilets",
+    },
+    "nb": {
+        "bakery": "bakerier",
+        "cafe": "kafeer",
+        "convenience": "nærbutikker",
+        "fast_food": "hurtigmat",
+        "hotel": "hoteller",
+        "ice_cream": "is",
+        "museum": "museer",
+        "park": "parker",
+        "pharmacy": "apotek",
+        "playground": "lekeplasser",
+        "restaurant": "restauranter",
+        "supermarket": "supermarkeder",
+        "toilets": "toaletter",
+    },
+    "nn": {
+        "bakery": "bakeri",
+        "cafe": "kafear",
+        "convenience": "nærbutikkar",
+        "fast_food": "snøggmat",
+        "hotel": "hotell",
+        "ice_cream": "is",
+        "museum": "museum",
+        "park": "parkar",
+        "pharmacy": "apotek",
+        "playground": "leikeplassar",
+        "restaurant": "restaurantar",
+        "supermarket": "supermarknader",
+        "toilets": "toalett",
+    },
+    "pl": {
+        "bakery": "piekarnie",
+        "cafe": "kawiarnie",
+        "convenience": "sklepy osiedlowe",
+        "fast_food": "fast food",
+        "hotel": "hotele",
+        "ice_cream": "lody",
+        "museum": "muzea",
+        "park": "parki",
+        "pharmacy": "apteki",
+        "playground": "place zabaw",
+        "restaurant": "restauracje",
+        "supermarket": "supermarkety",
+        "toilets": "toalety",
+    },
+    "pt": {
+        "bakery": "padarias",
+        "cafe": "cafés",
+        "convenience": "lojas de conveniência",
+        "fast_food": "fast food",
+        "hotel": "hotéis",
+        "ice_cream": "gelado",
+        "museum": "museus",
+        "park": "parques",
+        "pharmacy": "farmácias",
+        "playground": "parques infantis",
+        "restaurant": "restaurantes",
+        "supermarket": "supermercados",
+        "toilets": "casas de banho",
+    },
+    "es": {
+        "bakery": "panaderías",
+        "cafe": "cafeterías",
+        "convenience": "tiendas de conveniencia",
+        "fast_food": "comida rápida",
+        "hotel": "hoteles",
+        "ice_cream": "helados",
+        "museum": "museos",
+        "park": "parques",
+        "pharmacy": "farmacias",
+        "playground": "parques infantiles",
+        "restaurant": "restaurantes",
+        "supermarket": "supermercados",
+        "toilets": "aseos",
+    },
+    "cs": {
+        "bakery": "pekárny",
+        "cafe": "kavárny",
+        "convenience": "večerky",
+        "fast_food": "rychlé občerstvení",
+        "hotel": "hotely",
+        "ice_cream": "zmrzlina",
+        "museum": "muzea",
+        "park": "parky",
+        "pharmacy": "lékárny",
+        "playground": "hřiště",
+        "restaurant": "restaurace",
+        "supermarket": "supermarkety",
+        "toilets": "toalety",
+    },
+    "hu": {
+        "bakery": "pékségek",
+        "cafe": "kávézók",
+        "convenience": "kisboltok",
+        "fast_food": "gyorséttermek",
+        "hotel": "szállodák",
+        "ice_cream": "fagylalt",
+        "museum": "múzeumok",
+        "park": "parkok",
+        "pharmacy": "gyógyszertárak",
+        "playground": "játszóterek",
+        "restaurant": "éttermek",
+        "supermarket": "szupermarketek",
+        "toilets": "mosdók",
+    },
+    "sl": {
+        "bakery": "pekarne",
+        "cafe": "kavarne",
+        "convenience": "trgovine",
+        "fast_food": "hitra hrana",
+        "hotel": "hoteli",
+        "ice_cream": "sladoled",
+        "museum": "muzeji",
+        "park": "parki",
+        "pharmacy": "lekarne",
+        "playground": "igrišča",
+        "restaurant": "restavracije",
+        "supermarket": "supermarketi",
+        "toilets": "stranišča",
+    },
+    "it": {
+        "bakery": "panetterie",
+        "cafe": "caffè",
+        "convenience": "minimarket",
+        "fast_food": "fast food",
+        "hotel": "hotel",
+        "ice_cream": "gelato",
+        "museum": "musei",
+        "park": "parchi",
+        "pharmacy": "farmacie",
+        "playground": "aree giochi",
+        "restaurant": "ristoranti",
+        "supermarket": "supermercati",
+        "toilets": "servizi igienici",
+    },
+    "rm": {
+        "bakery": "furnarias",
+        "cafe": "cafés",
+        "convenience": "butias da convenienza",
+        "fast_food": "fast food",
+        "hotel": "hotels",
+        "ice_cream": "glatsch",
+        "museum": "museums",
+        "park": "parcs",
+        "pharmacy": "apotecas",
+        "playground": "plazzas da gieu",
+        "restaurant": "restaurants",
+        "supermarket": "supermartgads",
+        "toilets": "tualettas",
+    },
+    "tr": {
+        "bakery": "fırınlar",
+        "cafe": "kafeler",
+        "convenience": "marketler",
+        "fast_food": "fast food",
+        "hotel": "oteller",
+        "ice_cream": "dondurma",
+        "museum": "müzeler",
+        "park": "parklar",
+        "pharmacy": "eczaneler",
+        "playground": "oyun alanları",
+        "restaurant": "restoranlar",
+        "supermarket": "süpermarketler",
+        "toilets": "tuvaletler",
+    },
+}
+
+SEO_CITY_MIN_FAST_STATIONS = 3
+SEO_AMENITY_MIN_FAST_STATIONS = 5
+SEO_COUNTRY_CITY_LINK_LIMIT = 40
+SEO_AMENITY_CATEGORIES = tuple(AMENITY_LABELS)
+CHUNKED_SEO_GROUPS = {"sitemap-seo-cities.xml", "sitemap-seo-amenities.xml"}
 
 AMENITY_GROUPS = (
     ("Food & drink", ("restaurant", "cafe", "fast_food", "ice_cream", "bakery")),
@@ -301,6 +676,28 @@ class SeoCountry:
     fast_station_count: int
     source_name: str
     live_station_count: int = 0
+
+
+@dataclass(frozen=True)
+class SeoCity:
+    country_code: str
+    name: str
+    slug: str
+    station_count: int
+    charger_count: int
+    fast_station_count: int
+    max_power_kw: float
+    amenities_total: int
+
+
+@dataclass(frozen=True)
+class SeoAmenity:
+    country_code: str
+    category: str
+    station_count: int
+    charger_count: int
+    max_power_kw: float
+    amenities_total: int
 
 
 @dataclass(frozen=True)
@@ -823,18 +1220,158 @@ def interpolate(template: str, values: dict[str, object]) -> str:
     return result
 
 
-def country_display_name(country_code: str, language: str) -> str:
+SLUG_TRANSLITERATION = str.maketrans(
+    {
+        "ß": "ss",
+        "ẞ": "SS",
+        "æ": "ae",
+        "Æ": "AE",
+        "œ": "oe",
+        "Œ": "OE",
+        "ø": "o",
+        "Ø": "O",
+        "å": "a",
+        "Å": "A",
+        "ð": "d",
+        "Ð": "D",
+        "þ": "th",
+        "Þ": "Th",
+        "ł": "l",
+        "Ł": "L",
+        "ı": "i",
+        "İ": "I",
+        "ħ": "h",
+        "Ħ": "H",
+        "đ": "d",
+        "Đ": "D",
+        "Α": "A",
+        "Β": "V",
+        "Γ": "G",
+        "Δ": "D",
+        "Ε": "E",
+        "Ζ": "Z",
+        "Η": "I",
+        "Θ": "Th",
+        "Ι": "I",
+        "Κ": "K",
+        "Λ": "L",
+        "Μ": "M",
+        "Ν": "N",
+        "Ξ": "X",
+        "Ο": "O",
+        "Π": "P",
+        "Ρ": "R",
+        "Σ": "S",
+        "Τ": "T",
+        "Υ": "Y",
+        "Φ": "F",
+        "Χ": "Ch",
+        "Ψ": "Ps",
+        "Ω": "O",
+        "α": "a",
+        "β": "v",
+        "γ": "g",
+        "δ": "d",
+        "ε": "e",
+        "ζ": "z",
+        "η": "i",
+        "θ": "th",
+        "ι": "i",
+        "κ": "k",
+        "λ": "l",
+        "μ": "m",
+        "ν": "n",
+        "ξ": "x",
+        "ο": "o",
+        "π": "p",
+        "ρ": "r",
+        "σ": "s",
+        "ς": "s",
+        "τ": "t",
+        "υ": "y",
+        "φ": "f",
+        "χ": "ch",
+        "ψ": "ps",
+        "ω": "o",
+    }
+)
+_COUNTRY_DISPLAY_NAMES_CACHE: dict[str, dict[str, str]] | None = None
+
+
+def slugify_path_segment(value: object, fallback: str = "page") -> str:
+    text = str(value or "").strip().translate(SLUG_TRANSLITERATION)
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    text = text.lower().replace("&", " and ")
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    text = re.sub(r"-{2,}", "-", text).strip("-")
+    return text or fallback
+
+
+def load_country_display_names() -> dict[str, dict[str, str]]:
+    global _COUNTRY_DISPLAY_NAMES_CACHE
+    if _COUNTRY_DISPLAY_NAMES_CACHE is not None:
+        return _COUNTRY_DISPLAY_NAMES_CACHE
+
+    script = """
+const languages = JSON.parse(process.argv[1]);
+const countries = JSON.parse(process.argv[2]);
+const names = {};
+for (const language of languages) {
+  const displayNames = new Intl.DisplayNames([language], { type: "region" });
+  names[language] = {};
+  for (const country of countries) {
+    names[language][country] = displayNames.of(country);
+  }
+}
+process.stdout.write(JSON.stringify(names));
+"""
     try:
-        return COUNTRY_SEO[country_code][language][0]
+        result = subprocess.run(
+            [
+                "node",
+                "-e",
+                script,
+                json.dumps(list(SEO_LANGUAGES)),
+                json.dumps(sorted(COUNTRY_SEO)),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeError("Node.js with Intl.DisplayNames is required to build localized SEO country pages") from exc
+
+    payload = json.loads(result.stdout)
+    if not isinstance(payload, dict):
+        raise ValueError("Localized country name lookup did not return an object")
+    _COUNTRY_DISPLAY_NAMES_CACHE = {
+        str(language): {
+            str(country_code).upper(): str(name).strip()
+            for country_code, name in countries.items()
+            if str(name).strip()
+        }
+        for language, countries in payload.items()
+        if isinstance(countries, dict)
+    }
+    return _COUNTRY_DISPLAY_NAMES_CACHE
+
+
+def country_display_name(country_code: str, language: str) -> str:
+    localized = COUNTRY_SEO.get(country_code, {}).get(language)
+    if localized:
+        return localized[0]
+    try:
+        return load_country_display_names()[language][country_code]
     except KeyError as exc:
         raise ValueError(f"Missing SEO country name for {country_code}/{language}") from exc
 
 
 def country_slug(country_code: str, language: str) -> str:
-    try:
-        return COUNTRY_SEO[country_code][language][1]
-    except KeyError as exc:
-        raise ValueError(f"Missing SEO country slug for {country_code}/{language}") from exc
+    localized = COUNTRY_SEO.get(country_code, {}).get(language)
+    if localized:
+        return localized[1]
+    return slugify_path_segment(country_display_name(country_code, language), country_code.lower())
 
 
 def seo_home_path(language: str) -> str:
@@ -847,6 +1384,28 @@ def seo_coverage_path(language: str, bundles: dict[str, dict[str, str]]) -> str:
 
 def seo_country_path(country_code: str, language: str) -> str:
     return f"{language}/{country_slug(country_code, language)}/index.html"
+
+
+def seo_city_path(city: SeoCity, language: str) -> str:
+    return f"{language}/{country_slug(city.country_code, language)}/{city.slug}/index.html"
+
+
+def amenity_display_label(category: str, language: str) -> str:
+    labels = AMENITY_LABELS_BY_LANGUAGE.get(language, {})
+    label = labels.get(category)
+    if label:
+        return label
+    if language in SEO_LANGUAGES:
+        raise ValueError(f"Missing SEO amenity label for {category}/{language}")
+    return AMENITY_LABELS.get(category, category.replace("_", " ").title())
+
+
+def seo_amenity_slug(category: str, language: str) -> str:
+    return slugify_path_segment(amenity_display_label(category, language), category.replace("_", "-"))
+
+
+def seo_amenity_path(amenity: SeoAmenity, language: str) -> str:
+    return f"{language}/{country_slug(amenity.country_code, language)}/amenity/{seo_amenity_slug(amenity.category, language)}/index.html"
 
 
 def public_path(path: str) -> str:
@@ -1221,6 +1780,18 @@ def coverage_country_rows(countries: list[SeoCountry], language: str, bundle: di
     return "".join(rows)
 
 
+INVALID_CITY_NAMES = {"-", "?", "n/a", "na", "nan", "nat", "none", "null", "unknown", "unbekannt"}
+
+
+def normalized_city_name(value: object) -> str:
+    return re.sub(r"\s+", " ", str(value or "").strip())
+
+
+def is_valid_city_name(value: object) -> bool:
+    city = normalized_city_name(value)
+    return bool(city) and city.lower() not in INVALID_CITY_NAMES
+
+
 def load_seo_station_summaries(limit_per_country: int = 6) -> tuple[dict[str, list[SeoStationSummary]], dict[str, list[tuple[str, int]]]]:
     bundle_path = resolve_static_bundle_path()
     conn = sqlite3.connect(bundle_path)
@@ -1299,6 +1870,243 @@ def load_seo_station_summaries(limit_per_country: int = 6) -> tuple[dict[str, li
     return top_stations, operators
 
 
+def load_seo_cities(
+    min_fast_station_count: int = SEO_CITY_MIN_FAST_STATIONS,
+    limit_per_city: int = 6,
+) -> tuple[dict[str, list[SeoCity]], dict[tuple[str, str], list[SeoStationSummary]]]:
+    bundle_path = resolve_static_bundle_path()
+    conn = sqlite3.connect(bundle_path)
+    conn.row_factory = sqlite3.Row
+    cities_by_country: dict[str, list[SeoCity]] = {}
+    top_stations_by_city: dict[tuple[str, str], list[SeoStationSummary]] = {}
+    city_slug_lookup: dict[tuple[str, str], str] = {}
+    try:
+        city_rows = conn.execute(
+            """
+            SELECT
+              s.country_code,
+              TRIM(s.city) AS city,
+              COUNT(*) AS station_count,
+              SUM(COALESCE(s.charger_count, 0)) AS charger_count,
+              MAX(COALESCE(s.max_power_kw, 0)) AS max_power_kw,
+              SUM(COALESCE(a.amenities_total, 0)) AS amenities_total
+            FROM stations s
+            LEFT JOIN station_amenities a ON a.station_uid = s.station_uid
+            WHERE s.station_id IS NOT NULL
+              AND TRIM(s.station_id) != ''
+              AND s.latitude IS NOT NULL
+              AND s.longitude IS NOT NULL
+              AND COALESCE(s.max_power_kw, 0) >= 50
+              AND TRIM(COALESCE(s.city, '')) != ''
+            GROUP BY s.country_code, TRIM(s.city)
+            HAVING station_count >= ?
+            ORDER BY s.country_code, LOWER(TRIM(s.city))
+            """,
+            (min_fast_station_count,),
+        )
+        seen_slugs_by_country: dict[str, dict[str, int]] = {}
+        for row in city_rows:
+            country_code = str(row["country_code"] or "").strip().upper()
+            city_name = normalized_city_name(row["city"])
+            if country_code not in COUNTRY_SEO or not is_valid_city_name(city_name):
+                continue
+            base_slug = slugify_path_segment(city_name, "city")
+            slug_counts = seen_slugs_by_country.setdefault(country_code, {})
+            duplicate_count = slug_counts.get(base_slug, 0)
+            slug_counts[base_slug] = duplicate_count + 1
+            slug = base_slug if duplicate_count == 0 else f"{base_slug}-{duplicate_count + 1}"
+            city = SeoCity(
+                country_code=country_code,
+                name=city_name,
+                slug=slug,
+                station_count=to_int(row["station_count"]),
+                charger_count=to_int(row["charger_count"]),
+                fast_station_count=to_int(row["station_count"]),
+                max_power_kw=float(row["max_power_kw"] or 0),
+                amenities_total=to_int(row["amenities_total"]),
+            )
+            cities_by_country.setdefault(country_code, []).append(city)
+            city_slug_lookup[(country_code, city_name)] = slug
+
+        for cities in cities_by_country.values():
+            cities.sort(key=lambda city: (-city.fast_station_count, city.name.lower(), city.slug))
+
+        if not city_slug_lookup:
+            return cities_by_country, top_stations_by_city
+
+        station_rows = conn.execute(
+            """
+            WITH ranked AS (
+              SELECT
+                s.country_code,
+                TRIM(s.city) AS city,
+                s.station_id,
+                COALESCE(NULLIF(TRIM(s.operator_name), ''), NULLIF(TRIM(s.station_name), ''), 'Unknown operator') AS operator,
+                COALESCE(s.max_power_kw, 0) AS max_power_kw,
+                COALESCE(s.charger_count, 0) AS charger_count,
+                COALESCE(a.amenities_total, 0) AS amenities_total,
+                ROW_NUMBER() OVER (
+                  PARTITION BY s.country_code, TRIM(s.city)
+                  ORDER BY COALESCE(a.amenities_total, 0) DESC,
+                           COALESCE(s.max_power_kw, 0) DESC,
+                           COALESCE(s.charger_count, 0) DESC,
+                           s.station_id ASC
+                ) AS rank
+              FROM stations s
+              LEFT JOIN station_amenities a ON a.station_uid = s.station_uid
+              WHERE s.station_id IS NOT NULL
+                AND TRIM(s.station_id) != ''
+                AND s.latitude IS NOT NULL
+                AND s.longitude IS NOT NULL
+                AND COALESCE(s.max_power_kw, 0) >= 50
+                AND TRIM(COALESCE(s.city, '')) != ''
+            )
+            SELECT *
+            FROM ranked
+            WHERE rank <= ?
+            ORDER BY country_code, city, rank
+            """,
+            (limit_per_city,),
+        )
+        for row in station_rows:
+            country_code = str(row["country_code"] or "").strip().upper()
+            city_name = normalized_city_name(row["city"])
+            city_slug = city_slug_lookup.get((country_code, city_name))
+            if not city_slug:
+                continue
+            top_stations_by_city.setdefault((country_code, city_slug), []).append(
+                SeoStationSummary(
+                    country_code=country_code,
+                    station_id=public_station_id(row["station_id"]),
+                    operator=str(row["operator"] or "").strip(),
+                    city=city_name,
+                    max_power_kw=float(row["max_power_kw"] or 0),
+                    charger_count=to_int(row["charger_count"]),
+                    amenities_total=to_int(row["amenities_total"]),
+                )
+            )
+    finally:
+        conn.close()
+    return cities_by_country, top_stations_by_city
+
+
+def load_seo_amenities(
+    min_fast_station_count: int = SEO_AMENITY_MIN_FAST_STATIONS,
+    limit_per_amenity: int = 6,
+) -> tuple[dict[str, list[SeoAmenity]], dict[tuple[str, str], list[SeoStationSummary]]]:
+    bundle_path = resolve_static_bundle_path()
+    conn = sqlite3.connect(bundle_path)
+    conn.row_factory = sqlite3.Row
+    amenities_by_country: dict[str, list[SeoAmenity]] = {}
+    top_stations_by_amenity: dict[tuple[str, str], list[SeoStationSummary]] = {}
+    category_placeholders = ",".join("?" for _ in SEO_AMENITY_CATEGORIES)
+    try:
+        amenity_rows = conn.execute(
+            f"""
+            SELECT
+              s.country_code,
+              json_each.key AS category,
+              COUNT(*) AS station_count,
+              SUM(COALESCE(s.charger_count, 0)) AS charger_count,
+              MAX(COALESCE(s.max_power_kw, 0)) AS max_power_kw,
+              SUM(CAST(json_each.value AS INTEGER)) AS amenities_total
+            FROM stations s
+            JOIN station_amenities a ON a.station_uid = s.station_uid
+            JOIN json_each(a.amenity_category_counts_json)
+            WHERE s.station_id IS NOT NULL
+              AND TRIM(s.station_id) != ''
+              AND s.latitude IS NOT NULL
+              AND s.longitude IS NOT NULL
+              AND COALESCE(s.max_power_kw, 0) >= 50
+              AND json_each.key IN ({category_placeholders})
+              AND CAST(json_each.value AS INTEGER) > 0
+            GROUP BY s.country_code, json_each.key
+            HAVING station_count >= ?
+            ORDER BY s.country_code, station_count DESC, json_each.key
+            """,
+            (*SEO_AMENITY_CATEGORIES, min_fast_station_count),
+        )
+        valid_keys: set[tuple[str, str]] = set()
+        for row in amenity_rows:
+            country_code = str(row["country_code"] or "").strip().upper()
+            category = str(row["category"] or "").strip()
+            if country_code not in COUNTRY_SEO or category not in SEO_AMENITY_CATEGORIES:
+                continue
+            amenity = SeoAmenity(
+                country_code=country_code,
+                category=category,
+                station_count=to_int(row["station_count"]),
+                charger_count=to_int(row["charger_count"]),
+                max_power_kw=float(row["max_power_kw"] or 0),
+                amenities_total=to_int(row["amenities_total"]),
+            )
+            amenities_by_country.setdefault(country_code, []).append(amenity)
+            valid_keys.add((country_code, category))
+
+        for amenities in amenities_by_country.values():
+            amenities.sort(key=lambda amenity: (-amenity.station_count, amenity.category))
+
+        if not valid_keys:
+            return amenities_by_country, top_stations_by_amenity
+
+        station_rows = conn.execute(
+            f"""
+            WITH ranked AS (
+              SELECT
+                s.country_code,
+                json_each.key AS category,
+                s.station_id,
+                COALESCE(NULLIF(TRIM(s.operator_name), ''), NULLIF(TRIM(s.station_name), ''), 'Unknown operator') AS operator,
+                COALESCE(NULLIF(TRIM(s.city), ''), NULLIF(TRIM(s.postal_code), ''), '') AS city,
+                COALESCE(s.max_power_kw, 0) AS max_power_kw,
+                COALESCE(s.charger_count, 0) AS charger_count,
+                CAST(json_each.value AS INTEGER) AS category_count,
+                ROW_NUMBER() OVER (
+                  PARTITION BY s.country_code, json_each.key
+                  ORDER BY CAST(json_each.value AS INTEGER) DESC,
+                           COALESCE(s.max_power_kw, 0) DESC,
+                           COALESCE(s.charger_count, 0) DESC,
+                           s.station_id ASC
+                ) AS rank
+              FROM stations s
+              JOIN station_amenities a ON a.station_uid = s.station_uid
+              JOIN json_each(a.amenity_category_counts_json)
+              WHERE s.station_id IS NOT NULL
+                AND TRIM(s.station_id) != ''
+                AND s.latitude IS NOT NULL
+                AND s.longitude IS NOT NULL
+                AND COALESCE(s.max_power_kw, 0) >= 50
+                AND json_each.key IN ({category_placeholders})
+                AND CAST(json_each.value AS INTEGER) > 0
+            )
+            SELECT *
+            FROM ranked
+            WHERE rank <= ?
+            ORDER BY country_code, category, rank
+            """,
+            (*SEO_AMENITY_CATEGORIES, limit_per_amenity),
+        )
+        for row in station_rows:
+            country_code = str(row["country_code"] or "").strip().upper()
+            category = str(row["category"] or "").strip()
+            if (country_code, category) not in valid_keys:
+                continue
+            top_stations_by_amenity.setdefault((country_code, category), []).append(
+                SeoStationSummary(
+                    country_code=country_code,
+                    station_id=public_station_id(row["station_id"]),
+                    operator=str(row["operator"] or "").strip(),
+                    city=str(row["city"] or "").strip(),
+                    max_power_kw=float(row["max_power_kw"] or 0),
+                    charger_count=to_int(row["charger_count"]),
+                    amenities_total=to_int(row["category_count"]),
+                )
+            )
+    finally:
+        conn.close()
+    return amenities_by_country, top_stations_by_amenity
+
+
 def render_station_summary_list(stations: list[SeoStationSummary], language: str, bundle: dict[str, str]) -> str:
     if not stations:
         return ""
@@ -1332,15 +2140,73 @@ def render_operator_list(operators: list[tuple[str, int]], language: str) -> str
     )
 
 
+def render_city_links(cities: list[SeoCity], language: str, limit: int = SEO_COUNTRY_CITY_LINK_LIMIT) -> str:
+    return "".join(
+        "<li>"
+        f'<a href="{html.escape("/" + public_path(seo_city_path(city, language)))}"><strong>{format_text(city.name)}</strong></a>'
+        f"{format_text(format_count(city.fast_station_count, language))}"
+        "</li>"
+        for city in cities[:limit]
+    )
+
+
+def render_amenity_links(amenities: list[SeoAmenity], language: str) -> str:
+    return "".join(
+        "<li>"
+        f'<a href="{html.escape("/" + public_path(seo_amenity_path(amenity, language)))}"><strong>{format_text(amenity_display_label(amenity.category, language))}</strong></a>'
+        f"{format_text(format_count(amenity.station_count, language))}"
+        "</li>"
+        for amenity in amenities
+    )
+
+
+def city_stat_items(city: SeoCity, language: str, bundle: dict[str, str]) -> str:
+    stats = (
+        (bundle["stationsLabel"], city.fast_station_count),
+        (bundle["chargingPointsLabel"], city.charger_count),
+        (bundle["stationNearbyPlaces"], city.amenities_total),
+    )
+    return "".join(
+        "<li>"
+        f"<strong>{html.escape(format_count(value, language))}</strong>"
+        f"{format_text(label)}"
+        "</li>"
+        for label, value in stats
+    )
+
+
+def amenity_stat_items(amenity: SeoAmenity, language: str, bundle: dict[str, str]) -> str:
+    stats = (
+        (bundle["stationsLabel"], amenity.station_count),
+        (bundle["chargingPointsLabel"], amenity.charger_count),
+        (amenity_display_label(amenity.category, language), amenity.amenities_total),
+    )
+    return "".join(
+        "<li>"
+        f"<strong>{html.escape(format_count(value, language))}</strong>"
+        f"{format_text(label)}"
+        "</li>"
+        for label, value in stats
+    )
+
+
 def build_seo_pages(
     countries: list[SeoCountry],
     generated_at: str,
     bundles: dict[str, dict[str, str]],
     top_stations: dict[str, list[SeoStationSummary]] | None = None,
     operators: dict[str, list[tuple[str, int]]] | None = None,
+    cities_by_country: dict[str, list[SeoCity]] | None = None,
+    top_stations_by_city: dict[tuple[str, str], list[SeoStationSummary]] | None = None,
+    amenities_by_country: dict[str, list[SeoAmenity]] | None = None,
+    top_stations_by_amenity: dict[tuple[str, str], list[SeoStationSummary]] | None = None,
 ) -> list[SeoPage]:
     top_stations = top_stations or {}
     operators = operators or {}
+    cities_by_country = cities_by_country or {}
+    top_stations_by_city = top_stations_by_city or {}
+    amenities_by_country = amenities_by_country or {}
+    top_stations_by_amenity = top_stations_by_amenity or {}
     pages: list[SeoPage] = []
 
     home_alternates = {language: seo_home_path(language) for language in SEO_LANGUAGES}
@@ -1409,12 +2275,30 @@ def build_seo_pages(
             bundle = bundles[language]
             country_name = country_display_name(country.code, language)
             coverage_href = "/" + public_path(seo_coverage_path(language, bundles))
+            country_city_links = render_city_links(cities_by_country.get(country.code, []), language)
+            country_amenity_links = render_amenity_links(amenities_by_country.get(country.code, []), language)
+            city_section = ""
+            if country_city_links:
+                city_section = (
+                    f'<h2>{format_text(bundle["cityListTitle"])}</h2>'
+                    f'<ul class="station-list">{country_city_links}</ul>'
+                    f'{render_seo_section_cta(language, bundle)}'
+                )
+            amenity_section = ""
+            if country_amenity_links:
+                amenity_section = (
+                    f'<h2>{format_text(bundle["amenityListTitle"])}</h2>'
+                    f'<ul class="station-list">{country_amenity_links}</ul>'
+                    f'{render_seo_section_cta(language, bundle)}'
+                )
             body = (
                 f'<p class="legal-intro">{format_text(interpolate(bundle["countryIntro"], {"country": country_name}))}</p>'
                 f'{render_seo_cta(language, bundle)}'
                 f'{render_country_data_box(country, language, bundle)}'
                 f'<ul class="station-list seo-stat-list">{country_stat_items(country, language, bundle)}</ul>'
                 f'{render_seo_section_cta(language, bundle)}'
+                f'{city_section}'
+                f'{amenity_section}'
                 f'<h2>{format_text(bundle["topStopsTitle"])}</h2>'
                 f'<p>{format_text(bundle["topStopsIntro"])}</p>'
                 f'<ul class="station-list">{render_station_summary_list(top_stations.get(country.code, []), language, bundle)}</ul>'
@@ -1437,6 +2321,82 @@ def build_seo_pages(
                     sitemap_group="sitemap-seo-countries.xml",
                 )
             )
+
+    for country in countries:
+        country_name_by_language = {
+            language: country_display_name(country.code, language)
+            for language in SEO_LANGUAGES
+        }
+        for city in cities_by_country.get(country.code, []):
+            city_alternates = {
+                language: seo_city_path(city, language)
+                for language in SEO_LANGUAGES
+            }
+            for language in SEO_LANGUAGES:
+                bundle = bundles[language]
+                country_name = country_name_by_language[language]
+                country_href = "/" + public_path(seo_country_path(country.code, language))
+                body = (
+                    f'<p class="legal-intro">{format_text(interpolate(bundle["cityIntro"], {"city": city.name, "country": country_name}))}</p>'
+                    f'{render_seo_cta(language, bundle)}'
+                    f'<ul class="station-list seo-stat-list">{city_stat_items(city, language, bundle)}</ul>'
+                    f'{render_seo_section_cta(language, bundle)}'
+                    f'<h2>{format_text(bundle["topStopsTitle"])}</h2>'
+                    f'<p>{format_text(bundle["topStopsIntro"])}</p>'
+                    f'<ul class="station-list">{render_station_summary_list(top_stations_by_city.get((country.code, city.slug), []), language, bundle)}</ul>'
+                    f'{render_seo_section_cta(language, bundle)}'
+                    f'<p class="station-note"><a href="{html.escape(country_href)}">{format_text(bundle["backToCountry"])}</a></p>'
+                )
+                values = {"city": city.name, "country": country_name}
+                pages.append(
+                    SeoPage(
+                        identity=f"city:{country.code}:{city.slug}",
+                        language=language,
+                        path=seo_city_path(city, language),
+                        title=interpolate(bundle["cityTitle"], values),
+                        description=interpolate(bundle["cityDescription"], values),
+                        h1=interpolate(bundle["cityH1"], values),
+                        alternate_paths=city_alternates,
+                        body_html=body,
+                        sitemap_group="sitemap-seo-cities.xml",
+                    )
+                )
+
+        for amenity in amenities_by_country.get(country.code, []):
+            amenity_alternates = {
+                language: seo_amenity_path(amenity, language)
+                for language in SEO_LANGUAGES
+            }
+            for language in SEO_LANGUAGES:
+                bundle = bundles[language]
+                country_name = country_name_by_language[language]
+                amenity_label = amenity_display_label(amenity.category, language)
+                country_href = "/" + public_path(seo_country_path(country.code, language))
+                body = (
+                    f'<p class="legal-intro">{format_text(interpolate(bundle["amenityIntro"], {"amenity": amenity_label, "country": country_name}))}</p>'
+                    f'{render_seo_cta(language, bundle)}'
+                    f'<ul class="station-list seo-stat-list">{amenity_stat_items(amenity, language, bundle)}</ul>'
+                    f'{render_seo_section_cta(language, bundle)}'
+                    f'<h2>{format_text(bundle["topStopsTitle"])}</h2>'
+                    f'<p>{format_text(bundle["topStopsIntro"])}</p>'
+                    f'<ul class="station-list">{render_station_summary_list(top_stations_by_amenity.get((country.code, amenity.category), []), language, bundle)}</ul>'
+                    f'{render_seo_section_cta(language, bundle)}'
+                    f'<p class="station-note"><a href="{html.escape(country_href)}">{format_text(bundle["backToCountry"])}</a></p>'
+                )
+                values = {"amenity": amenity_label, "country": country_name}
+                pages.append(
+                    SeoPage(
+                        identity=f"amenity:{country.code}:{amenity.category}",
+                        language=language,
+                        path=seo_amenity_path(amenity, language),
+                        title=interpolate(bundle["amenityTitle"], values),
+                        description=interpolate(bundle["amenityDescription"], values),
+                        h1=interpolate(bundle["amenityH1"], values),
+                        alternate_paths=amenity_alternates,
+                        body_html=body,
+                        sitemap_group="sitemap-seo-amenities.xml",
+                    )
+                )
 
     return pages
 
@@ -1463,7 +2423,19 @@ def write_seo_pages() -> dict[str, list[str]]:
     live_counts_by_country = load_dynamic_station_counts_by_country()
     countries, generated_at = load_seo_countries(live_counts_by_country=live_counts_by_country)
     top_stations, operators = load_seo_station_summaries()
-    pages = build_seo_pages(countries, generated_at, bundles, top_stations, operators)
+    cities_by_country, top_stations_by_city = load_seo_cities()
+    amenities_by_country, top_stations_by_amenity = load_seo_amenities()
+    pages = build_seo_pages(
+        countries,
+        generated_at,
+        bundles,
+        top_stations,
+        operators,
+        cities_by_country,
+        top_stations_by_city,
+        amenities_by_country,
+        top_stations_by_amenity,
+    )
     groups: dict[str, list[str]] = {}
     for page in pages:
         target = SITE_DIR / page.path
@@ -1792,8 +2764,17 @@ def write_sitemap(page_paths: list[str], seo_groups: dict[str, list[str]] | None
     sitemap_paths.append("sitemap-pages.xml")
 
     for relative_path, paths in sorted((seo_groups or {}).items()):
-        write_urlset_sitemap(relative_path, paths)
-        sitemap_paths.append(relative_path)
+        chunks = chunk_paths(paths)
+        should_chunk = len(chunks) > 1 or relative_path in CHUNKED_SEO_GROUPS
+        if should_chunk:
+            stem = relative_path.removesuffix(".xml")
+            for index, chunk in enumerate(chunks, start=1):
+                chunk_path = f"{stem}-{index}.xml"
+                write_urlset_sitemap(chunk_path, chunk)
+                sitemap_paths.append(chunk_path)
+        else:
+            write_urlset_sitemap(relative_path, paths)
+            sitemap_paths.append(relative_path)
 
     for index, chunk in enumerate(chunk_paths(page_paths), start=1):
         relative_path = f"sitemap-stations-{index}.xml"

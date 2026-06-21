@@ -139,7 +139,7 @@ def test_build_seo_pages_generates_language_paths_and_served_countries_only():
     assert "de/deutschland/index.html" in paths
     assert "en/france/index.html" in paths
     assert "en/italy/index.html" not in paths
-    assert len([page for page in pages if page.sitemap_group == "sitemap-seo-countries.xml"]) == 8
+    assert len([page for page in pages if page.sitemap_group == "sitemap-seo-countries.xml"]) == 46
 
     germany_page = next(page for page in pages if page.path == "en/germany/index.html")
     assert 'class="link-btn seo-primary-cta" href="/?lang=en"' in germany_page.body_html
