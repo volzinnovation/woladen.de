@@ -52,6 +52,7 @@ fun MainMapView(
     favoriteStationIds: Set<String>,
     markerTint: (GeoJsonFeature) -> String,
     onFeatureTap: (GeoJsonFeature) -> Unit,
+    onFeatureLongPress: (GeoJsonFeature) -> Unit,
     onMapIdle: (Double, Double) -> Unit,
     onMapReady: (MapLibreMap) -> Unit,
     modifier: Modifier = Modifier
@@ -69,13 +70,13 @@ fun MainMapView(
         val keys = listOf("gold", "silver", "bronze", "gray")
         buildMap {
             for (key in keys) {
-                put(key, createMapLibreCircleIcon(iconFactory, context, markerColorForKey(key), diameterDp = 16f))
+                put(key, createMapLibreCircleIcon(iconFactory, context, markerColorForKey(key), diameterDp = 30f, strokeDp = 3f))
             }
-            put("favorite", iconFactory.fromBitmap(drawableToBitmap(createFavoriteMarkerDrawable(context))))
+            put("favorite", iconFactory.fromBitmap(drawableToBitmap(createFavoriteMarkerDrawable(context, diameterDp = 40f))))
         }
     }
     val userIcon = remember(context, iconFactory) {
-        createMapLibreCircleIcon(iconFactory, context, Color.BLUE, diameterDp = 10f, strokeDp = 1f)
+        createMapLibreCircleIcon(iconFactory, context, Color.BLUE, diameterDp = 18f, strokeDp = 2.5f)
     }
 
     AndroidView(
@@ -117,6 +118,21 @@ fun MainMapView(
                         )
                         if (feature != null) {
                             onFeatureTap(feature)
+                            true
+                        } else {
+                            false
+                        }
+                    }
+
+                    mapLibreMap.addOnMapLongClickListener { latLng ->
+                        val feature = nearestFeatureForTap(
+                            features = featureById.values,
+                            tapLat = latLng.latitude,
+                            tapLon = latLng.longitude,
+                            zoom = mapLibreMap.cameraPosition.zoom
+                        )
+                        if (feature != null) {
+                            onFeatureLongPress(feature)
                             true
                         } else {
                             false
@@ -192,13 +208,13 @@ fun DetailMiniMapView(
 
     val iconFactory = remember(context) { IconFactory.getInstance(context) }
     val stationIcon = remember(context, iconFactory) {
-        createMapLibreCircleIcon(iconFactory, context, Color.rgb(0, 150, 136), diameterDp = 16f)
+        createMapLibreCircleIcon(iconFactory, context, Color.rgb(0, 150, 136), diameterDp = 30f, strokeDp = 3f)
     }
     val favoriteStationIcon = remember(context, iconFactory) {
-        iconFactory.fromBitmap(drawableToBitmap(createFavoriteMarkerDrawable(context)))
+        iconFactory.fromBitmap(drawableToBitmap(createFavoriteMarkerDrawable(context, diameterDp = 40f)))
     }
     val defaultAmenityIcon = remember(context, iconFactory) {
-        createMapLibreCircleIcon(iconFactory, context, Color.rgb(250, 173, 20), diameterDp = 8f)
+        createMapLibreCircleIcon(iconFactory, context, Color.rgb(250, 173, 20), diameterDp = 22f, strokeDp = 2f)
     }
     val amenityIconsByKey = remember(context, iconFactory) {
         mutableMapOf<String, Icon>()
@@ -250,7 +266,7 @@ fun DetailMiniMapView(
                                                 iconFactory = iconFactory,
                                                 context = context,
                                                 resId = resId,
-                                                scaleFactor = 0.66f
+                                                scaleFactor = 1.15f
                                             )
                                         } else {
                                             defaultAmenityIcon

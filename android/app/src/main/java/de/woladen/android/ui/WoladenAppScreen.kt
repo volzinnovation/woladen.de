@@ -1,23 +1,28 @@
 package de.woladen.android.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
@@ -34,11 +39,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.woladen.android.R
 import de.woladen.android.model.FilterState
@@ -96,21 +105,22 @@ fun WoladenAppScreen(
                     )
                 }
             }
-        }
-    }
 
-    if (showingFilter) {
-        FilterSheetView(
-            filter = viewModel.filterState,
-            operators = viewModel.operators,
-            availableAmenityKeys = availableAmenityKeys(viewModel),
-            onDismiss = { showingFilter = false },
-            onApply = { newFilter: FilterState ->
-                viewModel.filterState = newFilter
-                viewModel.applyFilters(locationService.currentLocation)
-                showingFilter = false
+            if (showingFilter) {
+                FilterSheetView(
+                    filter = viewModel.filterState,
+                    operators = viewModel.operators,
+                    availableAmenityKeys = availableAmenityKeys(viewModel),
+                    useWideDialog = usesWideLayout,
+                    onDismiss = { showingFilter = false },
+                    onApply = { newFilter: FilterState ->
+                        viewModel.filterState = newFilter
+                        viewModel.applyFilters(locationService.currentLocation)
+                        showingFilter = false
+                    }
+                )
             }
-        )
+        }
     }
 
 }
@@ -154,29 +164,30 @@ private fun WideAppLayout(
     onRequestLocationPermission: () -> Unit,
     onShowFilter: () -> Unit
 ) {
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
     ) {
-        WideNavigationRail(
-            selectedTab = viewModel.selectedTab,
-            onTabSelected = { viewModel.selectedTab = it }
-        )
-        VerticalDivider()
-        Box(modifier = Modifier.weight(1f)) {
-            AppTabContent(
-                viewModel = viewModel,
-                locationService = locationService,
-                favoritesStore = favoritesStore,
-                onRequestLocationPermission = onRequestLocationPermission,
-                onShowFilter = onShowFilter
+        Row(modifier = Modifier.fillMaxSize()) {
+            WideNavigationRail(
+                selectedTab = viewModel.selectedTab,
+                onTabSelected = { viewModel.selectedTab = it }
             )
+            VerticalDivider()
+            Box(modifier = Modifier.weight(1f)) {
+                AppTabContent(
+                    viewModel = viewModel,
+                    locationService = locationService,
+                    favoritesStore = favoritesStore,
+                    onRequestLocationPermission = onRequestLocationPermission,
+                    onShowFilter = onShowFilter
+                )
+            }
         }
         if (viewModel.selectedTab != AppViewModel.AppTab.INFO) {
             viewModel.selectedFeature?.let { feature ->
-                VerticalDivider()
-                StationDetailPane(
+                StationDetailWideDialog(
                     feature = feature,
                     isFavorite = favoritesStore.isFavorite(feature.properties.stationId),
                     onToggleFavorite = {
@@ -184,10 +195,7 @@ private fun WideAppLayout(
                     },
                     onDismiss = {
                         viewModel.clearSelectedFeature()
-                    },
-                    modifier = Modifier
-                        .weight(0.42f)
-                        .fillMaxHeight()
+                    }
                 )
             }
         }
@@ -208,6 +216,7 @@ private fun AppTabContent(
                 viewModel = viewModel,
                 locationService = locationService,
                 favoriteStationIds = favoritesStore.favorites,
+                onToggleFavorite = { stationId -> favoritesStore.toggle(stationId) },
                 onShowFilter = onShowFilter
             )
         }
@@ -259,26 +268,105 @@ private fun WideNavigationRail(
     onTabSelected: (AppViewModel.AppTab) -> Unit
 ) {
     val items = tabItems()
-    NavigationRail(
-        modifier = Modifier.fillMaxHeight(),
-        containerColor = MaterialTheme.colorScheme.surface
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(108.dp)
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 8.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         for (item in items) {
             val selected = selectedTab == item.tab
-            NavigationRailItem(
-                selected = selected,
+            TextButton(
                 onClick = { onTabSelected(item.tab) },
-                icon = {
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
+                modifier = Modifier
+                    .testTag("rail-${item.tab.name.lowercase()}")
+                    .width(78.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent
+                    )
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(
                         imageVector = item.icon,
-                        contentDescription = item.title
+                        contentDescription = item.title,
+                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(34.dp)
                     )
-                },
-                label = { Text(item.title) },
-                modifier = Modifier.testTag("rail-${item.tab.name.lowercase()}")
+                    Text(
+                        text = item.title,
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WoladenBrandIntro(
+    showProductMessage: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 18.dp, vertical = if (showProductMessage) 14.dp else 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
+        ) {
+            Image(
+                painter = painterResource(R.mipmap.ic_launcher),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Column(
+                modifier = Modifier.weight(1f, fill = false),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = "woladen:",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(R.string.i18n_seo_primarytagline),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Text(
+                    text = "${stringResource(R.string.i18n_seo_humanhook)}\n${stringResource(R.string.i18n_seo_timeline)}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+        }
+
+        if (showProductMessage) {
+            Text(
+                text = stringResource(R.string.i18n_seo_productmessage),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
+    HorizontalDivider()
 }
 
 @Composable
@@ -294,16 +382,17 @@ private fun BottomTabBar(
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
     ) {
-        Divider()
+        HorizontalDivider()
         Row(modifier = Modifier.fillMaxWidth()) {
             for (item in items) {
                 val selected = selectedTab == item.tab
                 TextButton(
                     onClick = { onTabSelected(item.tab) },
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
                     modifier = Modifier
                         .weight(1f)
                         .testTag("tab-${item.tab.name.lowercase()}")
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                        .padding(horizontal = 3.dp, vertical = 6.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(
                             if (selected) {
@@ -314,18 +403,21 @@ private fun BottomTabBar(
                         )
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.title,
-                            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = item.title,
-                            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.title,
+                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(34.dp)
+                    )
+                    Text(
+                        text = item.title,
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
+            }
             }
         }
     }
