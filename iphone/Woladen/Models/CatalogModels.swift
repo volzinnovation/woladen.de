@@ -340,6 +340,362 @@ struct CatalogAmenities: Decodable {
     }
 }
 
+struct CatalogInfoSummary: Decodable {
+    let openStaticSummary: OpenStaticSummary?
+    let buildSummary: BundleBuildSummary?
+
+    enum CodingKeys: String, CodingKey {
+        case openStaticSummary = "open_static_summary"
+        case openStaticSummaryCamel = "openStaticSummary"
+        case summary
+        case buildSummary = "build_summary"
+        case bundle
+        case countries
+        case sources
+    }
+
+    init(openStaticSummary: OpenStaticSummary?, buildSummary: BundleBuildSummary?) {
+        self.openStaticSummary = openStaticSummary
+        self.buildSummary = buildSummary
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if container.contains(.bundle) || container.contains(.countries) || container.contains(.sources) {
+            openStaticSummary = try OpenStaticSummary(from: decoder)
+            buildSummary = nil
+        } else {
+            openStaticSummary =
+                (try? container.decode(OpenStaticSummary.self, forKey: .openStaticSummary)) ??
+                (try? container.decode(OpenStaticSummary.self, forKey: .openStaticSummaryCamel))
+            buildSummary =
+                (try? container.decode(BundleBuildSummary.self, forKey: .summary)) ??
+                (try? container.decode(BundleBuildSummary.self, forKey: .buildSummary))
+        }
+    }
+
+    var generatedAt: String {
+        firstNonEmpty(openStaticSummary?.generatedAt ?? "", buildSummary?.run?.finishedAt ?? "")
+    }
+
+    var stationCount: Int {
+        if let count = openStaticSummary?.bundle?.stationCount, count > 0 {
+            return count
+        }
+        let countryTotal = countries.reduce(0) { $0 + $1.stationCount }
+        if countryTotal > 0 {
+            return countryTotal
+        }
+        return buildSummary?.records?.fullRegistryActiveStationsTotal ?? 0
+    }
+
+    var chargerCount: Int {
+        if let count = openStaticSummary?.bundle?.chargerCount, count > 0 {
+            return count
+        }
+        let countryTotal = countries.reduce(0) { $0 + $1.chargerCount }
+        if countryTotal > 0 {
+            return countryTotal
+        }
+        return buildSummary?.records?.rawRows ?? 0
+    }
+
+    var countries: [OpenStaticCountry] {
+        openStaticSummary?.countries ?? []
+    }
+
+    var sources: [OpenStaticSource] {
+        openStaticSummary?.normalizedSources ?? []
+    }
+
+    func sortedCountries(locale: Locale = .current) -> [OpenStaticCountry] {
+        countries.sorted { lhs, rhs in
+            let leftName = lhs.localizedName(locale: locale)
+            let rightName = rhs.localizedName(locale: locale)
+            if leftName == rightName {
+                return lhs.code < rhs.code
+            }
+            return leftName.localizedCompare(rightName) == .orderedAscending
+        }
+    }
+
+    func countrySourceLinks(for countryCode: String) -> [InfoSourceLink] {
+        let code = countryCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if code == "DE" {
+            return [
+                InfoSourceLink(
+                    label: "Mobilithek",
+                    urlString: "https://mobilithek.info/offers/842113170303512576"
+                )
+            ]
+        }
+
+        var seen: Set<String> = []
+        return sources
+            .filter { $0.countryCode == code }
+            .compactMap { source in
+                let label = source.compactCountrySourceLabel
+                guard !label.isEmpty else { return nil }
+                let key = "\(label)\u{1}\(source.sourceURL)"
+                guard seen.insert(key).inserted else { return nil }
+                return InfoSourceLink(label: label, urlString: source.sourceURL)
+            }
+    }
+
+    func dataSourceLinks(locale: Locale = .current) -> [InfoSourceLink] {
+        var seen: Set<String> = []
+        return sources
+            .sorted { lhs, rhs in
+                let left = "\(lhs.countryCode):\(lhs.displayName)"
+                let right = "\(rhs.countryCode):\(rhs.displayName)"
+                return left.localizedCompare(right) == .orderedAscending
+            }
+            .compactMap { source in
+                let label = source.bundleSourceTitle
+                guard !label.isEmpty else { return nil }
+                let key = "\(label)\u{1}\(source.sourceURL)"
+                guard seen.insert(key).inserted else { return nil }
+                return InfoSourceLink(label: label, urlString: source.sourceURL)
+            }
+    }
+}
+
+struct OpenStaticSummary: Decodable {
+    let bundle: OpenStaticBundle?
+    let countries: [OpenStaticCountry]
+    let generatedAt: String
+    let schemaVersion: Int
+    private let rawSources: [OpenStaticSource]
+
+    enum CodingKeys: String, CodingKey {
+        case bundle
+        case countries
+        case generatedAt = "generated_at"
+        case schemaVersion = "schema_version"
+        case sources
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        bundle = try? container.decode(OpenStaticBundle.self, forKey: .bundle)
+        countries = (try? container.decode([OpenStaticCountry].self, forKey: .countries)) ?? []
+        generatedAt = container.decodeLossyString(forKey: .generatedAt)
+        schemaVersion = container.decodeLossyInt(forKey: .schemaVersion) ?? 0
+        rawSources = (try? container.decode([OpenStaticSource].self, forKey: .sources)) ?? []
+    }
+
+    var normalizedSources: [OpenStaticSource] {
+        var seen: Set<String> = []
+        return rawSources.filter { source in
+            let key = [
+                source.countryCode,
+                source.sourceUID,
+                source.sourceURL,
+                source.displayName
+            ].joined(separator: "\u{1}")
+            guard !seen.contains(key) else { return false }
+            seen.insert(key)
+            return !source.countryCode.isEmpty || !source.displayName.isEmpty || !source.sourceURL.isEmpty
+        }
+    }
+}
+
+struct OpenStaticBundle: Decodable {
+    let stationCount: Int
+    let chargerCount: Int
+    let countryCount: Int
+    let schemaVersion: Int
+
+    enum CodingKeys: String, CodingKey {
+        case stationCount = "station_count"
+        case chargerCount = "charger_count"
+        case countryCount = "country_count"
+        case schemaVersion = "schema_version"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        stationCount = container.decodeLossyInt(forKey: .stationCount) ?? 0
+        chargerCount = container.decodeLossyInt(forKey: .chargerCount) ?? 0
+        countryCount = container.decodeLossyInt(forKey: .countryCount) ?? 0
+        schemaVersion = container.decodeLossyInt(forKey: .schemaVersion) ?? 0
+    }
+}
+
+struct OpenStaticCountry: Decodable, Identifiable {
+    let code: String
+    let name: String
+    let stationCount: Int
+    let chargerCount: Int
+    let fastStationCount: Int
+
+    var id: String { code }
+
+    enum CodingKeys: String, CodingKey {
+        case code
+        case countryCode = "country_code"
+        case name
+        case countryName = "country_name"
+        case stationCount = "station_count"
+        case stationCountCamel = "stationCount"
+        case stations
+        case chargerCount = "charger_count"
+        case chargerCountCamel = "chargerCount"
+        case chargers
+        case fastStationCount = "fast_station_count"
+        case fastStationCountCamel = "fastStationCount"
+        case fastStations = "fast_stations"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        code = firstNonEmpty(
+            container.decodeLossyString(forKey: .code),
+            container.decodeLossyString(forKey: .countryCode)
+        ).uppercased()
+        name = firstNonEmpty(
+            container.decodeLossyString(forKey: .name),
+            container.decodeLossyString(forKey: .countryName)
+        )
+        stationCount =
+            container.decodeLossyInt(forKey: .stationCount) ??
+            container.decodeLossyInt(forKey: .stationCountCamel) ??
+            container.decodeLossyInt(forKey: .stations) ??
+            0
+        chargerCount =
+            container.decodeLossyInt(forKey: .chargerCount) ??
+            container.decodeLossyInt(forKey: .chargerCountCamel) ??
+            container.decodeLossyInt(forKey: .chargers) ??
+            0
+        fastStationCount =
+            container.decodeLossyInt(forKey: .fastStationCount) ??
+            container.decodeLossyInt(forKey: .fastStationCountCamel) ??
+            container.decodeLossyInt(forKey: .fastStations) ??
+            0
+    }
+
+    func localizedName(locale: Locale = .current) -> String {
+        locale.localizedString(forRegionCode: code) ?? firstNonEmpty(name, code)
+    }
+}
+
+struct OpenStaticSource: Decodable {
+    let countryCode: String
+    let sourceUID: String
+    let displayName: String
+    let sourceURL: String
+    let license: String
+    let licenseURL: String
+
+    enum CodingKeys: String, CodingKey {
+        case countryCode = "country_code"
+        case countryCodeCamel = "countryCode"
+        case sourceUID = "source_uid"
+        case sourceUIDCamel = "sourceUid"
+        case displayName = "display_name"
+        case displayNameCamel = "displayName"
+        case sourceName = "source_name"
+        case sourceNameCamel = "sourceName"
+        case sourceURL = "source_url"
+        case sourceURLCamel = "sourceUrl"
+        case url
+        case license
+        case licenseURL = "license_url"
+        case licenseURLCamel = "licenseUrl"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        countryCode = firstNonEmpty(
+            container.decodeLossyString(forKey: .countryCode),
+            container.decodeLossyString(forKey: .countryCodeCamel)
+        ).uppercased()
+        sourceUID = firstNonEmpty(
+            container.decodeLossyString(forKey: .sourceUID),
+            container.decodeLossyString(forKey: .sourceUIDCamel)
+        )
+        displayName = firstNonEmpty(
+            container.decodeLossyString(forKey: .displayName),
+            container.decodeLossyString(forKey: .displayNameCamel),
+            container.decodeLossyString(forKey: .sourceName),
+            container.decodeLossyString(forKey: .sourceNameCamel),
+            sourceUID
+        )
+        sourceURL = normalizedSourceURL(
+            firstNonEmpty(
+                container.decodeLossyString(forKey: .sourceURL),
+                container.decodeLossyString(forKey: .sourceURLCamel),
+                container.decodeLossyString(forKey: .url)
+            )
+        )
+        license = container.decodeLossyString(forKey: .license)
+        licenseURL = firstNonEmpty(
+            container.decodeLossyString(forKey: .licenseURL),
+            container.decodeLossyString(forKey: .licenseURLCamel)
+        )
+    }
+
+    var bundleSourceTitle: String {
+        let rawLabel = firstNonEmpty(displayName, sourceUID, sourceURL, "Datenquelle")
+        let label = stripLeadingCountryCode(rawLabel, countryCode)
+        return countryCode.isEmpty ? label : "\(countryCode): \(label)"
+    }
+
+    var compactCountrySourceLabel: String {
+        stripLeadingCountryCode(firstNonEmpty(displayName, bundleSourceTitle), countryCode)
+    }
+}
+
+struct InfoSourceLink: Identifiable, Hashable {
+    let label: String
+    let urlString: String
+
+    var id: String { "\(label)\u{1}\(urlString)" }
+
+    var url: URL? {
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return URL(string: trimmed)
+    }
+}
+
+struct BundleBuildSummary: Decodable {
+    let run: BundleBuildRun?
+    let records: BundleBuildRecords?
+}
+
+struct BundleBuildRun: Decodable {
+    let startedAt: String
+    let finishedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case startedAt = "started_at"
+        case finishedAt = "finished_at"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        startedAt = container.decodeLossyString(forKey: .startedAt)
+        finishedAt = container.decodeLossyString(forKey: .finishedAt)
+    }
+}
+
+struct BundleBuildRecords: Decodable {
+    let rawRows: Int
+    let fullRegistryActiveStationsTotal: Int
+
+    enum CodingKeys: String, CodingKey {
+        case rawRows = "raw_rows"
+        case fullRegistryActiveStationsTotal = "full_registry_active_stations_total"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        rawRows = container.decodeLossyInt(forKey: .rawRows) ?? 0
+        fullRegistryActiveStationsTotal = container.decodeLossyInt(forKey: .fullRegistryActiveStationsTotal) ?? 0
+    }
+}
+
 private func normalizedAmenityCounts(_ raw: [String: Int]) -> [String: Int] {
     var counts: [String: Int] = [:]
     for (key, value) in raw where value > 0 {
@@ -389,6 +745,22 @@ private func firstNonEmpty(_ values: String...) -> String {
         }
     }
     return ""
+}
+
+private func normalizedSourceURL(_ value: String) -> String {
+    value
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+        .replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
+}
+
+private func stripLeadingCountryCode(_ label: String, _ countryCode: String) -> String {
+    let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+    let code = countryCode.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, !code.isEmpty else { return trimmed }
+    let pattern = "^\(NSRegularExpression.escapedPattern(for: code))(?:\\s*:\\s*|\\s+)"
+    return trimmed
+        .replacingOccurrences(of: pattern, with: "", options: [.regularExpression, .caseInsensitive])
+        .trimmingCharacters(in: .whitespacesAndNewlines)
 }
 
 private extension KeyedDecodingContainer {

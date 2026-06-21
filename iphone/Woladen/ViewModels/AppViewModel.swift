@@ -20,6 +20,9 @@ final class AppViewModel: ObservableObject {
     @Published private(set) var isLoading: Bool = false
     @Published private(set) var isAwaitingFirstLocationFix: Bool = false
     @Published private(set) var activeCatalogInfo: ActiveCatalogSourceInfo?
+    @Published private(set) var infoSummary: CatalogInfoSummary?
+    @Published private(set) var infoSummaryError: String?
+    @Published private(set) var isLoadingInfoSummary: Bool = false
 
     private let liveAPIClient: LiveAPIClient
     private let repository: ChargerRepository
@@ -30,6 +33,7 @@ final class AppViewModel: ObservableObject {
     private var filterPool: [GeoJSONFeature] = []
     private var discoveredByID: [String: GeoJSONFeature] = [:]
     private var discoveredOrder: [String] = []
+    private var hasRequestedInitialCatalogLoad = false
     private var didSeedFromUserLocation = false
     private var currentCatalogCenter = ChargerRepository.defaultCatalogCenter
     private var favoriteDetailFeatures: [String: GeoJSONFeature] = [:]
@@ -40,6 +44,7 @@ final class AppViewModel: ObservableObject {
     private var pendingLiveDetailStationIDs: Set<String> = []
     private var pendingStaticDetailStationIDs: Set<String> = []
     private var catalogLoadTask: Task<Void, Never>?
+    private var infoSummaryTask: Task<Void, Never>?
     private var liveSummaryRefreshTask: Task<Void, Never>?
     private var selectedFeatureRefreshTask: Task<Void, Never>?
 
@@ -51,15 +56,42 @@ final class AppViewModel: ObservableObject {
 
     deinit {
         catalogLoadTask?.cancel()
+        infoSummaryTask?.cancel()
         liveSummaryRefreshTask?.cancel()
         selectedFeatureRefreshTask?.cancel()
     }
 
+    func loadIfNeeded(userLocation: CLLocation?) {
+        guard !hasRequestedInitialCatalogLoad else { return }
+        guard userLocation != nil else {
+            waitForLocation()
+            return
+        }
+        load(userLocation: userLocation)
+    }
+
     func load(userLocation: CLLocation?) {
+        guard let userLocation else {
+            waitForLocation()
+            return
+        }
+        hasRequestedInitialCatalogLoad = true
         resetLiveState()
         favoriteDetailFeatures = [:]
-        let center = userLocation?.coordinate ?? currentCatalogCenter
-        loadCatalog(center: center, userLocation: userLocation)
+        loadCatalog(center: userLocation.coordinate, userLocation: userLocation)
+    }
+
+    func waitForLocation() {
+        catalogLoadTask?.cancel()
+        isLoading = false
+        loadError = nil
+        isAwaitingFirstLocationFix = true
+        if allFeatures.isEmpty {
+            filterPool = []
+            discoveredFeatures = []
+            operators = []
+            activeCatalogInfo = nil
+        }
     }
 
     private func loadCatalog(center: CLLocationCoordinate2D, userLocation: CLLocation?) {
@@ -85,6 +117,7 @@ final class AppViewModel: ObservableObject {
                 self.activeCatalogInfo = loaded.sourceInfo
                 self.currentCatalogCenter = loaded.catalogCenter
                 self.loadError = nil
+                self.isAwaitingFirstLocationFix = false
                 self.didSeedFromUserLocation = userLocation != nil
                 self.applyLocalFilters(userLocation: userLocation)
             case .failure(let error):
@@ -102,6 +135,10 @@ final class AppViewModel: ObservableObject {
     }
 
     func reloadCatalog(userLocation: CLLocation?) {
+        guard userLocation != nil else {
+            waitForLocation()
+            return
+        }
         Task { [weak self] in
             guard let self else { return }
             await self.repository.invalidateCache()
@@ -110,7 +147,11 @@ final class AppViewModel: ObservableObject {
     }
 
     func applyFilters(userLocation: CLLocation?) {
-        loadCatalog(center: userLocation?.coordinate ?? currentCatalogCenter, userLocation: userLocation)
+        guard let userLocation else {
+            waitForLocation()
+            return
+        }
+        loadCatalog(center: userLocation.coordinate, userLocation: userLocation)
     }
 
     private func applyLocalFilters(userLocation: CLLocation?) {
@@ -136,7 +177,10 @@ final class AppViewModel: ObservableObject {
 
     func seedFromInitialUserLocation(_ location: CLLocation?) {
         guard let location else { return }
-        guard !allFeatures.isEmpty else { return }
+        guard !allFeatures.isEmpty else {
+            load(userLocation: location)
+            return
+        }
         if !didSeedFromUserLocation {
             if shouldReloadCatalog(for: location.coordinate) {
                 load(userLocation: location)
@@ -147,12 +191,12 @@ final class AppViewModel: ObservableObject {
     }
 
     func reloadListForCurrentLocation(_ location: CLLocation?) {
-        guard !allFeatures.isEmpty else {
-            load(userLocation: location)
+        guard let location else {
+            waitForLocation()
             return
         }
-        guard let location else {
-            applyFilters(userLocation: nil)
+        guard !allFeatures.isEmpty else {
+            load(userLocation: location)
             return
         }
         if shouldReloadCatalog(for: location.coordinate) {
@@ -163,12 +207,12 @@ final class AppViewModel: ObservableObject {
     }
 
     func reloadMapForCenter(_ center: CLLocationCoordinate2D?) {
-        guard !allFeatures.isEmpty else {
-            loadCatalog(center: center ?? currentCatalogCenter, userLocation: nil)
+        guard let center else {
+            waitForLocation()
             return
         }
-        guard let center else {
-            discoverNearby(center: currentCatalogCenter, resetHistory: false, seededByUserLocation: false)
+        guard !allFeatures.isEmpty else {
+            loadCatalog(center: center, userLocation: nil)
             return
         }
         if shouldReloadCatalog(for: center) {
@@ -251,7 +295,48 @@ final class AppViewModel: ObservableObject {
     }
 
     func reloadCatalogForCurrentContext(userLocation: CLLocation?) {
-        loadCatalog(center: userLocation?.coordinate ?? currentCatalogCenter, userLocation: userLocation)
+        guard let userLocation else {
+            waitForLocation()
+            return
+        }
+        loadCatalog(center: userLocation.coordinate, userLocation: userLocation)
+    }
+
+    func loadInfoSummaryIfNeeded() {
+        guard infoSummary == nil, !isLoadingInfoSummary else { return }
+        loadInfoSummary(forceRefresh: false)
+    }
+
+    func reloadInfoSummary() {
+        loadInfoSummary(forceRefresh: true)
+    }
+
+    private func loadInfoSummary(forceRefresh: Bool) {
+        infoSummaryTask?.cancel()
+        isLoadingInfoSummary = true
+        infoSummaryError = nil
+        infoSummaryTask = Task { [weak self] in
+            guard let self else { return }
+            if forceRefresh {
+                await self.repository.invalidateInfoSummaryCache()
+            }
+            let result: Result<CatalogInfoSummary, Error>
+            do {
+                result = .success(try await self.repository.infoSummary())
+            } catch {
+                result = .failure(error)
+            }
+
+            guard !Task.isCancelled else { return }
+            self.isLoadingInfoSummary = false
+            switch result {
+            case .success(let summary):
+                self.infoSummary = summary
+                self.infoSummaryError = nil
+            case .failure(let error):
+                self.infoSummaryError = error.localizedDescription
+            }
+        }
     }
 
     func requestLiveDetailIfNeeded(for stationID: String, force: Bool = false) async {

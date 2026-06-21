@@ -5,13 +5,15 @@ struct FilterState: Equatable {
     var minPowerKW: Double = 50
     var selectedAmenities: Set<String> = []
     var amenityNameQuery: String = ""
+    var availableOnly: Bool = true
 
     var activeCount: Int {
         var count = 0
         if !operatorName.isEmpty { count += 1 }
-        if minPowerKW > 50 { count += 1 }
+        if minPowerKW > 0 { count += 1 }
         count += selectedAmenities.count
         if !amenityNameQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { count += 1 }
+        if availableOnly { count += 1 }
         return count
     }
 }

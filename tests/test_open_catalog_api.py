@@ -339,6 +339,69 @@ def test_catalog_station_detail_returns_chargers_and_amenities(app_config, tmp_p
     assert payload["amenities"]["amenity_examples"][0]["name"] == "Nearby Food"
 
 
+def test_catalog_summary_returns_web_info_contract(app_config, tmp_path: Path):
+    open_summary_path = tmp_path / "open_static_summary.json"
+    build_summary_path = tmp_path / "summary.json"
+    open_summary_path.write_text(
+        json.dumps(
+            {
+                "bundle": {
+                    "station_count": 42,
+                    "charger_count": 84,
+                    "country_count": 1,
+                    "schema_version": 4,
+                },
+                "countries": [
+                    {
+                        "code": "AT",
+                        "name": "Österreich",
+                        "station_count": 42,
+                        "charger_count": 84,
+                    }
+                ],
+                "generated_at": "2026-06-21T09:04:42+00:00",
+                "schema_version": 4,
+                "sources": [
+                    {
+                        "country_code": "AT",
+                        "display_name": "AT E-Control",
+                        "source_uid": "at_econtrol",
+                        "source_url": "https://example.test/at",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    build_summary_path.write_text(
+        json.dumps(
+            {
+                "run": {"finished_at": "2026-06-21T09:00:00+00:00"},
+                "records": {"raw_rows": 84, "full_registry_active_stations_total": 42},
+            }
+        ),
+        encoding="utf-8",
+    )
+    client = TestClient(
+        create_app(
+            replace(
+                app_config,
+                open_static_summary_path=open_summary_path,
+                build_summary_path=build_summary_path,
+            )
+        )
+    )
+
+    response = client.get("/v1/catalog/summary")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["open_static_summary"]["bundle"]["station_count"] == 42
+    assert payload["open_static_summary"]["countries"][0]["code"] == "AT"
+    assert payload["open_static_summary"]["sources"][0]["source_url"] == "https://example.test/at"
+    assert payload["summary"]["records"]["raw_rows"] == 84
+
+
 def test_catalog_endpoints_return_503_when_bundle_missing(app_config, tmp_path: Path):
     client = TestClient(create_app(replace(app_config, open_static_sqlite_path=tmp_path / "missing.sqlite3")))
 
@@ -346,3 +409,14 @@ def test_catalog_endpoints_return_503_when_bundle_missing(app_config, tmp_path: 
 
     assert response.status_code == 503
     assert response.json()["detail"] == "open_static_sqlite_unavailable"
+
+
+def test_catalog_summary_returns_503_when_open_summary_missing(app_config, tmp_path: Path):
+    client = TestClient(
+        create_app(replace(app_config, open_static_summary_path=tmp_path / "missing-summary.json"))
+    )
+
+    response = client.get("/v1/catalog/summary")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "open_static_summary_unavailable"

@@ -152,6 +152,60 @@ final class LiveFeatureFormattingTests: XCTestCase {
         XCTAssertEqual(feature.displayPrice, "0.59 EUR/kWh")
     }
 
+    func testCatalogInfoSummaryUsesWebCountryAndSourceContract() throws {
+        let data = Data(
+            #"""
+            {
+              "open_static_summary": {
+                "bundle": {
+                  "station_count": 287338,
+                  "charger_count": 820182,
+                  "country_count": 22,
+                  "schema_version": 4
+                },
+                "countries": [
+                  {"code": "DE", "name": "Deutschland", "station_count": 73204, "charger_count": 111713},
+                  {"code": "AT", "name": "Österreich", "station_count": 14661, "charger_count": 38771}
+                ],
+                "generated_at": "2026-06-21T09:04:42+00:00",
+                "schema_version": 4,
+                "sources": [
+                  {
+                    "country_code": "AT",
+                    "display_name": "AT E-Control DATEX energy infrastructure table publication",
+                    "source_uid": "at_econtrol",
+                    "source_url": "https://api.e-control.at/charge/1.0/datex2/v3.5/energy-infrastructure-table-publication"
+                  },
+                  {
+                    "country_code": "DE",
+                    "display_name": "DE Bundesnetzagentur",
+                    "source_uid": "de_bnetza",
+                    "source_url": "https://example.test/de"
+                  }
+                ]
+              },
+              "summary": {
+                "run": {"finished_at": "2026-06-21T03:19:14+00:00"},
+                "records": {"raw_rows": 111713, "full_registry_active_stations_total": 73204}
+              }
+            }
+            """#.utf8
+        )
+
+        let summary = try JSONDecoder().decode(CatalogInfoSummary.self, from: data)
+
+        XCTAssertEqual(summary.stationCount, 287338)
+        XCTAssertEqual(summary.chargerCount, 820182)
+        XCTAssertEqual(summary.generatedAt, "2026-06-21T09:04:42+00:00")
+        XCTAssertEqual(summary.countrySourceLinks(for: "DE").first?.label, "Mobilithek")
+        XCTAssertEqual(
+            summary.countrySourceLinks(for: "DE").first?.urlString,
+            "https://mobilithek.info/offers/842113170303512576"
+        )
+        XCTAssertEqual(summary.countrySourceLinks(for: "AT").first?.label, "E-Control DATEX energy infrastructure table publication")
+        XCTAssertTrue(summary.dataSourceLinks().contains { $0.label.hasPrefix("AT: E-Control") })
+    }
+
     func testFormattedElapsedLiveTimeUsesMinutesForRecentUpdates() {
         let now = ISO8601DateFormatter().date(from: "2026-04-17T15:03:18Z")!
         let formatted = formattedElapsedLiveTime("2026-04-17T14:50:00Z", now: now)

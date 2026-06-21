@@ -13,11 +13,22 @@ func normalizeAmenityNameQuery(_ value: String) -> String {
 }
 
 extension ChargerProperties {
+    var hasAvailabilitySummary: Bool {
+        occupancyTotalEVSEs > 0
+    }
+
+    var hasAvailableChargingPoint: Bool {
+        occupancyTotalEVSEs > 0 && occupancyAvailableEVSEs > 0
+    }
+
     func matches(_ filterState: FilterState) -> Bool {
         if !filterState.operatorName.isEmpty && operatorName != filterState.operatorName {
             return false
         }
         if maxPowerKW < filterState.minPowerKW {
+            return false
+        }
+        if filterState.availableOnly && !hasAvailableChargingPoint {
             return false
         }
         if !filterState.selectedAmenities.isEmpty {

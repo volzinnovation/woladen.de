@@ -3,7 +3,6 @@ import SwiftUI
 @main
 struct WoladenApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var viewModel = AppViewModel()
     @StateObject private var locationService = LocationService()
     @StateObject private var favoritesStore = FavoritesStore()
@@ -19,12 +18,17 @@ struct WoladenApp: App {
                 RootTabView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .overlay {
+                if viewModel.isLoading && viewModel.allFeatures.isEmpty && viewModel.loadError == nil {
+                    StartupLoadingView()
+                }
+            }
             .environmentObject(viewModel)
             .environmentObject(locationService)
             .environmentObject(favoritesStore)
             .task {
                 locationService.activate()
-                viewModel.load(userLocation: locationService.currentLocation)
+                viewModel.loadIfNeeded(userLocation: locationService.currentLocation)
             }
             .onChange(of: scenePhase) { _, newValue in
                 if newValue == .active {
@@ -91,6 +95,31 @@ struct WoladenApp: App {
             return feature
         }
         return viewModel.discoveredFeatures.first ?? viewModel.allFeatures.first
+    }
+}
+
+private struct StartupLoadingView: View {
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "bolt.circle.fill")
+                .font(.system(size: 46, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .accessibilityHidden(true)
+
+            VStack(spacing: 4) {
+                Text("Woladen")
+                    .font(.title2.weight(.bold))
+                Text(String(localized: "list.loading"))
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
+
+            ProgressView()
+                .controlSize(.regular)
+        }
+        .padding(28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
     }
 }
 

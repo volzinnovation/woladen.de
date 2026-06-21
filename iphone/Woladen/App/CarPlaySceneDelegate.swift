@@ -2,22 +2,16 @@ import UIKit
 import CarPlay
 
 final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
-    private let repository = ChargerRepository()
-
     func templateApplicationScene(
         _ templateApplicationScene: CPTemplateApplicationScene,
         didConnect interfaceController: CPInterfaceController,
         to window: CPWindow
     ) {
         interfaceController.setRootTemplate(
-            makeRootTemplate(chargerItems: [CPListItem(text: String(localized: "list.loading"), detailText: nil)]),
+            makeRootTemplate(chargerItems: carPlayChargerItems()),
             animated: false,
             completion: nil
         )
-        Task {
-            let items = await carPlayChargerItems()
-            interfaceController.setRootTemplate(makeRootTemplate(chargerItems: items), animated: true, completion: nil)
-        }
     }
 
     func templateApplicationScene(
@@ -44,30 +38,12 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         return CPListTemplate(title: "Woladen", sections: [introSection, chargersSection])
     }
 
-    private func carPlayChargerItems() async -> [CPListItem] {
-        guard let payload = try? await repository.loadData(
-            center: ChargerRepository.defaultCatalogCenter,
-            filterState: FilterState()
-        ) else {
-            return [CPListItem(text: String(localized: "list.empty"), detailText: nil)]
-        }
-
-        return payload.features.prefix(12).map { feature in
-            let p = feature.properties
-            let subtitle = "\(p.city) • \(Int(p.displayedMaxPowerKW.rounded())) kW • \(chargingPointLabel(p.chargingPointsCount))"
-            let item = CPListItem(text: p.operatorName, detailText: subtitle)
-            item.handler = { _, completion in
-                completion()
-            }
-            return item
-        }
-    }
-
-    private func chargingPointLabel(_ count: Int) -> String {
-        let template = count == 1
-            ? String(localized: "station.chargingPointOne")
-            : String(localized: "station.chargingPointMany")
-        return template
-            .replacingOccurrences(of: "{count}", with: "\(count)")
+    private func carPlayChargerItems() -> [CPListItem] {
+        [
+            CPListItem(
+                text: String(localized: "location.deniedTitle"),
+                detailText: String(localized: "location.settingsMessage")
+            )
+        ]
     }
 }

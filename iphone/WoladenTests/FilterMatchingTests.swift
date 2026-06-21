@@ -63,14 +63,26 @@ final class FilterMatchingTests: XCTestCase {
             amenityNameQuery: "McDonald"
         )
 
-        XCTAssertEqual(filters.activeCount, 5)
+        XCTAssertEqual(filters.activeCount, 6)
+    }
+
+    func testAvailableOnlyRequiresKnownFreeChargingPoint() {
+        let available = sampleProperties(occupancyTotalEVSEs: 4, occupancyAvailableEVSEs: 1)
+        let occupied = sampleProperties(occupancyTotalEVSEs: 4, occupancyAvailableEVSEs: 0, occupancyOccupiedEVSEs: 4)
+
+        XCTAssertTrue(available.matches(FilterState()))
+        XCTAssertFalse(occupied.matches(FilterState()))
+        XCTAssertTrue(occupied.matches(FilterState(availableOnly: false)))
     }
 
     private func sampleProperties(
         operatorName: String = "IONITY",
         maxPowerKW: Double = 150,
         amenityExamples: [AmenityExample] = [],
-        amenityCounts: [String: Int] = [:]
+        amenityCounts: [String: Int] = [:],
+        occupancyTotalEVSEs: Int = 4,
+        occupancyAvailableEVSEs: Int = 1,
+        occupancyOccupiedEVSEs: Int = 0
     ) -> ChargerProperties {
         ChargerProperties(
             stationID: "station-1",
@@ -86,9 +98,9 @@ final class FilterMatchingTests: XCTestCase {
             occupancySourceName: "",
             occupancyStatus: "",
             occupancyLastUpdated: "",
-            occupancyTotalEVSEs: 0,
-            occupancyAvailableEVSEs: 0,
-            occupancyOccupiedEVSEs: 0,
+            occupancyTotalEVSEs: occupancyTotalEVSEs,
+            occupancyAvailableEVSEs: occupancyAvailableEVSEs,
+            occupancyOccupiedEVSEs: occupancyOccupiedEVSEs,
             occupancyChargingEVSEs: 0,
             occupancyOutOfOrderEVSEs: 0,
             occupancyUnknownEVSEs: 0,

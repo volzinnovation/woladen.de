@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import secrets
 import time
@@ -272,6 +273,15 @@ def _json_response(request: Request, payload: object, *, status_code: int = 200)
     return response
 
 
+def _load_json_resource(path, *, unavailable_detail: str) -> object:
+    if path is None or not path.exists():
+        raise HTTPException(status_code=503, detail=unavailable_detail)
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=500, detail=f"{unavailable_detail}_invalid_json") from exc
+
+
 def create_app(config: AppConfig | None = None) -> FastAPI:
     effective_config = config or AppConfig()
     store = LiveStore(effective_config)
@@ -388,6 +398,27 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.get("/v1/providers")
     def list_providers() -> list[dict]:
         return app.state.store.list_providers()
+
+    @app.get("/v1/catalog/summary")
+    def catalog_summary(request: Request) -> JSONResponse:
+        open_static_summary = _load_json_resource(
+            effective_config.open_static_summary_path,
+            unavailable_detail="open_static_summary_unavailable",
+        )
+        build_summary = None
+        if effective_config.build_summary_path is not None and effective_config.build_summary_path.exists():
+            build_summary = _load_json_resource(
+                effective_config.build_summary_path,
+                unavailable_detail="build_summary_unavailable",
+            )
+        return _json_response(
+            request,
+            {
+                "open_static_summary": open_static_summary,
+                "summary": build_summary,
+                "source": "open_static_summary.json+summary.json",
+            },
+        )
 
     @app.get("/v1/catalog/search")
     def catalog_search(

@@ -1,6 +1,65 @@
 import SwiftUI
+import CoreLocation
+import UIKit
 
 private let favoriteStarColor = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
+
+enum StationVisualStyle {
+    static let amenityGold = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
+    static let amenitySilver = Color(red: 148.0 / 255.0, green: 163.0 / 255.0, blue: 184.0 / 255.0)
+    static let amenityBronze = Color(red: 180.0 / 255.0, green: 83.0 / 255.0, blue: 9.0 / 255.0)
+    static let amenityGrey = Color(red: 100.0 / 255.0, green: 116.0 / 255.0, blue: 139.0 / 255.0)
+
+    static let cardOutOfOrder = Color(red: 1.0, green: 241.0 / 255.0, blue: 242.0 / 255.0)
+    static let cardOccupied = Color(red: 241.0 / 255.0, green: 245.0 / 255.0, blue: 249.0 / 255.0)
+    static let cardOneFreeLeft = Color(red: 1.0, green: 251.0 / 255.0, blue: 235.0 / 255.0)
+    static let cardOftenBroken = Color(red: 1.0, green: 247.0 / 255.0, blue: 248.0 / 255.0)
+    static let cardOftenOccupied = Color(red: 248.0 / 255.0, green: 250.0 / 255.0, blue: 252.0 / 255.0)
+    static let cardDefault = Color(.secondarySystemBackground)
+
+    static let borderOutOfOrder = Color(red: 220.0 / 255.0, green: 38.0 / 255.0, blue: 38.0 / 255.0).opacity(0.28)
+    static let borderOccupied = Color(red: 100.0 / 255.0, green: 116.0 / 255.0, blue: 139.0 / 255.0).opacity(0.28)
+    static let borderOneFreeLeft = Color(red: 217.0 / 255.0, green: 119.0 / 255.0, blue: 6.0 / 255.0).opacity(0.28)
+    static let borderOftenBroken = Color(red: 244.0 / 255.0, green: 63.0 / 255.0, blue: 94.0 / 255.0).opacity(0.18)
+    static let borderOftenOccupied = Color(red: 100.0 / 255.0, green: 116.0 / 255.0, blue: 139.0 / 255.0).opacity(0.16)
+    static let borderDefault = Color(.separator).opacity(0.35)
+
+    static let markerOutOfOrder = Color(red: 239.0 / 255.0, green: 68.0 / 255.0, blue: 68.0 / 255.0)
+    static let markerFullyOccupied = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
+}
+
+extension GeoJSONFeature {
+    var hasAvailabilitySummary: Bool {
+        availabilityCounts.total > 0
+    }
+
+    var isStationOutOfOrder: Bool {
+        hasAvailabilitySummary && availabilityStatus == .outOfOrder
+    }
+
+    var isStationFullyOccupied: Bool {
+        hasAvailabilitySummary && availabilityStatus == .occupied
+    }
+
+    var isStationOneFreeLeft: Bool {
+        let counts = availabilityCounts
+        return hasAvailabilitySummary && counts.total > 1 && counts.available == 1
+    }
+
+    var stationCardBackground: Color {
+        if isStationOutOfOrder { return StationVisualStyle.cardOutOfOrder }
+        if isStationFullyOccupied { return StationVisualStyle.cardOccupied }
+        if isStationOneFreeLeft { return StationVisualStyle.cardOneFreeLeft }
+        return StationVisualStyle.cardDefault
+    }
+
+    var stationCardBorder: Color {
+        if isStationOutOfOrder { return StationVisualStyle.borderOutOfOrder }
+        if isStationFullyOccupied { return StationVisualStyle.borderOccupied }
+        if isStationOneFreeLeft { return StationVisualStyle.borderOneFreeLeft }
+        return StationVisualStyle.borderDefault
+    }
+}
 
 struct ListTabView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -16,10 +75,10 @@ struct ListTabView: View {
                 if let error = viewModel.loadError {
                     ContentUnavailableView(String(localized: "errors.dataLoad"), systemImage: "exclamationmark.triangle", description: Text(error))
                 } else if viewModel.isAwaitingFirstLocationFix {
-                    ContentUnavailableView(
-                        initialLocationTitle,
-                        systemImage: "location.magnifyingglass",
-                        description: Text(initialLocationDescription)
+                    LocationAccessInstructionView(
+                        authorizationStatus: locationService.authorizationStatus,
+                        lastError: locationService.lastError,
+                        retry: requestLocationAccess
                     )
                 } else if viewModel.isLoading && viewModel.allFeatures.isEmpty {
                     ProgressView(String(localized: "list.loading"))
@@ -43,7 +102,11 @@ struct ListTabView: View {
                                         isFavorite: favoritesStore.isFavorite(feature.properties.stationID)
                                     )
                                     .padding(14)
-                                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                    .background(feature.stationCardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            .stroke(feature.stationCardBorder, lineWidth: 1)
+                                    }
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -64,7 +127,7 @@ struct ListTabView: View {
                 }
                 .padding(.trailing, 14)
                 .padding(.top, 10)
-                .accessibilityLabel(Text("aria.filterOpen"))
+                .accessibilityLabel(Text(String(localized: "aria.filterOpen")))
             }
         .onAppear(perform: reloadForActiveLocation)
         .onChange(of: scenePhase) { _, newValue in
@@ -75,37 +138,144 @@ struct ListTabView: View {
 
     private func color(for key: String) -> Color {
         switch key {
-        case "gold": return Color.yellow
-        case "silver": return Color.gray
-        case "bronze": return Color.brown
-        default: return Color.secondary
-        }
-    }
-
-    private var initialLocationTitle: String {
-        switch locationService.authorizationStatus {
-        case .denied, .restricted:
-            return String(localized: "location.deniedTitle")
-        default:
-            return String(localized: "location.pendingTitle")
-        }
-    }
-
-    private var initialLocationDescription: String {
-        switch locationService.authorizationStatus {
-        case .notDetermined:
-            return String(localized: "location.idleMessage")
-        case .denied, .restricted:
-            return String(localized: "location.deniedMessage")
-        case .authorizedWhenInUse, .authorizedAlways:
-            return String(localized: "location.pendingMessage")
-        @unknown default:
-            return String(localized: "location.pendingMessage")
+        case "gold": return StationVisualStyle.amenityGold
+        case "silver": return StationVisualStyle.amenitySilver
+        case "bronze": return StationVisualStyle.amenityBronze
+        default: return StationVisualStyle.amenityGrey
         }
     }
 
     private func reloadForActiveLocation() {
+        if viewModel.allFeatures.isEmpty, viewModel.loadError == nil {
+            if locationService.currentLocation == nil {
+                locationService.activate()
+            }
+            viewModel.loadIfNeeded(userLocation: locationService.currentLocation)
+            return
+        }
         viewModel.reloadListForCurrentLocation(locationService.currentLocation)
+    }
+
+    private func requestLocationAccess() {
+        locationService.requestAuthorization()
+        viewModel.loadIfNeeded(userLocation: locationService.currentLocation)
+    }
+}
+
+struct LocationAccessInstructionView: View {
+    let authorizationStatus: CLAuthorizationStatus
+    let lastError: String?
+    let retry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Image(systemName: iconName)
+                .font(.system(size: 42, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .accessibilityHidden(true)
+
+            VStack(spacing: 8) {
+                Text(title)
+                    .font(.title3.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                Text(message)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: 420)
+
+            Button {
+                primaryAction()
+            } label: {
+                Label(primaryActionTitle, systemImage: primaryActionIcon)
+                    .frame(minWidth: 180)
+            }
+            .buttonStyle(.borderedProminent)
+
+            if let lastError, !lastError.isEmpty, isAuthorized {
+                Text(lastError)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 420)
+            }
+        }
+        .padding(.horizontal, 28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var title: String {
+        switch authorizationStatus {
+        case .denied, .restricted:
+            return String(localized: "location.deniedTitle")
+        case .authorizedWhenInUse, .authorizedAlways:
+            return String(localized: "location.pendingTitle")
+        case .notDetermined:
+            return String(localized: "location.idleTitle")
+        @unknown default:
+            return String(localized: "location.unknownMessage")
+        }
+    }
+
+    private var message: String {
+        switch authorizationStatus {
+        case .denied, .restricted:
+            return String(localized: "location.settingsMessage")
+        case .authorizedWhenInUse, .authorizedAlways:
+            return String(localized: "location.pendingMessage")
+        case .notDetermined:
+            return String(localized: "location.idleMessage")
+        @unknown default:
+            return String(localized: "location.unavailableMessage")
+        }
+    }
+
+    private var iconName: String {
+        switch authorizationStatus {
+        case .denied, .restricted:
+            return "gearshape.fill"
+        default:
+            return "location.magnifyingglass"
+        }
+    }
+
+    private var primaryActionTitle: String {
+        switch authorizationStatus {
+        case .denied, .restricted:
+            return String(localized: "location.openSettings")
+        case .notDetermined:
+            return String(localized: "location.idleAction")
+        default:
+            return String(localized: "location.retry")
+        }
+    }
+
+    private var primaryActionIcon: String {
+        switch authorizationStatus {
+        case .denied, .restricted:
+            return "gearshape"
+        default:
+            return "location.fill"
+        }
+    }
+
+    private var isAuthorized: Bool {
+        authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways
+    }
+
+    private func primaryAction() {
+        switch authorizationStatus {
+        case .denied, .restricted:
+            openAppSettings()
+        default:
+            retry()
+        }
+    }
+
+    private func openAppSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        UIApplication.shared.open(url)
     }
 }
 

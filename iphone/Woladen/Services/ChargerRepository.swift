@@ -34,6 +34,38 @@ final class ChargerRepository {
         await cache.removeAll()
     }
 
+    func invalidateInfoSummaryCache() async {
+        await cache.removeInfoSummary()
+    }
+
+    func infoSummary() async throws -> CatalogInfoSummary {
+        if let cached = await cache.infoSummary(maxAge: .infoFresh) {
+            return cached
+        }
+
+        do {
+            let summary = try await client.catalogInfoSummary()
+            await cache.storeInfoSummary(summary)
+            return summary
+        } catch {
+            do {
+                let openStaticSummary = try await client.webOpenStaticSummary()
+                let buildSummary = try? await client.webBuildSummary()
+                let summary = CatalogInfoSummary(
+                    openStaticSummary: openStaticSummary,
+                    buildSummary: buildSummary
+                )
+                await cache.storeInfoSummary(summary)
+                return summary
+            } catch {
+                if let stale = await cache.infoSummary(maxAge: .infoStale) {
+                    return stale
+                }
+                throw error
+            }
+        }
+    }
+
     func searchCatalog(
         center: CLLocationCoordinate2D,
         filter: FilterState,
@@ -109,6 +141,8 @@ private extension TimeInterval {
     static let searchStale: TimeInterval = 24 * 60 * 60
     static let detailFresh: TimeInterval = 24 * 60 * 60
     static let detailStale: TimeInterval = 7 * 24 * 60 * 60
+    static let infoFresh: TimeInterval = 30 * 60
+    static let infoStale: TimeInterval = 7 * 24 * 60 * 60
 }
 
 private struct CatalogSearchCacheKey: Hashable {
@@ -138,6 +172,12 @@ private actor CatalogRepositoryCache {
     private var searchOrder: [CatalogSearchCacheKey] = []
     private var details: [String: DetailEntry] = [:]
     private var detailOrder: [String] = []
+    private var infoSummaryEntry: InfoSummaryEntry?
+
+    private struct InfoSummaryEntry {
+        let storedAt: Date
+        let summary: CatalogInfoSummary
+    }
 
     func searchResult(for key: CatalogSearchCacheKey, maxAge: TimeInterval) -> ChargerRepository.SearchResult? {
         guard let entry = searches[key], Date().timeIntervalSince(entry.storedAt) <= maxAge else {
@@ -173,11 +213,27 @@ private actor CatalogRepositoryCache {
         }
     }
 
+    func infoSummary(maxAge: TimeInterval) -> CatalogInfoSummary? {
+        guard let entry = infoSummaryEntry, Date().timeIntervalSince(entry.storedAt) <= maxAge else {
+            return nil
+        }
+        return entry.summary
+    }
+
+    func storeInfoSummary(_ summary: CatalogInfoSummary) {
+        infoSummaryEntry = InfoSummaryEntry(storedAt: Date(), summary: summary)
+    }
+
+    func removeInfoSummary() {
+        infoSummaryEntry = nil
+    }
+
     func removeAll() {
         searches = [:]
         searchOrder = []
         details = [:]
         detailOrder = []
+        infoSummaryEntry = nil
     }
 
     private func touchSearch(_ key: CatalogSearchCacheKey) {

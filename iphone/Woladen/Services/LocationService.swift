@@ -33,7 +33,7 @@ final class LocationService: NSObject, ObservableObject {
         authorizationStatus = manager.authorizationStatus
         switch authorizationStatus {
         case .notDetermined:
-            stopUpdates()
+            requestAuthorization()
         case .authorizedWhenInUse, .authorizedAlways:
             requestSingleLocation()
             startUpdates()
@@ -44,11 +44,15 @@ final class LocationService: NSObject, ObservableObject {
 
     func requestAuthorization() {
         guard screenshotLocation == nil else { return }
+        authorizationStatus = manager.authorizationStatus
         switch authorizationStatus {
         case .notDetermined:
             manager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse, .authorizedAlways:
+            requestSingleLocation()
+            startUpdates()
         default:
-            break
+            stopUpdates()
         }
     }
 

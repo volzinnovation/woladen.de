@@ -65,6 +65,7 @@ struct FavoritesTabView: View {
                         .accessibilityLabel(Text("aria.removeFavorite"))
                     }
                     .padding(.vertical, 2)
+                    .listRowBackground(feature.stationCardBackground)
                 }
                 .listStyle(.plain)
             }

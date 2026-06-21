@@ -31,6 +31,7 @@ struct MapTabView: View {
                         } label: {
                             marker(for: feature)
                         }
+                        .buttonStyle(.plain)
                     }
                 }
 
@@ -70,7 +71,7 @@ struct MapTabView: View {
                         .padding(10)
                         .background(Color(.secondarySystemBackground), in: Circle())
                 }
-                .accessibilityLabel(Text("aria.locate"))
+                .accessibilityLabel(Text(String(localized: "aria.locate")))
 
                 Button {
                     showingFilter = true
@@ -80,7 +81,7 @@ struct MapTabView: View {
                         .padding(10)
                         .background(Color(.secondarySystemBackground), in: Circle())
                 }
-                .accessibilityLabel(Text("aria.filterOpen"))
+                .accessibilityLabel(Text(String(localized: "aria.filterOpen")))
             }
             .padding(.trailing, 16)
             .padding(.top, 12)
@@ -95,10 +96,10 @@ struct MapTabView: View {
             }
 
             if viewModel.isAwaitingFirstLocationFix {
-                ContentUnavailableView(
-                    initialLocationTitle,
-                    systemImage: "location.magnifyingglass",
-                    description: Text(initialLocationDescription)
+                LocationAccessInstructionView(
+                    authorizationStatus: locationService.authorizationStatus,
+                    lastError: locationService.lastError,
+                    retry: requestCurrentLocation
                 )
                 .padding(.horizontal, 24)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
@@ -141,28 +142,6 @@ struct MapTabView: View {
         return lhs.distance(from: rhs) > 250
     }
 
-    private var initialLocationTitle: String {
-        switch locationService.authorizationStatus {
-        case .denied, .restricted:
-            return String(localized: "location.deniedTitle")
-        default:
-            return String(localized: "location.pendingTitle")
-        }
-    }
-
-    private var initialLocationDescription: String {
-        switch locationService.authorizationStatus {
-        case .notDetermined:
-            return String(localized: "location.idleMessage")
-        case .denied, .restricted:
-            return String(localized: "location.deniedMessage")
-        case .authorizedWhenInUse, .authorizedAlways:
-            return String(localized: "location.pendingMessage")
-        @unknown default:
-            return String(localized: "location.pendingMessage")
-        }
-    }
-
     private func handleActivation() {
         if let current = locationService.currentLocation {
             if !hasCenteredInitialLocation {
@@ -174,21 +153,27 @@ struct MapTabView: View {
         } else {
             centerOnNextLocationUpdate = true
             locationService.activate()
-            if !hasCenteredInitialLocation {
-                let center = ChargerRepository.defaultCatalogCenter
-                hasCenteredInitialLocation = true
-                lastQueriedCenter = center
-                viewModel.reloadMapForCenter(center)
-            }
+            viewModel.waitForLocation()
+        }
+    }
+
+    private func requestCurrentLocation() {
+        centerOnNextLocationUpdate = true
+        locationService.requestAuthorization()
+        if let current = locationService.currentLocation {
+            centerMap(on: current)
+            hasCenteredInitialLocation = true
+        } else {
+            viewModel.waitForLocation()
         }
     }
 
     private func color(for key: String) -> Color {
         switch key {
-        case "gold": return Color.yellow
-        case "silver": return Color.gray
-        case "bronze": return Color.brown
-        default: return Color.secondary
+        case "gold": return StationVisualStyle.amenityGold
+        case "silver": return StationVisualStyle.amenitySilver
+        case "bronze": return StationVisualStyle.amenityBronze
+        default: return StationVisualStyle.amenityGrey
         }
     }
 
@@ -200,7 +185,21 @@ struct MapTabView: View {
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(favoriteStarColor)
                     .frame(width: 24, height: 24)
-                    .background(Color(.systemBackground).opacity(0.92), in: Circle())
+            } else if feature.isStationOutOfOrder {
+                ZStack {
+                    Circle()
+                        .fill(StationVisualStyle.markerOutOfOrder)
+                        .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundStyle(Color.white)
+                }
+                .frame(width: 22, height: 22)
+            } else if feature.isStationFullyOccupied {
+                Circle()
+                    .fill(Color.white)
+                    .overlay(Circle().stroke(StationVisualStyle.markerFullyOccupied, lineWidth: 2))
+                    .frame(width: 18, height: 18)
             } else {
                 Circle()
                     .fill(color(for: viewModel.markerTint(for: feature)))
@@ -208,6 +207,7 @@ struct MapTabView: View {
                     .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
             }
         }
+        .shadow(color: Color.black.opacity(0.22), radius: 2.5, x: 0, y: 2)
         .accessibilityLabel(markerAccessibilityLabel(for: feature, isFavorite: isFavorite))
     }
 

@@ -18,6 +18,7 @@ struct FilterSheetView: View {
     var body: some View {
         NavigationStack {
             Form {
+                availabilitySection
                 operatorSection
                 amenityNameSection
                 powerSection
@@ -44,6 +45,19 @@ struct FilterSheetView: View {
                 Text(String(localized: "filters.allOperators")).tag("")
                 ForEach(operators) { entry in
                     Text("\(entry.name) (\(entry.stations))").tag(entry.name)
+                }
+            }
+        }
+    }
+
+    private var availabilitySection: some View {
+        Section(String(localized: "filters.all")) {
+            Toggle(isOn: $draftFilter.availableOnly) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(String(localized: "filters.availableOnly"))
+                    Text(String(localized: "filters.availableOnlyNote"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
