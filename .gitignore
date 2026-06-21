@@ -15,6 +15,7 @@ secret/
 # Local virtual envs
 .venv/
 venv/
+node_modules/
 data/germany-latest.osm.pbf
 test-results/desktop_test.mp4
 test-results/mobile_test.mp4
@@ -47,6 +48,7 @@ data/onboarded_static/
 data/osm_pbf_cache/
 .npm/
 .playwright-cli/
+.playwright-test-results/
 Library/
 output/playwright/
 tmp/
