@@ -175,6 +175,7 @@ const FALLBACK_BUNDLE = {
     legendSilver: "More than 5 nearby places",
     legendBronze: "At least 1 nearby place",
     legendGrey: "No nearby places",
+    legendFavorite: "Favorite station",
     legendMarkerOutOfOrder: "Live marker: out of order",
     legendMarkerFullyOccupied: "Live marker: fully occupied",
     aboutIntro: "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. woladen knows",

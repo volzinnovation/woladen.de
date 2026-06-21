@@ -4013,11 +4013,15 @@ function createStationCard(feature, options = {}) {
     : "";
 
   const markerColor = getMarkerColor(p);
+  const isFavoriteStation = Boolean(stationId && state.favorites.has(stationId));
+  const cardMarker = isFavoriteStation
+    ? `<span class="favorite-station-star card-favorite-star" aria-hidden="true">★</span>`
+    : `<span class="amenity-dot" style="background-color: ${markerColor}"></span>`;
   
   div.innerHTML = `
     <div class="card-header">
       <div class="card-title-row">
-        <span class="amenity-dot" style="background-color: ${markerColor}"></span>
+        ${cardMarker}
         <h3 class="card-title">${escapeHtml(p.operator || t("station.unknownOperator"))}</h3>
       </div>
       ${metricsMarkup}
@@ -5167,7 +5171,9 @@ function toggleDetailFavorite() {
   updateMapMarkersForStationIds([id]);
   renderDetailStationMarker(currentDetailFeature);
 
-  // If we are in favorites view, refresh
+  if (els.views.list.classList.contains("active")) {
+    renderList();
+  }
   if (els.views.favorites.classList.contains("active")) {
     renderFavorites();
   }

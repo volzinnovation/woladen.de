@@ -95,6 +95,21 @@ test("favorite control sits before the detail title and favorites use map star m
   assert.match(appJs, /renderDetailStationMarker\(currentDetailFeature\)/);
 });
 
+test("favorite stations use passive star markers on cards and in the info legend", () => {
+  const indexHtml = readText(INDEX_HTML_URL);
+  const appJs = readText(new URL("./app.js", import.meta.url));
+  const createStationCardSource = appJs.slice(
+    appJs.indexOf("function createStationCard"),
+    appJs.indexOf("function getListDisplayItems"),
+  );
+  assert.match(indexHtml, /data-i18n="info\.legendFavorite"/);
+  assert.match(indexHtml, /class="favorite-station-star legend-favorite-star"/);
+  assert.match(createStationCardSource, /state\.favorites\.has\(stationId\)/);
+  assert.match(createStationCardSource, /favorite-station-star card-favorite-star/);
+  assert.match(createStationCardSource, /aria-hidden="true">★<\/span>/);
+  assert.doesNotMatch(createStationCardSource, /toggleDetailFavorite/);
+});
+
 test("app shell uses the canonical woladen brand SEO copy", () => {
   const indexHtml = readText(INDEX_HTML_URL);
   assert.match(indexHtml, /<title>woladen - Smart EV Stops in Europe<\/title>/);
