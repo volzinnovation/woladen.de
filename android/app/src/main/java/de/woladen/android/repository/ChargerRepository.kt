@@ -27,7 +27,8 @@ class ChargerRepository(
         val radiusMeters: Int,
         val limit: Int,
         val minPowerKwTenth: Int,
-        val operatorName: String
+        val operatorName: String,
+        val availableOnly: Boolean
     )
 
     private data class CacheEntry<T>(
@@ -53,7 +54,8 @@ class ChargerRepository(
             radiusMeters = radiusMeters,
             limit = limit,
             minPowerKwTenth = (filterState.minPowerKw * 10).roundToInt(),
-            operatorName = filterState.operatorName.trim()
+            operatorName = filterState.operatorName.trim(),
+            availableOnly = filterState.availableOnly
         )
 
         var staleSearch: CatalogLoadResult? = null

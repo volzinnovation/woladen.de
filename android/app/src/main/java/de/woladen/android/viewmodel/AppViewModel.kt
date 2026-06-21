@@ -1,6 +1,7 @@
 package de.woladen.android.viewmodel
 
 import android.app.Application
+import android.content.Context
 import android.location.Location
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +52,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var operators: List<OperatorEntry> by mutableStateOf(emptyList())
         private set
 
-    var filterState: FilterState by mutableStateOf(FilterState())
+    private val filterPreferences = application.getSharedPreferences("woladen", Context.MODE_PRIVATE)
+
+    private var filterStateBacking: FilterState by mutableStateOf(loadSavedFilterState())
+
+    var filterState: FilterState
+        get() = filterStateBacking
+        set(value) {
+            filterStateBacking = value
+            saveFilterState(value)
+        }
 
     var selectedFeature: GeoJsonFeature? by mutableStateOf(null)
         private set
@@ -106,6 +116,31 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         liveSummaryRefreshJob?.cancel()
         selectedFeatureRefreshJob?.cancel()
         super.onCleared()
+    }
+
+    private fun loadSavedFilterState(): FilterState {
+        return FilterState(
+            operatorName = filterPreferences.getString(FILTER_OPERATOR_NAME_KEY, "").orEmpty(),
+            minPowerKw = filterPreferences.getFloat(FILTER_MIN_POWER_KW_KEY, 50f).toDouble(),
+            selectedAmenities = filterPreferences
+                .getStringSet(FILTER_SELECTED_AMENITIES_KEY, emptySet())
+                .orEmpty()
+                .toSet(),
+            amenityNameQuery = filterPreferences.getString(FILTER_AMENITY_NAME_QUERY_KEY, "").orEmpty(),
+            availableOnly = filterPreferences.getBoolean(FILTER_AVAILABLE_ONLY_KEY, true),
+            currentlyOpenOnly = filterPreferences.getBoolean(FILTER_CURRENTLY_OPEN_ONLY_KEY, false)
+        )
+    }
+
+    private fun saveFilterState(state: FilterState) {
+        filterPreferences.edit()
+            .putString(FILTER_OPERATOR_NAME_KEY, state.operatorName)
+            .putFloat(FILTER_MIN_POWER_KW_KEY, state.minPowerKw.toFloat())
+            .putStringSet(FILTER_SELECTED_AMENITIES_KEY, state.selectedAmenities)
+            .putString(FILTER_AMENITY_NAME_QUERY_KEY, state.amenityNameQuery)
+            .putBoolean(FILTER_AVAILABLE_ONLY_KEY, state.availableOnly)
+            .putBoolean(FILTER_CURRENTLY_OPEN_ONLY_KEY, state.currentlyOpenOnly)
+            .apply()
     }
 
     fun load(userLocation: Location?) {
@@ -648,6 +683,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val EARTH_RADIUS_METERS = 6371000.0
+        private const val FILTER_OPERATOR_NAME_KEY = "filter.operatorName"
+        private const val FILTER_MIN_POWER_KW_KEY = "filter.minPowerKw"
+        private const val FILTER_SELECTED_AMENITIES_KEY = "filter.selectedAmenities"
+        private const val FILTER_AMENITY_NAME_QUERY_KEY = "filter.amenityNameQuery"
+        private const val FILTER_AVAILABLE_ONLY_KEY = "filter.availableOnly"
+        private const val FILTER_CURRENTLY_OPEN_ONLY_KEY = "filter.currentlyOpenOnly"
         private val DEFAULT_CATALOG_CENTER = 52.52 to 13.405
     }
 }

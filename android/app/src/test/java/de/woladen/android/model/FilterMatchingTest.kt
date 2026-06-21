@@ -66,14 +66,31 @@ class FilterMatchingTest {
             amenityNameQuery = "McDonald"
         )
 
-        assertEquals(5, filters.activeCount)
+        assertEquals(6, filters.activeCount)
+    }
+
+    @Test
+    fun availableOnlyRequiresKnownFreeChargingPoint() {
+        val available = sampleProperties(occupancyTotalEvses = 4, occupancyAvailableEvses = 1)
+        val occupied = sampleProperties(
+            occupancyTotalEvses = 4,
+            occupancyAvailableEvses = 0,
+            occupancyOccupiedEvses = 4
+        )
+
+        assertTrue(available.matches(FilterState()))
+        assertFalse(occupied.matches(FilterState()))
+        assertTrue(occupied.matches(FilterState(availableOnly = false)))
     }
 
     private fun sampleProperties(
         operatorName: String = "IONITY",
         maxPowerKw: Double = 150.0,
         amenityExamples: List<AmenityExample> = emptyList(),
-        amenityCounts: Map<String, Int> = emptyMap()
+        amenityCounts: Map<String, Int> = emptyMap(),
+        occupancyTotalEvses: Int = 4,
+        occupancyAvailableEvses: Int = 1,
+        occupancyOccupiedEvses: Int = 0
     ): ChargerProperties {
         return ChargerProperties(
             stationId = "station-1",
@@ -89,9 +106,9 @@ class FilterMatchingTest {
             occupancySourceName = "",
             occupancyStatus = "",
             occupancyLastUpdated = "",
-            occupancyTotalEvses = 0,
-            occupancyAvailableEvses = 0,
-            occupancyOccupiedEvses = 0,
+            occupancyTotalEvses = occupancyTotalEvses,
+            occupancyAvailableEvses = occupancyAvailableEvses,
+            occupancyOccupiedEvses = occupancyOccupiedEvses,
             occupancyChargingEvses = 0,
             occupancyOutOfOrderEvses = 0,
             occupancyUnknownEvses = 0,

@@ -13,7 +13,11 @@ final class AppViewModel: ObservableObject {
     @Published private(set) var allFeatures: [GeoJSONFeature] = []
     @Published private(set) var discoveredFeatures: [GeoJSONFeature] = []
     @Published private(set) var operators: [OperatorEntry] = []
-    @Published var filterState = FilterState()
+    @Published var filterState = FilterStateStore.load() {
+        didSet {
+            FilterStateStore.save(filterState)
+        }
+    }
     @Published var selectedFeature: GeoJSONFeature?
     @Published var selectedTab: AppTab = .list
     @Published private(set) var loadError: String?
