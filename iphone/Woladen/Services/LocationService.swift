@@ -8,7 +8,6 @@ final class LocationService: NSObject, ObservableObject {
 
     private let manager = CLLocationManager()
     private let screenshotLocation = LocationService.resolveScreenshotLocation()
-    private var requestedAlwaysUpgrade = false
 
     override init() {
         super.init()
@@ -34,7 +33,7 @@ final class LocationService: NSObject, ObservableObject {
         authorizationStatus = manager.authorizationStatus
         switch authorizationStatus {
         case .notDetermined:
-            manager.requestWhenInUseAuthorization()
+            stopUpdates()
         case .authorizedWhenInUse, .authorizedAlways:
             requestSingleLocation()
             startUpdates()
@@ -48,8 +47,6 @@ final class LocationService: NSObject, ObservableObject {
         switch authorizationStatus {
         case .notDetermined:
             manager.requestWhenInUseAuthorization()
-        case .authorizedWhenInUse:
-            manager.requestAlwaysAuthorization()
         default:
             break
         }
@@ -63,10 +60,7 @@ final class LocationService: NSObject, ObservableObject {
             return
         }
 
-        if authorizationStatus == .notDetermined {
-            requestAuthorization()
-            return
-        }
+        if authorizationStatus == .notDetermined { return }
         guard authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways else {
             return
         }
@@ -115,10 +109,6 @@ extension LocationService: CLLocationManagerDelegate {
                 self.stopUpdates()
             }
 
-            if status == .authorizedWhenInUse && !self.requestedAlwaysUpgrade {
-                self.requestedAlwaysUpgrade = true
-                manager.requestAlwaysAuthorization()
-            }
         }
     }
 

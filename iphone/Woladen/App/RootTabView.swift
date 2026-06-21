@@ -121,30 +121,20 @@ struct RootTabView: View {
     }
 
     private var tabBar: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 0) {
+            Divider()
             HStack(spacing: 8) {
                 tabButton(.list, title: "Liste", systemImage: "list.bullet")
                 tabButton(.map, title: "Karte", systemImage: "map")
                 tabButton(.favorites, title: "Favoriten", systemImage: "star")
                 tabButton(.info, title: "Info", systemImage: "info.circle")
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay {
-                Capsule()
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
-            }
-
-            Capsule()
-                .fill(Color.secondary.opacity(0.35))
-                .frame(width: 120, height: 5)
+            .padding(.horizontal, 10)
+            .padding(.top, 6)
+            .padding(.bottom, 8)
         }
-        .frame(maxWidth: 380)
-        .padding(.horizontal, 16)
-        .padding(.top, 6)
-        .padding(.bottom, 8)
         .frame(maxWidth: .infinity)
+        .background(Color(.systemBackground))
     }
 
     private func tabButton(_ tab: AppViewModel.AppTab, title: String, systemImage: String) -> some View {

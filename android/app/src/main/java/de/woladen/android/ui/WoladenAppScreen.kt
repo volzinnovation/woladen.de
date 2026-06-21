@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
@@ -162,46 +161,14 @@ private fun WideAppLayout(
             onTabSelected = { viewModel.selectedTab = it }
         )
         VerticalDivider()
-        when (viewModel.selectedTab) {
-            AppViewModel.AppTab.LIST,
-            AppViewModel.AppTab.MAP -> {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .widthIn(min = 360.dp, max = 460.dp)
-                    ) {
-                        ListTabView(
-                            viewModel = viewModel,
-                            locationService = locationService,
-                            favoriteStationIds = favoritesStore.favorites,
-                            onShowFilter = onShowFilter
-                        )
-                    }
-                    VerticalDivider()
-                    Box(modifier = Modifier.weight(1f)) {
-                        MapTabView(
-                            viewModel = viewModel,
-                            locationService = locationService,
-                            favoriteStationIds = favoritesStore.favorites,
-                            onRequestLocationPermission = onRequestLocationPermission,
-                            onShowFilter = onShowFilter
-                        )
-                    }
-                }
-            }
-            AppViewModel.AppTab.FAVORITES,
-            AppViewModel.AppTab.INFO -> {
-                Box(modifier = Modifier.weight(1f)) {
-                    AppTabContent(
-                        viewModel = viewModel,
-                        locationService = locationService,
-                        favoritesStore = favoritesStore,
-                        onRequestLocationPermission = onRequestLocationPermission,
-                        onShowFilter = onShowFilter
-                    )
-                }
-            }
+        Box(modifier = Modifier.weight(1f)) {
+            AppTabContent(
+                viewModel = viewModel,
+                locationService = locationService,
+                favoritesStore = favoritesStore,
+                onRequestLocationPermission = onRequestLocationPermission,
+                onShowFilter = onShowFilter
+            )
         }
     }
 }

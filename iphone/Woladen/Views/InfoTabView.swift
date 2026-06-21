@@ -77,7 +77,11 @@ struct InfoTabView: View {
             Section("Standort") {
                 Text(locationStatusText)
                 Button("Standort aktualisieren") {
-                    locationService.requestSingleLocation()
+                    if locationService.authorizationStatus == .notDetermined {
+                        locationService.requestAuthorization()
+                    } else {
+                        locationService.requestSingleLocation()
+                    }
                 }
             }
 

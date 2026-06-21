@@ -108,7 +108,7 @@ struct StationDetailView: View {
                 }
                 .accessibilityLabel(favoritesStore.isFavorite(feature.properties.stationID) ? "Aus Favoriten entfernen" : "Als Favorit markieren")
                 Text(feature.properties.operatorName)
-                    .font(.title3.bold())
+                    .font(.title2.bold())
                     .lineLimit(2)
                     .layoutPriority(1)
                 Spacer(minLength: 0)
@@ -126,7 +126,7 @@ struct StationDetailView: View {
             }
 
             Text("\(feature.properties.address), \(feature.properties.postcode) \(feature.properties.city)")
-                .font(.subheadline)
+                .font(.body)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -188,19 +188,19 @@ struct StationDetailView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(alignment: .top, spacing: 10) {
                             Text(row.title)
-                                .font(.subheadline.weight(.semibold))
+                                .font(.body.weight(.semibold))
                             Spacer()
                             statusPill(status: row.status)
                         }
 
                         HStack(alignment: .top, spacing: 10) {
                             Text(row.meta)
-                                .font(.caption)
+                                .font(.footnote)
                                 .foregroundStyle(.secondary)
                             Spacer(minLength: 0)
                             if !row.price.isEmpty {
                                 Text(row.price)
-                                    .font(.caption.weight(.semibold))
+                                    .font(.footnote.weight(.semibold))
                                     .foregroundStyle(Color.green)
                             }
                         }
@@ -210,10 +210,10 @@ struct StationDetailView: View {
                                 ForEach(row.notes) { note in
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(note.label)
-                                            .font(.caption.weight(.semibold))
+                                            .font(.footnote.weight(.semibold))
                                             .foregroundStyle(.secondary)
                                         Text(note.value)
-                                            .font(.caption)
+                                            .font(.footnote)
                                     }
                                 }
                             }
@@ -291,11 +291,11 @@ struct StationDetailView: View {
                 ForEach(rows) { row in
                     HStack(alignment: .top, spacing: 10) {
                         Text(row.label)
-                            .font(.caption.weight(.semibold))
+                            .font(.footnote.weight(.semibold))
                             .foregroundStyle(.secondary)
                             .frame(width: 88, alignment: .leading)
                         Text(row.value)
-                            .font(.subheadline)
+                            .font(.body)
                         Spacer()
                     }
                     .padding(.vertical, 8)
@@ -305,7 +305,7 @@ struct StationDetailView: View {
 
                 if let source {
                     Text(source)
-                        .font(.caption)
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -320,9 +320,9 @@ struct StationDetailView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name ?? AmenityCatalog.label(for: "amenity_\(item.category)"))
-                    .font(.subheadline)
+                    .font(.body)
                 Text(meta(for: item))
-                    .font(.caption)
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
             }
             Spacer()
@@ -423,7 +423,7 @@ struct StationDetailView: View {
 
     private func detailChip(text: String, systemImage: String) -> some View {
         Label(text, systemImage: systemImage)
-            .font(.footnote.weight(.semibold))
+            .font(.subheadline.weight(.semibold))
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
             .background(Color.teal.opacity(0.12), in: Capsule())
@@ -434,7 +434,7 @@ struct StationDetailView: View {
     private func sourceFooterSection(_ feature: GeoJSONFeature) -> some View {
         if feature.liveEVSERows.isEmpty, let occupancySource = feature.occupancySourceLabel, !occupancySource.isEmpty {
             Text(occupancySource)
-                .font(.caption)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
         }
     }
@@ -442,7 +442,7 @@ struct StationDetailView: View {
     private func detailStatCard(text: String, systemImage: String, tint: Color = .primary) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Label(text, systemImage: systemImage)
-                .font(.footnote.weight(.semibold))
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(tint)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -459,7 +459,7 @@ struct StationDetailView: View {
 
     private func statusPill(status: AvailabilityStatus) -> some View {
         Text(status.label)
-            .font(.caption.weight(.semibold))
+            .font(.footnote.weight(.semibold))
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(statusColor(for: status).opacity(0.16), in: Capsule())

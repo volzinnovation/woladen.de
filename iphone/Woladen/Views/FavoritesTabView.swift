@@ -19,15 +19,16 @@ struct FavoritesTabView: View {
                         } label: {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(feature.properties.operatorName)
-                                    .font(.headline)
+                                    .font(.title3.weight(.semibold))
                                 Text(feature.properties.city)
+                                    .font(.body)
                                     .foregroundStyle(.secondary)
                                 Text("\(Int(feature.properties.displayedMaxPowerKW.rounded())) kW max • \(feature.properties.chargingPointsCount) Ladepunkte")
-                                    .font(.caption)
+                                    .font(.subheadline)
                                     .foregroundStyle(.secondary)
                                 if let occupancy = feature.occupancySummaryLabel ?? nil, !occupancy.isEmpty {
                                     Label(occupancy, systemImage: "dot.radiowaves.left.and.right")
-                                        .font(.caption2)
+                                        .font(.caption)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 3)
                                         .background(favoriteOccupancyColor(for: feature).opacity(0.16))
@@ -35,7 +36,7 @@ struct FavoritesTabView: View {
                                         .clipShape(Capsule())
                                 } else if !feature.displayPrice.isEmpty {
                                     Label(feature.displayPrice, systemImage: "eurosign")
-                                        .font(.caption2)
+                                        .font(.caption)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 3)
                                         .background(Color.green.opacity(0.12))

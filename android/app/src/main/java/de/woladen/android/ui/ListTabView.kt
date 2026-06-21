@@ -6,12 +6,14 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,7 +24,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -108,8 +110,17 @@ fun ListTabView(
             }
 
             else -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 320.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 14.dp,
+                        top = 72.dp,
+                        end = 14.dp,
+                        bottom = 12.dp
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(viewModel.discoveredFeatures, key = { it.id }) { feature ->
                         StationRow(
@@ -167,13 +178,13 @@ private fun StationRow(
     markerColor: Color,
     onClick: () -> Unit
 ) {
-    Surface(
+    OutlinedCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("station-row")
             .clickable(onClick = onClick)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Row(
                     modifier = Modifier.weight(1f),

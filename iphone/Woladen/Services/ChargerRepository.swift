@@ -2,7 +2,7 @@ import Foundation
 import CoreLocation
 
 final class ChargerRepository {
-    static let defaultCatalogCenter = CLLocationCoordinate2D(latitude: 51.1657, longitude: 10.4515)
+    static let defaultCatalogCenter = CLLocationCoordinate2D(latitude: 52.52, longitude: 13.405)
 
     struct SearchResult {
         let features: [GeoJSONFeature]

@@ -75,7 +75,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val maxKnownCatalogFeatures = 600
     private val catalogSearchRadiusMeters = 20_000
     private val catalogSearchLimit = LiveApiClient.MAX_CATALOG_SEARCH_RESULTS
-    private val maxDiscoveredHistory = 200
     private val liveRefreshIntervalMs = 15_000L
 
     private var currentCatalogFeatures: List<GeoJsonFeature> = emptyList()
@@ -592,17 +591,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             discoveredFeatures = emptyList()
             return
         }
+        discoveredById.clear()
+        discoveredOrder.clear()
         for (feature in nearest) {
-            if (!discoveredById.containsKey(feature.id)) {
-                discoveredOrder += feature.id
-            }
+            discoveredOrder += feature.id
             discoveredById[feature.id] = feature
         }
-        while (discoveredOrder.size > maxDiscoveredHistory) {
-            val removedId = discoveredOrder.removeAt(0)
-            discoveredById.remove(removedId)
-        }
-        discoveredFeatures = discoveredOrder.mapNotNull { discoveredById[it] }
+        discoveredFeatures = nearest
     }
 
     private fun selectNearest(
@@ -650,7 +645,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val EARTH_RADIUS_METERS = 6371000.0
-        private val DEFAULT_CATALOG_CENTER = 51.1657 to 10.4515
+        private val DEFAULT_CATALOG_CENTER = 52.52 to 13.405
     }
 }
 

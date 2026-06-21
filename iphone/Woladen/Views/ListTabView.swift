@@ -26,20 +26,32 @@ struct ListTabView: View {
                 } else if viewModel.discoveredFeatures.isEmpty {
                     ContentUnavailableView("Keine Ladepunkte", systemImage: "bolt.slash")
                 } else {
-                    List(viewModel.discoveredFeatures) { feature in
-                        Button {
-                            viewModel.selectFeature(feature)
-                        } label: {
-                            StationRowView(
-                                feature: feature,
-                                distanceText: viewModel.distanceText(from: locationService.currentLocation, to: feature.coordinate),
-                                markerColor: color(for: viewModel.markerTint(for: feature)),
-                                isFavorite: favoritesStore.isFavorite(feature.properties.stationID)
-                            )
+                    ScrollView {
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: 320, maximum: 520), spacing: 10, alignment: .top)],
+                            alignment: .leading,
+                            spacing: 10
+                        ) {
+                            ForEach(viewModel.discoveredFeatures) { feature in
+                                Button {
+                                    viewModel.selectFeature(feature)
+                                } label: {
+                                    StationRowView(
+                                        feature: feature,
+                                        distanceText: viewModel.distanceText(from: locationService.currentLocation, to: feature.coordinate),
+                                        markerColor: color(for: viewModel.markerTint(for: feature)),
+                                        isFavorite: favoritesStore.isFavorite(feature.properties.stationID)
+                                    )
+                                    .padding(14)
+                                    .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 14)
+                        .padding(.top, 58)
+                        .padding(.bottom, 12)
                     }
-                    .listStyle(.plain)
                 }
             }
                 Button {
@@ -112,29 +124,29 @@ private struct StationRowView: View {
                 HStack(spacing: 6) {
                     if isFavorite {
                         Image(systemName: "star.fill")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(favoriteStarColor)
-                            .frame(width: 10, height: 10)
+                            .frame(width: 12, height: 12)
                             .accessibilityHidden(true)
                     } else {
                         Circle()
                             .fill(markerColor)
-                            .frame(width: 10, height: 10)
+                            .frame(width: 12, height: 12)
                     }
                     Text(feature.properties.operatorName)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.headline.weight(.semibold))
                         .lineLimit(1)
                 }
                 Spacer()
                 if let distanceText {
                     Text(distanceText)
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
             }
 
             Text("\(feature.properties.city) • \(Int(feature.properties.displayedMaxPowerKW.rounded())) kW • \(feature.properties.chargingPointsCount) Ladepunkte")
-                .font(.caption)
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             if occupancy != nil || !priceDisplay.isEmpty {
@@ -142,7 +154,7 @@ private struct StationRowView: View {
                     HStack(spacing: 6) {
                         if let occupancy {
                             Label(occupancy, systemImage: "dot.radiowaves.left.and.right")
-                                .font(.caption2)
+                                .font(.caption)
                                 .lineLimit(1)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
@@ -153,7 +165,7 @@ private struct StationRowView: View {
 
                         if !priceDisplay.isEmpty {
                             Label(priceDisplay, systemImage: "eurosign")
-                                .font(.caption2)
+                                .font(.caption)
                                 .lineLimit(1)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
@@ -170,7 +182,7 @@ private struct StationRowView: View {
                     HStack(spacing: 6) {
                         ForEach(topAmenities, id: \.key) { item in
                             Label("\(item.count)", systemImage: AmenityCatalog.symbol(for: item.key))
-                                .font(.caption2)
+                                .font(.caption)
                                 .lineLimit(1)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)

@@ -52,10 +52,6 @@
 	<string></string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Woladen nutzt den Standort dauerhaft, um die nächsten Schnellladepunkte jederzeit bereitzustellen.</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Woladen nutzt den Standort dauerhaft, um die nächsten Schnellladepunkte jederzeit bereitzustellen.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Woladen nutzt den Standort, um Ladepunkte in der Nähe zu zeigen.</string>
 	<key>UIApplicationSceneManifest</key>

@@ -2,12 +2,15 @@ package de.woladen.android
 
 import android.Manifest
 import android.content.pm.ApplicationInfo
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.DisposableEffect
@@ -28,7 +31,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        WindowCompat.setDecorFitsSystemWindows(window, true)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(Color.WHITE, Color.WHITE)
+        )
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         locationService = LocationService(applicationContext)
         favoritesStore = FavoritesStore(applicationContext)
 

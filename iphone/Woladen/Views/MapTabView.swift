@@ -57,7 +57,11 @@ struct MapTabView: View {
             HStack(spacing: 12) {
                 Button {
                     centerOnNextLocationUpdate = true
-                    locationService.requestSingleLocation()
+                    if locationService.authorizationStatus == .notDetermined {
+                        locationService.requestAuthorization()
+                    } else {
+                        locationService.requestSingleLocation()
+                    }
                     if let current = locationService.currentLocation {
                         centerMap(on: current)
                     }
@@ -168,7 +172,7 @@ struct MapTabView: View {
             }
         } else {
             centerOnNextLocationUpdate = true
-            locationService.requestSingleLocation()
+            locationService.activate()
         }
     }
 
