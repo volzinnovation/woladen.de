@@ -80,6 +80,21 @@ test("detail view orders amenities, live status, notes, and details", () => {
   assert.ok(noteIndex < detailsIndex, "personal note should come before details");
 });
 
+test("favorite control sits before the detail title and favorites use map star markers", () => {
+  const indexHtml = readText(INDEX_HTML_URL);
+  const appJs = readText(new URL("./app.js", import.meta.url));
+  const favoriteButtonIndex = indexHtml.indexOf('id="btn-toggle-fav"');
+  const detailTitleIndex = indexHtml.indexOf('id="detail-title"');
+  assert.ok(favoriteButtonIndex > -1, "favorite button exists");
+  assert.ok(detailTitleIndex > -1, "detail title exists");
+  assert.ok(favoriteButtonIndex < detailTitleIndex, "favorite button should sit before the station name");
+  assert.match(appJs, /FAVORITE_MARKER_SIZE/);
+  assert.match(appJs, /function getFavoriteStationMarkerIcon\(\)/);
+  assert.match(appJs, /state\.favorites\.has\(stationId\)[\s\S]*createFavoriteStationMarker/);
+  assert.match(appJs, /updateMapMarkersForStationIds\(\[id\]\)/);
+  assert.match(appJs, /renderDetailStationMarker\(currentDetailFeature\)/);
+});
+
 test("app shell uses the canonical woladen brand SEO copy", () => {
   const indexHtml = readText(INDEX_HTML_URL);
   assert.match(indexHtml, /<title>woladen - Smart EV Stops in Europe<\/title>/);

@@ -103,6 +103,7 @@ const EASTER_EGG_ITERATIONS_PER_FRAME = 1200;
 const EASTER_EGG_CHARS = "E0101101#*";
 const LIVE_OUT_OF_ORDER_MARKER_SIZE = 22;
 const LIVE_FULLY_OCCUPIED_MARKER_SIZE = 18;
+const FAVORITE_MARKER_SIZE = 28;
 const STATION_ID_NAMESPACE = "DE:";
 const LEGACY_STATION_ID_RE = /^[0-9a-f]{16}$/i;
 const NAMESPACED_STATION_ID_RE = /^DE:([0-9a-f]{16})$/i;
@@ -154,6 +155,7 @@ const LIVE_STATUS_MARKER_CONFIGS = {
   },
 };
 const liveStatusMarkerIcons = new Map();
+let favoriteStationMarkerIcon = null;
 const AMENITY_MAPPING = {
   amenity_restaurant: { label: "Restaurant", icon: "amenity_restaurant.png" },
   amenity_cafe: { label: "Café", icon: "amenity_cafe.png" },
@@ -3130,9 +3132,41 @@ function createLiveStatusMarker(lat, lon, statusKey, feature) {
   return marker;
 }
 
+function getFavoriteStationMarkerIcon() {
+  if (favoriteStationMarkerIcon) {
+    return favoriteStationMarkerIcon;
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${FAVORITE_MARKER_SIZE}" height="${FAVORITE_MARKER_SIZE}" viewBox="0 0 ${FAVORITE_MARKER_SIZE} ${FAVORITE_MARKER_SIZE}">
+    <path d="M14 2.5l3.48 7.05 7.78 1.13-5.63 5.49 1.33 7.75L14 20.26l-6.96 3.66 1.33-7.75-5.63-5.49 7.78-1.13L14 2.5z" fill="#f59e0b" stroke="#ffffff" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M14 5.6l2.47 5 5.52.8-3.99 3.89.94 5.49L14 18.19l-4.94 2.59.94-5.49-3.99-3.89 5.52-.8L14 5.6z" fill="#fbbf24"/>
+  </svg>`;
+  favoriteStationMarkerIcon = L.icon({
+    iconUrl: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    iconRetinaUrl: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    iconSize: [FAVORITE_MARKER_SIZE, FAVORITE_MARKER_SIZE],
+    iconAnchor: [FAVORITE_MARKER_SIZE / 2, FAVORITE_MARKER_SIZE / 2],
+    className: "station-map-marker-icon station-map-marker-favorite-icon",
+  });
+  return favoriteStationMarkerIcon;
+}
+
+function createFavoriteStationMarker(lat, lon, feature) {
+  return L.marker([lat, lon], {
+    icon: getFavoriteStationMarkerIcon(),
+    keyboard: true,
+    title: formatStationMarkerLabel(feature),
+  });
+}
+
 function createStationMarker(feature) {
   const [lon, lat] = feature.geometry.coordinates;
   const props = feature.properties;
+  const stationId = getStationIdFromProps(props);
+
+  if (stationId && state.favorites.has(stationId)) {
+    return createFavoriteStationMarker(lat, lon, feature);
+  }
 
   if (isStationOutOfOrder(props)) {
     return createLiveStatusMarker(lat, lon, "outOfOrder", feature);
@@ -5119,7 +5153,8 @@ function renderDetailStaticInfo(props) {
 
 function toggleDetailFavorite() {
   if (!currentDetailFeature) return;
-  const id = currentDetailFeature.properties.station_id;
+  const id = getStationIdFromProps(currentDetailFeature.properties);
+  if (!id) return;
 
   if (state.favorites.has(id)) {
     state.favorites.delete(id);
@@ -5129,6 +5164,8 @@ function toggleDetailFavorite() {
 
   updateFavBtnState();
   saveFavorites();
+  updateMapMarkersForStationIds([id]);
+  renderDetailStationMarker(currentDetailFeature);
 
   // If we are in favorites view, refresh
   if (els.views.favorites.classList.contains("active")) {
@@ -5138,7 +5175,8 @@ function toggleDetailFavorite() {
 
 function updateFavBtnState() {
   if (!currentDetailFeature) return;
-  const id = currentDetailFeature.properties.station_id;
+  const id = getStationIdFromProps(currentDetailFeature.properties);
+  if (!id) return;
   const isFav = state.favorites.has(id);
 
   if (isFav) {
