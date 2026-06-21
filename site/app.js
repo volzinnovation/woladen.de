@@ -1,5 +1,10 @@
 import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs?v=20260620-filter-constraints1";
 import {
+  DEFAULT_FILTER_SETTINGS,
+  parseStoredFilterSettings,
+  serializeStoredFilterSettings,
+} from "./filter-settings.mjs?v=20260621-filter-persistence";
+import {
   formatOpeningHoursForDisplay,
   getAmenityOpenStatus,
 } from "./opening-hours.mjs?v=20260620-i18n";
@@ -68,10 +73,11 @@ import {
 
 /* --- CONFIGURATION & CONSTANTS --- */
 const MAX_DISPLAY_POWER_KW = 400;
-const DEFAULT_MIN_POWER_KW = 50;
+const DEFAULT_MIN_POWER_KW = DEFAULT_FILTER_SETTINGS.minPower;
 const RATINGS_STORAGE_KEY = "woladen_ratings_v1";
 const RATING_CLIENT_STORAGE_KEY = "woladen_rating_client_v1";
 const NOTES_STORAGE_KEY = "woladen_notes_v1";
+const FILTERS_STORAGE_KEY = "woladen_filters_v1";
 const SHARED_RATINGS_ENABLED = window.WOLADEN_ENABLE_SHARED_RATINGS === true ||
   window.WOLADEN_ENABLE_SHARED_RATINGS === "true";
 const RATING_SUMMARY_REFRESH_MS = 60000;
@@ -1030,12 +1036,12 @@ const state = {
     errorCode: "",
   },
   filters: {
-    operator: "",
+    operator: DEFAULT_FILTER_SETTINGS.operator,
     minPower: DEFAULT_MIN_POWER_KW,
-    amenities: new Set(),
-    amenityNameQuery: "",
-    availableOnly: true,
-    currentlyOpenOnly: false,
+    amenities: new Set(DEFAULT_FILTER_SETTINGS.amenities),
+    amenityNameQuery: DEFAULT_FILTER_SETTINGS.amenityNameQuery,
+    availableOnly: DEFAULT_FILTER_SETTINGS.availableOnly,
+    currentlyOpenOnly: DEFAULT_FILTER_SETTINGS.currentlyOpenOnly,
   },
   live: {
     baseUrl: LIVE_API_BASE_URL,
@@ -1242,6 +1248,7 @@ async function init() {
   loadFavorites();
   loadRatings();
   loadNotes();
+  loadFilters();
   initMap();
   initNavigation();
   syncViewWithRequestedHash();
@@ -3456,7 +3463,18 @@ function refreshMapMarkersFromCurrentFeatures() {
 }
 
 /* --- FILTER LOGIC --- */
+function syncFilterControlsFromState() {
+  els.filter.operator.value = state.filters.operator || "";
+  els.filter.amenityName.value = state.filters.amenityNameQuery || "";
+  els.filter.availableOnly.checked = Boolean(state.filters.availableOnly);
+  els.filter.currentlyOpen.checked = Boolean(state.filters.currentlyOpenOnly);
+  els.filter.power.value = String(Math.round(Number(state.filters.minPower || DEFAULT_MIN_POWER_KW)));
+  updatePowerFilterLabel();
+}
+
 function initFilters() {
+  syncFilterControlsFromState();
+
   // Operator
   els.filter.operator.addEventListener("change", (e) => {
     state.filters.operator = e.target.value;
@@ -3470,7 +3488,6 @@ function initFilters() {
   });
 
   // Available charging points
-  els.filter.availableOnly.checked = Boolean(state.filters.availableOnly);
   els.filter.availableOnly.addEventListener("change", (e) => {
     state.filters.availableOnly = e.target.checked;
     updateFilters();
@@ -3489,7 +3506,6 @@ function initFilters() {
     updatePowerFilterLabel();
     updateFilters({ reloadCatalog: true });
   });
-  updatePowerFilterLabel();
 }
 
 function updatePowerFilterLabel() {
@@ -3571,6 +3587,7 @@ function renderAmenityFilters() {
 
 function updateFilters(options = {}) {
   const { reloadCatalog = false } = options;
+  saveFilters();
   if (reloadCatalog && hasCatalogSearchCenter()) {
     void loadCatalogStationsForCurrentCenter({ force: true }).then(updateFilterLabel);
     updateFilterLabel();
@@ -5623,6 +5640,28 @@ async function requestUserLocation() {
 }
 
 /* --- LOCALSTORAGE --- */
+function applyStoredFilterSettings(settings) {
+  if (!settings) {
+    return;
+  }
+  state.filters.operator = settings.operator;
+  state.filters.minPower = settings.minPower;
+  state.filters.amenities = new Set(settings.amenities);
+  state.filters.amenityNameQuery = settings.amenityNameQuery;
+  state.filters.availableOnly = settings.availableOnly;
+  state.filters.currentlyOpenOnly = settings.currentlyOpenOnly;
+}
+
+function loadFilters() {
+  try {
+    applyStoredFilterSettings(
+      parseStoredFilterSettings(localStorage.getItem(FILTERS_STORAGE_KEY), DEFAULT_FILTER_SETTINGS),
+    );
+  } catch (e) {
+    console.error("Error loading filters", e);
+  }
+}
+
 function loadFavorites() {
   try {
     const raw = localStorage.getItem("woladen_favs");
@@ -5716,6 +5755,17 @@ function saveNotes() {
     localStorage.setItem(NOTES_STORAGE_KEY, serializeStoredNotes(state.notes));
   } catch (e) {
     console.error("Error saving notes", e);
+  }
+}
+
+function saveFilters() {
+  try {
+    localStorage.setItem(
+      FILTERS_STORAGE_KEY,
+      serializeStoredFilterSettings(state.filters, DEFAULT_FILTER_SETTINGS),
+    );
+  } catch (e) {
+    console.error("Error saving filters", e);
   }
 }
 

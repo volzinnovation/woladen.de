@@ -267,6 +267,7 @@ body {
   flex: 0 1 620px;
   max-width: 620px;
   margin: 0;
+  pointer-events: auto;
 }
 
 .legal-shell > .app-install-promo {
@@ -1703,7 +1704,7 @@ input[type="search"]::placeholder {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 
 .action-btn {

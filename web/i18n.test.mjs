@@ -65,16 +65,27 @@ test("occupancy history layout keeps desktop bars visible", () => {
   assert.match(mobileBlock, /\.occupancy-history-track\s*\{[\s\S]*?grid-column:\s*2;[\s\S]*?grid-row:\s*1;/);
 });
 
+test("map app install promo keeps its dismiss button clickable", () => {
+  const styles = readText(STYLES_URL);
+  assert.match(styles, /\.map-controls-overlay > \.app-install-promo\s*\{[\s\S]*?pointer-events:\s*auto;/);
+});
+
 test("detail view orders amenities, live status, notes, and details", () => {
   const indexHtml = readText(INDEX_HTML_URL);
+  const addressIndex = indexHtml.indexOf('id="detail-address"');
+  const navigationIndex = indexHtml.indexOf('class="detail-actions"');
   const amenitiesIndex = indexHtml.indexOf('id="detail-amenities-title"');
   const liveIndex = indexHtml.indexOf('id="detail-live-section"');
   const noteIndex = indexHtml.indexOf('class="detail-note"');
   const detailsIndex = indexHtml.indexOf('id="detail-details-section"');
+  assert.ok(addressIndex > -1, "address exists");
+  assert.ok(navigationIndex > -1, "navigation actions exist");
   assert.ok(amenitiesIndex > -1, "amenities section exists");
   assert.ok(liveIndex > -1, "live section exists");
   assert.ok(noteIndex > -1, "note section exists");
   assert.ok(detailsIndex > -1, "details section exists");
+  assert.ok(addressIndex < navigationIndex, "navigation should come after address");
+  assert.ok(navigationIndex < amenitiesIndex, "navigation should come before amenities");
   assert.ok(amenitiesIndex < liveIndex, "amenities should come before live status");
   assert.ok(liveIndex < noteIndex, "personal note should come after live status");
   assert.ok(noteIndex < detailsIndex, "personal note should come before details");
