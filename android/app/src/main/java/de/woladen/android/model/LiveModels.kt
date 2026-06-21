@@ -64,9 +64,9 @@ enum class AvailabilityStatus(val rawValue: String, val label: String) {
     companion object {
         fun fromRaw(value: String?): AvailabilityStatus {
             return when (value?.trim()?.lowercase()) {
-                FREE.rawValue -> FREE
-                OCCUPIED.rawValue -> OCCUPIED
-                OUT_OF_ORDER.rawValue -> OUT_OF_ORDER
+                FREE.rawValue, "available" -> FREE
+                OCCUPIED.rawValue, "charging", "in_use", "inuse" -> OCCUPIED
+                OUT_OF_ORDER.rawValue, "outoforder", "faulted", "unavailable" -> OUT_OF_ORDER
                 else -> UNKNOWN
             }
         }

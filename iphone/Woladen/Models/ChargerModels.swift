@@ -57,6 +57,11 @@ struct GeoJSONPointGeometry: Decodable {
     let type: String
     let coordinates: [Double]
 
+    init(type: String = "Point", coordinates: [Double]) {
+        self.type = type
+        self.coordinates = coordinates
+    }
+
     var coordinate: CLLocationCoordinate2D {
         guard coordinates.count == 2 else {
             return CLLocationCoordinate2D(latitude: 0, longitude: 0)
@@ -354,9 +359,68 @@ struct AmenityExample: Decodable, Identifiable {
         case lon
     }
 
+    init(
+        category: String,
+        name: String?,
+        openingHours: String?,
+        distanceM: Double?,
+        lat: Double?,
+        lon: Double?
+    ) {
+        self.category = category
+        self.name = name
+        self.openingHours = openingHours
+        self.distanceM = distanceM
+        self.lat = lat
+        self.lon = lon
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: AnyCodingKey.self)
+        let rawCategory = Self.decodeString(container, keys: ["category", "kind", "amenity_kind"])
+        category = normalizedAmenityCategory(rawCategory)
+        name = Self.decodeString(container, keys: ["name", "amenity_name", "title"]).nilIfEmpty
+        openingHours = Self.decodeString(container, keys: ["opening_hours", "openingHours"]).nilIfEmpty
+        distanceM = Self.decodeDouble(container, keys: ["distance_m", "distanceM", "nearest_amenity_distance_m"])
+        lat = Self.decodeDouble(container, keys: ["lat", "latitude"])
+        lon = Self.decodeDouble(container, keys: ["lon", "longitude"])
+    }
+
     var coordinate: CLLocationCoordinate2D? {
         guard let lat, let lon else { return nil }
         return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
+
+    private static func decodeString(_ container: KeyedDecodingContainer<AnyCodingKey>, keys: [String]) -> String {
+        for key in keys {
+            guard let codingKey = AnyCodingKey(stringValue: key) else { continue }
+            if let value = try? container.decode(String.self, forKey: codingKey) {
+                return value
+            }
+            if let value = try? container.decode(Double.self, forKey: codingKey) {
+                return String(value)
+            }
+            if let value = try? container.decode(Int.self, forKey: codingKey) {
+                return String(value)
+            }
+        }
+        return ""
+    }
+
+    private static func decodeDouble(_ container: KeyedDecodingContainer<AnyCodingKey>, keys: [String]) -> Double? {
+        for key in keys {
+            guard let codingKey = AnyCodingKey(stringValue: key) else { continue }
+            if let value = try? container.decode(Double.self, forKey: codingKey) {
+                return value
+            }
+            if let value = try? container.decode(Int.self, forKey: codingKey) {
+                return Double(value)
+            }
+            if let value = try? container.decode(String.self, forKey: codingKey) {
+                return Double(value.replacingOccurrences(of: ",", with: "."))
+            }
+        }
+        return nil
     }
 }
 
@@ -519,6 +583,27 @@ struct AnyCodingKey: CodingKey {
     init?(intValue: Int) {
         self.stringValue = "\(intValue)"
         self.intValue = intValue
+    }
+}
+
+func normalizedAmenityCategory(_ value: String) -> String {
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return "other" }
+    if trimmed.hasPrefix("amenity_") {
+        return String(trimmed.dropFirst("amenity_".count))
+    }
+    return trimmed
+}
+
+func normalizedAmenityKey(_ value: String) -> String {
+    let category = normalizedAmenityCategory(value)
+    return category.hasPrefix("amenity_") ? category : "amenity_\(category)"
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
 

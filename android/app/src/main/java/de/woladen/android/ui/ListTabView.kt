@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +51,7 @@ import de.woladen.android.viewmodel.AppViewModel
 fun ListTabView(
     viewModel: AppViewModel,
     locationService: LocationService,
+    favoriteStationIds: Set<String>,
     onShowFilter: () -> Unit
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -117,6 +119,7 @@ fun ListTabView(
                                 latitude = feature.latitude,
                                 longitude = feature.longitude
                             ),
+                            isFavorite = favoriteStationIds.contains(feature.properties.stationId),
                             markerColor = Color(markerColorForKey(viewModel.markerTint(feature))),
                             onClick = { viewModel.selectFeature(feature) }
                         )
@@ -160,6 +163,7 @@ private fun initialLocationDescription(status: LocationAuthorizationStatus): Str
 private fun StationRow(
     feature: GeoJsonFeature,
     distanceText: String?,
+    isFavorite: Boolean,
     markerColor: Color,
     onClick: () -> Unit
 ) {
@@ -176,11 +180,19 @@ private fun StationRow(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .background(markerColor, CircleShape)
-                            .padding(5.dp)
-                    )
+                    if (isFavorite) {
+                        Icon(
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = "Favorit",
+                            tint = Color(0xFFF59E0B)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .background(markerColor, CircleShape)
+                                .padding(5.dp)
+                        )
+                    }
                     Text(
                         text = feature.properties.operatorName,
                         style = MaterialTheme.typography.titleSmall,

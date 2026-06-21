@@ -2,13 +2,16 @@ package de.woladen.android.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
@@ -18,8 +21,11 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,7 +39,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import de.woladen.android.R
 import de.woladen.android.model.FilterState
 import de.woladen.android.service.LocationService
 import de.woladen.android.store.FavoritesStore
@@ -56,55 +64,24 @@ fun WoladenAppScreen(
             .background(MaterialTheme.colorScheme.background)
             .semantics { testTagsAsResourceId = true }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-        ) {
-            Box(
-                modifier = Modifier.weight(1f)
-            ) {
-                when (viewModel.selectedTab) {
-                    AppViewModel.AppTab.LIST -> {
-                        ListTabView(
-                            viewModel = viewModel,
-                            locationService = locationService,
-                            onShowFilter = { showingFilter = true }
-                        )
-                    }
-
-                    AppViewModel.AppTab.MAP -> {
-                        MapTabView(
-                            viewModel = viewModel,
-                            locationService = locationService,
-                            onRequestLocationPermission = onRequestLocationPermission,
-                            onShowFilter = { showingFilter = true }
-                        )
-                    }
-
-                    AppViewModel.AppTab.FAVORITES -> {
-                        FavoritesTabView(
-                            viewModel = viewModel,
-                            favoritesStore = favoritesStore,
-                            locationService = locationService
-                        )
-                    }
-
-                    AppViewModel.AppTab.INFO -> {
-                        InfoTabView(
-                            viewModel = viewModel,
-                            locationService = locationService,
-                            onRequestLocationPermission = onRequestLocationPermission
-                        )
-                    }
-                }
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            if (maxWidth >= 840.dp) {
+                WideAppLayout(
+                    viewModel = viewModel,
+                    locationService = locationService,
+                    favoritesStore = favoritesStore,
+                    onRequestLocationPermission = onRequestLocationPermission,
+                    onShowFilter = { showingFilter = true }
+                )
+            } else {
+                CompactAppLayout(
+                    viewModel = viewModel,
+                    locationService = locationService,
+                    favoritesStore = favoritesStore,
+                    onRequestLocationPermission = onRequestLocationPermission,
+                    onShowFilter = { showingFilter = true }
+                )
             }
-
-            BottomTabBar(
-                selectedTab = viewModel.selectedTab,
-                onTabSelected = { viewModel.selectedTab = it },
-                modifier = Modifier.navigationBarsPadding()
-            )
         }
     }
 
@@ -136,6 +113,142 @@ fun WoladenAppScreen(
     }
 }
 
+@Composable
+private fun CompactAppLayout(
+    viewModel: AppViewModel,
+    locationService: LocationService,
+    favoritesStore: FavoritesStore,
+    onRequestLocationPermission: () -> Unit,
+    onShowFilter: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+    ) {
+        Box(modifier = Modifier.weight(1f)) {
+            AppTabContent(
+                viewModel = viewModel,
+                locationService = locationService,
+                favoritesStore = favoritesStore,
+                onRequestLocationPermission = onRequestLocationPermission,
+                onShowFilter = onShowFilter
+            )
+        }
+
+        BottomTabBar(
+            selectedTab = viewModel.selectedTab,
+            onTabSelected = { viewModel.selectedTab = it },
+            modifier = Modifier.navigationBarsPadding()
+        )
+    }
+}
+
+@Composable
+private fun WideAppLayout(
+    viewModel: AppViewModel,
+    locationService: LocationService,
+    favoritesStore: FavoritesStore,
+    onRequestLocationPermission: () -> Unit,
+    onShowFilter: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+    ) {
+        WideNavigationRail(
+            selectedTab = viewModel.selectedTab,
+            onTabSelected = { viewModel.selectedTab = it }
+        )
+        VerticalDivider()
+        when (viewModel.selectedTab) {
+            AppViewModel.AppTab.LIST,
+            AppViewModel.AppTab.MAP -> {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .widthIn(min = 360.dp, max = 460.dp)
+                    ) {
+                        ListTabView(
+                            viewModel = viewModel,
+                            locationService = locationService,
+                            favoriteStationIds = favoritesStore.favorites,
+                            onShowFilter = onShowFilter
+                        )
+                    }
+                    VerticalDivider()
+                    Box(modifier = Modifier.weight(1f)) {
+                        MapTabView(
+                            viewModel = viewModel,
+                            locationService = locationService,
+                            favoriteStationIds = favoritesStore.favorites,
+                            onRequestLocationPermission = onRequestLocationPermission,
+                            onShowFilter = onShowFilter
+                        )
+                    }
+                }
+            }
+            AppViewModel.AppTab.FAVORITES,
+            AppViewModel.AppTab.INFO -> {
+                Box(modifier = Modifier.weight(1f)) {
+                    AppTabContent(
+                        viewModel = viewModel,
+                        locationService = locationService,
+                        favoritesStore = favoritesStore,
+                        onRequestLocationPermission = onRequestLocationPermission,
+                        onShowFilter = onShowFilter
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppTabContent(
+    viewModel: AppViewModel,
+    locationService: LocationService,
+    favoritesStore: FavoritesStore,
+    onRequestLocationPermission: () -> Unit,
+    onShowFilter: () -> Unit
+) {
+    when (viewModel.selectedTab) {
+        AppViewModel.AppTab.LIST -> {
+            ListTabView(
+                viewModel = viewModel,
+                locationService = locationService,
+                favoriteStationIds = favoritesStore.favorites,
+                onShowFilter = onShowFilter
+            )
+        }
+        AppViewModel.AppTab.MAP -> {
+            MapTabView(
+                viewModel = viewModel,
+                locationService = locationService,
+                favoriteStationIds = favoritesStore.favorites,
+                onRequestLocationPermission = onRequestLocationPermission,
+                onShowFilter = onShowFilter
+            )
+        }
+        AppViewModel.AppTab.FAVORITES -> {
+            FavoritesTabView(
+                viewModel = viewModel,
+                favoritesStore = favoritesStore,
+                locationService = locationService
+            )
+        }
+        AppViewModel.AppTab.INFO -> {
+            InfoTabView(
+                viewModel = viewModel,
+                locationService = locationService,
+                onRequestLocationPermission = onRequestLocationPermission
+            )
+        }
+    }
+}
+
 private fun availableAmenityKeys(viewModel: AppViewModel): List<String> {
     val keys = linkedSetOf<String>()
     for (feature in viewModel.allFeatures) {
@@ -150,7 +263,35 @@ private data class TabItem(
     val tab: AppViewModel.AppTab,
     val title: String,
     val icon: ImageVector
-)
+    )
+
+@Composable
+private fun WideNavigationRail(
+    selectedTab: AppViewModel.AppTab,
+    onTabSelected: (AppViewModel.AppTab) -> Unit
+) {
+    val items = tabItems()
+    NavigationRail(
+        modifier = Modifier.fillMaxHeight(),
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        for (item in items) {
+            val selected = selectedTab == item.tab
+            NavigationRailItem(
+                selected = selected,
+                onClick = { onTabSelected(item.tab) },
+                icon = {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = item.title
+                    )
+                },
+                label = { Text(item.title) },
+                modifier = Modifier.testTag("rail-${item.tab.name.lowercase()}")
+            )
+        }
+    }
+}
 
 @Composable
 private fun BottomTabBar(
@@ -158,12 +299,7 @@ private fun BottomTabBar(
     onTabSelected: (AppViewModel.AppTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val items = listOf(
-        TabItem(AppViewModel.AppTab.LIST, "Liste", Icons.Outlined.Menu),
-        TabItem(AppViewModel.AppTab.MAP, "Karte", Icons.Outlined.Map),
-        TabItem(AppViewModel.AppTab.FAVORITES, "Favoriten", Icons.Outlined.Star),
-        TabItem(AppViewModel.AppTab.INFO, "Info", Icons.Outlined.Info)
-    )
+    val items = tabItems()
 
     Column(
         modifier = modifier
@@ -205,4 +341,14 @@ private fun BottomTabBar(
             }
         }
     }
+}
+
+@Composable
+private fun tabItems(): List<TabItem> {
+    return listOf(
+        TabItem(AppViewModel.AppTab.LIST, stringResource(R.string.i18n_nav_list), Icons.Outlined.Menu),
+        TabItem(AppViewModel.AppTab.MAP, stringResource(R.string.i18n_nav_map), Icons.Outlined.Map),
+        TabItem(AppViewModel.AppTab.FAVORITES, stringResource(R.string.i18n_nav_favorites), Icons.Outlined.Star),
+        TabItem(AppViewModel.AppTab.INFO, stringResource(R.string.i18n_nav_info), Icons.Outlined.Info)
+    )
 }

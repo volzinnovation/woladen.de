@@ -2,8 +2,6 @@ package de.woladen.android.ui
 
 import android.content.Intent
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -13,16 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -33,7 +25,6 @@ import de.woladen.android.service.LocationAuthorizationStatus
 import de.woladen.android.service.LocationService
 import de.woladen.android.util.formatTimestamp
 import de.woladen.android.viewmodel.AppViewModel
-import kotlinx.coroutines.launch
 
 private const val PRIVACY_POLICY_URL = "https://woladen.de/privacy.html"
 private const val IMPRINT_URL = "https://woladen.de/imprint.html"
@@ -49,38 +40,10 @@ fun InfoTabView(
     locationService: LocationService,
     onRequestLocationPermission: () -> Unit
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var importMessage by remember { mutableStateOf<String?>(null) }
-    var importError by remember { mutableStateOf<String?>(null) }
     val isDarkMode = isSystemInDarkTheme()
     val infoBackground = if (isDarkMode) Color(0xFF111114) else Color.White
     val infoForeground = if (isDarkMode) Color.White else Color(0xFF111114)
     val infoMuted = infoForeground.copy(alpha = 0.78f)
-
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-
-        runCatching {
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION
-            )
-        }
-
-        scope.launch {
-            val result = viewModel.installBundleFromTreeUri(uri, locationService.currentLocation)
-            if (result.isSuccess) {
-                importMessage = "Datenbundle erfolgreich importiert."
-                importError = null
-            } else {
-                importError = result.exceptionOrNull()?.localizedMessage
-                importMessage = null
-            }
-        }
-    }
 
     androidx.compose.material3.Surface(
         modifier = Modifier
@@ -97,7 +60,7 @@ fun InfoTabView(
         ) {
             InfoSection(title = "Über woladen.de") {
                 Text("Finde Schnellladesäulen mit der besten Aufenthaltsqualität. Wir zeigen dir, wo es sich lohnt zu laden. Ohne Ladeweile.")
-                viewModel.activeBundleInfo?.let {
+                viewModel.activeCatalogInfo?.let {
                     Text(
                         "Datenstand: ${formatTimestamp(it.manifest.generatedAt)}",
                         color = infoMuted
@@ -110,6 +73,7 @@ fun InfoTabView(
                 LegendRow(Color.Gray, ">5 Angebote vor Ort (Silber)")
                 LegendRow(Color(0xFF964B00), ">1 Angebote vor Ort (Bronze)")
                 LegendRow(infoMuted, "Keine Angebote vor Ort")
+                FavoriteLegendRow("Favorit")
             }
 
             InfoSection(title = "Kontakt & Code") {
@@ -125,7 +89,7 @@ fun InfoTabView(
 
             InfoSection(title = "Datenschutz") {
                 Text("Standortzugriff ist optional. Wenn du ihn aktiv nutzt, verwendet die App ihn, um die Karte auf deine Umgebung zu fokussieren und nahe Ladepunkte zu sortieren.")
-                Text("Favoriten und importierte Datenbundles bleiben auf deinem Gerät.")
+                Text("Favoriten und der lokale API-Cache bleiben auf deinem Gerät.")
                 LinkButton("Datenschutzerklärung", PRIVACY_POLICY_URL)
             }
 
@@ -158,51 +122,23 @@ fun InfoTabView(
                 }
             }
 
-            InfoSection(title = "Datenbundle") {
-                Text(viewModel.humanReadableBundleSource())
-                viewModel.activeBundleInfo?.let {
+            InfoSection(title = "API-Katalog") {
+                Text(viewModel.humanReadableCatalogSource())
+                viewModel.activeCatalogInfo?.let {
                     Text("Version: ${it.manifest.version}")
                     Text("Erstellt am: ${formatTimestamp(it.manifest.generatedAt)}")
+                    Text("Schema: ${it.manifest.schema}", color = infoMuted)
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { importLauncher.launch(null) }) {
-                        Text("Datenbundle importieren")
+                    OutlinedButton(onClick = { viewModel.reloadCatalog(locationService.currentLocation) }) {
+                        Text("Katalog neu laden")
                     }
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        scope.launch {
-                            val result = viewModel.removeInstalledBundle(locationService.currentLocation)
-                            if (result.isSuccess) {
-                                importMessage = "Installiertes Bundle entfernt. Baseline aktiv."
-                                importError = null
-                            } else {
-                                importError = result.exceptionOrNull()?.localizedMessage
-                                importMessage = null
-                            }
-                        }
-                    }
-                ) {
-                    Text("Installiertes Datenbundle entfernen")
                 }
             }
 
             InfoSection(title = "Hinweis für getrennte Updates") {
-                Text("Code und Daten sind getrennt: Die App enthält ein Baseline-Datenbundle. Optional kann ein neues Datenbundle als Ordner importiert werden (muss chargers_fast.geojson, operators.json und optional data_manifest.json enthalten).")
-            }
-
-            if (importMessage != null) {
-                InfoSection {
-                    Text(importMessage.orEmpty(), color = Color(0xFF0B8A35))
-                }
-            }
-
-            if (importError != null) {
-                InfoSection {
-                    Text(importError.orEmpty(), color = MaterialTheme.colorScheme.error)
-                }
+                Text("Code und Daten sind getrennt: Die App lädt den öffentlichen Katalog über die Live-EU-API und nutzt einen begrenzten lokalen Cache.")
             }
         }
     }
@@ -239,6 +175,14 @@ private fun InfoSection(
 private fun LegendRow(color: Color, text: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("●", color = color)
+        Text(text)
+    }
+}
+
+@Composable
+private fun FavoriteLegendRow(text: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("★", color = Color(0xFFF59E0B))
         Text(text)
     }
 }

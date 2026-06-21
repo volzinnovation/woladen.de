@@ -2,13 +2,13 @@ package de.woladen.android.viewmodel
 
 import android.app.Application
 import android.location.Location
-import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import de.woladen.android.model.ActiveDataBundleInfo
+import de.woladen.android.model.ActiveCatalogSourceInfo
+import de.woladen.android.model.CatalogSourceManifest
 import de.woladen.android.model.FilterState
 import de.woladen.android.model.GeoJsonFeature
 import de.woladen.android.model.LiveStationDetail
@@ -16,8 +16,8 @@ import de.woladen.android.model.LiveStationSummary
 import de.woladen.android.model.OperatorEntry
 import de.woladen.android.model.matches
 import de.woladen.android.repository.ChargerRepository
-import de.woladen.android.repository.DataBundleManager
 import de.woladen.android.service.LiveApiClient
+import de.woladen.android.service.lookupStationIdBatches
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -65,27 +65,32 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var isAwaitingFirstLocationFix: Boolean by mutableStateOf(false)
         private set
 
-    var activeBundleInfo: ActiveDataBundleInfo? by mutableStateOf(null)
+    var activeCatalogInfo: ActiveCatalogSourceInfo? by mutableStateOf(null)
         private set
 
-    private val dataBundleManager = DataBundleManager(application.applicationContext)
-    private val repository = ChargerRepository(dataBundleManager)
     private val liveApiClient = LiveApiClient()
+    private val repository = ChargerRepository(liveApiClient)
 
     private val maxVisibleChargers = 20
+    private val maxKnownCatalogFeatures = 600
+    private val catalogSearchRadiusMeters = 20_000
+    private val catalogSearchLimit = LiveApiClient.MAX_CATALOG_SEARCH_RESULTS
     private val maxDiscoveredHistory = 200
     private val liveRefreshIntervalMs = 15_000L
 
+    private var currentCatalogFeatures: List<GeoJsonFeature> = emptyList()
     private var filterPool: List<GeoJsonFeature> = emptyList()
     private val discoveredById: MutableMap<String, GeoJsonFeature> = linkedMapOf()
     private val discoveredOrder: MutableList<String> = mutableListOf()
     private var didSeedFromUserLocation = false
     private var lastUserLocationCenter: Pair<Double, Double>? = null
+    private var lastCatalogCenter: Pair<Double, Double>? = null
 
     private val liveSummaryFetchedAtByStationId: MutableMap<String, Long> = mutableMapOf()
     private val liveDetailFetchedAtByStationId: MutableMap<String, Long> = mutableMapOf()
     private val pendingLiveSummaryStationIds: MutableSet<String> = mutableSetOf()
     private val pendingLiveDetailStationIds: MutableSet<String> = mutableSetOf()
+    private val pendingCatalogDetailStationIds: MutableSet<String> = mutableSetOf()
 
     private var refreshNearbyJob: Job? = null
     private var liveSummaryRefreshJob: Job? = null
@@ -107,80 +112,47 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         loadError = null
 
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    val loaded = repository.loadData()
-                    val bundle = dataBundleManager.activeBundleInfo()
-                    Triple(loaded.features, loaded.operators, bundle)
-                }
-            }
+            resetLiveState()
+            currentCatalogFeatures = emptyList()
+            filterPool = emptyList()
+            discoveredFeatures = emptyList()
+            allFeatures = emptyList()
+            operators = emptyList()
+            activeCatalogInfo = ActiveCatalogSourceInfo(
+                source = "catalog_api",
+                manifest = CatalogSourceManifest(
+                    version = "live-eu",
+                    generatedAt = "network",
+                    schema = "v1/catalog/search"
+                )
+            )
+            loadError = null
 
-            isLoading = false
-            result.onSuccess { (features, operators, bundle) ->
-                resetLiveState()
-                allFeatures = features
-                this@AppViewModel.operators = operators
-                activeBundleInfo = bundle
-                loadError = null
-                didSeedFromUserLocation = false
-                applyFilters(userLocation)
-            }.onFailure { error ->
-                loadError = error.localizedMessage
-                allFeatures = emptyList()
-                filterPool = emptyList()
-                discoveredFeatures = emptyList()
-                operators = emptyList()
-                activeBundleInfo = null
-                isAwaitingFirstLocationFix = false
-                refreshNearbyJob?.cancel()
-                resetLiveState()
-            }
+            val center = userLocation?.let { location ->
+                didSeedFromUserLocation = true
+                lastUserLocationCenter = location.latitude to location.longitude
+                location.latitude to location.longitude
+            } ?: DEFAULT_CATALOG_CENTER
+            isAwaitingFirstLocationFix = false
+            refreshNearbyAsync(center.first, center.second)
         }
     }
 
-    fun reloadDataAfterBundleUpdate(userLocation: Location?) {
+    fun reloadCatalog(userLocation: Location?) {
         load(userLocation)
     }
 
-    suspend fun installBundleFromTreeUri(treeUri: Uri, userLocation: Location?): Result<Unit> {
-        val result = withContext(Dispatchers.IO) {
-            runCatching {
-                dataBundleManager.installBundleFromTreeUri(treeUri)
-            }
-        }
-        if (result.isSuccess) {
-            reloadDataAfterBundleUpdate(userLocation)
-            applyFilters(userLocation)
-        }
-        return result
-    }
-
-    suspend fun removeInstalledBundle(userLocation: Location?): Result<Unit> {
-        val result = withContext(Dispatchers.IO) {
-            runCatching {
-                dataBundleManager.removeInstalledBundle()
-            }
-        }
-        if (result.isSuccess) {
-            reloadDataAfterBundleUpdate(userLocation)
-        }
-        return result
-    }
-
     fun applyFilters(userLocation: Location?) {
-        filterPool = allFeatures.filter { feature -> feature.properties.matches(filterState) }
         resetDiscoveredList()
         if (userLocation != null) {
             didSeedFromUserLocation = true
             lastUserLocationCenter = userLocation.latitude to userLocation.longitude
-            isAwaitingFirstLocationFix = false
             refreshNearbyAsync(userLocation.latitude, userLocation.longitude)
         } else {
-            didSeedFromUserLocation = false
-            lastUserLocationCenter = null
-            isAwaitingFirstLocationFix = allFeatures.isNotEmpty()
-            discoveredFeatures = emptyList()
+            val center = lastCatalogCenter ?: DEFAULT_CATALOG_CENTER
+            refreshNearbyAsync(center.first, center.second)
         }
+        isAwaitingFirstLocationFix = false
     }
 
     fun handleMapCenterChange(latitude: Double, longitude: Double) {
@@ -190,7 +162,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun seedFromInitialUserLocation(location: Location?) {
-        if (location == null || allFeatures.isEmpty()) return
+        if (location == null) return
         if (!didSeedFromUserLocation) {
             // Start charger discovery from the first real location fix.
             applyFilters(location)
@@ -198,27 +170,29 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun reloadListForCurrentLocation(location: Location?) {
-        if (allFeatures.isEmpty()) return
         if (location == null) {
-            isAwaitingFirstLocationFix = true
+            val center = lastCatalogCenter ?: DEFAULT_CATALOG_CENTER
+            refreshNearbyAsync(center.first, center.second)
             return
         }
         applyFilters(location)
     }
 
     fun reloadMapForCenter(latitude: Double?, longitude: Double?) {
-        if (allFeatures.isEmpty()) return
         if (latitude == null || longitude == null) {
-            isAwaitingFirstLocationFix = true
+            val center = lastCatalogCenter ?: DEFAULT_CATALOG_CENTER
+            handleMapCenterChange(center.first, center.second)
             return
         }
         handleMapCenterChange(latitude, longitude)
     }
 
     fun refreshNearbyFromUserLocation(location: Location?, force: Boolean = false) {
-        if (allFeatures.isEmpty()) return
         if (location == null) {
-            isAwaitingFirstLocationFix = true
+            if (lastCatalogCenter == null || force) {
+                val center = DEFAULT_CATALOG_CENTER
+                refreshNearbyAsync(center.first, center.second)
+            }
             return
         }
         if (!didSeedFromUserLocation) {
@@ -248,15 +222,33 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun featureForStationId(stationId: String): GeoJsonFeature? {
         return allFeatures.firstOrNull { it.properties.stationId == stationId }
             ?: discoveredFeatures.firstOrNull { it.properties.stationId == stationId }
+            ?: repository.cachedFeaturesForStationIds(setOf(stationId)).firstOrNull()
             ?: selectedFeature?.takeIf { it.properties.stationId == stationId }
     }
 
     suspend fun refreshFavoritesLiveSummaries(favorites: Set<String>, force: Boolean = false) {
+        refreshFavoriteCatalogDetails(favorites)
         requestLiveSummaries(favorites.toList(), force = force)
     }
 
+    suspend fun refreshFavoriteCatalogDetails(favorites: Set<String>) {
+        val favoriteStationIds = favorites
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+
+        for (stationId in favoriteStationIds) {
+            requestCatalogDetailIfNeeded(stationId)
+        }
+    }
+
     fun favoritesFeatures(favorites: Set<String>, userLocation: Location?): List<GeoJsonFeature> {
-        val items = allFeatures.filter { favorites.contains(it.properties.stationId) }.toMutableList()
+        val cachedFeatures = repository.cachedFeaturesForStationIds(favorites)
+        val byStationId = linkedMapOf<String, GeoJsonFeature>()
+        allFeatures
+            .filter { favorites.contains(it.properties.stationId) }
+            .forEach { byStationId[it.properties.stationId] = it }
+        cachedFeatures.forEach { byStationId.putIfAbsent(it.properties.stationId, it) }
+        val items = byStationId.values.toMutableList()
         if (userLocation != null) {
             items.sortBy {
                 distanceMeters(
@@ -290,12 +282,28 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun humanReadableBundleSource(): String {
-        val info = activeBundleInfo ?: return "unbekannt"
-        return if (info.source == "installed") {
-            "Installiertes Datenbundle (${info.manifest.version})"
-        } else {
-            "In der App gebündeltes Baseline-Datenbundle"
+    fun humanReadableCatalogSource(): String {
+        val info = activeCatalogInfo ?: return "unbekannt"
+        return when (info.source) {
+            "catalog_api" -> "Live-Katalog via live-eu.woladen.de"
+            else -> "Live-Katalog via live-eu.woladen.de"
+        }
+    }
+
+    suspend fun requestCatalogDetailIfNeeded(stationId: String) {
+        val trimmedStationId = stationId.trim()
+        if (trimmedStationId.isBlank()) return
+        if (!liveApiClient.isEnabled) return
+        if (pendingCatalogDetailStationIds.contains(trimmedStationId)) return
+
+        pendingCatalogDetailStationIds += trimmedStationId
+        try {
+            val feature = repository.loadCatalogStationDetail(trimmedStationId)
+            applyCatalogFeature(feature)
+        } catch (_: Exception) {
+            // Search results remain usable when static detail is temporarily unavailable.
+        } finally {
+            pendingCatalogDetailStationIds -= trimmedStationId
         }
     }
 
@@ -320,7 +328,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             liveSummaryFetchedAtByStationId[trimmedStationId] = now
             applyLiveDetail(trimmedStationId, detail)
         } catch (_: Exception) {
-            // Keep offline behavior intact by silently falling back to bundled data.
+            // The catalog row remains visible when the live detail endpoint is temporarily unavailable.
         } finally {
             pendingLiveDetailStationIds -= trimmedStationId
         }
@@ -352,14 +360,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
         pendingLiveSummaryStationIds += eligibleIds
         try {
-            val response = liveApiClient.lookupStations(eligibleIds)
-            val fetchedAt = System.currentTimeMillis()
-            (response.stations.map { it.stationId } + response.missingStationIds).forEach { stationId ->
-                liveSummaryFetchedAtByStationId[stationId] = fetchedAt
+            for (batch in lookupStationIdBatches(eligibleIds)) {
+                val response = liveApiClient.lookupStations(batch)
+                val fetchedAt = System.currentTimeMillis()
+                (response.stations.map { it.stationId } + response.missingStationIds).forEach { stationId ->
+                    liveSummaryFetchedAtByStationId[stationId] = fetchedAt
+                }
+                applyLiveSummaries(
+                    response.stations.associateBy { it.stationId },
+                    response.missingStationIds.toSet()
+                )
             }
-            applyLiveSummaries(response.stations.associateBy { it.stationId }, response.missingStationIds.toSet())
         } catch (_: Exception) {
-            // Keep offline behavior intact by silently falling back to bundled data.
+            // Keep the last API/cache state visible when live summaries are temporarily unavailable.
         } finally {
             pendingLiveSummaryStationIds -= eligibleIds.toSet()
         }
@@ -385,12 +398,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private fun startSelectedFeatureRefresh(stationId: String) {
         selectedFeatureRefreshJob?.cancel()
         selectedFeatureRefreshJob = viewModelScope.launch {
+            requestCatalogDetailIfNeeded(stationId)
             requestLiveDetailIfNeeded(stationId, force = true)
             while (isActive) {
                 delay(liveRefreshIntervalMs)
                 if (selectedFeature?.properties?.stationId != stationId) {
                     return@launch
                 }
+                requestCatalogDetailIfNeeded(stationId)
                 requestLiveDetailIfNeeded(stationId, force = true)
             }
         }
@@ -424,6 +439,55 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private fun applyCatalogFeature(feature: GeoJsonFeature) {
+        mergeKnownFeatures(listOf(feature))
+        val stationId = feature.properties.stationId
+        updateFeatureCollections(setOf(stationId)) { existing ->
+            mergeCatalogFeature(existing, feature)
+        }
+    }
+
+    private fun mergeKnownFeatures(features: List<GeoJsonFeature>) {
+        if (features.isEmpty()) return
+        val byStationId = linkedMapOf<String, GeoJsonFeature>()
+        for (feature in allFeatures) {
+            byStationId[feature.properties.stationId] = feature
+        }
+        for (feature in features) {
+            val stationId = feature.properties.stationId
+            byStationId[stationId] = byStationId[stationId]?.let { existing ->
+                mergeCatalogFeature(existing, feature)
+            } ?: feature
+        }
+        while (byStationId.size > maxKnownCatalogFeatures) {
+            val firstKey = byStationId.keys.firstOrNull() ?: break
+            byStationId.remove(firstKey)
+        }
+        allFeatures = byStationId.values.toList()
+        rebuildOperators()
+    }
+
+    private fun mergeCatalogFeature(existing: GeoJsonFeature, incoming: GeoJsonFeature): GeoJsonFeature {
+        val existingHasRicherAmenities =
+            existing.properties.amenityExamples.size > incoming.properties.amenityExamples.size
+        return incoming.copy(
+            properties = if (existingHasRicherAmenities) existing.properties else incoming.properties,
+            liveSummary = incoming.liveSummary ?: existing.liveSummary,
+            liveDetail = existing.liveDetail ?: incoming.liveDetail
+        )
+    }
+
+    private fun rebuildOperators() {
+        operators = allFeatures
+            .asSequence()
+            .map { it.properties.operatorName.trim() }
+            .filter { it.isNotBlank() }
+            .groupingBy { it }
+            .eachCount()
+            .map { (name, count) -> OperatorEntry(name = name, stations = count) }
+            .sortedWith(compareByDescending<OperatorEntry> { it.stations }.thenBy { it.name })
+    }
+
     private fun updateFeatureCollections(
         stationIds: Set<String>,
         updater: (GeoJsonFeature) -> GeoJsonFeature
@@ -431,6 +495,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (stationIds.isEmpty()) return
 
         allFeatures = allFeatures.map { feature ->
+            if (stationIds.contains(feature.properties.stationId)) updater(feature) else feature
+        }
+        currentCatalogFeatures = currentCatalogFeatures.map { feature ->
             if (stationIds.contains(feature.properties.stationId)) updater(feature) else feature
         }
         filterPool = filterPool.map { feature ->
@@ -456,6 +523,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         liveDetailFetchedAtByStationId.clear()
         pendingLiveSummaryStationIds.clear()
         pendingLiveDetailStationIds.clear()
+        pendingCatalogDetailStationIds.clear()
         clearSelectedFeature()
     }
 
@@ -467,35 +535,74 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun refreshNearbyAsync(centerLat: Double, centerLon: Double) {
-        val poolSnapshot = filterPool
-        if (poolSnapshot.isEmpty()) {
+        lastCatalogCenter = centerLat to centerLon
+        isAwaitingFirstLocationFix = false
+        refreshNearbyJob?.cancel()
+        refreshNearbyJob = viewModelScope.launch {
+            val cachedPool = currentCatalogFeatures.filter { feature -> feature.properties.matches(filterState) }
+            filterPool = cachedPool
+            if (cachedPool.isNotEmpty()) {
+                publishNearestCatalogFeatures(centerLat, centerLon, cachedPool)
+            }
+
+            isLoading = allFeatures.isEmpty() || cachedPool.isEmpty()
+            val result = runCatching {
+                repository.searchCatalog(
+                    latitude = centerLat,
+                    longitude = centerLon,
+                    radiusMeters = catalogSearchRadiusMeters,
+                    limit = catalogSearchLimit,
+                    filterState = filterState
+                )
+            }
+
+            if (!isActive) return@launch
+            isLoading = false
+            result.onSuccess { catalogResult ->
+                currentCatalogFeatures = catalogResult.features
+                mergeKnownFeatures(catalogResult.features)
+                filterPool = currentCatalogFeatures.filter { feature -> feature.properties.matches(filterState) }
+                publishNearestCatalogFeatures(centerLat, centerLon, filterPool)
+                requestLiveSummaries(discoveredFeatures.map { it.properties.stationId })
+                loadError = null
+            }.onFailure { error ->
+                if (discoveredFeatures.isEmpty()) {
+                    loadError = error.localizedMessage ?: "Katalog konnte nicht geladen werden"
+                }
+            }
+        }
+    }
+
+    private suspend fun publishNearestCatalogFeatures(
+        centerLat: Double,
+        centerLon: Double,
+        poolSnapshot: List<GeoJsonFeature>
+    ) {
+        val nearest = withContext(Dispatchers.Default) {
+            selectNearest(
+                pool = poolSnapshot,
+                centerLat = centerLat,
+                centerLon = centerLon,
+                maxCount = maxVisibleChargers
+            )
+        }
+        if (nearest.isEmpty()) {
+            discoveredById.clear()
+            discoveredOrder.clear()
             discoveredFeatures = emptyList()
             return
         }
-        refreshNearbyJob?.cancel()
-        refreshNearbyJob = viewModelScope.launch {
-            val nearest = withContext(Dispatchers.Default) {
-                selectNearest(
-                    pool = poolSnapshot,
-                    centerLat = centerLat,
-                    centerLon = centerLon,
-                    maxCount = maxVisibleChargers
-                )
+        for (feature in nearest) {
+            if (!discoveredById.containsKey(feature.id)) {
+                discoveredOrder += feature.id
             }
-            if (!isActive) return@launch
-            for (feature in nearest) {
-                if (!discoveredById.containsKey(feature.id)) {
-                    discoveredOrder += feature.id
-                }
-                discoveredById[feature.id] = feature
-            }
-            while (discoveredOrder.size > maxDiscoveredHistory) {
-                val removedId = discoveredOrder.removeAt(0)
-                discoveredById.remove(removedId)
-            }
-            discoveredFeatures = discoveredOrder.mapNotNull { discoveredById[it] }
-            requestLiveSummaries(nearest.map { it.properties.stationId })
+            discoveredById[feature.id] = feature
         }
+        while (discoveredOrder.size > maxDiscoveredHistory) {
+            val removedId = discoveredOrder.removeAt(0)
+            discoveredById.remove(removedId)
+        }
+        discoveredFeatures = discoveredOrder.mapNotNull { discoveredById[it] }
     }
 
     private fun selectNearest(
@@ -542,7 +649,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     companion object {
-        private const val EARTH_RADIUS_METERS = 6_371_000.0
+        private const val EARTH_RADIUS_METERS = 6371000.0
+        private val DEFAULT_CATALOG_CENTER = 51.1657 to 10.4515
     }
 }
 

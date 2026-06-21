@@ -1,5 +1,6 @@
 import SwiftUI
-import UniformTypeIdentifiers
+
+private let favoriteStarColor = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
 
 struct InfoTabView: View {
     private let websiteURL = URL(string: "https://woladen.de/")!
@@ -12,15 +13,11 @@ struct InfoTabView: View {
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
 
-    @State private var showingImporter = false
-    @State private var importMessage: String?
-    @State private var importError: String?
-
     var body: some View {
         List {
             Section("Über woladen.de") {
                 Text("Finde Schnellladesäulen mit der besten Aufenthaltsqualität. Wir zeigen dir, wo es sich lohnt zu laden. Ohne Ladeweile.")
-                if let info = viewModel.activeBundleInfo {
+                if let info = viewModel.activeCatalogInfo {
                     Text("Datenstand: \(formattedTimestamp(info.manifest.generatedAt))")
                         .foregroundStyle(.secondary)
                 }
@@ -31,6 +28,7 @@ struct InfoTabView: View {
                 legendRow(color: Color.gray, text: ">5 Angebote vor Ort (Silber)")
                 legendRow(color: Color.brown, text: ">1 Angebote vor Ort (Bronze)")
                 legendRow(color: Color.secondary, text: "Keine Angebote vor Ort")
+                favoriteLegendRow(text: "Favorit")
             }
 
             Section("Kontakt & Code") {
@@ -50,7 +48,7 @@ struct InfoTabView: View {
 
             Section("Datenschutz") {
                 Text("Standortzugriff ist optional. Wenn du ihn freigibst, wird er verwendet, um die Karte auf deine Umgebung zu fokussieren und nahe Schnelllader zu sortieren.")
-                Text("Favoriten und importierte Datenbundles bleiben auf deinem Gerät.")
+                Text("Favoriten und der lokale API-Cache bleiben auf deinem Gerät.")
                 Link("Datenschutzerklärung", destination: privacyPolicyURL)
             }
 
@@ -83,59 +81,23 @@ struct InfoTabView: View {
                 }
             }
 
-            Section("Datenbundle") {
-                Text(viewModel.humanReadableBundleSource())
-                if let info = viewModel.activeBundleInfo {
+            Section("API-Katalog") {
+                Text(viewModel.humanReadableCatalogSource())
+                if let info = viewModel.activeCatalogInfo {
                     Text("Version: \(info.manifest.version)")
                     Text("Erstellt am: \(formattedTimestamp(info.manifest.generatedAt))")
+                    Text("Schema: \(info.manifest.schema)")
+                        .foregroundStyle(.secondary)
                 }
 
-                Button("Datenbundle importieren") {
-                    showingImporter = true
-                }
-
-                Button("Installiertes Datenbundle entfernen", role: .destructive) {
-                    do {
-                        try DataBundleManager.shared.removeInstalledBundle()
-                        viewModel.reloadDataAfterBundleUpdate(userLocation: locationService.currentLocation)
-                        importMessage = "Installiertes Bundle entfernt. Baseline aktiv."
-                        importError = nil
-                    } catch {
-                        importError = error.localizedDescription
-                    }
+                Button("Katalog neu laden") {
+                    viewModel.reloadCatalogForCurrentContext(userLocation: locationService.currentLocation)
                 }
             }
 
             Section("Hinweis für getrennte Updates") {
-                Text("Code und Daten sind getrennt: Die App enthält ein Baseline-Datenbundle. Optional kann ein neues Datenbundle als Ordner importiert werden (muss chargers_fast.geojson, operators.json und optional data_manifest.json enthalten).")
+                Text("Code und Daten sind getrennt: Die App lädt den öffentlichen Katalog über die Live-EU-API und nutzt einen begrenzten lokalen Cache.")
                     .foregroundStyle(.secondary)
-            }
-
-            if let importMessage {
-                Section {
-                    Text(importMessage)
-                        .foregroundStyle(.green)
-                }
-            }
-
-            if let importError {
-                Section {
-                    Text(importError)
-                        .foregroundStyle(.red)
-                }
-            }
-        }
-        .fileImporter(
-            isPresented: $showingImporter,
-            allowedContentTypes: [.folder],
-            allowsMultipleSelection: false
-        ) { result in
-            switch result {
-            case .success(let urls):
-                guard let url = urls.first else { return }
-                importBundle(at: url)
-            case .failure(let error):
-                importError = error.localizedDescription
             }
         }
     }
@@ -144,6 +106,16 @@ struct InfoTabView: View {
         HStack(spacing: 10) {
             Circle()
                 .fill(color)
+                .frame(width: 12, height: 12)
+            Text(text)
+        }
+    }
+
+    private func favoriteLegendRow(text: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "star.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(favoriteStarColor)
                 .frame(width: 12, height: 12)
             Text(text)
         }
@@ -189,22 +161,4 @@ struct InfoTabView: View {
         }
     }
 
-    private func importBundle(at url: URL) {
-        let needsAccess = url.startAccessingSecurityScopedResource()
-        defer {
-            if needsAccess {
-                url.stopAccessingSecurityScopedResource()
-            }
-        }
-
-        do {
-            try DataBundleManager.shared.installBundle(from: url)
-            viewModel.reloadDataAfterBundleUpdate(userLocation: locationService.currentLocation)
-            viewModel.applyFilters(userLocation: locationService.currentLocation)
-            importMessage = "Datenbundle erfolgreich importiert."
-            importError = nil
-        } catch {
-            importError = error.localizedDescription
-        }
-    }
 }

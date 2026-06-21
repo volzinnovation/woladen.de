@@ -18,6 +18,11 @@ struct LiveStationLookupResponse: Decodable {
         case stations
         case missingStationIDs = "missing_station_ids"
     }
+
+    init(stations: [LiveStationSummary], missingStationIDs: [String]) {
+        self.stations = stations
+        self.missingStationIDs = missingStationIDs
+    }
 }
 
 struct LiveStationDetail: Decodable {
@@ -204,13 +209,13 @@ enum AvailabilityStatus: String {
 
     init?(rawValue: String) {
         switch rawValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
-        case "free":
+        case "free", "available":
             self = .free
-        case "occupied":
+        case "occupied", "charging":
             self = .occupied
-        case "out_of_order":
+        case "out_of_order", "outoforder", "inoperative", "faulted":
             self = .outOfOrder
-        case "unknown":
+        case "unknown", "":
             self = .unknown
         default:
             return nil

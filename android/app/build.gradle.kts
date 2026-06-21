@@ -26,6 +26,15 @@ val hasReleaseSigning = listOf(
     releaseKeyPassword
 ).all { it != null }
 
+fun escapedBuildConfigString(value: String): String =
+    value.replace("\\", "\\\\").replace("\"", "\\\"")
+
+val liveApiBaseUrl = (
+    providers.gradleProperty("woladenLiveApiBaseUrl").orNull
+        ?: System.getenv("WOLADEN_LIVE_API_BASE_URL")
+        ?: "https://live-eu.woladen.de"
+    ).trim()
+
 android {
     namespace = "de.woladen.android"
     compileSdk = 35
@@ -38,6 +47,7 @@ android {
         versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "LIVE_API_BASE_URL", "\"${escapedBuildConfigString(liveApiBaseUrl)}\"")
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -75,6 +85,7 @@ android {
         jvmTarget = "17"
     }
     buildFeatures {
+        buildConfig = true
         compose = true
     }
     composeOptions {
@@ -88,10 +99,7 @@ android {
 
     sourceSets {
         getByName("main") {
-            assets.srcDirs(
-                "src/main/assets",
-                "../../iphone/Woladen/Resources/Data/baseline"
-            )
+            assets.srcDirs("src/main/assets")
         }
     }
 }

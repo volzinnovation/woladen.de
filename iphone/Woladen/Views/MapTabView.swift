@@ -1,10 +1,13 @@
 import SwiftUI
 import MapKit
 
+private let favoriteStarColor = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
+
 struct MapTabView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
+    @EnvironmentObject private var favoritesStore: FavoritesStore
 
     @Binding var showingFilter: Bool
 
@@ -26,10 +29,7 @@ struct MapTabView: View {
                         Button {
                             viewModel.selectFeature(feature)
                         } label: {
-                            Circle()
-                                .fill(color(for: viewModel.markerTint(for: feature)))
-                                .frame(width: 16, height: 16)
-                                .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                            marker(for: feature)
                         }
                     }
                 }
@@ -179,5 +179,24 @@ struct MapTabView: View {
         case "bronze": return Color.brown
         default: return Color.secondary
         }
+    }
+
+    private func marker(for feature: GeoJSONFeature) -> some View {
+        let isFavorite = favoritesStore.isFavorite(feature.properties.stationID)
+        return Group {
+            if isFavorite {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(favoriteStarColor)
+                    .frame(width: 24, height: 24)
+                    .background(Color(.systemBackground).opacity(0.92), in: Circle())
+            } else {
+                Circle()
+                    .fill(color(for: viewModel.markerTint(for: feature)))
+                    .frame(width: 16, height: 16)
+                    .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+            }
+        }
+        .accessibilityLabel(isFavorite ? "Favorit" : "Ladepunkt")
     }
 }

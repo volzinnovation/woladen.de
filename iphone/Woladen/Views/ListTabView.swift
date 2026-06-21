@@ -1,9 +1,12 @@
 import SwiftUI
 
+private let favoriteStarColor = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
+
 struct ListTabView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
+    @EnvironmentObject private var favoritesStore: FavoritesStore
 
     @Binding var showingFilter: Bool
 
@@ -30,7 +33,8 @@ struct ListTabView: View {
                             StationRowView(
                                 feature: feature,
                                 distanceText: viewModel.distanceText(from: locationService.currentLocation, to: feature.coordinate),
-                                markerColor: color(for: viewModel.markerTint(for: feature))
+                                markerColor: color(for: viewModel.markerTint(for: feature)),
+                                isFavorite: favoritesStore.isFavorite(feature.properties.stationID)
                             )
                         }
                         .buttonStyle(.plain)
@@ -96,6 +100,7 @@ private struct StationRowView: View {
     let feature: GeoJSONFeature
     let distanceText: String?
     let markerColor: Color
+    let isFavorite: Bool
 
     var body: some View {
         let topAmenities = feature.properties.topAmenities()
@@ -105,9 +110,17 @@ private struct StationRowView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
                 HStack(spacing: 6) {
-                    Circle()
-                        .fill(markerColor)
-                        .frame(width: 10, height: 10)
+                    if isFavorite {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(favoriteStarColor)
+                            .frame(width: 10, height: 10)
+                            .accessibilityHidden(true)
+                    } else {
+                        Circle()
+                            .fill(markerColor)
+                            .frame(width: 10, height: 10)
+                    }
                     Text(feature.properties.operatorName)
                         .font(.subheadline.weight(.semibold))
                         .lineLimit(1)
@@ -169,6 +182,7 @@ private struct StationRowView: View {
             }
         }
         .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var occupancyBackgroundColor: Color {

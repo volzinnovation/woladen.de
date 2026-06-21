@@ -42,9 +42,11 @@ fun FavoritesTabView(
     locationService: LocationService
 ) {
     val items = viewModel.favoritesFeatures(favoritesStore.favorites, locationService.currentLocation)
+    val favoriteSignature = favoritesStore.favorites.sorted().joinToString("|")
 
-    LaunchedEffect(items.map { it.id }.joinToString("|")) {
+    LaunchedEffect(favoriteSignature) {
         while (true) {
+            viewModel.refreshFavoriteCatalogDetails(favoritesStore.favorites)
             viewModel.refreshFavoritesLiveSummaries(favoritesStore.favorites, force = true)
             delay(15_000)
         }

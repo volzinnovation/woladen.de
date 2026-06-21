@@ -9,7 +9,15 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         didConnect interfaceController: CPInterfaceController,
         to window: CPWindow
     ) {
-        interfaceController.setRootTemplate(makeRootTemplate(), animated: false, completion: nil)
+        interfaceController.setRootTemplate(
+            makeRootTemplate(chargerItems: [CPListItem(text: "Lade Daten...", detailText: nil)]),
+            animated: false,
+            completion: nil
+        )
+        Task {
+            let items = await carPlayChargerItems()
+            interfaceController.setRootTemplate(makeRootTemplate(chargerItems: items), animated: true, completion: nil)
+        }
     }
 
     func templateApplicationScene(
@@ -20,7 +28,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
         // no-op scaffold
     }
 
-    private func makeRootTemplate() -> CPTemplate {
+    private func makeRootTemplate(chargerItems: [CPListItem]) -> CPTemplate {
         let intro = CPListItem(
             text: "Woladen CarPlay",
             detailText: "Scaffold aktiv. Für produktiven Betrieb ist CarPlay-Entitlement + Apple-Kategorie-Freigabe erforderlich."
@@ -28,16 +36,19 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
 
         let introSection = CPListSection(items: [intro], header: "Status", sectionIndexTitle: nil)
         let chargersSection = CPListSection(
-            items: carPlayChargerItems(),
-            header: "Schnelllader (offline)",
+            items: chargerItems,
+            header: "Schnelllader",
             sectionIndexTitle: nil
         )
 
         return CPListTemplate(title: "Woladen", sections: [introSection, chargersSection])
     }
 
-    private func carPlayChargerItems() -> [CPListItem] {
-        guard let payload = try? repository.loadData() else {
+    private func carPlayChargerItems() async -> [CPListItem] {
+        guard let payload = try? await repository.loadData(
+            center: ChargerRepository.defaultCatalogCenter,
+            filterState: FilterState()
+        ) else {
             return [CPListItem(text: "Keine Daten verfuegbar", detailText: nil)]
         }
 

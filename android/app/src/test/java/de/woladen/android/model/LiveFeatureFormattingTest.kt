@@ -19,7 +19,7 @@ class LiveFeatureFormattingTest {
     }
 
     @Test
-    fun liveSummaryOverridesBundledOccupancyAndPrice() {
+    fun liveSummaryOverridesStaticCatalogOccupancyAndPrice() {
         val feature = sampleFeature(
             properties = sampleProperties(
                 occupancyTotalEvses = 2,
@@ -54,7 +54,7 @@ class LiveFeatureFormattingTest {
     }
 
     @Test
-    fun bundledValuesRemainWhenNoLiveOverlayExists() {
+    fun staticCatalogValuesRemainWhenNoLiveOverlayExists() {
         val feature = sampleFeature(
             properties = sampleProperties(
                 occupancyTotalEvses = 4,

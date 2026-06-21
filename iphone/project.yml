@@ -23,9 +23,8 @@ targets:
       - path: Woladen/Views
       - path: Woladen/Resources/Assets.xcassets
         buildPhase: resources
-      - path: Woladen/Resources/Data
+      - path: Woladen/Resources/Localizable.xcstrings
         buildPhase: resources
-        type: folder
     settings:
       base:
         ENABLE_DEBUG_DYLIB: NO
@@ -33,7 +32,7 @@ targets:
         INFOPLIST_OUTPUT_FORMAT: xml
         PRODUCT_BUNDLE_IDENTIFIER: de.woladen.ios
         PRODUCT_NAME: Woladen
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
   WoladenTests:
     type: bundle.unit-test
     platform: iOS

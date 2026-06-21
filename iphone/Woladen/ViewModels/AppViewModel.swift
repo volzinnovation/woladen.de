@@ -19,64 +19,81 @@ final class AppViewModel: ObservableObject {
     @Published private(set) var loadError: String?
     @Published private(set) var isLoading: Bool = false
     @Published private(set) var isAwaitingFirstLocationFix: Bool = false
-    @Published private(set) var activeBundleInfo: ActiveDataBundleInfo?
+    @Published private(set) var activeCatalogInfo: ActiveCatalogSourceInfo?
 
-    private let liveAPIClient = LiveAPIClient()
+    private let liveAPIClient: LiveAPIClient
+    private let repository: ChargerRepository
     private let maxVisibleChargers = 20
     private let liveRefreshInterval: TimeInterval = 15
+    private let catalogReloadDistanceM: CLLocationDistance = 10_000
 
     private var filterPool: [GeoJSONFeature] = []
     private var discoveredByID: [String: GeoJSONFeature] = [:]
     private var discoveredOrder: [String] = []
     private var didSeedFromUserLocation = false
+    private var currentCatalogCenter = ChargerRepository.defaultCatalogCenter
+    private var favoriteDetailFeatures: [String: GeoJSONFeature] = [:]
 
     private var liveSummaryFetchedAtByStationID: [String: Date] = [:]
     private var liveDetailFetchedAtByStationID: [String: Date] = [:]
     private var pendingLiveSummaryStationIDs: Set<String> = []
     private var pendingLiveDetailStationIDs: Set<String> = []
+    private var pendingStaticDetailStationIDs: Set<String> = []
+    private var catalogLoadTask: Task<Void, Never>?
     private var liveSummaryRefreshTask: Task<Void, Never>?
     private var selectedFeatureRefreshTask: Task<Void, Never>?
 
-    init() {
+    init(liveAPIClient: LiveAPIClient = LiveAPIClient()) {
+        self.liveAPIClient = liveAPIClient
+        self.repository = ChargerRepository(liveAPIClient: liveAPIClient)
         startLiveSummaryRefreshLoop()
     }
 
     deinit {
+        catalogLoadTask?.cancel()
         liveSummaryRefreshTask?.cancel()
         selectedFeatureRefreshTask?.cancel()
     }
 
     func load(userLocation: CLLocation?) {
+        resetLiveState()
+        favoriteDetailFeatures = [:]
+        let center = userLocation?.coordinate ?? currentCatalogCenter
+        loadCatalog(center: center, userLocation: userLocation)
+    }
+
+    private func loadCatalog(center: CLLocationCoordinate2D, userLocation: CLLocation?) {
+        catalogLoadTask?.cancel()
         isLoading = true
         loadError = nil
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let result: Result<(features: [GeoJSONFeature], operators: [OperatorEntry], bundle: ActiveDataBundleInfo), Error>
+        catalogLoadTask = Task { [weak self] in
+            guard let self else { return }
+            let result: Result<ChargerRepositoryLoadResult, Error>
             do {
-                result = .success(try ChargerRepository().loadData())
+                result = .success(try await self.repository.loadData(center: center, filterState: self.filterState))
             } catch {
                 result = .failure(error)
             }
 
-            DispatchQueue.main.async {
-                guard let self else { return }
-                self.isLoading = false
-                switch result {
-                case .success(let loaded):
-                    self.resetLiveState()
-                    self.allFeatures = loaded.features
-                    self.operators = loaded.operators
-                    self.activeBundleInfo = loaded.bundle
-                    self.loadError = nil
-                    self.didSeedFromUserLocation = false
-                    self.applyFilters(userLocation: userLocation)
-                case .failure(let error):
-                    self.loadError = error.localizedDescription
-                    self.allFeatures = []
+            guard !Task.isCancelled else { return }
+            self.isLoading = false
+            switch result {
+            case .success(let loaded):
+                self.allFeatures = loaded.features
+                self.operators = loaded.operators
+                self.activeCatalogInfo = loaded.sourceInfo
+                self.currentCatalogCenter = loaded.catalogCenter
+                self.loadError = nil
+                self.didSeedFromUserLocation = userLocation != nil
+                self.applyLocalFilters(userLocation: userLocation)
+            case .failure(let error):
+                self.loadError = error.localizedDescription
+                if self.allFeatures.isEmpty {
                     self.filterPool = []
                     self.discoveredFeatures = []
                     self.operators = []
-                    self.activeBundleInfo = nil
+                    self.activeCatalogInfo = nil
                     self.isAwaitingFirstLocationFix = false
                     self.resetLiveState()
                 }
@@ -84,56 +101,81 @@ final class AppViewModel: ObservableObject {
         }
     }
 
-    func reloadDataAfterBundleUpdate(userLocation: CLLocation?) {
-        load(userLocation: userLocation)
+    func reloadCatalog(userLocation: CLLocation?) {
+        Task { [weak self] in
+            guard let self else { return }
+            await self.repository.invalidateCache()
+            self.load(userLocation: userLocation)
+        }
     }
 
     func applyFilters(userLocation: CLLocation?) {
+        loadCatalog(center: userLocation?.coordinate ?? currentCatalogCenter, userLocation: userLocation)
+    }
+
+    private func applyLocalFilters(userLocation: CLLocation?) {
         filterPool = allFeatures.filter { feature in
             feature.properties.matches(filterState)
         }
         resetDiscoveredList()
-        if let userLocation {
-            discoverNearby(
-                center: userLocation.coordinate,
-                resetHistory: false
-            )
-        } else {
-            didSeedFromUserLocation = false
-            isAwaitingFirstLocationFix = !allFeatures.isEmpty
-            discoveredFeatures = []
-        }
+        let center = userLocation?.coordinate ?? currentCatalogCenter
+        discoverNearby(
+            center: center,
+            resetHistory: false,
+            seededByUserLocation: userLocation != nil
+        )
     }
 
     func handleMapCenterChange(_ center: CLLocationCoordinate2D) {
-        discoverNearby(center: center, resetHistory: false)
+        if shouldReloadCatalog(for: center) {
+            loadCatalog(center: center, userLocation: nil)
+        } else {
+            discoverNearby(center: center, resetHistory: false, seededByUserLocation: false)
+        }
     }
 
     func seedFromInitialUserLocation(_ location: CLLocation?) {
         guard let location else { return }
         guard !allFeatures.isEmpty else { return }
         if !didSeedFromUserLocation {
-            // Start charger discovery from the first real location fix.
-            applyFilters(userLocation: location)
+            if shouldReloadCatalog(for: location.coordinate) {
+                load(userLocation: location)
+            } else {
+                applyFilters(userLocation: location)
+            }
         }
     }
 
     func reloadListForCurrentLocation(_ location: CLLocation?) {
-        guard !allFeatures.isEmpty else { return }
-        guard let location else {
-            isAwaitingFirstLocationFix = true
+        guard !allFeatures.isEmpty else {
+            load(userLocation: location)
             return
         }
-        applyFilters(userLocation: location)
+        guard let location else {
+            applyFilters(userLocation: nil)
+            return
+        }
+        if shouldReloadCatalog(for: location.coordinate) {
+            load(userLocation: location)
+        } else {
+            applyFilters(userLocation: location)
+        }
     }
 
     func reloadMapForCenter(_ center: CLLocationCoordinate2D?) {
-        guard !allFeatures.isEmpty else { return }
-        guard let center else {
-            isAwaitingFirstLocationFix = true
+        guard !allFeatures.isEmpty else {
+            loadCatalog(center: center ?? currentCatalogCenter, userLocation: nil)
             return
         }
-        discoverNearby(center: center, resetHistory: false)
+        guard let center else {
+            discoverNearby(center: currentCatalogCenter, resetHistory: false, seededByUserLocation: false)
+            return
+        }
+        if shouldReloadCatalog(for: center) {
+            loadCatalog(center: center, userLocation: nil)
+        } else {
+            discoverNearby(center: center, resetHistory: false, seededByUserLocation: false)
+        }
     }
 
     func selectFeature(_ feature: GeoJSONFeature) {
@@ -151,21 +193,38 @@ final class AppViewModel: ObservableObject {
     func feature(forStationID stationID: String) -> GeoJSONFeature? {
         allFeatures.first(where: { $0.properties.stationID == stationID })
             ?? discoveredFeatures.first(where: { $0.properties.stationID == stationID })
+            ?? favoriteDetailFeatures[stationID]
             ?? selectedFeature.flatMap { $0.properties.stationID == stationID ? $0 : nil }
     }
 
     func favoritesFeatures(_ favorites: Set<String>, userLocation: CLLocation?) -> [GeoJSONFeature] {
-        var items = allFeatures.filter { favorites.contains($0.properties.stationID) }
+        var byStationID: [String: GeoJSONFeature] = [:]
+        for feature in allFeatures where favorites.contains(feature.properties.stationID) {
+            byStationID[feature.properties.stationID] = feature
+        }
+        for feature in favoriteDetailFeatures.values where favorites.contains(feature.properties.stationID) {
+            byStationID[feature.properties.stationID] = feature
+        }
+        var items = favorites.compactMap { byStationID[$0] }
         if let userLocation {
             items.sort { lhs, rhs in
                 distance(from: userLocation, to: lhs.coordinate) < distance(from: userLocation, to: rhs.coordinate)
             }
+        } else {
+            items.sort { $0.properties.operatorName < $1.properties.operatorName }
         }
         return items
     }
 
     func refreshFavoritesLiveSummaries(_ favorites: Set<String>, force: Bool = false) async {
+        await hydrateFavoriteDetails(favorites)
         await requestLiveSummaries(forStationIDs: Array(favorites), force: force)
+    }
+
+    func refreshFavoriteStaticDetails(_ favorites: Set<String>) async {
+        for stationID in favorites.sorted() {
+            await requestStaticDetailIfNeeded(for: stationID)
+        }
     }
 
     func distanceText(from userLocation: CLLocation?, to coordinate: CLLocationCoordinate2D) -> String? {
@@ -183,12 +242,16 @@ final class AppViewModel: ObservableObject {
         return "gray"
     }
 
-    func humanReadableBundleSource() -> String {
-        guard let activeBundleInfo else { return "unbekannt" }
-        if activeBundleInfo.source == "installed" {
-            return "Installiertes Datenbundle (\(activeBundleInfo.manifest.version))"
+    func humanReadableCatalogSource() -> String {
+        guard let activeCatalogInfo else { return "unbekannt" }
+        if activeCatalogInfo.source == "catalog-api" {
+            return "Live-EU-Katalog API (\(activeCatalogInfo.manifest.version))"
         }
-        return "In der App gebündeltes Baseline-Datenbundle"
+        return "Live-EU-Katalog API"
+    }
+
+    func reloadCatalogForCurrentContext(userLocation: CLLocation?) {
+        loadCatalog(center: userLocation?.coordinate ?? currentCatalogCenter, userLocation: userLocation)
     }
 
     func requestLiveDetailIfNeeded(for stationID: String, force: Bool = false) async {
@@ -215,7 +278,49 @@ final class AppViewModel: ObservableObject {
             liveSummaryFetchedAtByStationID[trimmed] = now
             applyLiveDetail(detail, stationID: trimmed)
         } catch {
-            // Keep offline behavior intact by silently falling back to bundled data.
+            // The catalog row remains visible when the live detail endpoint is temporarily unavailable.
+        }
+    }
+
+    func requestStaticDetailIfNeeded(for stationID: String) async {
+        let trimmed = stationID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        guard !pendingStaticDetailStationIDs.contains(trimmed) else { return }
+
+        pendingStaticDetailStationIDs.insert(trimmed)
+        defer {
+            pendingStaticDetailStationIDs.remove(trimmed)
+        }
+
+        do {
+            let updated = try await repository.stationDetail(
+                stationID: trimmed,
+                preserving: feature(forStationID: trimmed)
+            )
+            upsertFeature(updated)
+        } catch {
+            // Static catalog detail is an enhancement; keep the selected search row visible.
+        }
+    }
+
+    private func hydrateFavoriteDetails(_ favorites: Set<String>) async {
+        for stationID in favorites {
+            let trimmed = stationID.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            guard feature(forStationID: trimmed) == nil else { continue }
+            guard !pendingStaticDetailStationIDs.contains(trimmed) else { continue }
+
+            pendingStaticDetailStationIDs.insert(trimmed)
+            defer {
+                pendingStaticDetailStationIDs.remove(trimmed)
+            }
+
+            do {
+                let feature = try await repository.stationDetail(stationID: trimmed, preserving: nil)
+                favoriteDetailFeatures[trimmed] = feature
+            } catch {
+                // Favorites outside the current search area remain hidden until API/cache detail is available.
+            }
         }
     }
 
@@ -258,7 +363,7 @@ final class AppViewModel: ObservableObject {
             stationIDs.forEach { liveSummaryFetchedAtByStationID[$0] = fetchedAt }
             applyLiveSummaries(response.stations, missingStationIDs: response.missingStationIDs)
         } catch {
-            // Keep offline behavior intact by silently falling back to bundled data.
+            // Keep the last API/cache state visible when live summaries are temporarily unavailable.
         }
     }
 
@@ -289,6 +394,7 @@ final class AppViewModel: ObservableObject {
         selectedFeatureRefreshTask?.cancel()
         selectedFeatureRefreshTask = Task { [weak self] in
             guard let self else { return }
+            await self.requestStaticDetailIfNeeded(for: stationID)
             await self.requestLiveDetailIfNeeded(for: stationID, force: true)
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(self.liveRefreshInterval * 1_000_000_000))
@@ -325,6 +431,12 @@ final class AppViewModel: ObservableObject {
         }
     }
 
+    private func applyStaticDetail(_ detail: CatalogStationDetailResponse, stationID: String) {
+        let existing = feature(forStationID: stationID)
+        let updated = detail.feature(preserving: existing)
+        upsertFeature(updated)
+    }
+
     private func updateFeatureCollections(for stationIDs: Set<String>, update: (GeoJSONFeature) -> GeoJSONFeature) {
         guard !stationIDs.isEmpty else { return }
         allFeatures = allFeatures.map { feature in
@@ -353,6 +465,7 @@ final class AppViewModel: ObservableObject {
         liveDetailFetchedAtByStationID = [:]
         pendingLiveSummaryStationIDs = []
         pendingLiveDetailStationIDs = []
+        pendingStaticDetailStationIDs = []
         clearSelectedFeature()
     }
 
@@ -373,8 +486,14 @@ final class AppViewModel: ObservableObject {
         discoveredFeatures = []
     }
 
-    private func discoverNearby(center: CLLocationCoordinate2D, resetHistory: Bool) {
-        didSeedFromUserLocation = true
+    private func discoverNearby(
+        center: CLLocationCoordinate2D,
+        resetHistory: Bool,
+        seededByUserLocation: Bool = true
+    ) {
+        if seededByUserLocation {
+            didSeedFromUserLocation = true
+        }
         isAwaitingFirstLocationFix = false
         if resetHistory {
             resetDiscoveredList()
@@ -404,8 +523,42 @@ final class AppViewModel: ObservableObject {
         }
         discoveredFeatures = discoveredOrder.compactMap { discoveredByID[$0] }
 
-        Task {
-            await requestLiveSummaries(forStationIDs: nearest.map { $0.properties.stationID })
+        let nearestStationIDs = nearest.map { $0.properties.stationID }
+        Task { [weak self] in
+            await self?.requestLiveSummaries(forStationIDs: nearestStationIDs)
+        }
+    }
+
+    private func shouldReloadCatalog(for center: CLLocationCoordinate2D) -> Bool {
+        distance(from: currentCatalogCenter, to: center) >= catalogReloadDistanceM
+    }
+
+    private func upsertFeature(_ feature: GeoJSONFeature) {
+        let stationID = feature.properties.stationID
+        if let index = allFeatures.firstIndex(where: { $0.properties.stationID == stationID }) {
+            allFeatures[index] = feature
+        } else {
+            allFeatures.append(feature)
+        }
+
+        if feature.properties.matches(filterState) {
+            if let index = filterPool.firstIndex(where: { $0.properties.stationID == stationID }) {
+                filterPool[index] = feature
+            } else {
+                filterPool.append(feature)
+            }
+        } else {
+            filterPool.removeAll { $0.properties.stationID == stationID }
+        }
+
+        if discoveredByID[feature.id] != nil {
+            discoveredByID[feature.id] = feature
+        }
+        discoveredFeatures = discoveredFeatures.map { existing in
+            existing.properties.stationID == stationID ? feature : existing
+        }
+        if let selectedFeature, selectedFeature.properties.stationID == stationID {
+            self.selectedFeature = feature
         }
     }
 }

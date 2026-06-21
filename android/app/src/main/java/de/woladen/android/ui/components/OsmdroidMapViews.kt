@@ -40,6 +40,7 @@ data class DetailMapPoint(
     val longitude: Double,
     val title: String,
     val isStation: Boolean,
+    val isFavorite: Boolean = false,
     val amenityKey: String? = null
 )
 
@@ -47,6 +48,7 @@ data class DetailMapPoint(
 fun MainMapView(
     features: List<GeoJsonFeature>,
     userLocation: Location?,
+    favoriteStationIds: Set<String>,
     markerTint: (GeoJsonFeature) -> String,
     onFeatureTap: (GeoJsonFeature) -> Unit,
     onMapIdle: (Double, Double) -> Unit,
@@ -63,12 +65,13 @@ fun MainMapView(
 
     val iconFactory = remember(context) { IconFactory.getInstance(context) }
     val stationIcons = remember(context, iconFactory) {
-        mapOf(
-            "gold" to createMapLibreCircleIcon(iconFactory, context, markerColorForKey("gold"), diameterDp = 16f),
-            "silver" to createMapLibreCircleIcon(iconFactory, context, markerColorForKey("silver"), diameterDp = 16f),
-            "bronze" to createMapLibreCircleIcon(iconFactory, context, markerColorForKey("bronze"), diameterDp = 16f),
-            "gray" to createMapLibreCircleIcon(iconFactory, context, markerColorForKey("gray"), diameterDp = 16f)
-        )
+        val keys = listOf("gold", "silver", "bronze", "gray")
+        buildMap {
+            for (key in keys) {
+                put(key, createMapLibreCircleIcon(iconFactory, context, markerColorForKey(key), diameterDp = 16f))
+            }
+            put("favorite", iconFactory.fromBitmap(drawableToBitmap(createFavoriteMarkerDrawable(context))))
+        }
     }
     val userIcon = remember(context, iconFactory) {
         createMapLibreCircleIcon(iconFactory, context, Color.BLUE, diameterDp = 10f, strokeDp = 1f)
@@ -131,7 +134,8 @@ fun MainMapView(
             if (!styleReady) return@AndroidView
 
             val featureSignature = features.map { feature ->
-                "${feature.id}:${feature.latitude}:${feature.longitude}:${markerTint(feature)}"
+                val isFavorite = favoriteStationIds.contains(feature.properties.stationId)
+                "${feature.id}:${feature.latitude}:${feature.longitude}:${markerTint(feature)}:$isFavorite"
             }
             val currentUserLocation = userLocation?.let { it.latitude to it.longitude }
 
@@ -143,7 +147,12 @@ fun MainMapView(
             mapLibreMap.clear()
 
             for (feature in features) {
-                val iconKey = markerTint(feature)
+                val baseIconKey = markerTint(feature)
+                val iconKey = if (favoriteStationIds.contains(feature.properties.stationId)) {
+                    "favorite"
+                } else {
+                    baseIconKey
+                }
                 mapLibreMap.addMarker(
                     MarkerOptions()
                         .position(LatLng(feature.latitude, feature.longitude))
@@ -184,6 +193,9 @@ fun DetailMiniMapView(
     val stationIcon = remember(context, iconFactory) {
         createMapLibreCircleIcon(iconFactory, context, Color.rgb(0, 150, 136), diameterDp = 16f)
     }
+    val favoriteStationIcon = remember(context, iconFactory) {
+        iconFactory.fromBitmap(drawableToBitmap(createFavoriteMarkerDrawable(context)))
+    }
     val defaultAmenityIcon = remember(context, iconFactory) {
         createMapLibreCircleIcon(iconFactory, context, Color.rgb(250, 173, 20), diameterDp = 8f)
     }
@@ -212,7 +224,7 @@ fun DetailMiniMapView(
             if (!styleReady) return@AndroidView
 
             val signature = points.map { point ->
-                "${point.id}:${point.latitude}:${point.longitude}:${point.isStation}:${point.amenityKey.orEmpty()}"
+                "${point.id}:${point.latitude}:${point.longitude}:${point.isStation}:${point.isFavorite}:${point.amenityKey.orEmpty()}"
             }
             if (signature == lastPointSignature) {
                 return@AndroidView
@@ -227,7 +239,7 @@ fun DetailMiniMapView(
                         .snippet(if (point.isStation) STATION_SNIPPET else AMENITY_SNIPPET)
                         .icon(
                             if (point.isStation) {
-                                stationIcon
+                                if (point.isFavorite) favoriteStationIcon else stationIcon
                             } else {
                                 point.amenityKey?.let { key ->
                                     amenityIconsByKey.getOrPut(key) {
@@ -313,13 +325,15 @@ private fun createMapLibreCircleIcon(
     context: Context,
     fillColor: Int,
     diameterDp: Float,
-    strokeDp: Float = 1.5f
+    strokeDp: Float = 1.5f,
+    strokeColor: Int = Color.WHITE
 ): Icon {
     val drawable = createCircleMarkerDrawable(
         context = context,
         fillColor = fillColor,
         diameterDp = diameterDp,
-        strokeDp = strokeDp
+        strokeDp = strokeDp,
+        strokeColor = strokeColor
     )
     return iconFactory.fromBitmap(drawableToBitmap(drawable))
 }

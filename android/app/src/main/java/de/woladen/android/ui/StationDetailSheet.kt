@@ -69,7 +69,7 @@ fun StationDetailSheet(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val detailPoints = remember(feature.id) { buildDetailMapPoints(feature) }
+    val detailPoints = remember(feature.id, isFavorite) { buildDetailMapPoints(feature, isFavorite) }
     var showMiniMap by remember(feature.id) { mutableStateOf(false) }
 
     LaunchedEffect(feature.id) {
@@ -117,6 +117,16 @@ fun StationDetailSheet(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    IconButton(
+                        onClick = onToggleFavorite,
+                        modifier = Modifier.testTag("detail-favorite-button")
+                    ) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
+                            contentDescription = "Favorit",
+                            tint = if (isFavorite) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Text(
                         text = feature.properties.operatorName,
                         style = MaterialTheme.typography.titleLarge,
@@ -124,15 +134,6 @@ fun StationDetailSheet(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    IconButton(
-                        onClick = onToggleFavorite,
-                        modifier = Modifier.testTag("detail-favorite-button")
-                    ) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
-                            contentDescription = "Favorit"
-                        )
-                    }
                 }
 
                 if (feature.hasPrimaryDetailHighlights) {
@@ -473,14 +474,15 @@ private fun compactLiveProvider(sourceLabel: String?): String? {
     return candidate
 }
 
-private fun buildDetailMapPoints(feature: GeoJsonFeature): List<DetailMapPoint> {
+private fun buildDetailMapPoints(feature: GeoJsonFeature, isFavorite: Boolean): List<DetailMapPoint> {
     val points = mutableListOf(
         DetailMapPoint(
             id = "station",
             latitude = feature.latitude,
             longitude = feature.longitude,
             title = feature.properties.operatorName,
-            isStation = true
+            isStation = true,
+            isFavorite = isFavorite
         )
     )
 

@@ -1,29 +1,232 @@
 import Foundation
+import CoreLocation
 
 final class ChargerRepository {
-    private let decoder = JSONDecoder()
+    static let defaultCatalogCenter = CLLocationCoordinate2D(latitude: 51.1657, longitude: 10.4515)
 
-    func loadData() throws -> (features: [GeoJSONFeature], operators: [OperatorEntry], bundle: ActiveDataBundleInfo) {
-        let bundle = try DataBundleManager.shared.activeBundleInfo()
-        let chargersURL = bundle.directory.appendingPathComponent("chargers_fast.geojson")
-        let operatorsURL = bundle.directory.appendingPathComponent("operators.json")
-        let chargersData = try Data(contentsOf: chargersURL, options: [.mappedIfSafe])
-        let operatorsData = try Data(contentsOf: operatorsURL, options: [.mappedIfSafe])
+    struct SearchResult {
+        let features: [GeoJSONFeature]
+        let operators: [OperatorEntry]
+    }
 
-        let featureCollection = try decoder.decode(
-            GeoJSONFeatureCollection.self,
-            from: chargersData
+    private let client: LiveAPIClient
+    private let cache = CatalogRepositoryCache()
+
+    init(client: LiveAPIClient = LiveAPIClient()) {
+        self.client = client
+    }
+
+    convenience init(liveAPIClient: LiveAPIClient) {
+        self.init(client: liveAPIClient)
+    }
+
+    func loadData(center: CLLocationCoordinate2D, filterState: FilterState) async throws -> ChargerRepositoryLoadResult {
+        let result = try await searchCatalog(center: center, filter: filterState)
+        return ChargerRepositoryLoadResult(
+            features: result.features,
+            operators: result.operators,
+            sourceInfo: ActiveCatalogSourceInfo.catalogAPI,
+            catalogCenter: center
         )
-        let operatorCatalog = try decoder.decode(
-            OperatorCatalog.self,
-            from: operatorsData
+    }
+
+    func invalidateCache() async {
+        await cache.removeAll()
+    }
+
+    func searchCatalog(
+        center: CLLocationCoordinate2D,
+        filter: FilterState,
+        radiusM: Int = 20_000,
+        limit: Int = 100
+    ) async throws -> SearchResult {
+        let key = CatalogSearchCacheKey(
+            latitudeBucket: Int((center.latitude * 10_000).rounded()),
+            longitudeBucket: Int((center.longitude * 10_000).rounded()),
+            radiusM: radiusM,
+            limit: limit,
+            minPowerKW: Int((filter.minPowerKW * 10).rounded()),
+            operatorName: filter.operatorName.trimmingCharacters(in: .whitespacesAndNewlines)
         )
 
-        let sortedOperators = operatorCatalog.operators.sorted { lhs, rhs in
-            if lhs.stations == rhs.stations { return lhs.name < rhs.name }
-            return lhs.stations > rhs.stations
+        if let cached = await cache.searchResult(for: key, maxAge: .searchFresh) {
+            return cached
         }
 
-        return (featureCollection.features, sortedOperators, bundle)
+        do {
+            let response = try await client.searchCatalog(
+                center: center,
+                radiusM: radiusM,
+                limit: limit,
+                minPowerKW: filter.minPowerKW,
+                operatorName: filter.operatorName
+            )
+            let features = response.stations.map { $0.feature() }
+            let result = SearchResult(features: features, operators: operators(from: features))
+            await cache.storeSearchResult(result, for: key)
+            return result
+        } catch {
+            if let stale = await cache.searchResult(for: key, maxAge: .searchStale) {
+                return stale
+            }
+            throw error
+        }
+    }
+
+    func stationDetail(
+        stationID: String,
+        preserving existing: GeoJSONFeature?
+    ) async throws -> GeoJSONFeature {
+        let trimmed = stationID.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let cached = await cache.detailFeature(for: trimmed, maxAge: .detailFresh) {
+            return cached.mergingLiveState(from: existing)
+        }
+
+        do {
+            let response = try await client.catalogStationDetail(stationID: trimmed)
+            let feature = response.feature(preserving: existing)
+            await cache.storeDetailFeature(feature, for: trimmed)
+            return feature
+        } catch {
+            if let stale = await cache.detailFeature(for: trimmed, maxAge: .detailStale) {
+                return stale.mergingLiveState(from: existing)
+            }
+            throw error
+        }
+    }
+
+}
+
+struct ChargerRepositoryLoadResult {
+    let features: [GeoJSONFeature]
+    let operators: [OperatorEntry]
+    let sourceInfo: ActiveCatalogSourceInfo
+    let catalogCenter: CLLocationCoordinate2D
+}
+
+private extension TimeInterval {
+    static let searchFresh: TimeInterval = 5 * 60
+    static let searchStale: TimeInterval = 24 * 60 * 60
+    static let detailFresh: TimeInterval = 24 * 60 * 60
+    static let detailStale: TimeInterval = 7 * 24 * 60 * 60
+}
+
+private struct CatalogSearchCacheKey: Hashable {
+    let latitudeBucket: Int
+    let longitudeBucket: Int
+    let radiusM: Int
+    let limit: Int
+    let minPowerKW: Int
+    let operatorName: String
+}
+
+private actor CatalogRepositoryCache {
+    private struct SearchEntry {
+        let storedAt: Date
+        let result: ChargerRepository.SearchResult
+    }
+
+    private struct DetailEntry {
+        let storedAt: Date
+        let feature: GeoJSONFeature
+    }
+
+    private let maxSearchEntries = 24
+    private let maxDetailEntries = 240
+
+    private var searches: [CatalogSearchCacheKey: SearchEntry] = [:]
+    private var searchOrder: [CatalogSearchCacheKey] = []
+    private var details: [String: DetailEntry] = [:]
+    private var detailOrder: [String] = []
+
+    func searchResult(for key: CatalogSearchCacheKey, maxAge: TimeInterval) -> ChargerRepository.SearchResult? {
+        guard let entry = searches[key], Date().timeIntervalSince(entry.storedAt) <= maxAge else {
+            return nil
+        }
+        touchSearch(key)
+        return entry.result
+    }
+
+    func storeSearchResult(_ result: ChargerRepository.SearchResult, for key: CatalogSearchCacheKey) {
+        searches[key] = SearchEntry(storedAt: Date(), result: result)
+        touchSearch(key)
+        while searchOrder.count > maxSearchEntries, let oldest = searchOrder.first {
+            searchOrder.removeFirst()
+            searches.removeValue(forKey: oldest)
+        }
+    }
+
+    func detailFeature(for stationID: String, maxAge: TimeInterval) -> GeoJSONFeature? {
+        guard let entry = details[stationID], Date().timeIntervalSince(entry.storedAt) <= maxAge else {
+            return nil
+        }
+        touchDetail(stationID)
+        return entry.feature
+    }
+
+    func storeDetailFeature(_ feature: GeoJSONFeature, for stationID: String) {
+        details[stationID] = DetailEntry(storedAt: Date(), feature: feature)
+        touchDetail(stationID)
+        while detailOrder.count > maxDetailEntries, let oldest = detailOrder.first {
+            detailOrder.removeFirst()
+            details.removeValue(forKey: oldest)
+        }
+    }
+
+    func removeAll() {
+        searches = [:]
+        searchOrder = []
+        details = [:]
+        detailOrder = []
+    }
+
+    private func touchSearch(_ key: CatalogSearchCacheKey) {
+        searchOrder.removeAll { $0 == key }
+        searchOrder.append(key)
+    }
+
+    private func touchDetail(_ stationID: String) {
+        detailOrder.removeAll { $0 == stationID }
+        detailOrder.append(stationID)
+    }
+}
+
+private extension ActiveCatalogSourceInfo {
+    static var catalogAPI: ActiveCatalogSourceInfo {
+        ActiveCatalogSourceInfo(
+            source: "catalog-api",
+            manifest: CatalogSourceManifest(
+                version: "live-eu",
+                generatedAt: ISO8601DateFormatter().string(from: Date()),
+                schema: "/v1/catalog/search+/v1/catalog/stations/{station_id}"
+            )
+        )
+    }
+}
+
+private func operators(from features: [GeoJSONFeature]) -> [OperatorEntry] {
+    let counts = features.reduce(into: [String: Int]()) { result, feature in
+        let name = feature.properties.operatorName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        result[name, default: 0] += 1
+    }
+    return counts
+        .map { OperatorEntry(name: $0.key, stations: $0.value) }
+        .sorted {
+            if $0.stations == $1.stations { return $0.name < $1.name }
+            return $0.stations > $1.stations
+        }
+}
+
+private extension GeoJSONFeature {
+    func mergingLiveState(from existing: GeoJSONFeature?) -> GeoJSONFeature {
+        guard let existing else { return self }
+        return GeoJSONFeature(
+            id: id,
+            geometry: geometry,
+            properties: properties,
+            liveSummary: liveSummary ?? existing.liveSummary,
+            liveDetail: liveDetail ?? existing.liveDetail
+        )
     }
 }

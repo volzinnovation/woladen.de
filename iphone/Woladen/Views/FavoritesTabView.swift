@@ -59,7 +59,8 @@ struct FavoritesTabView: View {
                 .listStyle(.plain)
             }
         }
-        .task(id: items.map(\.id).joined(separator: "|")) {
+        .task(id: favoritesStore.favorites.sorted().joined(separator: "|")) {
+            await viewModel.refreshFavoriteStaticDetails(favoritesStore.favorites)
             while !Task.isCancelled {
                 await viewModel.refreshFavoritesLiveSummaries(favoritesStore.favorites, force: true)
                 try? await Task.sleep(nanoseconds: 15_000_000_000)

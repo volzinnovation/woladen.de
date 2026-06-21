@@ -44,6 +44,7 @@ import org.maplibre.android.maps.MapLibreMap
 fun MapTabView(
     viewModel: AppViewModel,
     locationService: LocationService,
+    favoriteStationIds: Set<String>,
     onRequestLocationPermission: () -> Unit,
     onShowFilter: () -> Unit
 ) {
@@ -70,11 +71,11 @@ fun MapTabView(
         MainMapView(
             features = viewModel.discoveredFeatures,
             userLocation = locationService.currentLocation,
+            favoriteStationIds = favoriteStationIds,
             markerTint = viewModel::markerTint,
             onFeatureTap = { feature -> viewModel.selectFeature(feature) },
             onMapIdle = { lat, lon ->
                 if (!hasCenteredInitialLocation) return@MainMapView
-                if (locationService.currentLocation == null) return@MainMapView
                 val shouldQuery = shouldQuery(lastQueriedCenter, lat, lon)
                 if (shouldQuery) {
                     lastQueriedCenter = lat to lon
@@ -170,6 +171,10 @@ fun MapTabView(
         } else if (locationService.authorizationStatus == LocationAuthorizationStatus.AUTHORIZED_WHEN_IN_USE) {
             centerOnNextLocationUpdate = true
             locationService.activate()
+        } else {
+            lastQueriedCenter = DEFAULT_MAP_CENTER
+            hasCenteredInitialLocation = true
+            viewModel.reloadMapForCenter(DEFAULT_MAP_CENTER.first, DEFAULT_MAP_CENTER.second)
         }
     }
 
@@ -201,6 +206,7 @@ fun MapTabView(
     }
 }
 
+private val DEFAULT_MAP_CENTER = 51.1657 to 10.4515
 
 private fun shouldQuery(lastQueriedCenter: Pair<Double, Double>?, lat: Double, lon: Double): Boolean {
     val last = lastQueriedCenter ?: return true

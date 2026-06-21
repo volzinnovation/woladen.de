@@ -1,6 +1,8 @@
 import SwiftUI
 import MapKit
 
+private let favoriteStarColor = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
+
 struct StationDetailView: View {
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var favoritesStore: FavoritesStore
@@ -47,6 +49,9 @@ struct StationDetailView: View {
         .onChange(of: feature?.id) { _, _ in
             updateRegionToFit()
         }
+        .onChange(of: feature?.properties.amenityExamples.count) { _, _ in
+            updateRegionToFit()
+        }
     }
 
     private func amenityCountLabel(for feature: GeoJSONFeature) -> String {
@@ -58,10 +63,7 @@ struct StationDetailView: View {
             ForEach(mapItems(for: feature)) { item in
                 Annotation("", coordinate: item.coordinate) {
                     if item.isStation {
-                        Circle()
-                            .fill(Color.teal)
-                            .frame(width: 16, height: 16)
-                            .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                        stationMapMarker(for: feature)
                     } else {
                         Image(systemName: item.symbol)
                             .font(.caption2)
@@ -94,19 +96,22 @@ struct StationDetailView: View {
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
+                Button {
+                    favoritesStore.toggle(feature.properties.stationID)
+                } label: {
+                    let isFavorite = favoritesStore.isFavorite(feature.properties.stationID)
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                        .font(.title3)
+                        .foregroundStyle(isFavorite ? favoriteStarColor : Color.primary)
+                        .frame(width: 42, height: 42)
+                        .background(Color(.secondarySystemBackground), in: Circle())
+                }
+                .accessibilityLabel(favoritesStore.isFavorite(feature.properties.stationID) ? "Aus Favoriten entfernen" : "Als Favorit markieren")
                 Text(feature.properties.operatorName)
                     .font(.title3.bold())
                     .lineLimit(2)
                     .layoutPriority(1)
                 Spacer(minLength: 0)
-                Button {
-                    favoritesStore.toggle(feature.properties.stationID)
-                } label: {
-                    Image(systemName: favoritesStore.isFavorite(feature.properties.stationID) ? "star.fill" : "star")
-                        .font(.title3)
-                        .frame(width: 42, height: 42)
-                        .background(Color(.secondarySystemBackground), in: Circle())
-                }
             }
 
             if feature.hasPrimaryDetailHighlights {
@@ -340,6 +345,25 @@ struct StationDetailView: View {
             )
         }
         return items
+    }
+
+    private func stationMapMarker(for feature: GeoJSONFeature) -> some View {
+        let isFavorite = favoritesStore.isFavorite(feature.properties.stationID)
+        return Group {
+            if isFavorite {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(favoriteStarColor)
+                    .frame(width: 24, height: 24)
+                    .background(Color(.systemBackground).opacity(0.92), in: Circle())
+            } else {
+                Circle()
+                    .fill(Color.teal)
+                    .frame(width: 16, height: 16)
+                    .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+            }
+        }
+        .accessibilityLabel(isFavorite ? "Favorit" : "Ladepunkt")
     }
 
     private func updateRegionToFit() {
