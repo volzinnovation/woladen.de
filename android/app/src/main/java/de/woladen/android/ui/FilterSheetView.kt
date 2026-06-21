@@ -30,7 +30,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import de.woladen.android.R
 import de.woladen.android.model.FilterState
 import de.woladen.android.model.OperatorEntry
 import de.woladen.android.ui.components.AmenityIcon
@@ -64,7 +66,7 @@ fun FilterSheetView(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Filter", style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.i18n_filters_title), style = MaterialTheme.typography.titleLarge)
                 Button(
                     onClick = {
                         onApply(
@@ -78,21 +80,21 @@ fun FilterSheetView(
                     },
                     modifier = Modifier.testTag("filter-apply-button")
                 ) {
-                    Text("Anwenden")
+                    Text(stringResource(R.string.i18n_filters_apply))
                 }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Betreiber", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.i18n_filters_operator), style = MaterialTheme.typography.titleSmall)
                 OutlinedButton(onClick = { operatorMenuExpanded = true }) {
-                    Text(if (draftOperator.isEmpty()) "Alle Betreiber" else draftOperator)
+                    Text(if (draftOperator.isEmpty()) stringResource(R.string.i18n_filters_alloperators) else draftOperator)
                 }
                 DropdownMenu(
                     expanded = operatorMenuExpanded,
                     onDismissRequest = { operatorMenuExpanded = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Alle Betreiber") },
+                        text = { Text(stringResource(R.string.i18n_filters_alloperators)) },
                         onClick = {
                             draftOperator = ""
                             operatorMenuExpanded = false
@@ -111,11 +113,11 @@ fun FilterSheetView(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Name des Angebots vor Ort", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.i18n_filters_amenityname), style = MaterialTheme.typography.titleSmall)
                 OutlinedTextField(
                     value = draftAmenityNameQuery,
                     onValueChange = { draftAmenityNameQuery = it },
-                    placeholder = { Text("z. B. McDonald's") },
+                    placeholder = { Text(stringResource(R.string.i18n_filters_amenitynameplaceholder)) },
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -124,7 +126,7 @@ fun FilterSheetView(
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Min. Leistung", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.i18n_filters_minpower).replace("{value}", draftMinPower.toInt().toString()), style = MaterialTheme.typography.titleSmall)
                 Text("${draftMinPower.toInt()} kW")
                 Slider(
                     value = draftMinPower.toFloat(),
@@ -136,7 +138,7 @@ fun FilterSheetView(
                 )
             }
 
-            Text("Angebote vor Ort", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.i18n_filters_amenities), style = MaterialTheme.typography.titleSmall)
             LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
                 items(availableAmenityKeys) { key ->
                     val selected = draftAmenities.contains(key)
@@ -179,7 +181,7 @@ fun FilterSheetView(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Abbrechen")
+                    Text(stringResource(android.R.string.cancel))
                 }
             }
         }

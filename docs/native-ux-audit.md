@@ -35,6 +35,9 @@ Implemented:
 - Tablet map remains a separate tab.
 - Detail remains a combined station-properties and map/detail context, which matches the web app direction without inventing a new flow.
 - Android cold startup now falls back to a Berlin catalog center, avoiding a misleading empty result from a bounded Germany-centroid search before location is available.
+- Android tablet detail now uses an inline side pane on wide layouts instead of opening the compact bottom sheet over the list or map.
+- Manual native reloads now invalidate repository caches before re-querying the API.
+- Core native screens now consume generated i18n resources for navigation, filters, lists, favorites, map controls, station detail, availability summaries, static detail labels, and Info content.
 
 ## Audit Findings
 
@@ -53,10 +56,13 @@ Issues fixed during the audit:
 - Android phone and tablet filter buttons previously obscured the first card. List content now starts below the floating filter control.
 - iOS bottom navigation used a floating overlay that could visually collide with content. It now uses an opaque safe-area tab bar.
 - Native fallback catalog startup could briefly show no chargers. Android and iOS catalog fallback now query Berlin for bounded API search while map cameras can stay Germany-wide.
+- iOS iPad detail could leak into unrelated tabs. The wide detail pane is now limited to list, map, and favorites.
+- Favorites could appear empty while saved stations were still being hydrated from `/v1/catalog/stations/{station_id}`. Both native apps now show a loading state when saved favorite IDs exist but station detail rows have not resolved yet.
+- Several model-derived native labels ignored generated localization resources. Availability, station detail metadata, live rows, and static detail rows now use native localized resources where generated web keys exist.
 
 Residual risks:
 
-- Some native hardcoded strings remain outside the generated i18n resources. The generated language set exists, but the UI is not fully wired to localization APIs yet.
+- Some operational/source labels remain intentionally raw because they are backend provider names, legal source titles, API schema names, or app-store/CarPlay scaffolding rather than translated UI chrome.
 - Android and iOS do not yet have automated visual regression tests for phone and tablet screenshots.
 - Android cold launch still depends on network latency for the first API-backed list because persistent disk caching is not yet implemented.
 - Detail layouts were not redesigned beyond readability improvements; this is acceptable for now because the user explicitly asked to stick close to the web app.
@@ -64,7 +70,7 @@ Residual risks:
 ## Follow-up Implementation Plan
 
 1. Finish native i18n wiring.
-   Replace remaining hardcoded UI strings with Android string resources and Swift localized string keys, then run locale smoke checks for the generated web language set.
+   Run locale smoke checks for the generated web language set and decide whether legal/source titles or CarPlay scaffolding need dedicated translation keys.
 
 2. Add screenshot smoke tests.
    Add deterministic simulator/emulator screenshot scripts for list, map, detail, favorites, and info on phone and tablet widths. Store only reviewed baseline artifacts or CI summaries to avoid noisy binary churn.

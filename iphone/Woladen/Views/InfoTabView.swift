@@ -15,44 +15,42 @@ struct InfoTabView: View {
 
     var body: some View {
         List {
-            Section("Über woladen.de") {
-                Text("Finde Schnellladesäulen mit der besten Aufenthaltsqualität. Wir zeigen dir, wo es sich lohnt zu laden. Ohne Ladeweile.")
+            Section(String(localized: "info.aboutTitle")) {
+                Text(aboutText)
                 if let info = viewModel.activeCatalogInfo {
-                    Text("Datenstand: \(formattedTimestamp(info.manifest.generatedAt))")
+                    Text(dataUpdatedText(for: info.manifest.generatedAt))
                         .foregroundStyle(.secondary)
                 }
             }
 
-            Section("Legende") {
-                legendRow(color: Color.yellow, text: ">10 Angebote vor Ort (Gold)")
-                legendRow(color: Color.gray, text: ">5 Angebote vor Ort (Silber)")
-                legendRow(color: Color.brown, text: ">1 Angebote vor Ort (Bronze)")
-                legendRow(color: Color.secondary, text: "Keine Angebote vor Ort")
-                favoriteLegendRow(text: "Favorit")
+            Section(String(localized: "info.legendTitle")) {
+                legendRow(color: Color.yellow, text: String(localized: "info.legendGold"))
+                legendRow(color: Color.gray, text: String(localized: "info.legendSilver"))
+                legendRow(color: Color.brown, text: String(localized: "info.legendBronze"))
+                legendRow(color: Color.secondary, text: String(localized: "info.legendGrey"))
+                favoriteLegendRow(text: String(localized: "info.legendFavorite"))
             }
 
-            Section("Kontakt & Code") {
+            Section(String(localized: "info.contactTitle")) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Entwickelt von Prof. Dr. Raphael Volz")
-                    Text("Hochschule Pforzheim")
+                    Text(String(localized: "info.developedBy"))
                     Link(
-                        "GitHub Projekt",
+                        String(localized: "info.github"),
                         destination: URL(string: "https://github.com/volzinnovation/woladen.de")!
                     )
-                    Text("Die Moonshots Studios GmbH betreibt und vertreibt woladen.de und die begleitenden Apps für iPhone und Android.")
+                    Text("\(String(localized: "info.distributedBy")) Moonshots Studios GmbH")
                     Link("woladen.de", destination: websiteURL)
                     Link("studios.moonshots.gmbh", destination: studiosURL)
-                    Link("Impressum", destination: imprintURL)
+                    Link(String(localized: "info.imprintLink"), destination: imprintURL)
                 }
             }
 
-            Section("Datenschutz") {
-                Text("Standortzugriff ist optional. Wenn du ihn freigibst, wird er verwendet, um die Karte auf deine Umgebung zu fokussieren und nahe Schnelllader zu sortieren.")
-                Text("Favoriten und der lokale API-Cache bleiben auf deinem Gerät.")
-                Link("Datenschutzerklärung", destination: privacyPolicyURL)
+            Section(String(localized: "info.privacyTitle")) {
+                Text(String(localized: "info.privacyBody"))
+                Link(String(localized: "info.privacyLink"), destination: privacyPolicyURL)
             }
 
-            Section("Datenquellen & Lizenzen") {
+            Section(String(localized: "info.dataSourcesTitle")) {
                 Link(
                     "BNetzA: Ladesäulenregister (Downloads und Formulare)",
                     destination: URL(string: "https://www.bundesnetzagentur.de/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/start.html")!
@@ -63,20 +61,20 @@ struct InfoTabView: View {
                     "OpenStreetMap",
                     destination: URL(string: "https://www.openstreetmap.org/")!
                 )
-                Text("Kartendaten und POI-Daten © OpenStreetMap-Mitwirkende, verfügbar unter ODbL v1.0.")
+                Text(String(localized: "info.osmNote"))
                 Link(
-                    "OpenStreetMap: Copyright und Lizenzhinweise",
+                    String(localized: "info.osmCopyright"),
                     destination: URL(string: "https://www.openstreetmap.org/copyright")!
                 )
                 Link(
-                    "ODbL v1.0: Vollständiger Lizenztext",
+                    String(localized: "info.odblLicense"),
                     destination: URL(string: "https://opendatacommons.org/licenses/odbl/1.0/")!
                 )
             }
 
-            Section("Standort") {
+            Section(String(localized: "location.idleTitle")) {
                 Text(locationStatusText)
-                Button("Standort aktualisieren") {
+                Button(String(localized: "location.retry")) {
                     if locationService.authorizationStatus == .notDetermined {
                         locationService.requestAuthorization()
                     } else {
@@ -89,12 +87,15 @@ struct InfoTabView: View {
                 Text(viewModel.humanReadableCatalogSource())
                 if let info = viewModel.activeCatalogInfo {
                     Text("Version: \(info.manifest.version)")
-                    Text("Erstellt am: \(formattedTimestamp(info.manifest.generatedAt))")
+                    Text(
+                        String(localized: "station.updated")
+                            .replacingOccurrences(of: "{date}", with: formattedTimestamp(info.manifest.generatedAt))
+                    )
                     Text("Schema: \(info.manifest.schema)")
                         .foregroundStyle(.secondary)
                 }
 
-                Button("Katalog neu laden") {
+                Button(String(localized: "errors.reload")) {
                     viewModel.reloadCatalogForCurrentContext(userLocation: locationService.currentLocation)
                 }
             }
@@ -127,9 +128,29 @@ struct InfoTabView: View {
 
     private func formattedTimestamp(_ raw: String) -> String {
         if let date = iso8601WithFractional.date(from: raw) ?? iso8601.date(from: raw) {
-            return deFormatter.string(from: date)
+            return dateFormatter.string(from: date)
         }
         return raw
+    }
+
+    private var aboutText: String {
+        let stationCount = viewModel.allFeatures.count
+        let chargerCount = viewModel.allFeatures.reduce(0) { total, feature in
+            total + feature.properties.chargingPointsCount
+        }
+        return [
+            String(localized: "info.aboutIntro"),
+            "\(stationCount)",
+            String(localized: "info.aboutStationCountJoin"),
+            "\(chargerCount)",
+            String(localized: "info.aboutOutro")
+        ].joined(separator: " ")
+    }
+
+    private func dataUpdatedText(for raw: String) -> String {
+        String(localized: "info.dataUpdated")
+            .replacingOccurrences(of: "{date}", with: formattedTimestamp(raw))
+            .replacingOccurrences(of: "{counts}", with: "")
     }
 
     private var iso8601: ISO8601DateFormatter {
@@ -144,9 +165,9 @@ struct InfoTabView: View {
         return formatter
     }
 
-    private var deFormatter: DateFormatter {
+    private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "de_DE")
+        formatter.locale = Locale.current
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter
@@ -155,13 +176,13 @@ struct InfoTabView: View {
     private var locationStatusText: String {
         switch locationService.authorizationStatus {
         case .authorizedAlways, .authorizedWhenInUse:
-            return "Standortzugriff erlaubt"
+            return String(localized: "location.positionTitle")
         case .denied, .restricted:
-            return "Standortzugriff nicht erlaubt"
+            return String(localized: "location.deniedTitle")
         case .notDetermined:
-            return "Standortzugriff noch nicht entschieden"
+            return String(localized: "location.idleTitle")
         @unknown default:
-            return "Standortstatus unbekannt"
+            return String(localized: "location.unknownMessage")
         }
     }
 

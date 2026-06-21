@@ -451,44 +451,49 @@ extension ChargerProperties {
         if knownEVSEs > 0, occupancyUnknownEVSEs > 0 {
             var parts: [String] = []
             if occupancyAvailableEVSEs > 0 {
-                parts.append("\(occupancyAvailableEVSEs) frei")
+                parts.append(localizedChargerCount("availability.available", count: occupancyAvailableEVSEs))
             }
             if occupancyOccupiedEVSEs > 0 {
-                parts.append("\(occupancyOccupiedEVSEs) belegt")
+                parts.append(localizedChargerCount("availability.occupiedCount", count: occupancyOccupiedEVSEs))
             }
             if occupancyOutOfOrderEVSEs > 0 {
-                parts.append("\(occupancyOutOfOrderEVSEs) defekt")
+                parts.append(localizedChargerCount("availability.outOfOrderCount", count: occupancyOutOfOrderEVSEs))
             }
-            parts.append("\(occupancyUnknownEVSEs) unbekannt")
+            parts.append(localizedChargerCount("availability.unknownCount", count: occupancyUnknownEVSEs))
             return parts.joined(separator: ", ")
         }
         if occupancyAvailableEVSEs > 0 {
-            return "\(occupancyAvailableEVSEs)/\(occupancyTotalEVSEs) frei"
+            return "\(occupancyAvailableEVSEs)/\(occupancyTotalEVSEs) \(String(localized: "availability.free").lowercased())"
         }
         if occupancyOccupiedEVSEs > 0 {
-            return "\(occupancyOccupiedEVSEs)/\(occupancyTotalEVSEs) belegt"
+            return "\(occupancyOccupiedEVSEs)/\(occupancyTotalEVSEs) \(String(localized: "availability.occupied").lowercased())"
         }
         if occupancyUnknownEVSEs <= 0, occupancyOutOfOrderEVSEs >= occupancyTotalEVSEs {
-            return "Außer Betrieb"
+            return String(localized: "availability.out_of_order")
         }
-        return "Belegung unbekannt"
+        return String(localized: "availability.summaryUnknown")
     }
 
     var occupancySourceLabel: String? {
         guard occupancyTotalEVSEs > 0 else { return nil }
         if occupancySourceName.hasPrefix("Mobilithek") {
-            return "Live via \(occupancySourceName)"
+            return String(localized: "station.liveVia")
+                .replacingOccurrences(of: "{source}", with: occupancySourceName)
         }
         if occupancySourceUID.hasPrefix("mobilithek_") {
             if occupancySourceName.isEmpty {
-                return "Live via Mobilithek"
+                return String(localized: "station.liveVia")
+                    .replacingOccurrences(of: "{source}", with: "Mobilithek")
             }
-            return "Live via Mobilithek (\(occupancySourceName))"
+            return String(localized: "station.liveVia")
+                .replacingOccurrences(of: "{source}", with: "Mobilithek (\(occupancySourceName))")
         }
         if occupancySourceName.isEmpty {
-            return "Live via MobiData BW"
+            return String(localized: "station.liveVia")
+                .replacingOccurrences(of: "{source}", with: "MobiData BW")
         }
-        return "Live via MobiData BW (\(occupancySourceName))"
+        return String(localized: "station.liveVia")
+            .replacingOccurrences(of: "{source}", with: "MobiData BW (\(occupancySourceName))")
     }
 
     var hasPrimaryDetailHighlights: Bool {
@@ -498,25 +503,38 @@ extension ChargerProperties {
     var staticDetailRows: [DetailRow] {
         var rows: [DetailRow] = []
         if !paymentMethodsDisplay.isEmpty {
-            rows.append(.init(label: "Bezahlen", value: paymentMethodsDisplay))
+            rows.append(.init(label: String(localized: "staticDetails.payment"), value: paymentMethodsDisplay))
         }
         if !authMethodsDisplay.isEmpty {
-            rows.append(.init(label: "Zugang", value: authMethodsDisplay))
+            rows.append(.init(label: String(localized: "staticDetails.access"), value: authMethodsDisplay))
         }
         if !connectorTypesDisplay.isEmpty {
-            rows.append(.init(label: "Stecker", value: connectorTypesDisplay))
+            rows.append(.init(label: String(localized: "staticDetails.connectors"), value: connectorTypesDisplay))
         }
         if !currentTypesDisplay.isEmpty {
-            rows.append(.init(label: "Stromart", value: currentTypesDisplay))
+            rows.append(.init(label: String(localized: "staticDetails.currentType"), value: currentTypesDisplay))
         }
         if connectorCount > 0 {
-            rows.append(.init(label: "Anschlüsse", value: "\(connectorCount) Steckplätze"))
+            rows.append(
+                .init(
+                    label: String(localized: "staticDetails.connectors"),
+                    value: String(localized: "staticDetails.sockets")
+                        .replacingOccurrences(of: "{count}", with: "\(connectorCount)")
+                )
+            )
         }
         if !serviceTypesDisplay.isEmpty {
-            rows.append(.init(label: "Service", value: serviceTypesDisplay))
+            rows.append(.init(label: String(localized: "staticDetails.service"), value: serviceTypesDisplay))
         }
         if let greenEnergy {
-            rows.append(.init(label: "Strom", value: greenEnergy ? "100 % erneuerbar" : "Nicht als erneuerbar markiert"))
+            rows.append(
+                .init(
+                    label: String(localized: "staticDetails.energy"),
+                    value: greenEnergy
+                        ? String(localized: "staticDetails.renewable")
+                        : String(localized: "staticDetails.notRenewable")
+                )
+            )
         }
         return rows
     }
@@ -529,12 +547,33 @@ extension ChargerProperties {
         }
         if let timestamp {
             if sourceName.isEmpty {
-                return "Stand \(timestamp)"
+                return String(localized: "station.updated")
+                    .replacingOccurrences(of: "{date}", with: timestamp)
             }
-            return "Details via \(sourceName) • Stand \(timestamp)"
+            return String(localized: "station.detailsSource")
+                .replacingOccurrences(of: "{source}", with: sourceName)
+                .replacingOccurrences(of: "{date}", with: timestamp)
         }
-        return "Details via \(sourceName)"
+        return String(localized: "station.detailsSourceOnly")
+            .replacingOccurrences(of: "{source}", with: sourceName)
     }
+}
+
+private func localizedChargerCount(_ key: String, count: Int) -> String {
+    let template: String
+    switch key {
+    case "availability.available":
+        template = String(localized: "availability.available")
+    case "availability.occupiedCount":
+        template = String(localized: "availability.occupiedCount")
+    case "availability.outOfOrderCount":
+        template = String(localized: "availability.outOfOrderCount")
+    case "availability.unknownCount":
+        template = String(localized: "availability.unknownCount")
+    default:
+        template = "{count}"
+    }
+    return template.replacingOccurrences(of: "{count}", with: "\(count)")
 }
 
 private func sanitizedDisplayPower(_ value: Double) -> Double {
@@ -553,7 +592,7 @@ private func formattedDetailTimestamp(_ value: String) -> String? {
     guard let date else { return value }
 
     let output = DateFormatter()
-    output.locale = Locale(identifier: "de_DE")
+    output.locale = Locale.current
     output.dateStyle = .short
     output.timeStyle = .short
     return output.string(from: date)

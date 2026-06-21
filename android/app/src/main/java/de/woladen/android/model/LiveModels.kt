@@ -1,11 +1,16 @@
 package de.woladen.android.model
 
+import android.text.format.DateUtils
+import de.woladen.android.R
+import de.woladen.android.util.AppStrings
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.LinkedHashMap
+import java.util.Locale
 
 data class LiveStationLookupResponse(
     val stations: List<LiveStationSummary>,
@@ -55,11 +60,19 @@ sealed interface LiveJsonValue {
     data object NullValue : LiveJsonValue
 }
 
-enum class AvailabilityStatus(val rawValue: String, val label: String) {
-    FREE("free", "Frei"),
-    OCCUPIED("occupied", "Belegt"),
-    OUT_OF_ORDER("out_of_order", "Defekt"),
-    UNKNOWN("unknown", "Unbekannt");
+enum class AvailabilityStatus(val rawValue: String) {
+    FREE("free"),
+    OCCUPIED("occupied"),
+    OUT_OF_ORDER("out_of_order"),
+    UNKNOWN("unknown");
+
+    val label: String
+        get() = when (this) {
+            FREE -> AppStrings.get(R.string.i18n_availability_free)
+            OCCUPIED -> AppStrings.get(R.string.i18n_availability_occupied)
+            OUT_OF_ORDER -> AppStrings.get(R.string.i18n_availability_out_of_order)
+            UNKNOWN -> AppStrings.get(R.string.i18n_availability_unknown)
+        }
 
     companion object {
         fun fromRaw(value: String?): AvailabilityStatus {
@@ -153,12 +166,12 @@ val GeoJsonFeature.occupancySummaryLabel: String?
         if (counts.total <= 0) return null
 
         val parts = buildList {
-            if (counts.available > 0) add("${counts.available} frei")
-            if (counts.occupied > 0) add("${counts.occupied} belegt")
-            if (counts.outOfOrder > 0) add("${counts.outOfOrder} defekt")
-            if (counts.unknown > 0) add("${counts.unknown} unbekannt")
+            if (counts.available > 0) add(AppStrings.count(R.string.i18n_availability_available, counts.available))
+            if (counts.occupied > 0) add(AppStrings.count(R.string.i18n_availability_occupiedcount, counts.occupied))
+            if (counts.outOfOrder > 0) add(AppStrings.count(R.string.i18n_availability_outofordercount, counts.outOfOrder))
+            if (counts.unknown > 0) add(AppStrings.count(R.string.i18n_availability_unknowncount, counts.unknown))
         }
-        return if (parts.isEmpty()) "Belegung unbekannt" else parts.joinToString(", ")
+        return if (parts.isEmpty()) AppStrings.get(R.string.i18n_availability_summaryunknown) else parts.joinToString(", ")
     }
 
 val GeoJsonFeature.occupancySourceLabel: String?
@@ -167,28 +180,28 @@ val GeoJsonFeature.occupancySourceLabel: String?
             val provider = liveSourceLabel
             val elapsed = formatElapsedLiveTime(liveObservedTimestamp)
             return when {
-                !provider.isNullOrBlank() && !elapsed.isNullOrBlank() -> "Live via $provider • Seit $elapsed"
-                !provider.isNullOrBlank() -> "Live via $provider"
-                !elapsed.isNullOrBlank() -> "Live seit $elapsed"
-                else -> "Live via lokaler API"
+                !provider.isNullOrBlank() && !elapsed.isNullOrBlank() -> liveViaUpdated(provider, elapsed)
+                !provider.isNullOrBlank() -> liveVia(provider)
+                !elapsed.isNullOrBlank() -> updatedLabel(elapsed)
+                else -> AppStrings.get(R.string.i18n_station_live)
             }
         }
 
         val counts = availabilityCounts
         if (counts.total <= 0) return null
         return when {
-            properties.occupancySourceName.startsWith("Mobilithek") -> "Live via ${properties.occupancySourceName}"
-            properties.occupancySourceUid.startsWith("mobilithek_") && properties.occupancySourceName.isBlank() -> "Live via Mobilithek"
-            properties.occupancySourceUid.startsWith("mobilithek_") -> "Live via Mobilithek (${properties.occupancySourceName})"
-            properties.occupancySourceName.isBlank() -> "Live via MobiData BW"
-            else -> "Live via MobiData BW (${properties.occupancySourceName})"
+            properties.occupancySourceName.startsWith("Mobilithek") -> liveVia(properties.occupancySourceName)
+            properties.occupancySourceUid.startsWith("mobilithek_") && properties.occupancySourceName.isBlank() -> liveVia("Mobilithek")
+            properties.occupancySourceUid.startsWith("mobilithek_") -> liveVia("Mobilithek (${properties.occupancySourceName})")
+            properties.occupancySourceName.isBlank() -> liveVia("MobiData BW")
+            else -> liveVia("MobiData BW (${properties.occupancySourceName})")
         }
     }
 
 val GeoJsonFeature.liveUpdatedLabel: String?
     get() {
         if (liveSummaryForDisplay == null) return null
-        return formatElapsedLiveTime(liveObservedTimestamp)?.let { "Seit $it" }
+        return formatElapsedLiveTime(liveObservedTimestamp)?.let { updatedLabel(it) }
     }
 
 val GeoJsonFeature.hasPrimaryDetailHighlights: Boolean
@@ -202,12 +215,12 @@ val GeoJsonFeature.liveEvseRows: List<LiveEvseRow>
                 val meta = listOfNotNull(
                     formatEvseCode(evse.providerEvseId),
                     formatElapsedLiveTime(firstNonEmpty(evse.sourceObservedAt, evse.fetchedAt, evse.ingestedAt))
-                        ?.let { "Seit $it" }
+                        ?.let { updatedLabel(it) }
                 ).joinToString(" • ")
                 LiveEvseRow(
-                    title = "Ladepunkt ${index + 1}",
+                    title = AppStrings.get(R.string.i18n_station_evse, mapOf("index" to (index + 1).toString())),
                     status = evse.availabilityStatus,
-                    meta = if (meta.isBlank()) "Live-Daten verfügbar" else meta,
+                    meta = if (meta.isBlank()) AppStrings.get(R.string.i18n_station_livedataavailable) else meta,
                     price = evse.priceDisplay.trim(),
                     notes = buildLiveNotes(evse)
                 )
@@ -220,9 +233,9 @@ val GeoJsonFeature.liveEvseRows: List<LiveEvseRow>
 
         return listOf(
             LiveEvseRow(
-                title = "Stationsstatus",
+                title = AppStrings.get(R.string.i18n_station_stationstatus),
                 status = availabilityStatus,
-                meta = occupancySummaryLabel ?: "Live-Daten verfügbar",
+                meta = occupancySummaryLabel ?: AppStrings.get(R.string.i18n_station_livedataavailable),
                 price = displayPrice,
                 notes = emptyList()
             )
@@ -250,11 +263,11 @@ private fun buildLiveNotes(evse: LiveEvse): List<LiveDetailNote> {
     val notes = mutableListOf<LiveDetailNote>()
     val nextSlot = formatLiveCollection(evse.nextAvailableChargingSlots)
     if (nextSlot.isNotBlank()) {
-        notes += LiveDetailNote(label = "Nächster Slot", value = nextSlot)
+        notes += LiveDetailNote(label = AppStrings.get(R.string.i18n_station_nextslot), value = nextSlot)
     }
     val supplemental = formatLiveCollection(evse.supplementalFacilityStatus)
     if (supplemental.isNotBlank()) {
-        notes += LiveDetailNote(label = "Zusatzstatus", value = supplemental)
+        notes += LiveDetailNote(label = AppStrings.get(R.string.i18n_station_supplementalstatus), value = supplemental)
     }
     return notes
 }
@@ -279,17 +292,29 @@ internal fun formatElapsedLiveTime(value: String, now: Instant = Instant.now()):
     if (raw.isBlank()) return null
     val instant = parseLiveInstant(raw) ?: return null
 
+    if (!AppStrings.isInitialized()) {
+        return formatFallbackElapsedLiveTime(instant, now)
+    }
+    return DateUtils.getRelativeTimeSpanString(
+        instant.toEpochMilli(),
+        now.toEpochMilli(),
+        DateUtils.SECOND_IN_MILLIS,
+        DateUtils.FORMAT_ABBREV_RELATIVE
+    ).toString()
+}
+
+private fun formatFallbackElapsedLiveTime(instant: Instant, now: Instant): String {
     val elapsedSeconds = Duration.between(instant, now).seconds.coerceAtLeast(0)
     return when {
-        elapsedSeconds < 60 -> "gerade eben"
-        elapsedSeconds < 60 * 60 -> "${elapsedSeconds / 60} Min."
-        elapsedSeconds < 60 * 60 * 24 -> "${elapsedSeconds / (60 * 60)} Std."
+        elapsedSeconds < 60 -> "now"
+        elapsedSeconds < 60 * 60 -> "${elapsedSeconds / 60} min ago"
+        elapsedSeconds < 60 * 60 * 24 -> "${elapsedSeconds / (60 * 60)} h ago"
         elapsedSeconds < 60L * 60 * 24 * 30 -> {
             val days = elapsedSeconds / (60 * 60 * 24)
-            if (days == 1L) "1 Tag" else "$days Tage"
+            if (days == 1L) "1 day ago" else "$days days ago"
         }
-        elapsedSeconds < 60L * 60 * 24 * 365 -> "${elapsedSeconds / (60L * 60 * 24 * 30)} Mon."
-        else -> "${elapsedSeconds / (60L * 60 * 24 * 365)} J."
+        elapsedSeconds < 60L * 60 * 24 * 365 -> "${elapsedSeconds / (60L * 60 * 24 * 30)} mo ago"
+        else -> "${elapsedSeconds / (60L * 60 * 24 * 365)} y ago"
     }
 }
 
@@ -316,7 +341,7 @@ private fun formatLiveCollection(values: List<LiveJsonValue>): String {
 private fun formatLiveValue(value: LiveJsonValue): String {
     return when (value) {
         LiveJsonValue.NullValue -> ""
-        is LiveJsonValue.BoolValue -> if (value.value) "Ja" else "Nein"
+        is LiveJsonValue.BoolValue -> AppStrings.get(if (value.value) R.string.i18n_common_yes else R.string.i18n_common_no)
         is LiveJsonValue.NumberValue -> {
             val numeric = value.value
             if (numeric % 1.0 == 0.0) numeric.toInt().toString() else numeric.toString()
@@ -337,7 +362,7 @@ private fun formatLiveValue(value: LiveJsonValue): String {
             }
             entries.joinToString(", ") { entry ->
                 val formatted = formatLiveValue(entry.value)
-                val label = LIVE_DYNAMIC_KEY_LABELS[entry.key] ?: humanizeLiveCode(entry.key)
+                val label = liveDynamicKeyLabel(entry.key) ?: humanizeLiveCode(entry.key)
                 if (label.isBlank()) formatted else "$label: $formatted"
             }
         }
@@ -354,16 +379,29 @@ private fun humanizeLiveCode(value: String): String {
     return spaced.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 }
 
-private val LIVE_DYNAMIC_KEY_LABELS = mapOf(
-    "expectedAvailableFromTime" to "Ab",
-    "expectedAvailableToTime" to "Bis",
-    "expectedAvailableUntilTime" to "Bis",
-    "startTime" to "Ab",
-    "endTime" to "Bis",
-    "lastUpdated" to "Seit",
-    "value" to ""
-)
+private fun liveVia(source: String): String =
+    AppStrings.get(R.string.i18n_station_livevia, mapOf("source" to source))
+
+private fun liveViaUpdated(source: String, date: String): String =
+    AppStrings.get(R.string.i18n_station_liveviaupdated, mapOf("source" to source, "date" to date))
+
+private fun updatedLabel(date: String): String =
+    AppStrings.get(R.string.i18n_station_updated, mapOf("date" to date))
+
+private fun liveDynamicKeyLabel(key: String): String? {
+    return when (key) {
+        "expectedAvailableFromTime",
+        "expectedAvailableToTime",
+        "expectedAvailableUntilTime",
+        "startTime",
+        "endTime" -> AppStrings.get(R.string.i18n_station_nextslot)
+        "lastUpdated" -> AppStrings.get(R.string.i18n_station_updated, mapOf("date" to "")).trim()
+        "value" -> ""
+        else -> null
+    }
+}
 
 private val LIVE_TIMESTAMP_FORMATTER: DateTimeFormatter = DateTimeFormatter
-    .ofPattern("dd.MM.yyyy, HH:mm")
+    .ofLocalizedDateTime(FormatStyle.SHORT)
+    .withLocale(Locale.getDefault())
     .withZone(ZoneId.systemDefault())

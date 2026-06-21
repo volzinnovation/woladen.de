@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import de.woladen.android.R
 import de.woladen.android.model.GeoJsonFeature
 import org.maplibre.android.annotations.Icon
 import org.maplibre.android.annotations.IconFactory
@@ -166,7 +167,7 @@ fun MainMapView(
                 mapLibreMap.addMarker(
                     MarkerOptions()
                         .position(LatLng(userLocation.latitude, userLocation.longitude))
-                        .title("Mein Standort")
+                        .title(context.getString(R.string.i18n_aria_locate))
                         .snippet(USER_SNIPPET)
                         .icon(userIcon)
                 )

@@ -36,7 +36,7 @@ struct MapTabView: View {
 
                 if let current = locationService.currentLocation {
                     UserAnnotation()
-                    Annotation("Mein Standort", coordinate: current.coordinate) {
+                    Annotation(String(localized: "aria.locate"), coordinate: current.coordinate) {
                         Circle()
                             .fill(Color.blue)
                             .frame(width: 10, height: 10)
@@ -47,7 +47,6 @@ struct MapTabView: View {
             .ignoresSafeArea(edges: [.top, .horizontal])
             .onMapCameraChange(frequency: .onEnd) { context in
                 guard hasCenteredInitialLocation else { return }
-                guard locationService.currentLocation != nil else { return }
                 let center = context.region.center
                 guard shouldQuery(for: center) else { return }
                 lastQueriedCenter = center
@@ -71,6 +70,7 @@ struct MapTabView: View {
                         .padding(10)
                         .background(Color(.secondarySystemBackground), in: Circle())
                 }
+                .accessibilityLabel(Text("aria.locate"))
 
                 Button {
                     showingFilter = true
@@ -80,12 +80,13 @@ struct MapTabView: View {
                         .padding(10)
                         .background(Color(.secondarySystemBackground), in: Circle())
                 }
+                .accessibilityLabel(Text("aria.filterOpen"))
             }
             .padding(.trailing, 16)
             .padding(.top, 12)
 
             if viewModel.isLoading && viewModel.allFeatures.isEmpty {
-                ProgressView("Lade Ladepunkte...")
+                ProgressView(String(localized: "list.loading"))
                     .padding(12)
                     .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 10))
                     .padding(.top, 12)
@@ -143,22 +144,22 @@ struct MapTabView: View {
     private var initialLocationTitle: String {
         switch locationService.authorizationStatus {
         case .denied, .restricted:
-            return "Standortfreigabe benötigt"
+            return String(localized: "location.deniedTitle")
         default:
-            return "Warte auf ersten GPS-Fix"
+            return String(localized: "location.pendingTitle")
         }
     }
 
     private var initialLocationDescription: String {
         switch locationService.authorizationStatus {
         case .notDetermined:
-            return "Nahe Ladepunkte werden geladen, sobald dein Standort freigegeben ist."
+            return String(localized: "location.idleMessage")
         case .denied, .restricted:
-            return "Aktiviere den Standortzugriff, damit die Karte nahe Ladepunkte laden kann."
+            return String(localized: "location.deniedMessage")
         case .authorizedWhenInUse, .authorizedAlways:
-            return "Die Karte lädt Ladepunkte, sobald der erste Standort bestimmt wurde."
+            return String(localized: "location.pendingMessage")
         @unknown default:
-            return "Die Karte lädt Ladepunkte, sobald der erste Standort bestimmt wurde."
+            return String(localized: "location.pendingMessage")
         }
     }
 
@@ -173,6 +174,12 @@ struct MapTabView: View {
         } else {
             centerOnNextLocationUpdate = true
             locationService.activate()
+            if !hasCenteredInitialLocation {
+                let center = ChargerRepository.defaultCatalogCenter
+                hasCenteredInitialLocation = true
+                lastQueriedCenter = center
+                viewModel.reloadMapForCenter(center)
+            }
         }
     }
 
@@ -201,6 +208,12 @@ struct MapTabView: View {
                     .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
             }
         }
-        .accessibilityLabel(isFavorite ? "Favorit" : "Ladepunkt")
+        .accessibilityLabel(markerAccessibilityLabel(for: feature, isFavorite: isFavorite))
+    }
+
+    private func markerAccessibilityLabel(for feature: GeoJSONFeature, isFavorite: Bool) -> String {
+        let stationLabel = String(localized: "station.chargingStation")
+        let favoritePrefix = isFavorite ? "\(String(localized: "info.legendFavorite")): " : ""
+        return "\(favoritePrefix)\(stationLabel), \(feature.properties.operatorName), \(feature.properties.city), \(Int(feature.properties.displayedMaxPowerKW.rounded())) kW"
     }
 }

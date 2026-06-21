@@ -10,7 +10,15 @@ struct FavoritesTabView: View {
 
         Group {
             if items.isEmpty {
-                ContentUnavailableView("Keine Favoriten", systemImage: "star")
+                if favoritesStore.favorites.isEmpty {
+                    ContentUnavailableView(
+                        String(localized: "favorites.empty"),
+                        systemImage: "star",
+                        description: Text(String(localized: "favorites.emptyHelp"))
+                    )
+                } else {
+                    ContentUnavailableView(String(localized: "favorites.loading"), systemImage: "star")
+                }
             } else {
                 List(items) { feature in
                     HStack(spacing: 10) {
@@ -23,7 +31,7 @@ struct FavoritesTabView: View {
                                 Text(feature.properties.city)
                                     .font(.body)
                                     .foregroundStyle(.secondary)
-                                Text("\(Int(feature.properties.displayedMaxPowerKW.rounded())) kW max • \(feature.properties.chargingPointsCount) Ladepunkte")
+                                Text("\(Int(feature.properties.displayedMaxPowerKW.rounded())) kW max • \(chargingPointLabel(feature.properties.chargingPointsCount))")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                                 if let occupancy = feature.occupancySummaryLabel ?? nil, !occupancy.isEmpty {
@@ -54,6 +62,7 @@ struct FavoritesTabView: View {
                             Image(systemName: "trash")
                                 .font(.headline)
                         }
+                        .accessibilityLabel(Text("aria.removeFavorite"))
                     }
                     .padding(.vertical, 2)
                 }
@@ -80,5 +89,13 @@ struct FavoritesTabView: View {
         case .unknown:
             return Color.secondary
         }
+    }
+
+    private func chargingPointLabel(_ count: Int) -> String {
+        let template = count == 1
+            ? String(localized: "station.chargingPointOne")
+            : String(localized: "station.chargingPointMany")
+        return template
+            .replacingOccurrences(of: "{count}", with: "\(count)")
     }
 }

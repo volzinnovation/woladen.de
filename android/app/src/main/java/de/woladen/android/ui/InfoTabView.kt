@@ -19,8 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.isSystemInDarkTheme
+import de.woladen.android.R
 import de.woladen.android.service.LocationAuthorizationStatus
 import de.woladen.android.service.LocationService
 import de.woladen.android.util.formatTimestamp
@@ -58,54 +60,54 @@ fun InfoTabView(
                 .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 84.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            InfoSection(title = "Über woladen.de") {
-                Text("Finde Schnellladesäulen mit der besten Aufenthaltsqualität. Wir zeigen dir, wo es sich lohnt zu laden. Ohne Ladeweile.")
+            InfoSection(title = stringResource(R.string.i18n_info_abouttitle)) {
+                Text(aboutText(viewModel))
                 viewModel.activeCatalogInfo?.let {
                     Text(
-                        "Datenstand: ${formatTimestamp(it.manifest.generatedAt)}",
+                        stringResource(R.string.i18n_info_dataupdated)
+                            .replace("{date}", formatTimestamp(it.manifest.generatedAt))
+                            .replace("{counts}", ""),
                         color = infoMuted
                     )
                 }
             }
 
-            InfoSection(title = "Legende") {
-                LegendRow(Color(0xFFFFD700), ">10 Angebote vor Ort (Gold)")
-                LegendRow(Color.Gray, ">5 Angebote vor Ort (Silber)")
-                LegendRow(Color(0xFF964B00), ">1 Angebote vor Ort (Bronze)")
-                LegendRow(infoMuted, "Keine Angebote vor Ort")
-                FavoriteLegendRow("Favorit")
+            InfoSection(title = stringResource(R.string.i18n_info_legendtitle)) {
+                LegendRow(Color(0xFFFFD700), stringResource(R.string.i18n_info_legendgold))
+                LegendRow(Color.Gray, stringResource(R.string.i18n_info_legendsilver))
+                LegendRow(Color(0xFF964B00), stringResource(R.string.i18n_info_legendbronze))
+                LegendRow(infoMuted, stringResource(R.string.i18n_info_legendgrey))
+                FavoriteLegendRow(stringResource(R.string.i18n_info_legendfavorite))
             }
 
-            InfoSection(title = "Kontakt & Code") {
-                Text("Entwickelt von Prof. Dr. Raphael Volz")
-                Text("Hochschule Pforzheim")
+            InfoSection(title = stringResource(R.string.i18n_info_contacttitle)) {
+                Text(stringResource(R.string.i18n_info_developedby))
                 LinkButton("raphael.volz@hs-pforzheim.de", "mailto:raphael.volz@hs-pforzheim.de")
-                LinkButton("GitHub Projekt", "https://github.com/volzinnovation/woladen.de")
-                Text("Die Moonshots Studios GmbH betreibt und vertreibt woladen.de und die begleitenden Apps für iPhone und Android.")
+                LinkButton(stringResource(R.string.i18n_info_github), "https://github.com/volzinnovation/woladen.de")
+                Text("${stringResource(R.string.i18n_info_distributedby)} Moonshots Studios GmbH")
                 LinkButton("woladen.de", WEBSITE_URL)
                 LinkButton("studios.moonshots.gmbh", STUDIOS_URL)
-                LinkButton("Impressum", IMPRINT_URL)
+                LinkButton(stringResource(R.string.i18n_info_imprintlink), IMPRINT_URL)
             }
 
-            InfoSection(title = "Datenschutz") {
-                Text("Standortzugriff ist optional. Wenn du ihn aktiv nutzt, verwendet die App ihn, um die Karte auf deine Umgebung zu fokussieren und nahe Ladepunkte zu sortieren.")
-                Text("Favoriten und der lokale API-Cache bleiben auf deinem Gerät.")
-                LinkButton("Datenschutzerklärung", PRIVACY_POLICY_URL)
+            InfoSection(title = stringResource(R.string.i18n_info_privacytitle)) {
+                Text(stringResource(R.string.i18n_info_privacybody))
+                LinkButton(stringResource(R.string.i18n_info_privacylink), PRIVACY_POLICY_URL)
             }
 
-            InfoSection(title = "Datenquellen & Lizenzen") {
+            InfoSection(title = stringResource(R.string.i18n_info_datasourcestitle)) {
                 LinkButton("BNetzA: Ladesäulenregister", "https://www.bundesnetzagentur.de/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/start.html")
                 LinkButton("Mobilithek", MOBILITHEK_URL)
                 Text(MOBILITHEK_SOURCES_TEXT)
-                Text("Kartendaten und POI-Daten © OpenStreetMap-Mitwirkende, verfügbar unter ODbL v1.0.")
-                LinkButton("OpenStreetMap: Copyright", "https://www.openstreetmap.org/copyright")
-                LinkButton("ODbL v1.0", "https://opendatacommons.org/licenses/odbl/1.0/")
+                Text(stringResource(R.string.i18n_info_osmnote))
+                LinkButton(stringResource(R.string.i18n_info_osmcopyright), "https://www.openstreetmap.org/copyright")
+                LinkButton(stringResource(R.string.i18n_info_odbllicense), "https://opendatacommons.org/licenses/odbl/1.0/")
             }
 
-            InfoSection(title = "Standort") {
+            InfoSection(title = stringResource(R.string.i18n_location_idletitle)) {
                 Text(locationStatusText(locationService.authorizationStatus))
                 Text(
-                    "Die App funktioniert auch ohne Standortfreigabe. Der Standort wird erst nach deiner Aktion abgefragt und danach für Kartenfokus und nahe Ladepunkte verwendet.",
+                    stringResource(R.string.i18n_location_idlemessage),
                     color = infoMuted
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -117,7 +119,7 @@ fun InfoTabView(
                             onRequestLocationPermission()
                         }
                     }, modifier = Modifier.testTag("info-location-refresh-button")) {
-                        Text("Standort aktualisieren")
+                        Text(stringResource(R.string.i18n_location_retry))
                     }
                 }
             }
@@ -126,13 +128,16 @@ fun InfoTabView(
                 Text(viewModel.humanReadableCatalogSource())
                 viewModel.activeCatalogInfo?.let {
                     Text("Version: ${it.manifest.version}")
-                    Text("Erstellt am: ${formatTimestamp(it.manifest.generatedAt)}")
+                    Text(
+                        stringResource(R.string.i18n_station_updated)
+                            .replace("{date}", formatTimestamp(it.manifest.generatedAt))
+                    )
                     Text("Schema: ${it.manifest.schema}", color = infoMuted)
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { viewModel.reloadCatalog(locationService.currentLocation) }) {
-                        Text("Katalog neu laden")
+                        Text(stringResource(R.string.i18n_errors_reload))
                     }
                 }
             }
@@ -144,11 +149,25 @@ fun InfoTabView(
     }
 }
 
+@Composable
+private fun aboutText(viewModel: AppViewModel): String {
+    val stationCount = viewModel.allFeatures.size
+    val chargerCount = viewModel.allFeatures.sumOf { it.properties.chargingPointsCount }
+    return listOf(
+        stringResource(R.string.i18n_info_aboutintro),
+        stationCount.toString(),
+        stringResource(R.string.i18n_info_aboutstationcountjoin),
+        chargerCount.toString(),
+        stringResource(R.string.i18n_info_aboutoutro)
+    ).joinToString(" ")
+}
+
+@Composable
 private fun locationStatusText(status: LocationAuthorizationStatus): String {
     return when (status) {
-        LocationAuthorizationStatus.AUTHORIZED_WHEN_IN_USE -> "Standortzugriff erlaubt"
-        LocationAuthorizationStatus.DENIED -> "Standortzugriff nicht erlaubt"
-        LocationAuthorizationStatus.NOT_DETERMINED -> "Standortzugriff noch nicht entschieden"
+        LocationAuthorizationStatus.AUTHORIZED_WHEN_IN_USE -> stringResource(R.string.i18n_location_positiontitle)
+        LocationAuthorizationStatus.DENIED -> stringResource(R.string.i18n_location_deniedtitle)
+        LocationAuthorizationStatus.NOT_DETERMINED -> stringResource(R.string.i18n_location_idletitle)
     }
 }
 

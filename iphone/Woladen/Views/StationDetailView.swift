@@ -41,7 +41,7 @@ struct StationDetailView: View {
                     }
                 }
             } else {
-                ContentUnavailableView("Ladepunkt nicht gefunden", systemImage: "bolt.slash")
+                ContentUnavailableView(String(localized: "errors.catalogTitle"), systemImage: "bolt.slash")
             }
         }
         .background(Color(.systemBackground))
@@ -55,7 +55,11 @@ struct StationDetailView: View {
     }
 
     private func amenityCountLabel(for feature: GeoJSONFeature) -> String {
-        feature.properties.amenitiesTotal == 1 ? "Angebot vor Ort" : "Angebote vor Ort"
+        let count = feature.properties.amenitiesTotal
+        let template = count == 1
+            ? String(localized: "amenity.one")
+            : String(localized: "amenity.many")
+        return template.replacingOccurrences(of: "{count}", with: "\(count)")
     }
 
     private func mapSection(_ feature: GeoJSONFeature) -> some View {
@@ -88,6 +92,7 @@ struct StationDetailView: View {
             }
             .padding(.leading, 12)
             .padding(.top, 12)
+            .accessibilityLabel(Text("aria.closeDetail"))
         }
     }
 
@@ -106,7 +111,11 @@ struct StationDetailView: View {
                         .frame(width: 42, height: 42)
                         .background(Color(.secondarySystemBackground), in: Circle())
                 }
-                .accessibilityLabel(favoritesStore.isFavorite(feature.properties.stationID) ? "Aus Favoriten entfernen" : "Als Favorit markieren")
+                .accessibilityLabel(
+                    favoritesStore.isFavorite(feature.properties.stationID)
+                    ? Text("aria.removeFavorite")
+                    : Text("aria.saveFavorite")
+                )
                 Text(feature.properties.operatorName)
                     .font(.title2.bold())
                     .lineLimit(2)
@@ -133,7 +142,7 @@ struct StationDetailView: View {
 
             HStack(alignment: .top, spacing: 10) {
                 detailStatCard(
-                    text: "\(Int(feature.properties.displayedMaxPowerKW.rounded())) kW max / \(feature.properties.chargingPointsCount) Ladepunkte",
+                    text: maxPowerLabel(for: feature),
                     systemImage: "bolt.fill"
                 )
                 if let occupancy {
@@ -166,7 +175,7 @@ struct StationDetailView: View {
                     Button {
                         openHelpdeskPhone(feature)
                     } label: {
-                        actionButtonLabel("Hilfe", systemImage: "phone.fill")
+                        actionButtonLabel(String(localized: "detail.help"), systemImage: "phone.fill")
                     }
                     .buttonStyle(.bordered)
                     .frame(maxWidth: .infinity, minHeight: 50)
@@ -229,11 +238,11 @@ struct StationDetailView: View {
 
     private func amenitySection(_ feature: GeoJSONFeature) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("\(feature.properties.amenitiesTotal) \(amenityCountLabel(for: feature))")
+            Text(amenityCountLabel(for: feature))
                 .font(.headline)
 
             if feature.properties.amenityExamples.isEmpty {
-                Text("Keine Details verfügbar.")
+                Text(String(localized: "amenity.noDetails"))
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(feature.properties.amenityExamples) { item in
@@ -245,12 +254,10 @@ struct StationDetailView: View {
 
     private func liveSectionTitle(for feature: GeoJSONFeature) -> String {
         guard let provider = compactLiveProvider(from: feature.occupancySourceLabel) else {
-            return "Live"
+            return String(localized: "station.live")
         }
-        if provider == "lokale API" {
-            return "Live von lokaler API"
-        }
-        return "Live von \(provider)"
+        return String(localized: "station.liveVia")
+            .replacingOccurrences(of: "{source}", with: provider)
     }
 
     private func compactLiveProvider(from sourceLabel: String?) -> String? {
@@ -285,7 +292,7 @@ struct StationDetailView: View {
         let source = feature.properties.detailSourceLabel
         if !rows.isEmpty || source != nil {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Details")
+                Text(String(localized: "station.details"))
                     .font(.headline)
 
                 ForEach(rows) { row in
@@ -363,7 +370,7 @@ struct StationDetailView: View {
                     .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
             }
         }
-        .accessibilityLabel(isFavorite ? "Favorit" : "Ladepunkt")
+        .accessibilityLabel(isFavorite ? Text("info.legendFavorite") : Text("station.chargingStation"))
     }
 
     private func updateRegionToFit() {
@@ -419,6 +426,20 @@ struct StationDetailView: View {
         let digits = feature.properties.helpdeskPhone.filter { "+0123456789".contains($0) }
         guard let url = URL(string: "tel:\(digits)") else { return }
         openURL(url)
+    }
+
+    private func maxPowerLabel(for feature: GeoJSONFeature) -> String {
+        String(localized: "station.maxPower")
+            .replacingOccurrences(of: "{power}", with: "\(Int(feature.properties.displayedMaxPowerKW.rounded()))")
+            .replacingOccurrences(of: "{points}", with: chargingPointLabel(feature.properties.chargingPointsCount))
+    }
+
+    private func chargingPointLabel(_ count: Int) -> String {
+        let template = count == 1
+            ? String(localized: "station.chargingPointOne")
+            : String(localized: "station.chargingPointMany")
+        return template
+            .replacingOccurrences(of: "{count}", with: "\(count)")
     }
 
     private func detailChip(text: String, systemImage: String) -> some View {

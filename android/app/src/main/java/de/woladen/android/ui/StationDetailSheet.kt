@@ -40,8 +40,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import de.woladen.android.R
 import de.woladen.android.model.AmenityExample
 import de.woladen.android.model.AvailabilityStatus
 import de.woladen.android.model.DetailRow
@@ -108,7 +110,7 @@ fun StationDetailSheet(
                         .align(Alignment.TopStart)
                         .padding(12.dp)
                 ) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Zurück")
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.i18n_aria_closedetail))
                 }
             }
 
@@ -123,7 +125,13 @@ fun StationDetailSheet(
                     ) {
                         Icon(
                             imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
-                            contentDescription = "Favorit",
+                            contentDescription = stringResource(
+                                if (isFavorite) {
+                                    R.string.i18n_aria_removefavorite
+                                } else {
+                                    R.string.i18n_aria_savefavorite
+                                }
+                            ),
                             tint = if (isFavorite) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -165,7 +173,7 @@ fun StationDetailSheet(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     SummaryStatCard(
-                        text = "${feature.properties.displayedMaxPowerKw.toInt()} kW max / ${feature.properties.chargingPointsCount} Ladepunkte",
+                        text = stationMaxPowerText(feature),
                         modifier = Modifier.weight(1f)
                     )
                     feature.occupancySummaryLabel?.let { occupancy ->
@@ -194,13 +202,13 @@ fun StationDetailSheet(
                         Text("Google", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     OutlinedButton(onClick = {
-                        openUri(context, "http://maps.apple.com/?daddr=${feature.latitude},${feature.longitude}")
+                        openUri(context, "geo:0,0?q=${feature.latitude},${feature.longitude}(${Uri.encode(feature.properties.operatorName)})")
                     }, modifier = Modifier
                         .weight(1f)
                         .heightIn(min = 52.dp)
                         .testTag("detail-system-nav-button")) {
                         Icon(Icons.Outlined.NearMe, contentDescription = null)
-                        Text("Apple", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("Maps", maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     if (feature.properties.helpdeskPhone.isNotBlank()) {
                         OutlinedButton(onClick = {
@@ -209,18 +217,18 @@ fun StationDetailSheet(
                         }, modifier = Modifier
                             .weight(1f)
                             .heightIn(min = 52.dp)) {
-                            Icon(Icons.Outlined.Phone, contentDescription = "Hilfe")
-                            Text("Hilfe", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Icon(Icons.Outlined.Phone, contentDescription = stringResource(R.string.i18n_detail_help))
+                            Text(stringResource(R.string.i18n_detail_help), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
 
                 Text(
-                    "${feature.properties.amenitiesTotal} ${formatAmenityCountLabel(feature.properties.amenitiesTotal)}",
+                    formatAmenityCountLabel(feature.properties.amenitiesTotal),
                     style = MaterialTheme.typography.titleMedium
                 )
                 if (feature.properties.amenityExamples.isEmpty()) {
-                    Text("Keine Details verfügbar.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.i18n_amenity_nodetails), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     for (item in feature.properties.amenityExamples) {
                         AmenityRow(item)
@@ -235,7 +243,7 @@ fun StationDetailSheet(
                 }
 
                 if (feature.properties.staticDetailRows.isNotEmpty() || feature.properties.detailSourceLabel != null) {
-                    Text("Details", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.i18n_station_details), style = MaterialTheme.typography.titleMedium)
                     for (row in feature.properties.staticDetailRows) {
                         DetailInfoRow(row)
                     }
@@ -262,8 +270,192 @@ fun StationDetailSheet(
     }
 }
 
+@Composable
+fun StationDetailPane(
+    feature: GeoJsonFeature,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val detailPoints = remember(feature.id, isFavorite) { buildDetailMapPoints(feature, isFavorite) }
+    var showMiniMap by remember(feature.id) { mutableStateOf(false) }
+
+    LaunchedEffect(feature.id) {
+        showMiniMap = false
+        delay(150)
+        showMiniMap = true
+    }
+
+    Column(
+        modifier = modifier
+            .testTag("station-detail-pane")
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 24.dp)
+    ) {
+        Box {
+            if (showMiniMap) {
+                DetailMiniMapView(
+                    points = detailPoints,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                )
+            }
+
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .testTag("detail-close-button")
+                    .align(Alignment.TopStart)
+                    .padding(12.dp)
+            ) {
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.i18n_aria_closedetail))
+            }
+        }
+
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                IconButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier.testTag("detail-favorite-button")
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
+                        contentDescription = stringResource(
+                            if (isFavorite) {
+                                R.string.i18n_aria_removefavorite
+                            } else {
+                                R.string.i18n_aria_savefavorite
+                            }
+                        ),
+                        tint = if (isFavorite) Color(0xFFF59E0B) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = feature.properties.operatorName,
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Text(
+                "${feature.properties.address}, ${feature.properties.postcode} ${feature.properties.city}",
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SummaryStatCard(
+                    text = stationMaxPowerText(feature),
+                    modifier = Modifier.weight(1f)
+                )
+                feature.occupancySummaryLabel?.let { occupancy ->
+                    SummaryStatCard(
+                        text = occupancy,
+                        modifier = Modifier.weight(1f),
+                        tint = availabilityColor(feature.availabilityStatus)
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Button(onClick = {
+                    openUri(
+                        context,
+                        "https://www.google.com/maps/dir/?api=1&destination=${feature.latitude},${feature.longitude}"
+                    )
+                }, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
+                    Icon(Icons.Outlined.NearMe, contentDescription = null)
+                    Text("Google", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                OutlinedButton(onClick = {
+                    openUri(context, "geo:0,0?q=${feature.latitude},${feature.longitude}(${Uri.encode(feature.properties.operatorName)})")
+                }, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
+                    Icon(Icons.Outlined.NearMe, contentDescription = null)
+                    Text("Maps", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+
+            Text(formatAmenityCountLabel(feature.properties.amenitiesTotal), style = MaterialTheme.typography.titleMedium)
+            if (feature.properties.amenityExamples.isEmpty()) {
+                Text(stringResource(R.string.i18n_amenity_nodetails), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                for (item in feature.properties.amenityExamples) {
+                    AmenityRow(item)
+                }
+            }
+
+            if (feature.liveEvseRows.isNotEmpty()) {
+                Text(liveSectionTitle(feature), style = MaterialTheme.typography.titleMedium)
+                for (row in feature.liveEvseRows) {
+                    LiveEvseRowCard(row)
+                }
+            }
+
+            if (feature.properties.staticDetailRows.isNotEmpty() || feature.properties.detailSourceLabel != null) {
+                Text(stringResource(R.string.i18n_station_details), style = MaterialTheme.typography.titleMedium)
+                for (row in feature.properties.staticDetailRows) {
+                    DetailInfoRow(row)
+                }
+                feature.properties.detailSourceLabel?.let { source ->
+                    Text(
+                        source,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun stationMaxPowerText(feature: GeoJsonFeature): String =
+    stringResource(R.string.i18n_station_maxpower)
+        .replace("{power}", feature.properties.displayedMaxPowerKw.toInt().toString())
+        .replace("{points}", chargingPointLabel(feature.properties.chargingPointsCount))
+
+@Composable
+private fun chargingPointLabel(count: Int): String {
+    val template = stringResource(
+        if (count == 1) {
+            R.string.i18n_station_chargingpointone
+        } else {
+            R.string.i18n_station_chargingpointmany
+        }
+    )
+    return template.replace("{count}", count.toString())
+}
+
+@Composable
 private fun formatAmenityCountLabel(count: Int): String =
-    if (count == 1) "Angebot vor Ort" else "Angebote vor Ort"
+    stringResource(
+        if (count == 1) {
+            R.string.i18n_amenity_one
+        } else {
+            R.string.i18n_amenity_many
+        }
+    ).replace("{count}", count.toString())
 
 @Composable
 private fun SummaryStatCard(
@@ -503,5 +695,7 @@ private fun buildDetailMapPoints(feature: GeoJsonFeature, isFavorite: Boolean): 
 
 private fun openUri(context: android.content.Context, url: String) {
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-    context.startActivity(intent)
+    runCatching {
+        context.startActivity(intent)
+    }
 }

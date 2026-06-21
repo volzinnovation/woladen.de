@@ -34,9 +34,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import de.woladen.android.R
 import de.woladen.android.model.AvailabilityStatus
 import de.woladen.android.model.availabilityStatus
 import de.woladen.android.model.GeoJsonFeature
@@ -84,7 +86,7 @@ fun ListTabView(
         when {
             viewModel.loadError != null -> {
                 EmptyState(
-                    title = "Fehler beim Laden",
+                    title = stringResource(R.string.i18n_errors_dataload),
                     subtitle = viewModel.loadError.orEmpty(),
                     modifier = Modifier.align(Alignment.Center)
                 )
@@ -104,7 +106,7 @@ fun ListTabView(
 
             viewModel.discoveredFeatures.isEmpty() -> {
                 EmptyState(
-                    title = "Keine Ladepunkte",
+                    title = stringResource(R.string.i18n_list_empty),
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
@@ -147,26 +149,28 @@ fun ListTabView(
                 .padding(top = 10.dp, end = 14.dp)
                 .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
         ) {
-            Icon(Icons.Filled.FilterList, contentDescription = "Filter")
+            Icon(Icons.Filled.FilterList, contentDescription = stringResource(R.string.i18n_aria_filteropen))
         }
     }
 }
 
+@Composable
 private fun initialLocationTitle(status: LocationAuthorizationStatus): String {
     return when (status) {
-        LocationAuthorizationStatus.DENIED -> "Standortfreigabe benötigt"
-        else -> "Warte auf ersten GPS-Fix"
+        LocationAuthorizationStatus.DENIED -> stringResource(R.string.i18n_location_deniedtitle)
+        else -> stringResource(R.string.i18n_location_pendingtitle)
     }
 }
 
+@Composable
 private fun initialLocationDescription(status: LocationAuthorizationStatus): String {
     return when (status) {
         LocationAuthorizationStatus.NOT_DETERMINED ->
-            "Nahe Ladepunkte werden geladen, sobald dein Standort freigegeben ist."
+            stringResource(R.string.i18n_location_idlemessage)
         LocationAuthorizationStatus.DENIED ->
-            "Aktiviere den Standortzugriff, damit die Liste nahe Ladepunkte laden kann."
+            stringResource(R.string.i18n_location_deniedmessage)
         LocationAuthorizationStatus.AUTHORIZED_WHEN_IN_USE ->
-            "Die Liste lädt Ladepunkte, sobald der erste Standort bestimmt wurde."
+            stringResource(R.string.i18n_location_pendingmessage)
     }
 }
 
@@ -194,7 +198,7 @@ private fun StationRow(
                     if (isFavorite) {
                         Icon(
                             imageVector = Icons.Filled.Star,
-                            contentDescription = "Favorit",
+                            contentDescription = stringResource(R.string.i18n_info_legendfavorite),
                             tint = Color(0xFFF59E0B)
                         )
                     } else {
@@ -220,7 +224,7 @@ private fun StationRow(
             }
 
             Text(
-                text = "${feature.properties.city} • ${feature.properties.displayedMaxPowerKw.toInt()} kW • ${feature.properties.chargingPointsCount} Ladepunkte",
+                text = "${feature.properties.city} • ${feature.properties.displayedMaxPowerKw.toInt()} kW • ${chargingPointLabel(feature.properties.chargingPointsCount)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -293,6 +297,18 @@ private fun occupancyColor(feature: GeoJsonFeature): Color {
         AvailabilityStatus.OUT_OF_ORDER -> Color(0xFFB91C1C)
         AvailabilityStatus.UNKNOWN -> Color.Gray
     }
+}
+
+@Composable
+private fun chargingPointLabel(count: Int): String {
+    val template = stringResource(
+        if (count == 1) {
+            R.string.i18n_station_chargingpointone
+        } else {
+            R.string.i18n_station_chargingpointmany
+        }
+    )
+    return template.replace("{count}", count.toString())
 }
 
 @Composable

@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import de.woladen.android.R
 import de.woladen.android.model.ActiveCatalogSourceInfo
 import de.woladen.android.model.CatalogSourceManifest
 import de.woladen.android.model.FilterState
@@ -18,6 +19,7 @@ import de.woladen.android.model.matches
 import de.woladen.android.repository.ChargerRepository
 import de.woladen.android.service.LiveApiClient
 import de.woladen.android.service.lookupStationIdBatches
+import de.woladen.android.util.AppStrings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -138,6 +140,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun reloadCatalog(userLocation: Location?) {
+        repository.invalidateCache()
         load(userLocation)
     }
 
@@ -282,7 +285,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun humanReadableCatalogSource(): String {
-        val info = activeCatalogInfo ?: return "unbekannt"
+        val info = activeCatalogInfo ?: return AppStrings.get(R.string.i18n_info_sourceunknown)
         return when (info.source) {
             "catalog_api" -> "Live-Katalog via live-eu.woladen.de"
             else -> "Live-Katalog via live-eu.woladen.de"

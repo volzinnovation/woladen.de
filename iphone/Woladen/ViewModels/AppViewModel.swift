@@ -243,7 +243,7 @@ final class AppViewModel: ObservableObject {
     }
 
     func humanReadableCatalogSource() -> String {
-        guard let activeCatalogInfo else { return "unbekannt" }
+        guard let activeCatalogInfo else { return String(localized: "info.sourceUnknown") }
         if activeCatalogInfo.source == "catalog-api" {
             return "Live-EU-Katalog API (\(activeCatalogInfo.manifest.version))"
         }

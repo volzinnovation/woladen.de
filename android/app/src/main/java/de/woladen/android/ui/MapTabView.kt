@@ -29,9 +29,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import de.woladen.android.R
 import de.woladen.android.service.LocationAuthorizationStatus
 import de.woladen.android.service.LocationService
 import de.woladen.android.ui.components.MainMapView
@@ -110,7 +112,7 @@ fun MapTabView(
                     shape = CircleShape
                 ).testTag("map-location-button")
             ) {
-                Icon(Icons.Filled.MyLocation, contentDescription = "Standort")
+                Icon(Icons.Filled.MyLocation, contentDescription = stringResource(R.string.i18n_aria_locate))
             }
 
             IconButton(
@@ -120,7 +122,7 @@ fun MapTabView(
                     shape = CircleShape
                 ).testTag("map-filter-button")
             ) {
-                Icon(Icons.Filled.FilterList, contentDescription = "Filter")
+                Icon(Icons.Filled.FilterList, contentDescription = stringResource(R.string.i18n_aria_filteropen))
             }
         }
 
@@ -136,7 +138,7 @@ fun MapTabView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CircularProgressIndicator(modifier = Modifier.padding(2.dp))
-                    Text("Lade Ladepunkte...")
+                    Text(stringResource(R.string.i18n_list_loading))
                 }
             }
         }
@@ -216,20 +218,22 @@ private fun shouldQuery(lastQueriedCenter: Pair<Double, Double>?, lat: Double, l
     return out[0] > 250f
 }
 
+@Composable
 private fun mapInitialLocationTitle(status: LocationAuthorizationStatus): String {
     return when (status) {
-        LocationAuthorizationStatus.DENIED -> "Standortfreigabe benötigt"
-        else -> "Warte auf ersten GPS-Fix"
+        LocationAuthorizationStatus.DENIED -> stringResource(R.string.i18n_location_deniedtitle)
+        else -> stringResource(R.string.i18n_location_pendingtitle)
     }
 }
 
+@Composable
 private fun mapInitialLocationDescription(status: LocationAuthorizationStatus): String {
     return when (status) {
         LocationAuthorizationStatus.NOT_DETERMINED ->
-            "Nahe Ladepunkte werden geladen, sobald dein Standort freigegeben ist."
+            stringResource(R.string.i18n_location_idlemessage)
         LocationAuthorizationStatus.DENIED ->
-            "Aktiviere den Standortzugriff, damit die Karte nahe Ladepunkte laden kann."
+            stringResource(R.string.i18n_location_deniedmessage)
         LocationAuthorizationStatus.AUTHORIZED_WHEN_IN_USE ->
-            "Die Karte lädt Ladepunkte, sobald der erste Standort bestimmt wurde."
+            stringResource(R.string.i18n_location_pendingmessage)
     }
 }

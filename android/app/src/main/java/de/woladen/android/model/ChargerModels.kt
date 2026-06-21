@@ -1,5 +1,12 @@
 package de.woladen.android.model
 
+import de.woladen.android.R
+import de.woladen.android.util.AppStrings
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
+
 private const val MAX_REASONABLE_DISPLAY_POWER_KW = 400.0
 
 data class GeoJsonFeatureCollection(
@@ -99,27 +106,27 @@ data class ChargerProperties(
             if (knownEvses > 0 && occupancyUnknownEvses > 0) {
                 val parts = mutableListOf<String>()
                 if (occupancyAvailableEvses > 0) {
-                    parts += "${occupancyAvailableEvses} frei"
+                    parts += AppStrings.count(R.string.i18n_availability_available, occupancyAvailableEvses)
                 }
                 if (occupancyOccupiedEvses > 0) {
-                    parts += "${occupancyOccupiedEvses} belegt"
+                    parts += AppStrings.count(R.string.i18n_availability_occupiedcount, occupancyOccupiedEvses)
                 }
                 if (occupancyOutOfOrderEvses > 0) {
-                    parts += "${occupancyOutOfOrderEvses} defekt"
+                    parts += AppStrings.count(R.string.i18n_availability_outofordercount, occupancyOutOfOrderEvses)
                 }
-                parts += "${occupancyUnknownEvses} unbekannt"
+                parts += AppStrings.count(R.string.i18n_availability_unknowncount, occupancyUnknownEvses)
                 return parts.joinToString(", ")
             }
             if (occupancyAvailableEvses > 0) {
-                return "${occupancyAvailableEvses}/${occupancyTotalEvses} frei"
+                return "${occupancyAvailableEvses}/${occupancyTotalEvses} ${AppStrings.get(R.string.i18n_availability_free).lowercase()}"
             }
             if (occupancyOccupiedEvses > 0) {
-                return "${occupancyOccupiedEvses}/${occupancyTotalEvses} belegt"
+                return "${occupancyOccupiedEvses}/${occupancyTotalEvses} ${AppStrings.get(R.string.i18n_availability_occupied).lowercase()}"
             }
             if (occupancyUnknownEvses <= 0 && occupancyOutOfOrderEvses >= occupancyTotalEvses) {
-                return "Außer Betrieb"
+                return AppStrings.get(R.string.i18n_availability_out_of_order)
             }
-            return "Belegung unbekannt"
+            return AppStrings.get(R.string.i18n_availability_summaryunknown)
         }
 
     val occupancySourceLabel: String?
@@ -128,18 +135,18 @@ data class ChargerProperties(
                 return null
             }
             if (occupancySourceName.startsWith("Mobilithek")) {
-                return "Live via $occupancySourceName"
+                return liveVia(occupancySourceName)
             }
             if (occupancySourceUid.startsWith("mobilithek_")) {
                 if (occupancySourceName.isBlank()) {
-                    return "Live via Mobilithek"
+                    return liveVia("Mobilithek")
                 }
-                return "Live via Mobilithek ($occupancySourceName)"
+                return liveVia("Mobilithek ($occupancySourceName)")
             }
             if (occupancySourceName.isBlank()) {
-                return "Live via MobiData BW"
+                return liveVia("MobiData BW")
             }
-            return "Live via MobiData BW ($occupancySourceName)"
+            return liveVia("MobiData BW ($occupancySourceName)")
         }
 
     val hasPrimaryDetailHighlights: Boolean
@@ -147,13 +154,33 @@ data class ChargerProperties(
 
     val staticDetailRows: List<DetailRow>
         get() = buildList {
-            if (paymentMethodsDisplay.isNotBlank()) add(DetailRow("Bezahlen", paymentMethodsDisplay))
-            if (authMethodsDisplay.isNotBlank()) add(DetailRow("Zugang", authMethodsDisplay))
-            if (connectorTypesDisplay.isNotBlank()) add(DetailRow("Stecker", connectorTypesDisplay))
-            if (currentTypesDisplay.isNotBlank()) add(DetailRow("Stromart", currentTypesDisplay))
-            if (connectorCount > 0) add(DetailRow("Anschlüsse", "$connectorCount Steckplätze"))
-            if (serviceTypesDisplay.isNotBlank()) add(DetailRow("Service", serviceTypesDisplay))
-            greenEnergy?.let { add(DetailRow("Strom", if (it) "100 % erneuerbar" else "Nicht als erneuerbar markiert")) }
+            if (paymentMethodsDisplay.isNotBlank()) add(DetailRow(AppStrings.get(R.string.i18n_staticdetails_payment), paymentMethodsDisplay))
+            if (authMethodsDisplay.isNotBlank()) add(DetailRow(AppStrings.get(R.string.i18n_staticdetails_access), authMethodsDisplay))
+            if (connectorTypesDisplay.isNotBlank()) add(DetailRow(AppStrings.get(R.string.i18n_staticdetails_connectors), connectorTypesDisplay))
+            if (currentTypesDisplay.isNotBlank()) add(DetailRow(AppStrings.get(R.string.i18n_staticdetails_currenttype), currentTypesDisplay))
+            if (connectorCount > 0) {
+                add(
+                    DetailRow(
+                        AppStrings.get(R.string.i18n_staticdetails_connectors),
+                        AppStrings.count(R.string.i18n_staticdetails_sockets, connectorCount)
+                    )
+                )
+            }
+            if (serviceTypesDisplay.isNotBlank()) add(DetailRow(AppStrings.get(R.string.i18n_staticdetails_service), serviceTypesDisplay))
+            greenEnergy?.let {
+                add(
+                    DetailRow(
+                        AppStrings.get(R.string.i18n_staticdetails_energy),
+                        AppStrings.get(
+                            if (it) {
+                                R.string.i18n_staticdetails_renewable
+                            } else {
+                                R.string.i18n_staticdetails_notrenewable
+                            }
+                        )
+                    )
+                )
+            }
         }
 
     val detailSourceLabel: String?
@@ -165,12 +192,12 @@ data class ChargerProperties(
             }
             if (timestamp != null) {
                 return if (sourceName.isEmpty()) {
-                    "Stand $timestamp"
+                    AppStrings.get(R.string.i18n_station_updated, mapOf("date" to timestamp))
                 } else {
-                    "Details via $sourceName • Stand $timestamp"
+                    AppStrings.get(R.string.i18n_station_detailssource, mapOf("source" to sourceName, "date" to timestamp))
                 }
             }
-            return "Details via $sourceName"
+            return AppStrings.get(R.string.i18n_station_detailssourceonly, mapOf("source" to sourceName))
         }
 }
 
@@ -204,10 +231,14 @@ private fun formatDetailTimestamp(value: String): String? {
     if (value.isBlank()) return null
     return try {
         val instant = java.time.Instant.parse(value)
-        val formatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm")
-            .withZone(java.time.ZoneId.systemDefault())
+        val formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
+            .withLocale(Locale.getDefault())
+            .withZone(ZoneId.systemDefault())
         formatter.format(instant)
     } catch (_: Exception) {
         value
     }
 }
+
+private fun liveVia(source: String): String =
+    AppStrings.get(R.string.i18n_station_livevia, mapOf("source" to source))

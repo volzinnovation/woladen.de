@@ -30,10 +30,15 @@ class ChargerRepository(
         val operatorName: String
     )
 
+    private data class CacheEntry<T>(
+        val value: T,
+        val storedAtMs: Long = System.currentTimeMillis()
+    )
+
     private val cacheLock = Any()
-    private val catalogSearchCache = BoundedLruCache<CatalogSearchKey, CatalogLoadResult>(MAX_SEARCH_CACHE_ENTRIES)
+    private val catalogSearchCache = BoundedLruCache<CatalogSearchKey, CacheEntry<CatalogLoadResult>>(MAX_SEARCH_CACHE_ENTRIES)
     private val stationSummaryCache = BoundedLruCache<String, GeoJsonFeature>(MAX_STATION_CACHE_ENTRIES)
-    private val stationDetailCache = BoundedLruCache<String, GeoJsonFeature>(MAX_DETAIL_CACHE_ENTRIES)
+    private val stationDetailCache = BoundedLruCache<String, CacheEntry<GeoJsonFeature>>(MAX_DETAIL_CACHE_ENTRIES)
 
     suspend fun searchCatalog(
         latitude: Double,
@@ -51,17 +56,31 @@ class ChargerRepository(
             operatorName = filterState.operatorName.trim()
         )
 
+        var staleSearch: CatalogLoadResult? = null
+        val now = System.currentTimeMillis()
         synchronized(cacheLock) {
-            catalogSearchCache[key]?.let { return it }
+            catalogSearchCache[key]?.let { entry ->
+                if (now - entry.storedAtMs <= SEARCH_FRESH_TTL_MS) {
+                    return entry.value
+                }
+                if (now - entry.storedAtMs <= SEARCH_STALE_TTL_MS) {
+                    staleSearch = entry.value
+                }
+            }
         }
 
-        val response = liveApiClient.catalogSearch(
-            latitude = latitude,
-            longitude = longitude,
-            radiusMeters = radiusMeters,
-            limit = limit,
-            filterState = filterState
-        )
+        val response = runCatching {
+            liveApiClient.catalogSearch(
+                latitude = latitude,
+                longitude = longitude,
+                radiusMeters = radiusMeters,
+                limit = limit,
+                filterState = filterState
+            )
+        }.getOrElse { error ->
+            staleSearch?.let { return it }
+            throw error
+        }
         val features = response.stations.map(::catalogStationToFeature)
         val result = CatalogLoadResult(
             features = features,
@@ -70,7 +89,7 @@ class ChargerRepository(
         )
 
         synchronized(cacheLock) {
-            catalogSearchCache[key] = result
+            catalogSearchCache[key] = CacheEntry(result)
             features.forEach { stationSummaryCache[it.properties.stationId] = it }
         }
 
@@ -79,24 +98,46 @@ class ChargerRepository(
 
     suspend fun loadCatalogStationDetail(stationId: String): GeoJsonFeature {
         val normalizedStationId = stationId.trim()
+        var staleDetail: GeoJsonFeature? = null
+        val now = System.currentTimeMillis()
         synchronized(cacheLock) {
-            stationDetailCache[normalizedStationId]?.let { return it }
+            stationDetailCache[normalizedStationId]?.let { entry ->
+                if (now - entry.storedAtMs <= DETAIL_FRESH_TTL_MS) {
+                    return entry.value
+                }
+                if (now - entry.storedAtMs <= DETAIL_STALE_TTL_MS) {
+                    staleDetail = entry.value
+                }
+            }
         }
 
-        val detail = liveApiClient.catalogStationDetail(normalizedStationId)
+        val detail = runCatching {
+            liveApiClient.catalogStationDetail(normalizedStationId)
+        }.getOrElse { error ->
+            staleDetail?.let { return it }
+            throw error
+        }
         val feature = catalogStationToFeature(detail.station, detail)
         synchronized(cacheLock) {
-            stationDetailCache[normalizedStationId] = feature
+            stationDetailCache[normalizedStationId] = CacheEntry(feature)
             stationSummaryCache[normalizedStationId] = feature
         }
         return feature
+    }
+
+    fun invalidateCache() {
+        synchronized(cacheLock) {
+            catalogSearchCache.clear()
+            stationDetailCache.clear()
+            stationSummaryCache.clear()
+        }
     }
 
     fun cachedFeaturesForStationIds(stationIds: Set<String>): List<GeoJsonFeature> {
         if (stationIds.isEmpty()) return emptyList()
         synchronized(cacheLock) {
             return stationIds.mapNotNull { stationId ->
-                stationDetailCache[stationId] ?: stationSummaryCache[stationId]
+                stationDetailCache[stationId]?.value ?: stationSummaryCache[stationId]
             }
         }
     }
@@ -222,6 +263,10 @@ class ChargerRepository(
         private const val MAX_SEARCH_CACHE_ENTRIES = 48
         private const val MAX_STATION_CACHE_ENTRIES = 600
         private const val MAX_DETAIL_CACHE_ENTRIES = 180
+        private const val SEARCH_FRESH_TTL_MS = 5 * 60 * 1000L
+        private const val SEARCH_STALE_TTL_MS = 24 * 60 * 60 * 1000L
+        private const val DETAIL_FRESH_TTL_MS = 24 * 60 * 60 * 1000L
+        private const val DETAIL_STALE_TTL_MS = 7 * 24 * 60 * 60 * 1000L
     }
 }
 

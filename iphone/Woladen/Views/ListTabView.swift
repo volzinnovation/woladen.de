@@ -14,7 +14,7 @@ struct ListTabView: View {
         ZStack(alignment: .topTrailing) {
             Group {
                 if let error = viewModel.loadError {
-                    ContentUnavailableView("Fehler beim Laden", systemImage: "exclamationmark.triangle", description: Text(error))
+                    ContentUnavailableView(String(localized: "errors.dataLoad"), systemImage: "exclamationmark.triangle", description: Text(error))
                 } else if viewModel.isAwaitingFirstLocationFix {
                     ContentUnavailableView(
                         initialLocationTitle,
@@ -22,9 +22,9 @@ struct ListTabView: View {
                         description: Text(initialLocationDescription)
                     )
                 } else if viewModel.isLoading && viewModel.allFeatures.isEmpty {
-                    ProgressView("Lade Ladepunkte...")
+                    ProgressView(String(localized: "list.loading"))
                 } else if viewModel.discoveredFeatures.isEmpty {
-                    ContentUnavailableView("Keine Ladepunkte", systemImage: "bolt.slash")
+                    ContentUnavailableView(String(localized: "list.empty"), systemImage: "bolt.slash")
                 } else {
                     ScrollView {
                         LazyVGrid(
@@ -64,6 +64,7 @@ struct ListTabView: View {
                 }
                 .padding(.trailing, 14)
                 .padding(.top, 10)
+                .accessibilityLabel(Text("aria.filterOpen"))
             }
         .onAppear(perform: reloadForActiveLocation)
         .onChange(of: scenePhase) { _, newValue in
@@ -84,22 +85,22 @@ struct ListTabView: View {
     private var initialLocationTitle: String {
         switch locationService.authorizationStatus {
         case .denied, .restricted:
-            return "Standortfreigabe benötigt"
+            return String(localized: "location.deniedTitle")
         default:
-            return "Warte auf ersten GPS-Fix"
+            return String(localized: "location.pendingTitle")
         }
     }
 
     private var initialLocationDescription: String {
         switch locationService.authorizationStatus {
         case .notDetermined:
-            return "Nahe Ladepunkte werden geladen, sobald dein Standort freigegeben ist."
+            return String(localized: "location.idleMessage")
         case .denied, .restricted:
-            return "Aktiviere den Standortzugriff, damit die Liste nahe Ladepunkte laden kann."
+            return String(localized: "location.deniedMessage")
         case .authorizedWhenInUse, .authorizedAlways:
-            return "Die Liste lädt Ladepunkte, sobald der erste Standort bestimmt wurde."
+            return String(localized: "location.pendingMessage")
         @unknown default:
-            return "Die Liste lädt Ladepunkte, sobald der erste Standort bestimmt wurde."
+            return String(localized: "location.pendingMessage")
         }
     }
 
@@ -145,7 +146,7 @@ private struct StationRowView: View {
                 }
             }
 
-            Text("\(feature.properties.city) • \(Int(feature.properties.displayedMaxPowerKW.rounded())) kW • \(feature.properties.chargingPointsCount) Ladepunkte")
+            Text("\(feature.properties.city) • \(Int(feature.properties.displayedMaxPowerKW.rounded())) kW • \(chargingPointLabel(feature.properties.chargingPointsCount))")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
@@ -208,5 +209,13 @@ private struct StationRowView: View {
         case .unknown:
             return Color.secondary
         }
+    }
+
+    private func chargingPointLabel(_ count: Int) -> String {
+        let template = count == 1
+            ? String(localized: "station.chargingPointOne")
+            : String(localized: "station.chargingPointMany")
+        return template
+            .replacingOccurrences(of: "{count}", with: "\(count)")
     }
 }

@@ -64,7 +64,8 @@ fun WoladenAppScreen(
             .semantics { testTagsAsResourceId = true }
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            if (maxWidth >= 840.dp) {
+            val usesWideLayout = maxWidth >= 840.dp
+            if (usesWideLayout) {
                 WideAppLayout(
                     viewModel = viewModel,
                     locationService = locationService,
@@ -80,6 +81,20 @@ fun WoladenAppScreen(
                     onRequestLocationPermission = onRequestLocationPermission,
                     onShowFilter = { showingFilter = true }
                 )
+            }
+            if (!usesWideLayout) {
+                viewModel.selectedFeature?.let { feature ->
+                    StationDetailSheet(
+                        feature = feature,
+                        isFavorite = favoritesStore.isFavorite(feature.properties.stationId),
+                        onToggleFavorite = {
+                            favoritesStore.toggle(feature.properties.stationId)
+                        },
+                        onDismiss = {
+                            viewModel.clearSelectedFeature()
+                        }
+                    )
+                }
             }
         }
     }
@@ -98,18 +113,6 @@ fun WoladenAppScreen(
         )
     }
 
-    viewModel.selectedFeature?.let { feature ->
-        StationDetailSheet(
-            feature = feature,
-            isFavorite = favoritesStore.isFavorite(feature.properties.stationId),
-            onToggleFavorite = {
-                favoritesStore.toggle(feature.properties.stationId)
-            },
-            onDismiss = {
-                viewModel.clearSelectedFeature()
-            }
-        )
-    }
 }
 
 @Composable
@@ -169,6 +172,24 @@ private fun WideAppLayout(
                 onRequestLocationPermission = onRequestLocationPermission,
                 onShowFilter = onShowFilter
             )
+        }
+        if (viewModel.selectedTab != AppViewModel.AppTab.INFO) {
+            viewModel.selectedFeature?.let { feature ->
+                VerticalDivider()
+                StationDetailPane(
+                    feature = feature,
+                    isFavorite = favoritesStore.isFavorite(feature.properties.stationId),
+                    onToggleFavorite = {
+                        favoritesStore.toggle(feature.properties.stationId)
+                    },
+                    onDismiss = {
+                        viewModel.clearSelectedFeature()
+                    },
+                    modifier = Modifier
+                        .weight(0.42f)
+                        .fillMaxHeight()
+                )
+            }
         }
     }
 }

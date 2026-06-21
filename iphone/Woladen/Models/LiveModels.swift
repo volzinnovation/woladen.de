@@ -1,12 +1,12 @@
 import Foundation
 
 private let liveDynamicKeyLabels: [String: String] = [
-    "expectedAvailableFromTime": "Ab",
-    "expectedAvailableToTime": "Bis",
-    "expectedAvailableUntilTime": "Bis",
-    "startTime": "Ab",
-    "endTime": "Bis",
-    "lastUpdated": "Seit",
+    "expectedAvailableFromTime": String(localized: "station.nextSlot"),
+    "expectedAvailableToTime": String(localized: "station.nextSlot"),
+    "expectedAvailableUntilTime": String(localized: "station.nextSlot"),
+    "startTime": String(localized: "station.nextSlot"),
+    "endTime": String(localized: "station.nextSlot"),
+    "lastUpdated": String(localized: "station.updated").replacingOccurrences(of: "{date}", with: ""),
     "value": ""
 ]
 
@@ -225,13 +225,13 @@ enum AvailabilityStatus: String {
     var label: String {
         switch self {
         case .free:
-            return "Frei"
+            return String(localized: "availability.free")
         case .occupied:
-            return "Belegt"
+            return String(localized: "availability.occupied")
         case .outOfOrder:
-            return "Defekt"
+            return String(localized: "availability.out_of_order")
         case .unknown:
-            return "Unbekannt"
+            return String(localized: "availability.unknown")
         }
     }
 }
@@ -325,18 +325,18 @@ extension GeoJSONFeature {
 
         var parts: [String] = []
         if counts.available > 0 {
-            parts.append("\(counts.available) frei")
+            parts.append(localizedCount("availability.available", count: counts.available))
         }
         if counts.occupied > 0 {
-            parts.append("\(counts.occupied) belegt")
+            parts.append(localizedCount("availability.occupiedCount", count: counts.occupied))
         }
         if counts.outOfOrder > 0 {
-            parts.append("\(counts.outOfOrder) defekt")
+            parts.append(localizedCount("availability.outOfOrderCount", count: counts.outOfOrder))
         }
         if counts.unknown > 0 {
-            parts.append("\(counts.unknown) unbekannt")
+            parts.append(localizedCount("availability.unknownCount", count: counts.unknown))
         }
-        return parts.isEmpty ? "Belegung unbekannt" : parts.joined(separator: ", ")
+        return parts.isEmpty ? String(localized: "availability.summaryUnknown") : parts.joined(separator: ", ")
     }
 
     var occupancySourceLabel: String? {
@@ -344,38 +344,48 @@ extension GeoJSONFeature {
             let provider = liveSourceLabel
             let elapsed = formattedElapsedLiveTime(liveObservedTimestamp)
             if let provider, let elapsed {
-                return "Live via \(provider) • Seit \(elapsed)"
+                return String(localized: "station.liveViaUpdated")
+                    .replacingOccurrences(of: "{source}", with: provider)
+                    .replacingOccurrences(of: "{date}", with: elapsed)
             }
             if let provider {
-                return "Live via \(provider)"
+                return String(localized: "station.liveVia")
+                    .replacingOccurrences(of: "{source}", with: provider)
             }
             if let elapsed {
-                return "Live seit \(elapsed)"
+                return String(localized: "station.updated")
+                    .replacingOccurrences(of: "{date}", with: elapsed)
             }
-            return "Live via lokaler API"
+            return String(localized: "station.live")
         }
 
         let counts = availabilityCounts
         guard counts.total > 0 else { return nil }
         if properties.occupancySourceName.hasPrefix("Mobilithek") {
-            return "Live via \(properties.occupancySourceName)"
+            return String(localized: "station.liveVia")
+                .replacingOccurrences(of: "{source}", with: properties.occupancySourceName)
         }
         if properties.occupancySourceUID.hasPrefix("mobilithek_") {
             if properties.occupancySourceName.isEmpty {
-                return "Live via Mobilithek"
+                return String(localized: "station.liveVia")
+                    .replacingOccurrences(of: "{source}", with: "Mobilithek")
             }
-            return "Live via Mobilithek (\(properties.occupancySourceName))"
+            return String(localized: "station.liveVia")
+                .replacingOccurrences(of: "{source}", with: "Mobilithek (\(properties.occupancySourceName))")
         }
         if properties.occupancySourceName.isEmpty {
-            return "Live via MobiData BW"
+            return String(localized: "station.liveVia")
+                .replacingOccurrences(of: "{source}", with: "MobiData BW")
         }
-        return "Live via MobiData BW (\(properties.occupancySourceName))"
+        return String(localized: "station.liveVia")
+            .replacingOccurrences(of: "{source}", with: "MobiData BW (\(properties.occupancySourceName))")
     }
 
     var liveUpdatedLabel: String? {
         guard liveSummaryForDisplay != nil else { return nil }
         guard let elapsed = formattedElapsedLiveTime(liveObservedTimestamp) else { return nil }
-        return "Seit \(elapsed)"
+        return String(localized: "station.updated")
+            .replacingOccurrences(of: "{date}", with: elapsed)
     }
 
     var hasPrimaryDetailHighlights: Bool {
@@ -392,15 +402,17 @@ extension GeoJSONFeature {
                     .compactMap { value in
                         guard let value, !value.isEmpty else { return nil }
                         if value == observedText {
-                            return "Seit \(value)"
+                            return String(localized: "station.updated")
+                                .replacingOccurrences(of: "{date}", with: value)
                         }
                         return value
                     }
                     .joined(separator: " • ")
                 return LiveEVSERow(
-                    title: "Ladepunkt \(index + 1)",
+                    title: String(localized: "station.evse")
+                        .replacingOccurrences(of: "{index}", with: "\(index + 1)"),
                     status: evse.availabilityStatus,
-                    meta: meta.isEmpty ? "Live-Daten verfügbar" : meta,
+                    meta: meta.isEmpty ? String(localized: "station.liveDataAvailable") : meta,
                     price: evse.priceDisplay.trimmingCharacters(in: .whitespacesAndNewlines),
                     notes: buildLiveNotes(for: evse)
                 )
@@ -410,9 +422,9 @@ extension GeoJSONFeature {
         guard liveSummaryForDisplay != nil else { return [] }
         return [
             LiveEVSERow(
-                title: "Stationsstatus",
+                title: String(localized: "station.stationStatus"),
                 status: availabilityStatus,
-                meta: occupancySummaryLabel ?? "Live-Daten verfügbar",
+                meta: occupancySummaryLabel ?? String(localized: "station.liveDataAvailable"),
                 price: displayPrice,
                 notes: []
             )
@@ -441,11 +453,11 @@ extension GeoJSONFeature {
         var notes: [LiveDetailNote] = []
         let nextSlot = formatLiveCollection(evse.nextAvailableChargingSlots)
         if !nextSlot.isEmpty {
-            notes.append(LiveDetailNote(label: "Nächster Slot", value: nextSlot))
+            notes.append(LiveDetailNote(label: String(localized: "station.nextSlot"), value: nextSlot))
         }
         let supplemental = formatLiveCollection(evse.supplementalFacilityStatus)
         if !supplemental.isEmpty {
-            notes.append(LiveDetailNote(label: "Zusatzstatus", value: supplemental))
+            notes.append(LiveDetailNote(label: String(localized: "station.supplementalStatus"), value: supplemental))
         }
         return notes
     }
@@ -460,6 +472,41 @@ private func formattedProviderLabel(_ value: String) -> String {
         .replacingOccurrences(of: "_", with: " ")
 }
 
+private func localizedCount(_ key: String, count: Int) -> String {
+    let template: String
+    switch key {
+    case "availability.available":
+        template = String(localized: "availability.available")
+    case "availability.occupiedCount":
+        template = String(localized: "availability.occupiedCount")
+    case "availability.outOfOrderCount":
+        template = String(localized: "availability.outOfOrderCount")
+    case "availability.unknownCount":
+        template = String(localized: "availability.unknownCount")
+    default:
+        template = "{count}"
+    }
+    return template.replacingOccurrences(of: "{count}", with: "\(count)")
+}
+
+private func localizedElapsed(seconds: Int) -> String {
+    let formatter = DateComponentsFormatter()
+    formatter.unitsStyle = .abbreviated
+    formatter.maximumUnitCount = 1
+    formatter.allowedUnits = seconds < 60
+        ? [.second]
+        : seconds < 3_600
+            ? [.minute]
+            : seconds < 86_400
+                ? [.hour]
+                : seconds < 2_592_000
+                    ? [.day]
+                    : seconds < 31_536_000
+                        ? [.month]
+                        : [.year]
+    return formatter.string(from: TimeInterval(seconds)) ?? "\(seconds) s"
+}
+
 func formattedElapsedLiveTime(_ value: String, now: Date = Date()) -> String? {
     let raw = value.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !raw.isEmpty else { return nil }
@@ -467,31 +514,31 @@ func formattedElapsedLiveTime(_ value: String, now: Date = Date()) -> String? {
 
     let elapsedSeconds = max(0, Int(now.timeIntervalSince(date)))
     if elapsedSeconds < 60 {
-        return "gerade eben"
+        return localizedElapsed(seconds: elapsedSeconds)
     }
 
     let elapsedMinutes = elapsedSeconds / 60
     if elapsedMinutes < 60 {
-        return "\(elapsedMinutes) Min."
+        return localizedElapsed(seconds: elapsedSeconds)
     }
 
     let elapsedHours = elapsedMinutes / 60
     if elapsedHours < 24 {
-        return "\(elapsedHours) Std."
+        return localizedElapsed(seconds: elapsedSeconds)
     }
 
     let elapsedDays = elapsedHours / 24
     if elapsedDays < 30 {
-        return elapsedDays == 1 ? "1 Tag" : "\(elapsedDays) Tage"
+        return localizedElapsed(seconds: elapsedSeconds)
     }
 
     let elapsedMonths = elapsedDays / 30
     if elapsedMonths < 12 {
-        return "\(elapsedMonths) Mon."
+        return localizedElapsed(seconds: elapsedSeconds)
     }
 
     let elapsedYears = elapsedDays / 365
-    return "\(elapsedYears) J."
+    return localizedElapsed(seconds: elapsedYears * 365 * 24 * 60 * 60)
 }
 
 private func formattedLiveTimestamp(_ value: String) -> String? {
@@ -500,7 +547,7 @@ private func formattedLiveTimestamp(_ value: String) -> String? {
     guard let date = parsedLiveDate(raw) else { return raw }
 
     let output = DateFormatter()
-    output.locale = Locale(identifier: "de_DE")
+    output.locale = Locale.current
     output.dateStyle = .short
     output.timeStyle = .short
     return output.string(from: date)
@@ -535,7 +582,7 @@ private func formatLiveValue(_ value: LiveJSONValue) -> String {
     case .null:
         return ""
     case .bool(let flag):
-        return flag ? "Ja" : "Nein"
+        return flag ? String(localized: "common.yes") : String(localized: "common.no")
     case .number(let number):
         if number.rounded() == number {
             return String(Int(number))

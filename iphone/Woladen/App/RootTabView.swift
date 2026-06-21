@@ -49,7 +49,7 @@ struct RootTabView: View {
                 currentTab
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                if let selectedFeature = viewModel.selectedFeature {
+                if shouldShowWideDetail, let selectedFeature = viewModel.selectedFeature {
                     Divider()
                     StationDetailView(stationID: selectedFeature.properties.stationID)
                         .frame(width: detailWidth)
@@ -64,17 +64,17 @@ struct RootTabView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Woladen")
                     .font(.title2.bold())
-                Text("Schnelllader")
+                Text(String(localized: "station.chargingStation"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             .padding(.top, 12)
 
             VStack(spacing: 6) {
-                wideTabButton(.list, title: "Liste", systemImage: "list.bullet")
-                wideTabButton(.map, title: "Karte", systemImage: "map")
-                wideTabButton(.favorites, title: "Favoriten", systemImage: "star")
-                wideTabButton(.info, title: "Info", systemImage: "info.circle")
+                wideTabButton(.list, title: String(localized: "nav.list"), systemImage: "list.bullet")
+                wideTabButton(.map, title: String(localized: "nav.map"), systemImage: "map")
+                wideTabButton(.favorites, title: String(localized: "nav.favorites"), systemImage: "star")
+                wideTabButton(.info, title: String(localized: "nav.info"), systemImage: "info.circle")
             }
 
             Spacer()
@@ -82,7 +82,7 @@ struct RootTabView: View {
             Button {
                 showingFilter = true
             } label: {
-                Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
+                Label(String(localized: "filters.title"), systemImage: "line.3.horizontal.decrease.circle")
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.bordered)
@@ -124,10 +124,10 @@ struct RootTabView: View {
         VStack(spacing: 0) {
             Divider()
             HStack(spacing: 8) {
-                tabButton(.list, title: "Liste", systemImage: "list.bullet")
-                tabButton(.map, title: "Karte", systemImage: "map")
-                tabButton(.favorites, title: "Favoriten", systemImage: "star")
-                tabButton(.info, title: "Info", systemImage: "info.circle")
+                tabButton(.list, title: String(localized: "nav.list"), systemImage: "list.bullet")
+                tabButton(.map, title: String(localized: "nav.map"), systemImage: "map")
+                tabButton(.favorites, title: String(localized: "nav.favorites"), systemImage: "star")
+                tabButton(.info, title: String(localized: "nav.info"), systemImage: "info.circle")
             }
             .padding(.horizontal, 10)
             .padding(.top, 6)
@@ -197,6 +197,15 @@ struct RootTabView: View {
                 }
             }
         )
+    }
+
+    private var shouldShowWideDetail: Bool {
+        switch viewModel.selectedTab {
+        case .list, .map, .favorites:
+            return true
+        case .info:
+            return false
+        }
     }
 
     private var selectedFeatureSheetBinding: Binding<GeoJSONFeature?> {

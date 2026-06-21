@@ -25,7 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import de.woladen.android.R
 import de.woladen.android.model.availabilityStatus
 import de.woladen.android.model.displayPrice
 import de.woladen.android.model.GeoJsonFeature
@@ -53,12 +55,27 @@ fun FavoritesTabView(
     }
 
     if (items.isEmpty()) {
+        val hasSavedFavorites = favoritesStore.favorites.isNotEmpty()
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Keine Favoriten", style = MaterialTheme.typography.titleMedium)
+            Text(
+                if (hasSavedFavorites) {
+                    stringResource(R.string.i18n_favorites_loading)
+                } else {
+                    stringResource(R.string.i18n_favorites_empty)
+                },
+                style = MaterialTheme.typography.titleMedium
+            )
+            if (!hasSavedFavorites) {
+                Text(
+                    stringResource(R.string.i18n_favorites_emptyhelp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         return
     }
@@ -99,7 +116,7 @@ private fun FavoriteRow(
                 Text(feature.properties.operatorName, style = MaterialTheme.typography.titleMedium)
                 Text(feature.properties.city, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    "${feature.properties.displayedMaxPowerKw.toInt()} kW max • ${feature.properties.chargingPointsCount} Ladepunkte",
+                    "${feature.properties.displayedMaxPowerKw.toInt()} kW max • ${chargingPointLabel(feature.properties.chargingPointsCount)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -130,10 +147,22 @@ private fun FavoriteRow(
             }
 
             IconButton(onClick = onRemove) {
-                Icon(Icons.Outlined.Delete, contentDescription = "Entfernen")
+                Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.i18n_aria_removefavorite))
             }
         }
     }
+}
+
+@Composable
+private fun chargingPointLabel(count: Int): String {
+    val template = stringResource(
+        if (count == 1) {
+            R.string.i18n_station_chargingpointone
+        } else {
+            R.string.i18n_station_chargingpointmany
+        }
+    )
+    return template.replace("{count}", count.toString())
 }
 
 @Composable

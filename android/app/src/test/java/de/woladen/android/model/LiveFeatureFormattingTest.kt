@@ -9,13 +9,13 @@ class LiveFeatureFormattingTest {
     @Test
     fun elapsedLiveTimeFormatsRecentMinutes() {
         val now = Instant.parse("2026-04-17T15:03:18Z")
-        assertEquals("13 Min.", formatElapsedLiveTime("2026-04-17T14:50:00Z", now))
+        assertEquals("13 min ago", formatElapsedLiveTime("2026-04-17T14:50:00Z", now))
     }
 
     @Test
     fun elapsedLiveTimeFormatsFreshUpdates() {
         val now = Instant.parse("2026-04-17T15:03:18Z")
-        assertEquals("gerade eben", formatElapsedLiveTime("2026-04-17T15:03:00Z", now))
+        assertEquals("now", formatElapsedLiveTime("2026-04-17T15:03:00Z", now))
     }
 
     @Test
@@ -47,7 +47,7 @@ class LiveFeatureFormattingTest {
         )
 
         assertEquals("ab 0,69 €/kWh", feature.displayPrice)
-        assertEquals("1 frei, 2 belegt", feature.occupancySummaryLabel)
+        assertEquals("1 free, 2 occupied", feature.occupancySummaryLabel)
         assertEquals(AvailabilityStatus.OCCUPIED, feature.availabilityStatus)
         assertEquals(1, feature.liveEvseRows.size)
         assertTrue(feature.occupancySourceLabel?.contains("EnBWmobility+") == true)
@@ -65,7 +65,7 @@ class LiveFeatureFormattingTest {
         )
 
         assertEquals("ab 0,59 €/kWh", feature.displayPrice)
-        assertEquals("3 frei, 1 belegt", feature.occupancySummaryLabel)
+        assertEquals("3 free, 1 occupied", feature.occupancySummaryLabel)
         assertEquals(AvailabilityStatus.FREE, feature.availabilityStatus)
         assertTrue(feature.liveEvseRows.isEmpty())
     }
