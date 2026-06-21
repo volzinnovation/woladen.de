@@ -117,7 +117,6 @@ struct ListTabView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            WoladenBrandIntroView(showProductMessage: false)
             listHeader
 
             if !activeFilterLabels.isEmpty {
@@ -168,8 +167,11 @@ struct ListTabView: View {
                             }
                         }
                         .padding(.horizontal, 14)
-                        .padding(.top, 14)
+                        .padding(.top, 8)
                         .padding(.bottom, 12)
+                    }
+                    .refreshable {
+                        await refreshListFromPull()
                     }
                 }
             }
@@ -184,10 +186,15 @@ struct ListTabView: View {
 
     private var listHeader: some View {
         HStack(alignment: .center, spacing: 12) {
-            Text(String(localized: "list.title"))
-                .font(.title3.weight(.semibold))
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(alignment: .center, spacing: 10) {
+                OfficialWoladenAppIconView()
+
+                Text("woladen")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(woladenBrandColor)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Button {
                 showingFilter = true
@@ -208,7 +215,7 @@ struct ListTabView: View {
             .accessibilityLabel(Text(String(localized: "aria.filterOpen")))
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 6)
         .background(Color(.systemBackground))
         .overlay(alignment: .bottom) {
             Divider()
@@ -225,21 +232,30 @@ struct ListTabView: View {
                 .truncationMode(.tail)
             Spacer()
             if hasClearableFilters {
-                Button(String(localized: "filters.reset")) {
+                Button {
                     viewModel.filterState = viewModel.filterState.clearableState
                     viewModel.reloadCatalogForCurrentContext(userLocation: locationService.currentLocation)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.footnote.weight(.bold))
+                        .frame(width: 34, height: 34)
+                        .background(woladenBrandColor.opacity(0.12), in: Circle())
+                        .overlay {
+                            Circle()
+                                .stroke(woladenBrandColor.opacity(0.18), lineWidth: 1)
+                        }
                 }
-                .font(.subheadline.weight(.bold))
                 .buttonStyle(.plain)
+                .accessibilityLabel(Text(String(localized: "filters.reset")))
             }
         }
         .foregroundStyle(woladenBrandColor)
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(woladenBrandColor.opacity(0.08))
+        .padding(.vertical, 6)
+        .background(woladenBrandColor.opacity(0.06))
         .overlay {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(woladenBrandColor.opacity(0.18), lineWidth: 1)
+                .stroke(woladenBrandColor.opacity(0.14), lineWidth: 1)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 4)
         }
@@ -333,6 +349,17 @@ struct ListTabView: View {
     private func requestLocationAccess() {
         locationService.requestAuthorization()
         viewModel.loadIfNeeded(userLocation: locationService.currentLocation)
+    }
+
+    @MainActor
+    private func refreshListFromPull() async {
+        locationService.activate()
+        if let currentLocation = locationService.currentLocation {
+            viewModel.reloadCatalogForCurrentContext(userLocation: currentLocation)
+        } else {
+            requestLocationAccess()
+        }
+        await Task.yield()
     }
 
     @ViewBuilder
@@ -606,28 +633,14 @@ struct WoladenBrandIntroView: View {
     let showProductMessage: Bool
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: showProductMessage ? 6 : 0) {
             HStack(alignment: .center, spacing: 10) {
                 OfficialWoladenAppIconView()
 
-                VStack(alignment: .leading, spacing: 2) {
-                    (
-                        Text("woladen:")
-                            .foregroundStyle(woladenBrandColor)
-                        + Text(" \(String(localized: "seo.primaryTagline"))")
-                    )
-                    .font(.title3.weight(.bold))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.82)
-
-                    Text("\(String(localized: "seo.humanHook")) \(String(localized: "seo.timeLine"))")
-                        .font(.subheadline.weight(.semibold))
-                        .italic()
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.86)
-                }
-                .fixedSize(horizontal: false, vertical: true)
+                Text("woladen")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(woladenBrandColor)
+                .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
@@ -641,7 +654,7 @@ struct WoladenBrandIntroView: View {
             }
         }
         .padding(.horizontal, 18)
-        .padding(.vertical, showProductMessage ? 14 : 12)
+        .padding(.vertical, showProductMessage ? 10 : 6)
         .frame(maxWidth: .infinity)
         .background(Color(.systemBackground))
         .overlay(alignment: .bottom) {
@@ -663,9 +676,9 @@ private struct OfficialWoladenAppIconView: View {
                 Color.clear
             }
         }
-        .frame(width: 46, height: 46)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 5)
+        .frame(width: 34, height: 34)
+        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .shadow(color: Color.black.opacity(0.10), radius: 5, x: 0, y: 2)
         .accessibilityHidden(true)
     }
 }

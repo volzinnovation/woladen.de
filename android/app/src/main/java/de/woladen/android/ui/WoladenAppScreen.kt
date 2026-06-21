@@ -319,9 +319,9 @@ fun WoladenBrandIntro(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 18.dp, vertical = if (showProductMessage) 14.dp else 12.dp),
+            .padding(horizontal = 16.dp, vertical = if (showProductMessage) 10.dp else 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -332,30 +332,17 @@ fun WoladenBrandIntro(
                 painter = painterResource(R.mipmap.ic_launcher),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(12.dp)),
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(9.dp)),
                 contentScale = ContentScale.Crop
             )
-            Column(
-                modifier = Modifier.weight(1f, fill = false),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = "woladen:",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = stringResource(R.string.i18n_seo_primarytagline),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "${stringResource(R.string.i18n_seo_humanhook)}\n${stringResource(R.string.i18n_seo_timeline)}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            }
+            Text(
+                text = "woladen",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
 
         if (showProductMessage) {

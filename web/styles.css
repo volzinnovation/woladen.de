@@ -809,13 +809,22 @@ body {
 }
 
 .active-filter-clear {
-  border: 0;
-  background: transparent;
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.1);
   color: var(--color-primary);
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 700;
+  font: 800 0.85rem/1 var(--font-sans);
   cursor: pointer;
+}
+
+.active-filter-clear:hover,
+.active-filter-clear:focus-visible {
+  background: rgba(15, 118, 110, 0.16);
 }
 
 /* LIST & GRID CONTAINERS */

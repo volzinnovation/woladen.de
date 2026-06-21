@@ -3,6 +3,7 @@ package de.woladen.android.ui
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -24,12 +25,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -49,7 +56,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,6 +81,7 @@ import de.woladen.android.ui.components.markerColorForKey
 import de.woladen.android.util.AmenityCatalog
 import de.woladen.android.viewmodel.AppViewModel
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ListTabView(
     viewModel: AppViewModel,
@@ -81,6 +91,7 @@ fun ListTabView(
     onShowFilter: () -> Unit
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
+    var isPullRefreshing by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         locationService.activate()
@@ -90,6 +101,28 @@ fun ListTabView(
     LaunchedEffect(locationService.currentLocation) {
         viewModel.refreshNearbyFromUserLocation(locationService.currentLocation)
     }
+
+    LaunchedEffect(viewModel.isLoading, isPullRefreshing) {
+        if (isPullRefreshing && !viewModel.isLoading) {
+            isPullRefreshing = false
+        }
+    }
+
+    fun refreshList() {
+        isPullRefreshing = true
+        locationService.activate()
+        val location = locationService.currentLocation
+        if (location != null) {
+            viewModel.reloadCatalog(location)
+        } else {
+            viewModel.reloadListForCurrentLocation(null)
+        }
+    }
+
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = isPullRefreshing,
+        onRefresh = ::refreshList
+    )
 
     DisposableEffect(lifecycleOwner, locationService) {
         val observer = LifecycleEventObserver { _, event ->
@@ -105,7 +138,6 @@ fun ListTabView(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        WoladenBrandIntro(showProductMessage = false)
         ListHeader(viewModel = viewModel, onShowFilter = onShowFilter)
         if (viewModel.filterState.activeCount > 0) {
             ActiveFilterSummary(
@@ -114,11 +146,16 @@ fun ListTabView(
             )
         }
 
-        Box(modifier = Modifier.weight(1f)) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .pullRefresh(pullRefreshState)
+        ) {
             when {
                 viewModel.loadError != null -> {
                     EmptyState(
-                        title = stringResource(R.string.i18n_errors_dataload),
+                        title = stringResource(R.string.i18n_errors_catalogtitle),
                         subtitle = viewModel.loadError.orEmpty(),
                         modifier = Modifier.align(Alignment.Center)
                     )
@@ -149,7 +186,7 @@ fun ListTabView(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             start = 14.dp,
-                            top = 14.dp,
+                            top = 8.dp,
                             end = 14.dp,
                             bottom = 12.dp
                         ),
@@ -173,6 +210,13 @@ fun ListTabView(
                     }
                 }
             }
+            PullRefreshIndicator(
+                refreshing = isPullRefreshing,
+                state = pullRefreshState,
+                modifier = Modifier.align(Alignment.TopCenter),
+                backgroundColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
@@ -186,15 +230,31 @@ private fun ListHeader(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = stringResource(R.string.i18n_list_title),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.weight(1f)
-        )
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Image(
+                painter = painterResource(R.mipmap.ic_launcher),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(9.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Text(
+                text = "woladen",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
         TextButton(
             onClick = onShowFilter,
             modifier = Modifier
@@ -225,8 +285,8 @@ private fun ActiveFilterSummary(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.06f))
+            .padding(horizontal = 14.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -237,12 +297,14 @@ private fun ActiveFilterSummary(
         )
         Text(
             text = summaryText,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
         if (viewModel.filterState.hasClearableFilters) {
-            TextButton(
+            IconButton(
                 onClick = {
                     viewModel.filterState = viewModel.filterState.clearableState
                     val location = locationService.currentLocation
@@ -251,9 +313,18 @@ private fun ActiveFilterSummary(
                     } else {
                         viewModel.applyFilters(null)
                     }
-                }
+                },
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
             ) {
-                Text(stringResource(R.string.i18n_filters_reset))
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.i18n_filters_reset),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }

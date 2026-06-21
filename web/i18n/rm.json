@@ -1,10 +1,10 @@
 {
   "meta": {
     "title": "woladen - Fermadas EV smartas en l'Europa",
-    "description": "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. Because charging time should be time well spent.",
+    "description": "Chatta chargiaders disponibels sper bunas furnarias, restaurants, butias, plazzas da gieu e cafés. Il temp da chargiar duai esser temp bain utilisà.",
     "ogTitle": "woladen - Fermadas EV smartas en l'Europa",
-    "ogDescription": "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. Because charging time should be time well spent.",
-    "socialAlt": "woladen preview with a Europe map and the tagline: Plugs for Cars. Perks for People."
+    "ogDescription": "Chatta chargiaders disponibels sper bunas furnarias, restaurants, butias, plazzas da gieu e cafés. Il temp da chargiar duai esser temp bain utilisà.",
+    "socialAlt": "Prevista da woladen cun ina charta da l’Europa ed il motto: Spinas per autos. Pausas per umans."
   },
   "languageName": "Rumantsch",
   "nav": {
@@ -20,19 +20,32 @@
   },
   "search": {
     "label": "Tschertgar lieu u adressa",
-    "placeholder": "Tschertgar lieu u adressa"
+    "placeholder": "Tschertgar lieu u adressa",
+    "noResults": "Naginas propostas chattadas.",
+    "minChars": "Endatescha almain dus segns.",
+    "searching": "Tschertgar lieu...",
+    "unavailable": "La tschertga da lieus n’è actualmain betg disponibla.",
+    "notConfigured": "La tschertga da lieus n’è betg configurada."
   },
   "list": {
     "title": "Puncts da chargiar en vischinanza",
     "loading": "Chargiar staziuns...",
-    "empty": "Naginas staziuns chattadas."
+    "empty": "Naginas staziuns chattadas.",
+    "loadingRadius": "Chargiar staziuns da chargiar entaifer 20 km...",
+    "loadingLiveFallback": "La tschertga live vegn chargiada. Chargiaders svelts memorisads vegnan mussads enfin lura.",
+    "more": "...e {count} dapli"
   },
   "favorites": {
     "title": "Favorits",
     "sort": "Zavrar",
     "distance": "Distanza",
     "rating": "Stailas",
-    "empty": "Nagins favorits memorisads."
+    "empty": "Nagins favorits memorisads.",
+    "emptyHelp": "Tippa sin la staila en la vista dals detagls per memorisar staziuns.",
+    "loading": "Chargiar favorits en la zona da tschertga actuala...",
+    "loadingFallback": "La tschertga live vegn chargiada. Favorits da chargiaders svelts memorisads restan visibels.",
+    "outsideArea": "Tes favorits n’èn betg en la zona da tschertga actuala.",
+    "someOutsideArea": "Intgins favorits èn ordaifer la zona da tschertga actuala."
   },
   "filters": {
     "title": "Filters",
@@ -43,7 +56,18 @@
     "amenities": "Lieus vischins",
     "apply": "Applitgar",
     "reset": "Resetar",
-    "selectedOnly": "Mo selecziunà: {labels}"
+    "selectedOnly": "Mo selecziunà: {labels}",
+    "all": "Tuts filters",
+    "amenityNamePlaceholder": "p.ex. McDonald’s",
+    "availableOnly": "Disponibel ussa",
+    "availableOnlyNote": "Mo staziuns cun disponibladad enconuschenta ed almain in punct da chargiar liber",
+    "currentlyOpenNote": "Mo staziuns cun almain in lieu vischin avert ussa",
+    "minPower": "Prestaziun min.: {value} kW",
+    "activeAmenity": "Filter {label} activ",
+    "filterAmenity": "Filtrar tenor {label}",
+    "openWithCount": "Avrir filters, {count} activ: {labels}",
+    "namePrefix": "Num: {value}",
+    "minPowerLabel": "da {value} kW"
   },
   "info": {
     "title": "Info ed agid",
@@ -52,13 +76,106 @@
     "country": "Pajais",
     "stations": "Staziuns",
     "loadingCountries": "Chargiar pajais...",
-    "dataSourcesTitle": "Funtaunas da datas e licenzas"
+    "dataSourcesTitle": "Funtaunas da datas e licenzas",
+    "source": "Funtauna da datas",
+    "countryLoadError": "La cuvrida dals pajais n’ha betg pudì vegnir chargiada.",
+    "legendTitle": "Legenda",
+    "cardBackgroundTitle": "Funds da las cartas da staziun",
+    "mapMarkerTitle": "Markers sin la charta",
+    "legendOneFreeLeft": "Mellen cler: anc in punct da chargiar liber",
+    "legendFullyOccupied": "Grisch: cumplettamain occupà",
+    "legendOutOfOrder": "Cotschen cler: actualmain or da funcziun",
+    "legendOftenBroken": "Cotschen pli cler: savens disturbà tenor analisa",
+    "legendOftenOccupied": "Grisch pli cler: savens occupà tenor analisa",
+    "legendGold": "Dapli che 10 lieus vischins",
+    "legendSilver": "Dapli che 5 lieus vischins",
+    "legendBronze": "Almain 1 lieu vischin",
+    "legendGrey": "Nagins lieus vischins",
+    "legendFavorite": "Staziun favorita",
+    "legendMarkerOutOfOrder": "Marker live: or da funcziun",
+    "legendMarkerFullyOccupied": "Marker live: cumplettamain occupà",
+    "aboutIntro": "Chatta chargiaders disponibels sper bunas furnarias, restaurants, butias, plazzas da gieu e cafés. woladen enconuscha",
+    "aboutStationCountJoin": "staziuns cun",
+    "aboutOutro": "puncts da chargiar en blers pajais e mussa quels entaifer 20 km da tes lieu u da la posiziun tschernida sin la charta. Perquai ch’il temp da chargiar duai esser temp bain utilisà. Per standard tschertga woladen chargiaders svelts a partir da 50 kW; il filter da prestaziun po era includer puncts da chargiar normals sut 50 kW.",
+    "sourceUnknown": "Funtauna da datas",
+    "licensesTitle": "Datas da charta e licenzas",
+    "osmNote": "Datas da charta e POI © contributors da OpenStreetMap, disponiblas sut ODbL v1.0.",
+    "osmCopyright": "OpenStreetMap: infurmaziuns davart dretgs d’autur e licenza",
+    "odblLicense": "ODbL v1.0: text cumplet da la licenza",
+    "contactTitle": "Contact e code",
+    "github": "Project GitHub",
+    "developedBy": "Sviluppà da Prof. Dr. Raphael Volz, Hochschule Pforzheim",
+    "distributedBy": "Distribuì da",
+    "contributorsTitle": "Contribuents",
+    "studentsGroup": "Students da la Hochschule Pforzheim, SS26",
+    "privacyTitle": "Protecziun da datas",
+    "privacyBody": "L’access al lieu è opziunal. Sche ti l’utiliseschas, focussescha el la charta sin tes conturn e zavra staziuns vischinas. Favorits restan localmain sin tes apparat.",
+    "privacyLink": "Decleraziun da protecziun da datas",
+    "imprintLink": "Impressum",
+    "loadingSources": "Chargiar funtaunas da datas...",
+    "sourceLoadError": "Las funtaunas da datas n’han betg pudì vegnir chargiadas.",
+    "dataUpdated": "Datas actualisadas: {date}{counts}",
+    "countSuffix": " · {stations} staziuns · {chargers} puncts da chargiar"
   },
   "amenity": {
     "generic": "Lieu vischin",
     "open": "Avert ussa",
     "closed": "Serrà",
-    "unknownHours": "Uras d’avertura nunenconuschentas"
+    "unknownHours": "Uras d’avertura nunenconuschentas",
+    "one": "{count} lieu vischin",
+    "many": "{count} lieus vischins",
+    "other": "Auter",
+    "noDetails": "Nagins detagls disponibels.",
+    "hours": "Uras d’avertura",
+    "groups": {
+      "food": "Mangiar e baiver",
+      "shopping": "Cumpras",
+      "leisure": "Temp liber e natira",
+      "lodging": "Alloschi",
+      "other": "Auter"
+    },
+    "labels": {
+      "restaurant": "Restaurant",
+      "cafe": "Café",
+      "fast_food": "Fast food",
+      "toilets": "Tualettas",
+      "supermarket": "Supermartgà",
+      "bakery": "Furnaria",
+      "convenience": "Butia da convenienza",
+      "pharmacy": "Apoteca",
+      "hotel": "Hotel",
+      "museum": "Museum",
+      "playground": "Plazza da gieu",
+      "park": "Parc",
+      "ice_cream": "Glatsch",
+      "bbq": "Lieu da grillar",
+      "biergarten": "Curtin da biera",
+      "cinema": "Kino",
+      "library": "Biblioteca",
+      "theatre": "Teater",
+      "atm": "Bancomat",
+      "bank": "Banca",
+      "bench": "Banca da seser",
+      "bicycle_rental": "Locaziun da velos",
+      "car_sharing": "Car sharing",
+      "fuel": "Tancadi",
+      "hospital": "Ospital",
+      "police": "Polizia",
+      "post_box": "Chascha da posta",
+      "post_office": "Posta",
+      "pub": "Pub",
+      "school": "Scola",
+      "taxi": "Taxi",
+      "waste_basket": "Chavagna da rument",
+      "swimming": "Bogn",
+      "gym": "Fitness",
+      "camp_site": "Camping",
+      "viewpoint": "Punct da vista",
+      "zoo": "Zoo",
+      "mall": "Center da cumpras",
+      "doityourself": "Butia da bricoladi",
+      "electronics": "Electronica"
+    }
   },
   "station": {
     "chargingPointOne": "{count} punct da chargiar",
@@ -79,7 +196,9 @@
     "updated": "Actualisà {date}",
     "maxPower": "{power} kW max / {points}",
     "nextSlot": "Proxim termin",
-    "supplementalStatus": "Status supplementar"
+    "supplementalStatus": "Status supplementar",
+    "typicalOccupancy": "Occupaziun tipica",
+    "typicalOccupancyNote": "Media dals puncts da chargiar occupads per ura; stadis nunenconuschents na quintan betg sco occupads."
   },
   "availability": {
     "free": "Liber",
@@ -150,5 +269,88 @@
     "backToCountry": "Enavos a la pagina dal pajais",
     "stationChargingPoints": "puncts da chargiar",
     "stationNearbyPlaces": "lieus en vischinanza"
+  },
+  "aria": {
+    "map": "Charta cun staziuns da chargiar. Utilisescha la glista per ina vista dals resultats pli accessibla.",
+    "locate": "Utilisar mes lieu",
+    "filterOpen": "Avrir filters",
+    "closeFilter": "Serrar filters",
+    "closeDetail": "Serrar detagls",
+    "closeAmenity": "Serrar lieu vischin",
+    "saveFavorite": "Memorisar favorit",
+    "removeFavorite": "Allontanar favorit",
+    "detailsOpen": "Avrir detagls",
+    "activeFilters": "Filters activs: {labels}"
+  },
+  "common": {
+    "yes": "Gea",
+    "no": "Na",
+    "days": "{count} dis"
+  },
+  "rating": {
+    "label": "Valitaziun",
+    "ariaLabel": "Valitar staziun da chargiar",
+    "starOne": "{count} staila",
+    "starMany": "{count} stailas",
+    "unrated": "Anc betg valità",
+    "save": "Memorisar valitaziun...",
+    "serverError": "Valitaziun memorisada localmain. Il server n’è actualmain betg disponibel.",
+    "yourRating": "Tia valitaziun: {rating} da 5",
+    "localOnly": "mo sin quest apparat",
+    "average": "Media da {count}",
+    "summary": "Media {value} da {count}",
+    "localTitle": "Tia valitaziun locala",
+    "one": "{count} valitaziun",
+    "many": "{count} valitaziuns"
+  },
+  "detail": {
+    "personalNote": "Notizia persunala",
+    "notePlaceholder": "p.ex. bain illuminà, parcadi stretg, furnaria enturn il chantun",
+    "noteSaved": "Notizia memorisada localmain",
+    "noteDeviceOnly": "Memorisà mo sin quest apparat",
+    "help": "Agid",
+    "helpTitle": "Agid {phone}"
+  },
+  "staticDetails": {
+    "payment": "Pajament",
+    "access": "Access",
+    "connectors": "Connecturs",
+    "currentType": "Tip da current",
+    "sockets": "{count} presas",
+    "service": "Servetsch",
+    "energy": "Energia",
+    "renewable": "100% regenerabel",
+    "notRenewable": "Betg marcà sco regenerabel"
+  },
+  "location": {
+    "idleTitle": "Chattar staziuns da chargiar en tia vischinanza",
+    "idleMessage": "Cundivida tes lieu per chargiar staziuns da chargiar entaifer 20 km.",
+    "idleAction": "Cundivider lieu",
+    "pendingTitle": "Tschertgar lieu",
+    "pendingMessage": "Staziuns da chargiar entaifer 20 km vegnan chargiadas.",
+    "deniedTitle": "Permissiun da lieu necessaria",
+    "deniedMessage": "Activescha l’access al lieu per chargiar staziuns da chargiar entaifer 20 km.",
+    "settingsMessage": "Activescha l’access al lieu per woladen en las preferenzas dal sistem per chargiar staziuns da chargiar en tia vischinanza.",
+    "openSettings": "Avrir preferenzas",
+    "usageDescription": "woladen utilisescha tes lieu per mussar puncts da chargiar en vischinanza.",
+    "unavailableTitle": "Lieu betg disponibel",
+    "unavailableMessage": "Questa tschertga dovra in navigatur cun access al lieu.",
+    "timeoutTitle": "La tschertga dal lieu dura memia ditg",
+    "timeoutMessage": "Emprova danovamain da chargiar staziuns da chargiar entaifer 20 km.",
+    "positionTitle": "Il lieu n’ha betg pudì vegnir determinà",
+    "positionMessage": "Emprova danovamain cura che tes navigatur po furnir in lieu.",
+    "unknownMessage": "Emprova danovamain da chargiar staziuns da chargiar entaifer 20 km.",
+    "retry": "Emprovar danovamain",
+    "searchMap": "Tschertgar lieu sin la charta"
+  },
+  "errors": {
+    "dataLoad": "Errur cun chargiar las datas.",
+    "catalogTitle": "Ils puncts da chargiar n’han betg pudì vegnir chargiads",
+    "catalogMessage": "Naginas connexiun a la rait. Perstgisa, la tschertga live na funcziunescha betg enfin che quest apparat è puspè online.",
+    "reload": "Chargiar danovamain"
+  },
+  "sources": {
+    "geocoder": "GEO: openrouteservice geocoding autocomplete (Pelias)",
+    "easterEgg": "Easter Egg: wake up! 16b da HellMood (Port)"
   }
 }

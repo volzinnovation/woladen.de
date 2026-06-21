@@ -3660,7 +3660,9 @@ function renderActiveFilterSummary(filterCount) {
     const clearButton = document.createElement("button");
     clearButton.type = "button";
     clearButton.className = "active-filter-clear";
-    clearButton.textContent = t("filters.reset");
+    clearButton.textContent = "X";
+    clearButton.setAttribute("aria-label", t("filters.reset"));
+    clearButton.title = t("filters.reset");
     clearButton.addEventListener("click", clearFilters);
     container.appendChild(clearButton);
   }
