@@ -84,7 +84,7 @@
     <string name="i18n_detail_noteplaceholder">e.g. well lit, tight parking, bakery around the corner</string>
     <string name="i18n_detail_notesaved">Note saved locally</string>
     <string name="i18n_detail_personalnote">Personal note</string>
-    <string name="i18n_errors_catalogmessage">Live search is currently unavailable. Please try again.</string>
+    <string name="i18n_errors_catalogmessage">No network connection. Sorry, live search will not work until this device is online.</string>
     <string name="i18n_errors_catalogtitle">Charging points could not be loaded</string>
     <string name="i18n_errors_dataload">Error loading data.</string>
     <string name="i18n_errors_reload">Reload</string>

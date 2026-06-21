@@ -279,12 +279,15 @@
     "positionMessage": "Probeer opnieuw wanneer je browser een locatie kan leveren.",
     "unknownMessage": "Probeer opnieuw om laadstations binnen 20 km te laden.",
     "retry": "Opnieuw proberen",
-    "searchMap": "Plaats op kaart zoeken"
+    "searchMap": "Plaats op kaart zoeken",
+    "settingsMessage": "Schakel locatietoegang voor woladen in de systeeminstellingen in om laadstations bij u in de buurt te laden.",
+    "openSettings": "Instellingen openen",
+    "usageDescription": "woladen gebruikt jouw locatie om oplaadpunten in de buurt te tonen."
   },
   "errors": {
     "dataLoad": "Fout bij laden van gegevens.",
     "catalogTitle": "Laadpunten konden niet worden geladen",
-    "catalogMessage": "Live zoeken is momenteel niet beschikbaar. Probeer het opnieuw.",
+    "catalogMessage": "Geen netwerkverbinding. Sorry, live zoeken werkt pas weer zodra dit apparaat online is.",
     "reload": "Opnieuw laden"
   },
   "sources": {

@@ -10,6 +10,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import de.woladen.android.R
 import de.woladen.android.model.ActiveCatalogSourceInfo
+import de.woladen.android.model.CatalogInfoSummary
 import de.woladen.android.model.CatalogSourceManifest
 import de.woladen.android.model.FilterState
 import de.woladen.android.model.GeoJsonFeature
@@ -80,6 +81,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var activeCatalogInfo: ActiveCatalogSourceInfo? by mutableStateOf(null)
         private set
 
+    var infoSummary: CatalogInfoSummary? by mutableStateOf(null)
+        private set
+
+    var infoSummaryError: String? by mutableStateOf(null)
+        private set
+
+    var isLoadingInfoSummary: Boolean by mutableStateOf(false)
+        private set
+
     private val liveApiClient = LiveApiClient()
     private val repository = ChargerRepository(liveApiClient)
 
@@ -106,6 +116,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var refreshNearbyJob: Job? = null
     private var liveSummaryRefreshJob: Job? = null
     private var selectedFeatureRefreshJob: Job? = null
+    private var infoSummaryJob: Job? = null
 
     init {
         startLiveSummaryRefreshLoop()
@@ -115,6 +126,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         refreshNearbyJob?.cancel()
         liveSummaryRefreshJob?.cancel()
         selectedFeatureRefreshJob?.cancel()
+        infoSummaryJob?.cancel()
         super.onCleared()
     }
 
@@ -324,6 +336,42 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         return when (info.source) {
             "catalog_api" -> "Live-Katalog via live-eu.woladen.de"
             else -> "Live-Katalog via live-eu.woladen.de"
+        }
+    }
+
+    fun loadInfoSummaryIfNeeded() {
+        if (infoSummary != null || isLoadingInfoSummary) return
+        loadInfoSummary(forceRefresh = false)
+    }
+
+    fun reloadInfoSummary() {
+        loadInfoSummary(forceRefresh = true)
+    }
+
+    private fun loadInfoSummary(forceRefresh: Boolean) {
+        infoSummaryJob?.cancel()
+        isLoadingInfoSummary = true
+        infoSummaryError = null
+        infoSummaryJob = viewModelScope.launch {
+            if (forceRefresh) {
+                repository.invalidateInfoSummaryCache()
+            }
+
+            val result = runCatching {
+                repository.infoSummary()
+            }
+
+            if (!isActive) return@launch
+            isLoadingInfoSummary = false
+            result
+                .onSuccess { summary ->
+                    infoSummary = summary
+                    infoSummaryError = null
+                }
+                .onFailure { error ->
+                    infoSummaryError = error.localizedMessage
+                        ?: AppStrings.get(R.string.i18n_info_countryloaderror)
+                }
         }
     }
 
@@ -602,9 +650,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 publishNearestCatalogFeatures(centerLat, centerLon, filterPool)
                 requestLiveSummaries(discoveredFeatures.map { it.properties.stationId })
                 loadError = null
-            }.onFailure { error ->
+            }.onFailure {
                 if (discoveredFeatures.isEmpty()) {
-                    loadError = error.localizedMessage ?: "Katalog konnte nicht geladen werden"
+                    loadError = catalogLoadErrorMessage()
                 }
             }
         }
@@ -692,6 +740,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         private val DEFAULT_CATALOG_CENTER = 52.52 to 13.405
     }
 }
+
+internal fun catalogLoadErrorMessage(): String =
+    AppStrings.get(R.string.i18n_errors_catalogmessage).ifBlank {
+        "No network connection. Sorry, live search will not work until this device is online."
+    }
 
 internal fun shouldRefreshUserLocation(
     lastCenter: Pair<Double, Double>?,

@@ -29,11 +29,7 @@ val hasReleaseSigning = listOf(
 fun escapedBuildConfigString(value: String): String =
     value.replace("\\", "\\\\").replace("\"", "\\\"")
 
-val liveApiBaseUrl = (
-    providers.gradleProperty("woladenLiveApiBaseUrl").orNull
-        ?: System.getenv("WOLADEN_LIVE_API_BASE_URL")
-        ?: "https://live-eu.woladen.de"
-    ).trim()
+val liveApiBaseUrl = "https://live-eu.woladen.de"
 
 android {
     namespace = "de.woladen.android"
@@ -114,6 +110,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material:material")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")

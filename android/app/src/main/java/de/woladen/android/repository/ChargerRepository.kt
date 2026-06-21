@@ -2,6 +2,7 @@ package de.woladen.android.repository
 
 import de.woladen.android.model.AmenityExample
 import de.woladen.android.model.CatalogCharger
+import de.woladen.android.model.CatalogInfoSummary
 import de.woladen.android.model.CatalogStation
 import de.woladen.android.model.CatalogStationDetail
 import de.woladen.android.model.ChargerProperties
@@ -10,6 +11,7 @@ import de.woladen.android.model.GeoJsonFeature
 import de.woladen.android.model.GeoJsonPointGeometry
 import de.woladen.android.model.OperatorEntry
 import de.woladen.android.service.LiveApiClient
+import java.io.IOException
 import kotlin.math.roundToInt
 
 class ChargerRepository(
@@ -40,6 +42,7 @@ class ChargerRepository(
     private val catalogSearchCache = BoundedLruCache<CatalogSearchKey, CacheEntry<CatalogLoadResult>>(MAX_SEARCH_CACHE_ENTRIES)
     private val stationSummaryCache = BoundedLruCache<String, GeoJsonFeature>(MAX_STATION_CACHE_ENTRIES)
     private val stationDetailCache = BoundedLruCache<String, CacheEntry<GeoJsonFeature>>(MAX_DETAIL_CACHE_ENTRIES)
+    private var infoSummaryCache: CacheEntry<CatalogInfoSummary>? = null
 
     suspend fun searchCatalog(
         latitude: Double,
@@ -127,11 +130,61 @@ class ChargerRepository(
         return feature
     }
 
+    suspend fun infoSummary(): CatalogInfoSummary {
+        var staleSummary: CatalogInfoSummary? = null
+        val now = System.currentTimeMillis()
+        synchronized(cacheLock) {
+            infoSummaryCache?.let { entry ->
+                if (now - entry.storedAtMs <= INFO_FRESH_TTL_MS) {
+                    return entry.value
+                }
+                if (now - entry.storedAtMs <= INFO_STALE_TTL_MS) {
+                    staleSummary = entry.value
+                }
+            }
+        }
+
+        val liveSummary = runCatching { liveApiClient.catalogInfoSummary() }
+        liveSummary.onSuccess { summary ->
+            synchronized(cacheLock) {
+                infoSummaryCache = CacheEntry(summary)
+            }
+            return summary
+        }
+
+        val webSummary = runCatching {
+            val openStaticSummary = liveApiClient.webOpenStaticSummary()
+            val buildSummary = runCatching { liveApiClient.webBuildSummary() }.getOrNull()
+            CatalogInfoSummary(
+                openStaticSummary = openStaticSummary,
+                buildSummary = buildSummary
+            )
+        }
+        webSummary.onSuccess { summary ->
+            synchronized(cacheLock) {
+                infoSummaryCache = CacheEntry(summary)
+            }
+            return summary
+        }
+
+        staleSummary?.let { return it }
+        throw webSummary.exceptionOrNull()
+            ?: liveSummary.exceptionOrNull()
+            ?: IOException("Catalog summary could not be loaded")
+    }
+
+    fun invalidateInfoSummaryCache() {
+        synchronized(cacheLock) {
+            infoSummaryCache = null
+        }
+    }
+
     fun invalidateCache() {
         synchronized(cacheLock) {
             catalogSearchCache.clear()
             stationDetailCache.clear()
             stationSummaryCache.clear()
+            infoSummaryCache = null
         }
     }
 
@@ -269,6 +322,8 @@ class ChargerRepository(
         private const val SEARCH_STALE_TTL_MS = 24 * 60 * 60 * 1000L
         private const val DETAIL_FRESH_TTL_MS = 24 * 60 * 60 * 1000L
         private const val DETAIL_STALE_TTL_MS = 7 * 24 * 60 * 60 * 1000L
+        private const val INFO_FRESH_TTL_MS = 30 * 60 * 1000L
+        private const val INFO_STALE_TTL_MS = 7 * 24 * 60 * 60 * 1000L
     }
 }
 

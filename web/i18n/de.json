@@ -77,7 +77,7 @@
     "activeAmenity": "{label} Filter aktiv",
     "filterAmenity": "{label} filtern",
     "openWithCount": "Filter öffnen, {count} aktiv: {labels}",
-    "selectedOnly": "Nur ausgewählt: {labels}",
+    "selectedOnly": "Auswahl: {labels}",
     "namePrefix": "Name: {value}",
     "minPowerLabel": "ab {value} kW"
   },
@@ -279,12 +279,15 @@
     "positionMessage": "Versuche es erneut, wenn dein Browser einen Standort liefern kann.",
     "unknownMessage": "Bitte versuche es erneut, um Ladestationen im Umkreis von 20 km zu laden.",
     "retry": "Erneut versuchen",
-    "searchMap": "Ort auf Karte suchen"
+    "searchMap": "Ort auf Karte suchen",
+    "settingsMessage": "Aktivieren Sie den Standortzugriff für woladen in den Systemeinstellungen, um Ladestationen in Ihrer Nähe zu laden.",
+    "openSettings": "Öffnen Sie Einstellungen",
+    "usageDescription": "woladen nutzt Ihren Standort, um Ladepunkte in der Nähe anzuzeigen."
   },
   "errors": {
     "dataLoad": "Fehler beim Laden der Daten.",
     "catalogTitle": "Ladepunkte konnten nicht geladen werden",
-    "catalogMessage": "Die Live-Suche ist gerade nicht erreichbar. Bitte versuche es erneut.",
+    "catalogMessage": "Keine Netzwerkverbindung. Tut uns leid, die Live-Suche funktioniert erst wieder, wenn dieses Gerät online ist.",
     "reload": "Erneut laden"
   },
   "sources": {

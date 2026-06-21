@@ -5,11 +5,19 @@ import android.util.JsonToken
 import de.woladen.android.BuildConfig
 import de.woladen.android.model.AmenityExample
 import de.woladen.android.model.AvailabilityStatus
+import de.woladen.android.model.BundleBuildRecords
+import de.woladen.android.model.BundleBuildRun
+import de.woladen.android.model.BundleBuildSummary
+import de.woladen.android.model.CatalogInfoSummary
 import de.woladen.android.model.CatalogCharger
 import de.woladen.android.model.CatalogSearchResponse
 import de.woladen.android.model.CatalogStation
 import de.woladen.android.model.CatalogStationDetail
 import de.woladen.android.model.FilterState
+import de.woladen.android.model.OpenStaticBundle
+import de.woladen.android.model.OpenStaticCountry
+import de.woladen.android.model.OpenStaticSource
+import de.woladen.android.model.OpenStaticSummary
 import de.woladen.android.model.LiveEvse
 import de.woladen.android.model.LiveJsonValue
 import de.woladen.android.model.LiveStationDetail
@@ -22,6 +30,7 @@ import org.json.JSONObject
 import java.io.IOException
 import java.io.Reader
 import java.net.HttpURLConnection
+import java.net.Proxy
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
@@ -99,9 +108,51 @@ class LiveApiClient(
         parseCatalogStationDetail(readJsonResponse(connection))
     }
 
+    suspend fun catalogInfoSummary(): CatalogInfoSummary = withContext(Dispatchers.IO) {
+        val connection = openConnection(
+            path = "/v1/catalog/summary",
+            method = "GET",
+            timeoutMs = CATALOG_SUMMARY_TIMEOUT_MS
+        )
+        connection.setRequestProperty("Accept", "application/json")
+        parseCatalogInfoSummaryPayload(readJsonResponse(connection))
+    }
+
+    suspend fun webOpenStaticSummary(): OpenStaticSummary = withContext(Dispatchers.IO) {
+        val connection = openAbsoluteConnection(
+            url = DEFAULT_WEB_OPEN_STATIC_SUMMARY_URL,
+            method = "GET",
+            timeoutMs = WEB_SUMMARY_TIMEOUT_MS
+        )
+        connection.setRequestProperty("Accept", "application/json")
+        parseOpenStaticSummaryPayload(readJsonResponse(connection))
+    }
+
+    suspend fun webBuildSummary(): BundleBuildSummary = withContext(Dispatchers.IO) {
+        val connection = openAbsoluteConnection(
+            url = DEFAULT_WEB_BUILD_SUMMARY_URL,
+            method = "GET",
+            timeoutMs = WEB_SUMMARY_TIMEOUT_MS
+        )
+        connection.setRequestProperty("Accept", "application/json")
+        parseBundleBuildSummaryPayload(readJsonResponse(connection))
+    }
+
     private fun openConnection(path: String, method: String, timeoutMs: Int): HttpURLConnection {
         val normalizedBaseUrl = baseUrl.trimEnd('/')
-        val connection = URL("$normalizedBaseUrl$path").openConnection() as HttpURLConnection
+        val connection = URL("$normalizedBaseUrl$path").openConnection(Proxy.NO_PROXY) as HttpURLConnection
+        connection.requestMethod = method
+        connection.connectTimeout = timeoutMs
+        connection.readTimeout = timeoutMs
+        connection.instanceFollowRedirects = true
+        if (acceptLanguage.isNotBlank()) {
+            connection.setRequestProperty("Accept-Language", acceptLanguage)
+        }
+        return connection
+    }
+
+    private fun openAbsoluteConnection(url: String, method: String, timeoutMs: Int): HttpURLConnection {
+        val connection = URL(url).openConnection(Proxy.NO_PROXY) as HttpURLConnection
         connection.requestMethod = method
         connection.connectTimeout = timeoutMs
         connection.readTimeout = timeoutMs
@@ -665,12 +716,158 @@ class LiveApiClient(
 
     companion object {
         val DEFAULT_BASE_URL: String = BuildConfig.LIVE_API_BASE_URL
+        const val DEFAULT_WEB_OPEN_STATIC_SUMMARY_URL = "https://woladen.de/data/open_static_summary.json"
+        const val DEFAULT_WEB_BUILD_SUMMARY_URL = "https://woladen.de/data/summary.json"
         const val MAX_LOOKUP_STATION_IDS = 20
         const val MAX_CATALOG_SEARCH_RESULTS = 100
         private const val LOOKUP_TIMEOUT_MS = 3_500
         private const val DETAIL_TIMEOUT_MS = 4_000
         private const val CATALOG_SEARCH_TIMEOUT_MS = 4_500
         private const val CATALOG_DETAIL_TIMEOUT_MS = 4_500
+        private const val CATALOG_SUMMARY_TIMEOUT_MS = 5_000
+        private const val WEB_SUMMARY_TIMEOUT_MS = 5_000
+    }
+}
+
+internal fun catalogInfoSummaryFromJson(rawJson: String): CatalogInfoSummary =
+    parseCatalogInfoSummaryPayload(JSONObject(rawJson))
+
+internal fun parseCatalogInfoSummaryPayload(payload: JSONObject): CatalogInfoSummary {
+    if (payload.has("bundle") || payload.has("countries") || payload.has("sources")) {
+        return CatalogInfoSummary(
+            openStaticSummary = parseOpenStaticSummaryPayload(payload),
+            buildSummary = null
+        )
+    }
+
+    return CatalogInfoSummary(
+        openStaticSummary = payload.optJSONObject("open_static_summary")?.let(::parseOpenStaticSummaryPayload)
+            ?: payload.optJSONObject("openStaticSummary")?.let(::parseOpenStaticSummaryPayload),
+        buildSummary = payload.optJSONObject("summary")?.let(::parseBundleBuildSummaryPayload)
+            ?: payload.optJSONObject("build_summary")?.let(::parseBundleBuildSummaryPayload)
+            ?: payload.optJSONObject("buildSummary")?.let(::parseBundleBuildSummaryPayload)
+    )
+}
+
+internal fun parseOpenStaticSummaryPayload(payload: JSONObject): OpenStaticSummary {
+    return OpenStaticSummary(
+        bundle = payload.optJSONObject("bundle")?.let(::parseOpenStaticBundlePayload),
+        countries = parseOpenStaticCountries(payload.optJSONArray("countries")),
+        generatedAt = payload.summaryCleanString("generated_at"),
+        schemaVersion = payload.summaryNullableInt("schema_version") ?: 0,
+        rawSources = parseOpenStaticSources(payload.optJSONArray("sources"))
+    )
+}
+
+internal fun parseBundleBuildSummaryPayload(payload: JSONObject): BundleBuildSummary {
+    return BundleBuildSummary(
+        run = payload.optJSONObject("run")?.let {
+            BundleBuildRun(
+                startedAt = it.summaryCleanString("started_at"),
+                finishedAt = it.summaryCleanString("finished_at")
+            )
+        },
+        records = payload.optJSONObject("records")?.let {
+            BundleBuildRecords(
+                rawRows = it.summaryNullableInt("raw_rows") ?: 0,
+                fullRegistryActiveStationsTotal = it.summaryNullableInt("full_registry_active_stations_total") ?: 0
+            )
+        }
+    )
+}
+
+private fun parseOpenStaticBundlePayload(payload: JSONObject): OpenStaticBundle {
+    return OpenStaticBundle(
+        stationCount = payload.summaryNullableInt("station_count") ?: 0,
+        chargerCount = payload.summaryNullableInt("charger_count") ?: 0,
+        countryCount = payload.summaryNullableInt("country_count") ?: 0,
+        schemaVersion = payload.summaryNullableInt("schema_version") ?: 0
+    )
+}
+
+private fun parseOpenStaticCountries(payload: JSONArray?): List<OpenStaticCountry> {
+    if (payload == null) return emptyList()
+    val countries = mutableListOf<OpenStaticCountry>()
+    for (index in 0 until payload.length()) {
+        val country = payload.optJSONObject(index) ?: continue
+        countries += OpenStaticCountry(
+            code = firstSummaryNonBlank(
+                country.summaryCleanString("code"),
+                country.summaryCleanString("country_code")
+            ).uppercase(Locale.ROOT),
+            name = firstSummaryNonBlank(
+                country.summaryCleanString("name"),
+                country.summaryCleanString("country_name")
+            ),
+            stationCount = firstSummaryInt(country, "station_count", "stationCount", "stations"),
+            chargerCount = firstSummaryInt(country, "charger_count", "chargerCount", "chargers"),
+            fastStationCount = firstSummaryInt(country, "fast_station_count", "fastStationCount", "fast_stations")
+        )
+    }
+    return countries
+}
+
+private fun parseOpenStaticSources(payload: JSONArray?): List<OpenStaticSource> {
+    if (payload == null) return emptyList()
+    val sources = mutableListOf<OpenStaticSource>()
+    for (index in 0 until payload.length()) {
+        val source = payload.optJSONObject(index) ?: continue
+        sources += OpenStaticSource(
+            countryCode = firstSummaryNonBlank(
+                source.summaryCleanString("country_code"),
+                source.summaryCleanString("countryCode")
+            ).uppercase(Locale.ROOT),
+            sourceUid = firstSummaryNonBlank(
+                source.summaryCleanString("source_uid"),
+                source.summaryCleanString("sourceUid")
+            ),
+            displayName = firstSummaryNonBlank(
+                source.summaryCleanString("display_name"),
+                source.summaryCleanString("displayName"),
+                source.summaryCleanString("source_name"),
+                source.summaryCleanString("sourceName"),
+                source.summaryCleanString("source_uid"),
+                source.summaryCleanString("sourceUid")
+            ),
+            sourceUrl = normalizedSummarySourceUrl(
+                firstSummaryNonBlank(
+                    source.summaryCleanString("source_url"),
+                    source.summaryCleanString("sourceUrl"),
+                    source.summaryCleanString("url")
+                )
+            ),
+            license = source.summaryCleanString("license"),
+            licenseUrl = firstSummaryNonBlank(
+                source.summaryCleanString("license_url"),
+                source.summaryCleanString("licenseUrl")
+            )
+        )
+    }
+    return sources
+}
+
+private fun firstSummaryInt(payload: JSONObject, vararg names: String): Int =
+    names.firstNotNullOfOrNull(payload::summaryNullableInt) ?: 0
+
+private fun firstSummaryNonBlank(vararg values: String): String =
+    values.firstOrNull { it.isNotBlank() }.orEmpty()
+
+private fun normalizedSummarySourceUrl(value: String): String =
+    value.trim().trimEnd('/')
+
+private fun JSONObject.summaryCleanString(name: String): String {
+    if (!has(name) || isNull(name)) return ""
+    return optString(name, "").trim()
+}
+
+private fun JSONObject.summaryNullableInt(name: String): Int? {
+    if (!has(name) || isNull(name)) return null
+    return when (val value = opt(name)) {
+        is Number -> value.toDouble().toInt()
+        is String -> value.trim().replace(',', '.').let { text ->
+            text.toIntOrNull() ?: text.toDoubleOrNull()?.toInt()
+        }
+        else -> null
     }
 }
 

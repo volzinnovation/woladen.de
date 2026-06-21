@@ -17,6 +17,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.core.view.WindowCompat
 import de.woladen.android.service.LocationService
+import de.woladen.android.service.LocationAuthorizationStatus
 import de.woladen.android.store.FavoritesStore
 import de.woladen.android.ui.WoladenTheme
 import de.woladen.android.ui.WoladenAppScreen
@@ -72,6 +73,9 @@ class MainActivity : ComponentActivity() {
 
             LaunchedEffect(Unit) {
                 locationService.activate()
+                if (locationService.authorizationStatus == LocationAuthorizationStatus.NOT_DETERMINED) {
+                    requestLocationPermission()
+                }
                 viewModel.load(locationService.currentLocation)
             }
 

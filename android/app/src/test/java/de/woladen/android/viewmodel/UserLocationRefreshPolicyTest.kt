@@ -1,10 +1,18 @@
 package de.woladen.android.viewmodel
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UserLocationRefreshPolicyTest {
+    @Test
+    fun catalog_load_error_message_is_human_readable_offline_copy() {
+        assertEquals(
+            "No network connection. Sorry, live search will not work until this device is online.",
+            catalogLoadErrorMessage()
+        )
+    }
 
     @Test
     fun refreshes_when_no_previous_user_center_exists() {

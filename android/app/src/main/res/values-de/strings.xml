@@ -84,7 +84,7 @@
     <string name="i18n_detail_noteplaceholder">z. B. gut beleuchtet, enger Parkplatz, Bäckerei um die Ecke</string>
     <string name="i18n_detail_notesaved">Anmerkung lokal gespeichert</string>
     <string name="i18n_detail_personalnote">Persönliche Anmerkung</string>
-    <string name="i18n_errors_catalogmessage">Die Live-Suche ist gerade nicht erreichbar. Bitte versuche es erneut.</string>
+    <string name="i18n_errors_catalogmessage">Keine Netzwerkverbindung. Tut uns leid, die Live-Suche funktioniert erst wieder, wenn dieses Gerät online ist.</string>
     <string name="i18n_errors_catalogtitle">Ladepunkte konnten nicht geladen werden</string>
     <string name="i18n_errors_dataload">Fehler beim Laden der Daten.</string>
     <string name="i18n_errors_reload">Erneut laden</string>
@@ -116,7 +116,7 @@
     <string name="i18n_filters_openwithcount">Filter öffnen, {count} aktiv: {labels}</string>
     <string name="i18n_filters_operator">Betreiber</string>
     <string name="i18n_filters_reset">Filter löschen</string>
-    <string name="i18n_filters_selectedonly">Nur ausgewählt: {labels}</string>
+    <string name="i18n_filters_selectedonly">Auswahl: {labels}</string>
     <string name="i18n_filters_title">Filter</string>
     <string name="i18n_info_aboutintro">Finde verfügbare Ladestationen in der Nähe guter Bäckereien, Restaurants, Läden, Spielplätzen und Cafés. woladen kennt</string>
     <string name="i18n_info_aboutoutro">Ladepunkten in vielen Ländern und zeigt sie im Umkreis von 20 km um deinen Standort oder die gewählte Kartenposition. Denn Ladezeit sollte gut genutzte Zeit sein. Standardmäßig sucht woladen Schnelllader ab 50 kW; über den Leistungsfilter lassen sich auch normale Ladepunkte unter 50 kW einbeziehen.</string>

@@ -344,6 +344,9 @@ const FALLBACK_BUNDLE = {
     pendingMessage: "Charging stations within 20 km are loading.",
     deniedTitle: "Location permission needed",
     deniedMessage: "Enable location access to load charging stations within 20 km.",
+    settingsMessage: "Enable location access for woladen in system settings to load charging stations near you.",
+    openSettings: "Open Settings",
+    usageDescription: "woladen uses your location to show charging points nearby.",
     unavailableTitle: "Location unavailable",
     unavailableMessage: "This search needs a browser with location access.",
     timeoutTitle: "Location search is taking too long",
@@ -357,7 +360,7 @@ const FALLBACK_BUNDLE = {
   errors: {
     dataLoad: "Error loading data.",
     catalogTitle: "Charging points could not be loaded",
-    catalogMessage: "Live search is currently unavailable. Please try again.",
+    catalogMessage: "No network connection. Sorry, live search will not work until this device is online.",
     reload: "Reload",
   },
   sources: {

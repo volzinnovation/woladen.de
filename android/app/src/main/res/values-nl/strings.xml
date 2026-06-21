@@ -84,7 +84,7 @@
     <string name="i18n_detail_noteplaceholder">bijv. goed verlicht, krappe parkeerplaats, bakker om de hoek</string>
     <string name="i18n_detail_notesaved">Notitie lokaal opgeslagen</string>
     <string name="i18n_detail_personalnote">Persoonlijke notitie</string>
-    <string name="i18n_errors_catalogmessage">Live zoeken is momenteel niet beschikbaar. Probeer het opnieuw.</string>
+    <string name="i18n_errors_catalogmessage">Geen netwerkverbinding. Sorry, live zoeken werkt pas weer zodra dit apparaat online is.</string>
     <string name="i18n_errors_catalogtitle">Laadpunten konden niet worden geladen</string>
     <string name="i18n_errors_dataload">Fout bij laden van gegevens.</string>
     <string name="i18n_errors_reload">Opnieuw laden</string>
