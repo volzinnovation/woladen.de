@@ -30,7 +30,7 @@ final class AppViewModel: ObservableObject {
 
     private let liveAPIClient: LiveAPIClient
     private let repository: ChargerRepository
-    private let maxVisibleChargers = 20
+    private let maxVisibleChargers = 1_000
     private let liveRefreshInterval: TimeInterval = 15
     private let catalogReloadDistanceM: CLLocationDistance = 10_000
 
@@ -82,7 +82,7 @@ final class AppViewModel: ObservableObject {
         hasRequestedInitialCatalogLoad = true
         resetLiveState()
         favoriteDetailFeatures = [:]
-        loadCatalog(center: userLocation.coordinate, userLocation: userLocation)
+        loadCatalog(center: userLocation.coordinate, userLocation: userLocation, resetResults: true)
     }
 
     func waitForLocation() {
@@ -98,7 +98,7 @@ final class AppViewModel: ObservableObject {
         }
     }
 
-    private func loadCatalog(center: CLLocationCoordinate2D, userLocation: CLLocation?) {
+    private func loadCatalog(center: CLLocationCoordinate2D, userLocation: CLLocation?, resetResults: Bool) {
         catalogLoadTask?.cancel()
         isLoading = true
         loadError = nil
@@ -116,14 +116,13 @@ final class AppViewModel: ObservableObject {
             self.isLoading = false
             switch result {
             case .success(let loaded):
-                self.allFeatures = loaded.features
-                self.operators = loaded.operators
+                self.mergeCatalogFeatures(loaded.features, reset: resetResults)
                 self.activeCatalogInfo = loaded.sourceInfo
                 self.currentCatalogCenter = loaded.catalogCenter
                 self.loadError = nil
                 self.isAwaitingFirstLocationFix = false
                 self.didSeedFromUserLocation = userLocation != nil
-                self.applyLocalFilters(userLocation: userLocation)
+                self.applyLocalFilters(userLocation: userLocation, resetDiscovered: resetResults)
             case .failure(let error):
                 self.loadError = error.localizedDescription
                 if self.allFeatures.isEmpty {
@@ -155,14 +154,16 @@ final class AppViewModel: ObservableObject {
             waitForLocation()
             return
         }
-        loadCatalog(center: userLocation.coordinate, userLocation: userLocation)
+        loadCatalog(center: userLocation.coordinate, userLocation: userLocation, resetResults: true)
     }
 
-    private func applyLocalFilters(userLocation: CLLocation?) {
+    private func applyLocalFilters(userLocation: CLLocation?, resetDiscovered: Bool) {
         filterPool = allFeatures.filter { feature in
             feature.properties.matches(filterState)
         }
-        resetDiscoveredList()
+        if resetDiscovered {
+            resetDiscoveredList()
+        }
         let center = userLocation?.coordinate ?? currentCatalogCenter
         discoverNearby(
             center: center,
@@ -173,7 +174,7 @@ final class AppViewModel: ObservableObject {
 
     func handleMapCenterChange(_ center: CLLocationCoordinate2D) {
         if shouldReloadCatalog(for: center) {
-            loadCatalog(center: center, userLocation: nil)
+            loadCatalog(center: center, userLocation: nil, resetResults: false)
         } else {
             discoverNearby(center: center, resetHistory: false, seededByUserLocation: false)
         }
@@ -216,11 +217,11 @@ final class AppViewModel: ObservableObject {
             return
         }
         guard !allFeatures.isEmpty else {
-            loadCatalog(center: center, userLocation: nil)
+            loadCatalog(center: center, userLocation: nil, resetResults: false)
             return
         }
         if shouldReloadCatalog(for: center) {
-            loadCatalog(center: center, userLocation: nil)
+            loadCatalog(center: center, userLocation: nil, resetResults: false)
         } else {
             discoverNearby(center: center, resetHistory: false, seededByUserLocation: false)
         }
@@ -303,7 +304,7 @@ final class AppViewModel: ObservableObject {
             waitForLocation()
             return
         }
-        loadCatalog(center: userLocation.coordinate, userLocation: userLocation)
+        loadCatalog(center: userLocation.coordinate, userLocation: userLocation, resetResults: true)
     }
 
     func loadInfoSummaryIfNeeded() {
@@ -569,6 +570,72 @@ final class AppViewModel: ObservableObject {
         return lhs.distance(from: rhs)
     }
 
+    private func mergeCatalogFeatures(_ features: [GeoJSONFeature], reset: Bool) {
+        var byStationID: [String: GeoJSONFeature] = [:]
+        var orderedStationIDs: [String] = []
+
+        if !reset {
+            for feature in allFeatures {
+                let stationID = feature.properties.stationID
+                guard !stationID.isEmpty else { continue }
+                if byStationID[stationID] == nil {
+                    orderedStationIDs.append(stationID)
+                }
+                byStationID[stationID] = feature
+            }
+        }
+
+        for feature in features {
+            let stationID = feature.properties.stationID
+            guard !stationID.isEmpty else { continue }
+            if let existing = byStationID[stationID] {
+                byStationID[stationID] = mergeCatalogFeature(existing: existing, incoming: feature)
+            } else {
+                orderedStationIDs.append(stationID)
+                byStationID[stationID] = feature
+            }
+        }
+
+        allFeatures = orderedStationIDs.compactMap { byStationID[$0] }
+        trimAccumulatedFeatures()
+        rebuildOperators()
+    }
+
+    private func mergeCatalogFeature(existing: GeoJSONFeature, incoming: GeoJSONFeature) -> GeoJSONFeature {
+        var merged = incoming
+        merged.liveSummary = incoming.liveSummary ?? existing.liveSummary
+        merged.liveDetail = existing.liveDetail ?? incoming.liveDetail
+        return merged
+    }
+
+    private func trimAccumulatedFeatures() {
+        let overflow = allFeatures.count - maxVisibleChargers
+        guard overflow > 0 else { return }
+
+        let removedStationIDs = Set(allFeatures.prefix(overflow).map { $0.properties.stationID })
+        allFeatures.removeFirst(overflow)
+        filterPool.removeAll { removedStationIDs.contains($0.properties.stationID) }
+        discoveredOrder.removeAll { removedStationIDs.contains($0) }
+        for stationID in removedStationIDs {
+            discoveredByID.removeValue(forKey: stationID)
+        }
+        discoveredFeatures = discoveredOrder.compactMap { discoveredByID[$0] }
+    }
+
+    private func rebuildOperators() {
+        let counts = allFeatures.reduce(into: [String: Int]()) { result, feature in
+            let name = feature.properties.operatorName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty else { return }
+            result[name, default: 0] += 1
+        }
+        operators = counts
+            .map { OperatorEntry(name: $0.key, stations: $0.value) }
+            .sorted {
+                if $0.stations == $1.stations { return $0.name < $1.name }
+                return $0.stations > $1.stations
+            }
+    }
+
     private func resetDiscoveredList() {
         discoveredByID = [:]
         discoveredOrder = []
@@ -610,6 +677,10 @@ final class AppViewModel: ObservableObject {
             }
             discoveredByID[feature.id] = feature
         }
+        while discoveredOrder.count > maxVisibleChargers {
+            let removedID = discoveredOrder.removeFirst()
+            discoveredByID.removeValue(forKey: removedID)
+        }
         discoveredFeatures = discoveredOrder.compactMap { discoveredByID[$0] }
 
         let nearestStationIDs = nearest.map { $0.properties.stationID }
@@ -646,6 +717,8 @@ final class AppViewModel: ObservableObject {
         discoveredFeatures = discoveredFeatures.map { existing in
             existing.properties.stationID == stationID ? feature : existing
         }
+        trimAccumulatedFeatures()
+        rebuildOperators()
         if let selectedFeature, selectedFeature.properties.stationID == stationID {
             self.selectedFeature = feature
         }

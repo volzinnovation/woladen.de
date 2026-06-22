@@ -82,7 +82,7 @@ const SHARED_RATINGS_ENABLED = window.WOLADEN_ENABLE_SHARED_RATINGS === true ||
   window.WOLADEN_ENABLE_SHARED_RATINGS === "true";
 const RATING_SUMMARY_REFRESH_MS = 60000;
 const RATING_API_TIMEOUT_MS = 3500;
-const LIST_VIEW_MAX_STATIONS = 20;
+const CATALOG_LIST_MAX_STATIONS = 1000;
 const FAVORITE_SORT_DISTANCE = "distance";
 const FAVORITE_SORT_RATING = "rating";
 const LIVE_SUMMARY_REFRESH_MS = 15000;
@@ -92,6 +92,7 @@ const GEOCODER_API_TIMEOUT_MS = 3500;
 const GEOCODER_SUGGESTION_DEBOUNCE_MS = 250;
 const CATALOG_SEARCH_RADIUS_M = 20000;
 const CATALOG_SEARCH_LIMIT = 100;
+const CATALOG_ACCUMULATED_FEATURE_LIMIT = 1000;
 const CATALOG_DETAIL_TIMEOUT_MS = 4500;
 const CATALOG_MAP_MOVE_DEBOUNCE_MS = 450;
 const CATALOG_MIN_RELOAD_DISTANCE_M = 1000;
@@ -1671,7 +1672,7 @@ function selectLocationSearchResult(result) {
   }
   clearLocationSearchResults();
   setCatalogSearchCenter({ lat: result.lat, lon: result.lon }, "search");
-  void loadCatalogStationsForCurrentCenter({ force: true });
+  void loadCatalogStationsForCurrentCenter({ force: true, reset: true });
   if (!state.views.map) {
     return;
   }
@@ -1839,6 +1840,75 @@ function catalogStationToFeature(station) {
   );
 }
 
+function mergeCatalogFeature(existing, incoming) {
+  if (!existing) {
+    applyCachedLiveStationSummaryToFeature(incoming);
+    return incoming;
+  }
+
+  const existingProps = existing.properties || {};
+  const incomingProps = incoming.properties || {};
+  const existingAmenities = Array.isArray(existingProps.amenity_examples)
+    ? existingProps.amenity_examples.length
+    : 0;
+  const incomingAmenities = Array.isArray(incomingProps.amenity_examples)
+    ? incomingProps.amenity_examples.length
+    : 0;
+  const merged = {
+    ...incoming,
+    properties: {
+      ...existingProps,
+      ...incomingProps,
+    },
+  };
+
+  if (existingAmenities > incomingAmenities) {
+    merged.properties.amenity_examples = existingProps.amenity_examples;
+    merged.properties.amenity_category_counts =
+      existingProps.amenity_category_counts || incomingProps.amenity_category_counts;
+    merged.properties.amenities_total = Math.max(
+      finiteNumber(existingProps.amenities_total, 0),
+      finiteNumber(incomingProps.amenities_total, 0),
+    );
+    if (merged.properties.amenity_category_counts) {
+      applyCatalogAmenityCounts(merged.properties, merged.properties.amenity_category_counts);
+    }
+  }
+
+  applyCachedLiveStationSummaryToFeature(merged);
+  return merged;
+}
+
+function upsertCatalogFeatures(features, { reset = false } = {}) {
+  const byStationId = new Map();
+  if (!reset) {
+    state.features.forEach((feature) => {
+      const stationId = normalizeStationId(getStationIdFromProps(feature.properties));
+      if (stationId && !byStationId.has(stationId)) {
+        byStationId.set(stationId, feature);
+      }
+    });
+  }
+
+  features.forEach((feature) => {
+    const stationId = normalizeStationId(getStationIdFromProps(feature.properties));
+    if (!stationId) {
+      return;
+    }
+    byStationId.set(stationId, mergeCatalogFeature(byStationId.get(stationId), feature));
+  });
+
+  while (byStationId.size > CATALOG_ACCUMULATED_FEATURE_LIMIT) {
+    const oldestStationId = byStationId.keys().next().value;
+    if (!oldestStationId) {
+      break;
+    }
+    byStationId.delete(oldestStationId);
+  }
+
+  state.features = Array.from(byStationId.values());
+}
+
 function catalogSearchMode() {
   return Number(state.filters.minPower ?? DEFAULT_MIN_POWER_KW) < DEFAULT_MIN_POWER_KW
     ? "local"
@@ -1940,7 +2010,7 @@ function catalogSearchQueryKey() {
   });
 }
 
-async function loadCatalogStationsForCurrentCenter({ force = false } = {}) {
+async function loadCatalogStationsForCurrentCenter({ force = false, reset = false } = {}) {
   const center = getCatalogSearchCenter();
   if (!state.live.baseUrl || !center) {
     return;
@@ -1957,8 +2027,6 @@ async function loadCatalogStationsForCurrentCenter({ force = false } = {}) {
   state.catalog.error = null;
   state.catalog.lastResultCount = null;
   state.catalog.lastQueryKey = queryKey;
-  state.features = [];
-  state.filtered = [];
   populateOperators();
   renderAmenityFilters();
   applyFilters();
@@ -1982,7 +2050,7 @@ async function loadCatalogStationsForCurrentCenter({ force = false } = {}) {
     if (!payload || typeof payload !== "object" || !Array.isArray(payload.stations)) {
       throw new Error("Unexpected catalog search payload");
     }
-    const featuresByStationId = new Map();
+    const incomingFeatures = [];
     payload.stations.forEach((station) => {
       const feature = catalogStationToFeature(station);
       const stationId = getStationIdFromProps(feature.properties);
@@ -1997,9 +2065,9 @@ async function loadCatalogStationsForCurrentCenter({ force = false } = {}) {
       } else {
         markCatalogLiveStationSummaryMissing(stationId);
       }
-      featuresByStationId.set(stationId, feature);
+      incomingFeatures.push(feature);
     });
-    state.features = Array.from(featuresByStationId.values());
+    upsertCatalogFeatures(incomingFeatures, { reset });
     state.catalog.lastResultCount = state.features.length;
     state.live.reachable = true;
   } catch (err) {
@@ -2007,8 +2075,7 @@ async function loadCatalogStationsForCurrentCenter({ force = false } = {}) {
       return;
     }
     console.error("Failed to load live catalog station search", err);
-    state.features = [];
-    state.catalog.lastResultCount = null;
+    state.catalog.lastResultCount = state.features.length || null;
     state.catalog.error = err;
   } finally {
     if (searchSequence === catalogSearchSequence) {
@@ -2414,7 +2481,7 @@ function createCatalogErrorPanel() {
   button.className = "primary-btn";
   button.textContent = t("errors.reload");
   button.addEventListener("click", () => {
-    void loadCatalogStationsForCurrentCenter({ force: true });
+    void loadCatalogStationsForCurrentCenter({ force: true, reset: true });
   });
   actions.appendChild(button);
   panel.appendChild(actions);
@@ -2637,8 +2704,9 @@ async function loadCatalogStationDetail(stationId) {
     const payloadStationId = normalizeStationId(payload.station.station_id || normalizedStationId);
     let feature = findFeatureByStationId(payloadStationId) || findFeatureByStationId(normalizedStationId);
     if (!feature) {
-      feature = catalogStationToFeature(payload.station);
-      state.features.push(feature);
+      const detailFeature = catalogStationToFeature(payload.station);
+      upsertCatalogFeatures([detailFeature]);
+      feature = findFeatureByStationId(payloadStationId) || detailFeature;
     }
     applyCatalogStationDetailToFeature(feature, payload);
     const featureStationId = getStationIdFromProps(feature.properties) || payloadStationId || normalizedStationId;
@@ -3589,7 +3657,7 @@ function updateFilters(options = {}) {
   const { reloadCatalog = false } = options;
   saveFilters();
   if (reloadCatalog && hasCatalogSearchCenter()) {
-    void loadCatalogStationsForCurrentCenter({ force: true }).then(updateFilterLabel);
+    void loadCatalogStationsForCurrentCenter({ force: true, reset: true }).then(updateFilterLabel);
     updateFilterLabel();
     return;
   }
@@ -3878,12 +3946,13 @@ function renderList() {
   requestLiveSummariesForFeatures(displayItems);
   requestRatingSummariesForFeatures(displayItems);
 
-  if (state.filtered.length > LIST_VIEW_MAX_STATIONS) {
+  const displayLimit = getListDisplayLimit();
+  if (state.filtered.length > displayLimit) {
     const more = document.createElement("div");
     more.style.textAlign = "center";
     more.style.padding = "1rem";
     more.style.color = "#888";
-    more.textContent = t("list.more", { count: state.filtered.length - LIST_VIEW_MAX_STATIONS });
+    more.textContent = t("list.more", { count: state.filtered.length - displayLimit });
     container.appendChild(more);
   }
 }
@@ -4069,7 +4138,11 @@ function createStationCard(feature, options = {}) {
 }
 
 function getListDisplayItems() {
-  return state.filtered.slice(0, hasCatalogSearchContext() ? LIST_VIEW_MAX_STATIONS : STATIC_FALLBACK_LIST_LIMIT);
+  return state.filtered.slice(0, getListDisplayLimit());
+}
+
+function getListDisplayLimit() {
+  return hasCatalogSearchContext() ? CATALOG_LIST_MAX_STATIONS : STATIC_FALLBACK_LIST_LIMIT;
 }
 
 function isEditableKeyTarget(target) {
@@ -5628,7 +5701,7 @@ async function requestUserLocation() {
     if (state.views.map) {
       state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
     }
-    await loadCatalogStationsForCurrentCenter({ force: true });
+    await loadCatalogStationsForCurrentCenter({ force: true, reset: true });
   } catch (err) {
     console.warn("Location error", err);
     updateLocationState({

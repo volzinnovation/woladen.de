@@ -93,13 +93,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val liveApiClient = LiveApiClient()
     private val repository = ChargerRepository(liveApiClient)
 
-    private val maxVisibleChargers = 20
-    private val maxKnownCatalogFeatures = 600
+    private val maxVisibleChargers = 1_000
+    private val maxKnownCatalogFeatures = 1_000
     private val catalogSearchRadiusMeters = 20_000
     private val catalogSearchLimit = LiveApiClient.MAX_CATALOG_SEARCH_RESULTS
     private val liveRefreshIntervalMs = 15_000L
 
-    private var currentCatalogFeatures: List<GeoJsonFeature> = emptyList()
     private var filterPool: List<GeoJsonFeature> = emptyList()
     private val discoveredById: MutableMap<String, GeoJsonFeature> = linkedMapOf()
     private val discoveredOrder: MutableList<String> = mutableListOf()
@@ -161,7 +160,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             resetLiveState()
-            currentCatalogFeatures = emptyList()
             filterPool = emptyList()
             discoveredFeatures = emptyList()
             allFeatures = emptyList()
@@ -544,11 +542,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 mergeCatalogFeature(existing, feature)
             } ?: feature
         }
+        val removedStationIds = mutableSetOf<String>()
         while (byStationId.size > maxKnownCatalogFeatures) {
             val firstKey = byStationId.keys.firstOrNull() ?: break
             byStationId.remove(firstKey)
+            removedStationIds += firstKey
         }
         allFeatures = byStationId.values.toList()
+        filterPool = allFeatures.filter { feature -> feature.properties.matches(filterState) }
+        removeDiscoveredStationIds(removedStationIds)
         rebuildOperators()
     }
 
@@ -580,9 +582,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (stationIds.isEmpty()) return
 
         allFeatures = allFeatures.map { feature ->
-            if (stationIds.contains(feature.properties.stationId)) updater(feature) else feature
-        }
-        currentCatalogFeatures = currentCatalogFeatures.map { feature ->
             if (stationIds.contains(feature.properties.stationId)) updater(feature) else feature
         }
         filterPool = filterPool.map { feature ->
@@ -619,12 +618,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         discoveredFeatures = emptyList()
     }
 
+    private fun removeDiscoveredStationIds(stationIds: Set<String>) {
+        if (stationIds.isEmpty()) return
+        discoveredOrder.removeAll { stationIds.contains(it) }
+        stationIds.forEach { discoveredById.remove(it) }
+        discoveredFeatures = discoveredOrder.mapNotNull { discoveredById[it] }
+    }
+
     private fun refreshNearbyAsync(centerLat: Double, centerLon: Double) {
         lastCatalogCenter = centerLat to centerLon
         isAwaitingFirstLocationFix = false
         refreshNearbyJob?.cancel()
         refreshNearbyJob = viewModelScope.launch {
-            val cachedPool = currentCatalogFeatures.filter { feature -> feature.properties.matches(filterState) }
+            val cachedPool = allFeatures.filter { feature -> feature.properties.matches(filterState) }
             filterPool = cachedPool
             if (cachedPool.isNotEmpty()) {
                 publishNearestCatalogFeatures(centerLat, centerLon, cachedPool)
@@ -644,9 +650,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             if (!isActive) return@launch
             isLoading = false
             result.onSuccess { catalogResult ->
-                currentCatalogFeatures = catalogResult.features
                 mergeKnownFeatures(catalogResult.features)
-                filterPool = currentCatalogFeatures.filter { feature -> feature.properties.matches(filterState) }
+                filterPool = allFeatures.filter { feature -> feature.properties.matches(filterState) }
                 publishNearestCatalogFeatures(centerLat, centerLon, filterPool)
                 requestLiveSummaries(discoveredFeatures.map { it.properties.stationId })
                 loadError = null
@@ -677,13 +682,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             discoveredFeatures = emptyList()
             return
         }
-        discoveredById.clear()
-        discoveredOrder.clear()
         for (feature in nearest) {
-            discoveredOrder += feature.id
+            if (!discoveredById.containsKey(feature.id)) {
+                discoveredOrder += feature.id
+            }
             discoveredById[feature.id] = feature
         }
-        discoveredFeatures = nearest
+        while (discoveredOrder.size > maxVisibleChargers) {
+            val removedId = discoveredOrder.removeAt(0)
+            discoveredById.remove(removedId)
+        }
+        discoveredFeatures = discoveredOrder.mapNotNull { discoveredById[it] }
     }
 
     private fun selectNearest(
