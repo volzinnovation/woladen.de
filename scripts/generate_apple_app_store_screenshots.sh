@@ -102,6 +102,71 @@ prepare_simulator() {
     --operatorName "" || true
 }
 
+device_name_for_udid() {
+  local device_udid="$1"
+
+  xcrun simctl list devices available |
+    sed -nE "s/^[[:space:]]*([^()].*) \\($device_udid\\).*/\\1/p" |
+    head -1
+}
+
+request_simulator_landscape() {
+  local device_udid="$1"
+  local device_name
+
+  device_name="$(device_name_for_udid "$device_udid")"
+  open -a Simulator --args -CurrentDeviceUDID "$device_udid" >/dev/null 2>&1 || true
+  osascript >/dev/null <<OSA || true
+tell application "Simulator" to activate
+delay 0.3
+tell application "System Events"
+  tell process "Simulator"
+    repeat with candidateWindow in windows
+      if (name of candidateWindow as text) starts with "$device_name" then
+        perform action "AXRaise" of candidateWindow
+        exit repeat
+      end if
+    end repeat
+    try
+      click menu item "Rotate Right" of menu "Device" of menu bar item "Device" of menu bar 1
+    end try
+  end tell
+end tell
+OSA
+  sleep 1
+}
+
+validate_screenshot_aspect() {
+  local image_path="$1"
+  local expected_aspect="$2"
+  local width
+  local height
+
+  width="$(sips -g pixelWidth "$image_path" 2>/dev/null | awk '/pixelWidth/ { print $2 }')"
+  height="$(sips -g pixelHeight "$image_path" 2>/dev/null | awk '/pixelHeight/ { print $2 }')"
+
+  if [[ -z "$width" || -z "$height" ]]; then
+    echo "Unable to read screenshot dimensions for $image_path" >&2
+    return 1
+  fi
+
+  case "$expected_aspect" in
+    portrait)
+      if (( width >= height )); then
+        echo "Expected portrait screenshot, got ${width}x${height}: $image_path" >&2
+        return 1
+      fi
+      ;;
+    landscape)
+      if (( width <= height )); then
+        echo "Expected landscape screenshot, got ${width}x${height}: $image_path" >&2
+        echo "The iPad app supports landscape, but this Simulator session did not rotate before capture." >&2
+        return 1
+      fi
+      ;;
+  esac
+}
+
 install_app() {
   local device_udid="$1"
   local app_path="$DERIVED_DATA_DIR/Build/Products/Debug-iphonesimulator/Woladen.app"
@@ -121,7 +186,8 @@ capture_profile() {
   local output_dir="$2"
   local explicit_udid="$3"
   local explicit_name="$4"
-  shift 4
+  local expected_aspect="$5"
+  shift 5
   local device_udid
   local data_container
   local ready_dir
@@ -142,6 +208,9 @@ capture_profile() {
   prepare_simulator "$device_udid"
   build_app "$device_udid"
   install_app "$device_udid"
+  if [[ "$expected_aspect" == "landscape" ]]; then
+    request_simulator_landscape "$device_udid"
+  fi
 
   data_container="$(xcrun simctl get_app_container "$device_udid" "$APP_BUNDLE_ID" data)"
   ready_dir="$data_container/Documents/app-store-screenshots"
@@ -165,7 +234,11 @@ capture_profile() {
 
     wait_for_ready_marker "$marker_path"
     sleep 1
+    if [[ "$expected_aspect" == "landscape" ]]; then
+      request_simulator_landscape "$device_udid"
+    fi
     xcrun simctl io "$device_udid" screenshot --type=png "$output_dir/$name.png" >/dev/null
+    validate_screenshot_aspect "$output_dir/$name.png" "$expected_aspect"
   done
 
   xcrun simctl terminate "$device_udid" "$APP_BUNDLE_ID" >/dev/null 2>&1 || true
@@ -182,6 +255,7 @@ run_profile() {
         "$OUTPUT_ROOT/6.9-inch" \
         "${IPHONE_SIMULATOR_UDID:-${SIMULATOR_UDID:-}}" \
         "${IPHONE_SIMULATOR_NAME:-${SIMULATOR_NAME:-}}" \
+        "portrait" \
         "iPhone 16 Pro Max" \
         "iPhone 17 Pro Max"
       ;;
@@ -191,6 +265,7 @@ run_profile() {
         "$OUTPUT_ROOT/6.5-inch" \
         "${IPHONE_SIMULATOR_UDID:-${SIMULATOR_UDID:-}}" \
         "${IPHONE_SIMULATOR_NAME:-${SIMULATOR_NAME:-}}" \
+        "portrait" \
         "6,5\" Device" \
         "6,5\" Decive" \
         "iPhone 16 Plus" \
@@ -207,6 +282,19 @@ run_profile() {
         "$OUTPUT_ROOT/13-inch-ipad" \
         "${IPAD_SIMULATOR_UDID:-${SIMULATOR_UDID:-}}" \
         "${IPAD_SIMULATOR_NAME:-${SIMULATOR_NAME:-}}" \
+        "portrait" \
+        "iPad Pro 13-inch (M4)" \
+        "iPad Pro 13-inch (M5)" \
+        "iPad Air 13-inch (M4)" \
+        "iPad Air 13-inch (M3)"
+      ;;
+    ipad-13-landscape)
+      capture_profile \
+        "$profile" \
+        "$OUTPUT_ROOT/13-inch-ipad-landscape" \
+        "${IPAD_SIMULATOR_UDID:-${SIMULATOR_UDID:-}}" \
+        "${IPAD_SIMULATOR_NAME:-${SIMULATOR_NAME:-}}" \
+        "landscape" \
         "iPad Pro 13-inch (M4)" \
         "iPad Pro 13-inch (M5)" \
         "iPad Air 13-inch (M4)" \
@@ -214,7 +302,7 @@ run_profile() {
       ;;
     *)
       echo "Unknown screenshot profile: $profile" >&2
-      echo "Supported profiles: iphone-6.9, iphone-6.5, ipad-13" >&2
+      echo "Supported profiles: iphone-6.9, iphone-6.5, ipad-13, ipad-13-landscape" >&2
       exit 1
       ;;
   esac
