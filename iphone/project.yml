@@ -25,6 +25,8 @@ targets:
         buildPhase: resources
       - path: Woladen/Resources/Localizable.xcstrings
         buildPhase: resources
+      - path: Woladen/Resources/InfoPlist.xcstrings
+        buildPhase: resources
     settings:
       base:
         ENABLE_DEBUG_DYLIB: NO

@@ -638,9 +638,9 @@ struct WoladenBrandIntroView: View {
                 OfficialWoladenAppIconView()
 
                 Text("woladen")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(woladenBrandColor)
-                .lineLimit(1)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(woladenBrandColor)
+                    .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .center)
 

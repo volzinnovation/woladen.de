@@ -53,7 +53,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Woladen nutzt den Standort, um Ladepunkte in der Nähe zu zeigen.</string>
+	<string>woladen uses your location to show charging points nearby.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
