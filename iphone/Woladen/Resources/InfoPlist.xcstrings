@@ -1,149 +1,173 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "NSLocationWhenInUseUsageDescription": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen uses your location to show charging points nearby."
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Woladen"
+          }
+        }
+      }
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Woladen"
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen používá vaši polohu k zobrazení nabíjecích bodů v okolí."
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen nutzt Ihren Standort, um Ladepunkte in der Nähe anzuzeigen."
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen bruger din placering til at vise ladepunkter i nærheden."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen utilise votre position pour afficher les points de recharge à proximité."
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen nutzt Ihren Standort, um Ladepunkte in der Nähe anzuzeigen."
           }
         },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen gebruikt jouw locatie om oplaadpunten in de buurt te tonen."
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το woladen χρησιμοποιεί την τοποθεσία σας για να εμφανίζει κοντινά σημεία φόρτισης."
           }
         },
-        "da": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen bruger din placering til at vise ladepunkter i nærheden."
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen uses your location to show charging points nearby."
           }
         },
-        "fi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen käyttää sijaintiasi näyttääkseen lähellä olevat latauspisteet."
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen utiliza tu ubicación para mostrar los puntos de carga cercanos."
           }
         },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen använder din plats för att visa laddningspunkter i närheten."
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen käyttää sijaintiasi näyttääkseen lähellä olevat latauspisteet."
           }
         },
-        "el": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Το woladen χρησιμοποιεί την τοποθεσία σας για να εμφανίζει κοντινά σημεία φόρτισης."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen utilise votre position pour afficher les points de recharge à proximité."
           }
         },
-        "lv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen izmanto jūsu atrašanās vietu, lai parādītu tuvumā esošos uzlādes punktus."
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A woladen az Ön tartózkodási helyét használja a közeli töltési pontok megjelenítéséhez."
           }
         },
-        "lt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen naudoja jūsų vietą, kad parodytų netoliese esančius įkrovimo taškus."
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen utilizza la tua posizione per mostrare i punti di ricarica nelle vicinanze."
           }
         },
-        "lb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen benotzt Är Location fir Opluedpunkten an der Géigend ze weisen."
+        "lb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen benotzt Är Location fir Opluedpunkten an der Géigend ze weisen."
           }
         },
-        "mt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen juża l-lokalità tiegħek biex juri l-punti tal-iċċarġjar fil-qrib."
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen naudoja jūsų vietą, kad parodytų netoliese esančius įkrovimo taškus."
           }
         },
-        "nb": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen bruker posisjonen din til å vise ladepunkter i nærheten."
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen izmanto jūsu atrašanās vietu, lai parādītu tuvumā esošos uzlādes punktus."
           }
         },
-        "nn": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen bruker posisjonen din til å vise ladepunkter i nærheten."
+        "mt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen juża l-lokalità tiegħek biex juri l-punti tal-iċċarġjar fil-qrib."
           }
         },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen wykorzystuje Twoją lokalizację, aby pokazać pobliskie punkty ładowania."
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen bruker posisjonen din til å vise ladepunkter i nærheten."
           }
         },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen usa sua localização para mostrar pontos de carregamento próximos."
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen gebruikt jouw locatie om oplaadpunten in de buurt te tonen."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen utiliza tu ubicación para mostrar los puntos de carga cercanos."
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen bruker posisjonen din til å vise ladepunkter i nærheten."
           }
         },
-        "cs": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen používá vaši polohu k zobrazení nabíjecích bodů v okolí."
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen wykorzystuje Twoją lokalizację, aby pokazać pobliskie punkty ładowania."
           }
         },
-        "hu": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A woladen az Ön tartózkodási helyét használja a közeli töltési pontok megjelenítéséhez."
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen usa sua localização para mostrar pontos de carregamento próximos."
           }
         },
-        "sl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen uporablja vašo lokacijo za prikaz polnilnih mest v bližini."
+        "rm" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen utilisescha tes lieu per mussar puncts da chargiar en vischinanza."
           }
         },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen utilizza la tua posizione per mostrare i punti di ricarica nelle vicinanze."
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen uporablja vašo lokacijo za prikaz polnilnih mest v bližini."
           }
         },
-        "rm": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen utilisescha tes lieu per mussar puncts da chargiar en vischinanza."
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen använder din plats för att visa laddningspunkter i närheten."
           }
         },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "woladen yakındaki şarj noktalarını göstermek için konumunuzu kullanır."
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "woladen yakındaki şarj noktalarını göstermek için konumunuzu kullanır."
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }
