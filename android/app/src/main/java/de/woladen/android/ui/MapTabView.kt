@@ -54,12 +54,16 @@ import de.woladen.android.service.LocationService
 import de.woladen.android.ui.components.MainMapView
 import de.woladen.android.viewmodel.AppViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import java.util.Locale
+
+private const val MAP_GPS_REFRESH_INTERVAL_MS = 5 * 60 * 1000L
 
 @Composable
 fun MapTabView(
@@ -296,6 +300,20 @@ fun MapTabView(
         if (location != null && (centerOnNextLocationUpdate || !hasCenteredInitialLocation)) {
             centerMap(location)
             hasCenteredInitialLocation = true
+        }
+    }
+
+    LaunchedEffect(mapViewRef, locationService.authorizationStatus) {
+        while (isActive) {
+            delay(MAP_GPS_REFRESH_INTERVAL_MS)
+            if (mapViewRef == null) continue
+            if (locationService.authorizationStatus != LocationAuthorizationStatus.AUTHORIZED_WHEN_IN_USE) {
+                continue
+            }
+            locationService.requestSingleLocation()
+            val location = locationService.currentLocation ?: continue
+            lastQueriedCenter = location.latitude to location.longitude
+            viewModel.refreshNearbyFromUserLocation(location, force = true)
         }
     }
 

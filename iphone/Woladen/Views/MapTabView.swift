@@ -2,6 +2,7 @@ import SwiftUI
 import MapKit
 
 private let favoriteStarColor = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
+private let mapGPSRefreshIntervalNanoseconds: UInt64 = 5 * 60 * 1_000_000_000
 
 struct MapTabView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -93,6 +94,9 @@ struct MapTabView: View {
         .onChange(of: scenePhase) { _, newValue in
             guard newValue == .active else { return }
             handleActivation()
+        }
+        .task {
+            await runGPSRefreshLoop()
         }
     }
 
@@ -258,6 +262,28 @@ struct MapTabView: View {
             locationService.activate()
             viewModel.waitForLocation()
         }
+    }
+
+    private func runGPSRefreshLoop() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: mapGPSRefreshIntervalNanoseconds)
+            guard !Task.isCancelled, scenePhase == .active else { continue }
+            refreshFromGPSPosition()
+        }
+    }
+
+    private func refreshFromGPSPosition() {
+        guard locationService.authorizationStatus == .authorizedWhenInUse ||
+                locationService.authorizationStatus == .authorizedAlways else {
+            return
+        }
+        locationService.requestSingleLocation()
+        guard let current = locationService.currentLocation else {
+            locationService.activate()
+            return
+        }
+        lastQueriedCenter = current.coordinate
+        viewModel.refreshMapForUserLocation(current)
     }
 
     private func requestCurrentLocation() {

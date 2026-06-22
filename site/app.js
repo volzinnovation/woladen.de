@@ -96,6 +96,8 @@ const CATALOG_ACCUMULATED_FEATURE_LIMIT = 1000;
 const CATALOG_DETAIL_TIMEOUT_MS = 4500;
 const CATALOG_MAP_MOVE_DEBOUNCE_MS = 450;
 const CATALOG_MIN_RELOAD_DISTANCE_M = 1000;
+const MAP_GPS_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const MAP_GPS_REFRESH_MAX_LOCATION_AGE_MS = 60 * 1000;
 const STATIC_FALLBACK_LIST_LIMIT = 20;
 const MAP_UNCLUSTERED_MARKER_LIMIT = 350;
 const MAP_UNCLUSTERED_FULL_RENDER_ZOOM = 9;
@@ -1285,6 +1287,9 @@ async function init() {
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
       stopEasterEgg();
+      stopMapGPSRefresh();
+    } else if (isMapViewActive()) {
+      startMapGPSRefresh();
     }
   });
 
@@ -1330,6 +1335,7 @@ function refreshLanguageSensitiveViews() {
 /* --- DATA LOADING --- */
 let catalogSearchSequence = 0;
 let catalogMapMoveTimer = 0;
+let mapGPSRefreshTimer = 0;
 
 async function fetchOptionalJson(path) {
   try {
@@ -3077,6 +3083,37 @@ function queueCatalogSearchFromMapMove() {
   }, CATALOG_MAP_MOVE_DEBOUNCE_MS);
 }
 
+function isMapViewActive() {
+  return Boolean(els.views.map?.classList.contains("active"));
+}
+
+function startMapGPSRefresh() {
+  if (!navigator.geolocation || mapGPSRefreshTimer || document.visibilityState === "hidden") {
+    return;
+  }
+  mapGPSRefreshTimer = window.setInterval(() => {
+    if (!isMapViewActive() || document.visibilityState === "hidden") {
+      stopMapGPSRefresh();
+      return;
+    }
+    void refreshCatalogFromGPSPosition({
+      reset: false,
+      recenter: false,
+      showPending: false,
+      showError: false,
+      maximumAge: MAP_GPS_REFRESH_MAX_LOCATION_AGE_MS,
+    });
+  }, MAP_GPS_REFRESH_INTERVAL_MS);
+}
+
+function stopMapGPSRefresh() {
+  if (!mapGPSRefreshTimer) {
+    return;
+  }
+  window.clearInterval(mapGPSRefreshTimer);
+  mapGPSRefreshTimer = 0;
+}
+
 function getMarkerColor(props) {
   const total = props.amenities_total || 0;
   if (total > 10) return "#f59e0b"; // Gold
@@ -3510,6 +3547,7 @@ function switchView(viewId, options = {}) {
 
   // Map resize fix
   if (viewId === "view-map" && state.views.map) {
+    startMapGPSRefresh();
     requestAnimationFrame(() => {
       state.views.map.invalidateSize({ pan: false });
       focusMapOnPendingStation();
@@ -3520,6 +3558,8 @@ function switchView(viewId, options = {}) {
       state.views.map.invalidateSize({ pan: false });
       refreshMapMarkersFromCurrentFeatures();
     }, 150);
+  } else {
+    stopMapGPSRefresh();
   }
 }
 
@@ -5664,26 +5704,36 @@ async function syncLocationPermissionState() {
   }
 }
 
-async function requestUserLocation() {
+async function refreshCatalogFromGPSPosition({
+  recenter = false,
+  reset = false,
+  showPending = true,
+  showError = true,
+  maximumAge = 300000,
+} = {}) {
   if (!navigator.geolocation) {
-    updateLocationState({
-      permissionState: LOCATION_PERMISSION_UNSUPPORTED,
-      requestState: LOCATION_REQUEST_ERROR,
-      errorCode: "unsupported",
-    });
+    if (showError) {
+      updateLocationState({
+        permissionState: LOCATION_PERMISSION_UNSUPPORTED,
+        requestState: LOCATION_REQUEST_ERROR,
+        errorCode: "unsupported",
+      });
+    }
     return;
   }
 
-  updateLocationState({
-    requestState: LOCATION_REQUEST_PENDING,
-    errorCode: "",
-  });
+  if (showPending) {
+    updateLocationState({
+      requestState: LOCATION_REQUEST_PENDING,
+      errorCode: "",
+    });
+  }
 
   try {
     const position = await requestBrowserLocation(navigator.geolocation, {
       enableHighAccuracy: false,
       timeout: 5000,
-      maximumAge: 300000,
+      maximumAge,
     });
 
     state.userPos = {
@@ -5698,20 +5748,32 @@ async function requestUserLocation() {
     setCatalogSearchCenter(state.userPos, "location");
     updateUserMarker();
 
-    if (state.views.map) {
+    if (recenter && state.views.map) {
       state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
     }
-    await loadCatalogStationsForCurrentCenter({ force: true, reset: true });
+    await loadCatalogStationsForCurrentCenter({ force: true, reset });
   } catch (err) {
     console.warn("Location error", err);
-    updateLocationState({
-      permissionState: err.code === LOCATION_ERROR_PERMISSION_DENIED
-        ? LOCATION_PERMISSION_DENIED
-        : state.location.permissionState,
-      requestState: LOCATION_REQUEST_ERROR,
-      errorCode: err.code || "unknown",
-    });
+    if (showError) {
+      updateLocationState({
+        permissionState: err.code === LOCATION_ERROR_PERMISSION_DENIED
+          ? LOCATION_PERMISSION_DENIED
+          : state.location.permissionState,
+        requestState: LOCATION_REQUEST_ERROR,
+        errorCode: err.code || "unknown",
+      });
+    }
   }
+}
+
+async function requestUserLocation() {
+  await refreshCatalogFromGPSPosition({
+    recenter: true,
+    reset: true,
+    showPending: true,
+    showError: true,
+    maximumAge: 300000,
+  });
 }
 
 /* --- LOCALSTORAGE --- */

@@ -227,6 +227,10 @@ final class AppViewModel: ObservableObject {
         }
     }
 
+    func refreshMapForUserLocation(_ location: CLLocation) {
+        loadCatalog(center: location.coordinate, userLocation: location, resetResults: false)
+    }
+
     func selectFeature(_ feature: GeoJSONFeature) {
         let stationID = feature.properties.stationID
         selectedFeature = self.feature(forStationID: stationID) ?? feature
