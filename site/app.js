@@ -2292,9 +2292,17 @@ function renderRouteResults() {
   if (state.route.loading) {
     hideRouteSummary();
     const loading = document.createElement("div");
-    loading.className = "loading-state";
+    loading.className = "loading-state route-loading-state";
     loading.setAttribute("data-nosnippet", "");
-    loading.textContent = t("route.loading");
+    loading.setAttribute("role", "status");
+    loading.setAttribute("aria-live", "polite");
+    const spinner = document.createElement("span");
+    spinner.className = "route-loading-spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    const text = document.createElement("span");
+    text.className = "route-loading-text";
+    text.textContent = t("route.loading");
+    loading.append(spinner, text);
     els.route.results.appendChild(loading);
     return;
   }

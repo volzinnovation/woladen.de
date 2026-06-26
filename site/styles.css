@@ -938,6 +938,42 @@ body {
   font-weight: 700;
 }
 
+.route-loading-state {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4rem;
+  padding: 1rem 0;
+  color: var(--color-text-main);
+  font-weight: 700;
+}
+
+.route-loading-spinner {
+  width: 1.4rem;
+  height: 1.4rem;
+  flex: 0 0 auto;
+  border: 3px solid rgba(15, 118, 110, 0.18);
+  border-top-color: var(--color-primary);
+  border-radius: 999px;
+  animation: route-loading-spin 0.75s linear infinite;
+}
+
+.route-loading-text {
+  min-width: 0;
+}
+
+@keyframes route-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-spinner {
+    animation: none;
+  }
+}
+
 .route-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
