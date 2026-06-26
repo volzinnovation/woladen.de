@@ -110,13 +110,50 @@ Request:
   "origin": { "lat": 52.5200, "lon": 13.4050, "label": "Berlin" },
   "destination": { "lat": 48.1372, "lon": 11.5755, "label": "Munich" },
   "filters": {
+    "operator": "",
     "min_power_kw": 50,
     "min_amenities_total": 0,
     "selected_amenities": [],
-    "operator": ""
-  }
+    "amenity_name_query": "",
+    "available_only": false,
+    "currently_open_only": false
+  },
+  "filter_mode": "route_calculation"
 }
 ```
+
+The route request must accept the same logical filter state as the list view. `filter_mode` is explicit because the apps need two behaviors:
+
+- `route_calculation`: apply filters before candidate validation to avoid expensive ORS Matrix work for stations the user already does not want.
+- `current_result`: keep the existing route result and filter only the stations already returned by the prior route calculation. This is instant but cannot reveal stations excluded by the earlier route-calculation filters.
+
+If the user broadens a filter after route calculation, the app should mark the result as incomplete for that broader filter and offer to recalculate. Narrowing filters can always be applied locally to the current result.
+
+Canonical route filter payload:
+
+```json
+{
+  "operator": "",
+  "min_power_kw": 50,
+  "min_amenities_total": 0,
+  "selected_amenities": [],
+  "amenity_name_query": "",
+  "available_only": false,
+  "currently_open_only": false
+}
+```
+
+Filter parity with the list view means:
+
+- operator
+- minimum kW
+- selected amenity categories
+- minimum amenity count / amenity color tier
+- amenity name query
+- available-only
+- currently-open-only
+
+The backend should apply all route-calculation filters that can be evaluated from catalog summaries before ORS Matrix validation. Filters needing live or detail enrichment should still be honored before validation where cached/cheap data is available; otherwise apply them immediately after validation and before returning the final top 100. The important invariant is that the final route response matches the requested filter semantics.
 
 Response:
 
@@ -176,7 +213,9 @@ Use coarse spatial filtering first, then validate reachability with actual drivi
 2. Normalize route coordinates as WGS84 `lat/lon` points.
 3. Build route segments and cumulative route distance.
 4. Collect candidate stations from the catalog spatial index with an expanded bounding box or grid tiles around each segment.
-5. Apply static filters early: minimum kW, operator, selected amenity categories, and minimum amenity count.
+5. Apply route-calculation filters early whenever possible:
+   - catalog/static filters first: operator, minimum kW, selected amenity categories, minimum amenity count, and amenity name query when summary examples are available
+   - live/detail-dependent filters next when cached or cheaply hydrated: available-only and currently-open-only
 6. Deduplicate candidate station IDs.
 7. Keep a bounded validation pool, initially the best 250 coarse candidates by straight-line route distance and amenity/power tie-breakers.
 8. Validate candidates with ORS Matrix first, not one directions request per charger:
@@ -188,7 +227,8 @@ Use coarse spatial filtering first, then validate reachability with actual drivi
 11. Keep only stations with `drive_distance_to_route_m <= 2000`.
 12. For ambiguous cases near the threshold, optionally confirm with a full waypoint directions request, e.g. origin -> charger -> destination.
 13. Compute `route_position_m` from the closest projected point on the base route for display, but not as the primary sort.
-14. Return the closest 100 stations after driving-route validation, sorted by `drive_distance_to_route_m`, then amenity tier, max kW, and route position.
+14. Apply any requested filters that could not be safely applied before Matrix validation.
+15. Return the closest 100 stations after driving-route validation and final filter evaluation, sorted by `drive_distance_to_route_m`, then amenity tier, max kW, and route position.
 
 If the first implementation must use existing point-radius catalog search internally, sample route points every 2 km, query with a padded radius around 3 km, deduplicate, then run the same matrix-first driving-route validation. The padded radius prevents false negatives between samples; it is not the final eligibility test.
 
@@ -209,6 +249,9 @@ Recommended first screen:
 - Swap origin/destination action
 - Route search button
 - Filter button using the existing native filter sheet, extended for route-specific thresholds
+- Filter application mode:
+  - calculate route with filters
+  - filter current route result
 
 Route results view:
 
@@ -224,6 +267,8 @@ Route results view:
   - approximate route kilometer, e.g. `km 132`
 - station detail opens the existing detail sheet/view
 - navigation action opens Google/Apple Maps as today
+- filter controls remain available after route calculation
+- if post-route filters are broader than the filters used for route calculation, show that the current result may be incomplete and offer recalculation
 
 Empty states:
 
@@ -243,6 +288,23 @@ GET /v1/geocode/autocomplete?q={query}&lat={focusLat}&lon={focusLon}&limit=5
 Use current location or current map center as focus. Keep platform-native geocoders only as an explicit fallback if the proxy is down, because route search should behave consistently across Android and iPhone.
 
 ## Filters
+
+Route search must support the same filter semantics as the normal list view:
+
+- operator
+- minimum kW
+- selected amenity categories
+- amenity name query
+- available-only
+- currently-open-only
+- minimum amenity count / amenity color tier
+
+There are two valid filter timings:
+
+- Route-calculation filtering: send the full filter state with the route request so the backend prunes candidates before expensive Matrix validation.
+- Post-route filtering: apply the same filter state locally to the already returned route stations for fast interactive refinement.
+
+Use route-calculation filtering for the initial route request and whenever the user broadens filters beyond the result set that was validated. Use post-route filtering for narrowing or exploring within the current validated result.
 
 ### Amenity Color Filter
 
@@ -350,7 +412,7 @@ Backend:
 - cache ORS route geometry by rounded origin/destination coordinates and profile
 - cache matrix validation results by route hash and candidate station set hash
 - cache optional per-candidate waypoint directions validation by route hash and station ID when threshold-edge confirmation is used
-- cache route-corridor station results by route hash plus static filters after driving-route validation
+- cache route-corridor station results by route hash plus route-calculation filter hash after driving-route validation
 - set short TTLs because live availability is hydrated separately
 - rate-limit route searches per user/device
 - time out ORS calls quickly and return a typed error
@@ -360,7 +422,8 @@ Native:
 - debounce address autocomplete
 - cancel in-flight autocomplete when fields change
 - cancel route searches when endpoints change
-- reuse previous route result when only local filters change and the route geometry is unchanged
+- reuse previous route result when post-route filters only narrow the current result
+- trigger or offer recalculation when filters broaden beyond the route-calculation filter set used for the current result
 - hydrate live summaries in batches using the existing station lookup flow
 
 ## Testing Plan
@@ -375,7 +438,10 @@ Backend:
 - deduplication when a station is near multiple route segments
 - final cap of the closest 100 validated stations
 - result ordering by `drive_distance_to_route_m`
-- filter behavior for min kW and min amenity count
+- filter parity with list view: operator, min kW, selected amenities, min amenity count, amenity name, available-only, currently-open-only
+- route-calculation filtering prunes candidates before Matrix validation
+- post-route filtering can refine a current result without recalculation
+- broadening filters after route calculation marks current results incomplete and can trigger recalculation
 - ORS failure and timeout handling
 
 Android:
@@ -386,6 +452,7 @@ Android:
 - route view model state transitions
 - address autocomplete client parsing
 - filter sheet slider semantics
+- route filter timing behavior: calculate with filters versus filter current result
 
 iPhone:
 
@@ -395,6 +462,7 @@ iPhone:
 - route view model state transitions
 - address autocomplete client parsing
 - filter sheet slider semantics
+- route filter timing behavior: calculate with filters versus filter current result
 
 Manual smoke checks:
 
@@ -408,7 +476,7 @@ Manual smoke checks:
 ## Rollout
 
 1. Add backend ORS routing configuration and base route normalization.
-2. Add backend `/v1/routes/chargers` with coarse corridor search, matrix-based candidate validation, final 100-result cap, and tests.
+2. Add backend `/v1/routes/chargers` with full list-view filter payload, coarse corridor search, route-calculation filtering, matrix-based candidate validation, final 100-result cap, and tests.
 3. Run a Europe self-hosted ORS spike before broad rollout: graph build, heap sizing, query latency, matrix throughput, monitoring, and blue/green graph replacement.
 4. Add native geocoding client on both platforms, replacing platform-only address search for this flow.
 5. Add `minAmenityCount` to native filter models and UI.
