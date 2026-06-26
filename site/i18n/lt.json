@@ -374,6 +374,7 @@
     "notConfigured": "Maršruto planavimas nesukonfigūruotas.",
     "locationUnavailable": "Jūsų vieta nepasiekiama.",
     "searchError": "Nepavyko įkelti įkrovimo stotelių maršrute.",
+    "capacityExhausted": "Maršrutų skaičiavimo pajėgumai šiuo metu išnaudoti. Bandykite vėliau dar kartą.",
     "noFilteredResults": "Nė viena įkrovimo stotelė maršrute neatitinka dabartinių filtrų.",
     "filterChanged": "Filtrai pasikeitė nuo šio maršruto skaičiavimo. Platesniems filtrams reikia naujos maršruto paieškos.",
     "recalculate": "Perskaičiuoti",

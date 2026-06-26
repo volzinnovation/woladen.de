@@ -200,6 +200,8 @@ class OpenRouteServiceClient:
         except requests.RequestException as exc:
             raise RouteProviderError("route_provider_request_failed", status_code=502) from exc
 
+        if response.status_code in {403, 429} and _response_mentions_quota_exceeded(response):
+            raise RouteProviderError("route_provider_quota_exhausted", status_code=503)
         if response.status_code == 429:
             raise RouteProviderError("route_provider_rate_limited", status_code=429)
         if response.status_code in {401, 403}:
@@ -514,6 +516,29 @@ def _first_feature(payload: dict[str, Any]) -> dict[str, Any]:
         if isinstance(feature, dict):
             return feature
     raise RouteNotFound("route_not_found")
+
+
+def _response_mentions_quota_exceeded(response: requests.Response) -> bool:
+    return "quota exceeded" in _response_error_text(response).lower()
+
+
+def _response_error_text(response: requests.Response) -> str:
+    try:
+        payload = response.json()
+    except ValueError:
+        return str(getattr(response, "text", "") or "")
+    if isinstance(payload, dict):
+        fragments: list[str] = []
+        for key in ("error", "message", "detail"):
+            value = payload.get(key)
+            if isinstance(value, str):
+                fragments.append(value)
+            elif isinstance(value, dict):
+                fragments.extend(str(item) for item in value.values())
+            elif isinstance(value, list):
+                fragments.extend(str(item) for item in value)
+        return " ".join(fragments)
+    return str(payload)
 
 
 def _route_cache_key(origin: RouteEndpoint, destination: RouteEndpoint) -> str:

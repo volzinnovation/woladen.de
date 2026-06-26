@@ -385,6 +385,7 @@
     "notConfigured": "Routeplanning is niet geconfigureerd.",
     "locationUnavailable": "Je locatie is niet beschikbaar.",
     "searchError": "Laadstations langs de route konden niet worden geladen.",
+    "capacityExhausted": "De routecapaciteit is momenteel uitgeput. Probeer het later opnieuw.",
     "noFilteredResults": "Geen laadstations langs de route passen bij de huidige filters.",
     "filterChanged": "Filters zijn gewijzigd sinds deze route is berekend. Ruimere filters vereisen een nieuwe routezoekopdracht.",
     "recalculate": "Opnieuw berekenen",

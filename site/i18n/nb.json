@@ -374,6 +374,7 @@
     "notConfigured": "Ruteplanlegging er ikke konfigurert.",
     "locationUnavailable": "Posisjonen din er ikke tilgjengelig.",
     "searchError": "Ladestasjoner langs ruten kunne ikke lastes.",
+    "capacityExhausted": "Rutekapasiteten er for øyeblikket brukt opp. Prøv igjen senere.",
     "noFilteredResults": "Ingen ladestasjoner langs ruten passer med gjeldende filtre.",
     "filterChanged": "Filtrene er endret siden ruten ble beregnet. Bredere filtre krever et nytt rutesøk.",
     "recalculate": "Beregn på nytt",

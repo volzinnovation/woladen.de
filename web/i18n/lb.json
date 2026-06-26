@@ -374,6 +374,7 @@
     "notConfigured": "Routeplanung ass net konfiguréiert.",
     "locationUnavailable": "Är Positioun ass net verfügbar.",
     "searchError": "Opluedstatiounen laanscht d’Route konnten net geluede ginn.",
+    "capacityExhausted": "D'Routing-Kapazitéite si momentan ausgeschöpft. Probéier et w.e.g. méi spéit nach eng Kéier.",
     "noFilteredResults": "Keng Opluedstatiounen laanscht d’Route passen zu den aktuelle Filteren.",
     "filterChanged": "D’Filtere goufen zanter der Routeberechnung geännert. Méi breet Filtere brauchen eng nei Routesich.",
     "recalculate": "Nei berechnen",

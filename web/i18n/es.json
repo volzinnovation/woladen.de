@@ -374,6 +374,7 @@
     "notConfigured": "La planificación de rutas no está configurada.",
     "locationUnavailable": "Tu ubicación no está disponible.",
     "searchError": "No se pudieron cargar las estaciones de carga en la ruta.",
+    "capacityExhausted": "La capacidad de cálculo de rutas está agotada en este momento. Inténtalo de nuevo más tarde.",
     "noFilteredResults": "Ninguna estación de carga en la ruta coincide con los filtros actuales.",
     "filterChanged": "Los filtros cambiaron desde que se calculó esta ruta. Los filtros más amplios requieren una nueva búsqueda.",
     "recalculate": "Recalcular",

@@ -1,10 +1,10 @@
 {
   "bundle": {
-    "charger_count": 820182,
-    "country_count": 22,
+    "charger_count": 889861,
+    "country_count": 23,
     "kind": "aggregate",
     "schema_version": 4,
-    "station_count": 287338
+    "station_count": 314677
   },
   "countries": [
     {
@@ -92,6 +92,13 @@
       "station_count": 1346
     },
     {
+      "charger_count": 69679,
+      "code": "IT",
+      "fast_station_count": 7022,
+      "name": "IT",
+      "station_count": 27339
+    },
+    {
       "charger_count": 13814,
       "code": "LT",
       "fast_station_count": 760,
@@ -162,7 +169,7 @@
       "station_count": 1191
     }
   ],
-  "generated_at": "2026-06-17T12:54:55+00:00",
+  "generated_at": "2026-06-26T22:14:56+00:00",
   "schema_version": 1,
   "sources": [
     {
@@ -285,6 +292,13 @@
       "source_url": "https://napportal.kozut.hu/"
     },
     {
+      "country_code": "IT",
+      "display_name": "IT PUN public web-app signed static charging API aggregate",
+      "license": "temporary_static_open_bundle_user_instruction_2026-06-26_source_terms_review_pending",
+      "source_uid": "it_pun_public_signed_api",
+      "source_url": "https://pun.piattaformaunicanazionale.it/"
+    },
+    {
       "country_code": "LT",
       "display_name": "LT Via Lietuva DATEX II public charging infrastructure table",
       "license": "source_terms_pending_human_publication_review_2026-05-03",
@@ -338,6 +352,13 @@
       "display_name": "OSM",
       "license": "ODbL-1.0",
       "source_uid": "OSM",
+      "source_url": ""
+    },
+    {
+      "country_code": "OSM",
+      "display_name": "osm_geofabrik_pbf_amenities_it",
+      "license": "ODbL-1.0",
+      "source_uid": "osm_geofabrik_pbf_amenities_it",
       "source_url": ""
     },
     {

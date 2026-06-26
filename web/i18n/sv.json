@@ -374,6 +374,7 @@
     "notConfigured": "Ruttplanering är inte konfigurerad.",
     "locationUnavailable": "Din plats är inte tillgänglig.",
     "searchError": "Laddstationer längs rutten kunde inte laddas.",
+    "capacityExhausted": "Ruttkapaciteten är för närvarande förbrukad. Försök igen senare.",
     "noFilteredResults": "Inga laddstationer längs rutten matchar aktuella filter.",
     "filterChanged": "Filtren har ändrats sedan rutten beräknades. Bredare filter kräver en ny ruttsökning.",
     "recalculate": "Beräkna om",

@@ -374,6 +374,7 @@
     "notConfigured": "Reittisuunnittelua ei ole määritetty.",
     "locationUnavailable": "Sijaintisi ei ole saatavilla.",
     "searchError": "Latausasemia reitin varrella ei voitu ladata.",
+    "capacityExhausted": "Reitityskapasiteetti on tällä hetkellä täynnä. Yritä myöhemmin uudelleen.",
     "noFilteredResults": "Mikään latausasema reitin varrella ei vastaa nykyisiä suodattimia.",
     "filterChanged": "Suodattimet ovat muuttuneet reitin laskennan jälkeen. Laajemmat suodattimet vaativat uuden reittihaun.",
     "recalculate": "Laske uudelleen",

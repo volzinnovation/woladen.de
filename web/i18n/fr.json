@@ -374,6 +374,7 @@
     "notConfigured": "La planification d’itinéraire n’est pas configurée.",
     "locationUnavailable": "Votre position n’est pas disponible.",
     "searchError": "Les bornes de recharge le long de l’itinéraire n’ont pas pu être chargées.",
+    "capacityExhausted": "Les capacités de calcul d’itinéraire sont actuellement épuisées. Réessayez plus tard.",
     "noFilteredResults": "Aucune borne de recharge le long de l’itinéraire ne correspond aux filtres actuels.",
     "filterChanged": "Les filtres ont changé depuis le calcul de cet itinéraire. Des filtres plus larges nécessitent une nouvelle recherche.",
     "recalculate": "Recalculer",

@@ -374,6 +374,7 @@
     "notConfigured": "La planisaziun da ruta n’è betg configurada.",
     "locationUnavailable": "Tia posiziun n’è betg disponibla.",
     "searchError": "Staziuns da chargiar per lung da la ruta na pon betg vegnir chargiadas.",
+    "capacityExhausted": "La capacitad da calcular rutas è actualmain exaurida. Emprova pli tard anc ina giada.",
     "noFilteredResults": "Naginas staziuns da chargiar per lung da la ruta correspundan als filters actuals.",
     "filterChanged": "Ils filters èn sa midads dapi il calcul da questa ruta. Filters pli lads pretendan ina nova tschertga.",
     "recalculate": "Calcular danovamain",

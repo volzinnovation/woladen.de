@@ -2097,6 +2097,18 @@ function routeEndpointsAreSame(origin, destination) {
   return distanceBetweenCoordinatesMeters(origin, destination) < 25;
 }
 
+function routeErrorMessage(error) {
+  const detail = apiErrorDetailText(error?.detail);
+  if (
+    detail === "route_provider_quota_exhausted" ||
+    detail === "route_provider_rate_limited" ||
+    (detail === "route_provider_auth_failed" && Number(error?.status) === 503)
+  ) {
+    return t("route.capacityExhausted");
+  }
+  return t("route.searchError");
+}
+
 async function submitRouteSearch() {
   ROUTE_FIELDS.forEach(cancelQueuedRouteSuggestions);
   renderRouteStatus(t("route.resolving"));
@@ -2162,7 +2174,7 @@ async function submitRouteSearch() {
     state.route.features = [];
     state.route.calculatedFilters = null;
     state.route.error = error;
-    renderRouteStatus(t("route.searchError"), "error");
+    renderRouteStatus(routeErrorMessage(error), "error");
   } finally {
     if (requestId === state.route.requestSeq) {
       state.route.loading = false;
@@ -2312,7 +2324,7 @@ function renderRouteResults() {
     const empty = document.createElement("div");
     empty.className = "empty-state";
     empty.setAttribute("data-nosnippet", "");
-    empty.textContent = state.route.error ? t("route.searchError") : t("route.empty");
+    empty.textContent = state.route.error ? routeErrorMessage(state.route.error) : t("route.empty");
     els.route.results.appendChild(empty);
     return;
   }
@@ -2927,6 +2939,20 @@ function isAbortError(error) {
   return error?.name === "AbortError";
 }
 
+function apiErrorDetailText(value) {
+  return String(value || "").trim();
+}
+
+class HttpApiError extends Error {
+  constructor(status, detail = "", payload = null) {
+    super(detail ? `HTTP ${status}: ${detail}` : `HTTP ${status}`);
+    this.name = "HttpApiError";
+    this.status = status;
+    this.detail = detail;
+    this.payload = payload;
+  }
+}
+
 async function fetchJsonWithTimeout(url, options = {}, timeoutMs = LIVE_API_TIMEOUT_MS) {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
@@ -2941,7 +2967,17 @@ async function fetchJsonWithTimeout(url, options = {}, timeoutMs = LIVE_API_TIME
       headers: requestHeaders,
     });
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+      const detail =
+        payload && typeof payload === "object"
+          ? apiErrorDetailText(payload.detail || payload.error || payload.message)
+          : "";
+      throw new HttpApiError(response.status, detail, payload);
     }
     return await response.json();
   } finally {

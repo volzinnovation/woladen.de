@@ -374,6 +374,7 @@
     "notConfigured": "O planeamento de rota não está configurado.",
     "locationUnavailable": "A sua localização não está disponível.",
     "searchError": "Não foi possível carregar as estações de carregamento na rota.",
+    "capacityExhausted": "A capacidade de cálculo de rotas está esgotada no momento. Tenta novamente mais tarde.",
     "noFilteredResults": "Nenhuma estação de carregamento na rota corresponde aos filtros atuais.",
     "filterChanged": "Os filtros mudaram desde que esta rota foi calculada. Filtros mais amplos exigem uma nova pesquisa.",
     "recalculate": "Recalcular",

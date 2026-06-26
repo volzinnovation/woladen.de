@@ -374,6 +374,7 @@
     "notConfigured": "Az útvonaltervezés nincs konfigurálva.",
     "locationUnavailable": "A tartózkodási helye nem érhető el.",
     "searchError": "Az útvonal menti töltőállomások nem tölthetők be.",
+    "capacityExhausted": "Az útvonaltervezési kapacitás jelenleg kimerült. Próbálja újra később.",
     "noFilteredResults": "Nincs az aktuális szűrőknek megfelelő töltőállomás az útvonal mentén.",
     "filterChanged": "A szűrők megváltoztak az útvonal kiszámítása óta. Szélesebb szűrőkhöz új útvonalkeresés szükséges.",
     "recalculate": "Újraszámítás",

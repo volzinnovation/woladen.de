@@ -108,6 +108,7 @@
     "notConfigured": "Routenplanung ist nicht konfiguriert.",
     "locationUnavailable": "Dein Standort ist nicht verfügbar.",
     "searchError": "Ladestationen entlang der Route konnten nicht geladen werden.",
+    "capacityExhausted": "Die Routing-Kapazitäten sind aktuell erschöpft. Bitte versuche es später erneut.",
     "noFilteredResults": "Keine Ladestationen passend zu den aktuellen Filtereinstellungen",
     "filterChanged": "Filter wurden seit der Routenberechnung geändert. Für weiter gefasste Filter muss die Route neu berechnet werden.",
     "recalculate": "Neu berechnen",

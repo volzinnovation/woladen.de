@@ -374,6 +374,7 @@
     "notConfigured": "L-ippjanar tar-rotta mhuwiex ikkonfigurat.",
     "locationUnavailable": "Il-post tiegħek mhuwiex disponibbli.",
     "searchError": "Ma setgħux jitgħabbew stazzjonijiet tal-iċċarġjar tul ir-rotta.",
+    "capacityExhausted": "Il-kapaċità tar-routing bħalissa ġiet eżawrita. Jekk jogħġbok erġa' pprova aktar tard.",
     "noFilteredResults": "L-ebda stazzjon tal-iċċarġjar tul ir-rotta ma jaqbel mal-filtri attwali.",
     "filterChanged": "Il-filtri nbidlu minn meta ġiet ikkalkulata din ir-rotta. Filtri usa’ jeħtieġu tfittxija ġdida.",
     "recalculate": "Ikkalkula mill-ġdid",

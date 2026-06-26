@@ -374,6 +374,7 @@
     "notConfigured": "Planowanie trasy nie jest skonfigurowane.",
     "locationUnavailable": "Twoja lokalizacja jest niedostępna.",
     "searchError": "Nie udało się wczytać stacji ładowania na trasie.",
+    "capacityExhausted": "Możliwości wyznaczania tras są obecnie wyczerpane. Spróbuj ponownie później.",
     "noFilteredResults": "Żadna stacja ładowania na trasie nie pasuje do obecnych filtrów.",
     "filterChanged": "Filtry zmieniły się od czasu obliczenia tej trasy. Szersze filtry wymagają nowego wyszukiwania trasy.",
     "recalculate": "Przelicz",

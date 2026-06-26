@@ -5,10 +5,11 @@ import sqlite3
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from backend.api import create_app
-from backend.routing import NormalizedRoute
+from backend.routing import NormalizedRoute, OpenRouteServiceClient, RouteEndpoint, RouteProviderError
 
 
 class FakeORSClient:
@@ -37,6 +38,26 @@ class FakeORSClient:
         labels = [origin.label for origin in origins]
         self.many_to_one_batches.append(labels)
         return [self.destination_distances.get(label) for label in labels]
+
+
+class FakeORSResponse:
+    def __init__(self, status_code: int, payload: dict | None = None, text: str = ""):
+        self.status_code = status_code
+        self.payload = payload
+        self.text = text
+
+    def json(self):
+        if self.payload is None:
+            raise ValueError("no json")
+        return self.payload
+
+
+class FakeORSSession:
+    def __init__(self, response: FakeORSResponse):
+        self.response = response
+
+    def post(self, url, *, json, headers, timeout):
+        return self.response
 
 
 def _create_route_sqlite(path: Path, stations: list[dict]) -> None:
@@ -156,6 +177,38 @@ def _route_request(filters: dict | None = None) -> dict:
         "filters": filters or {"min_power_kw": 50},
         "filter_mode": "route_calculation",
     }
+
+
+def test_ors_client_maps_quota_403_to_route_capacity_error(app_config):
+    client = OpenRouteServiceClient(
+        replace(app_config, ors_base_url="https://api.openrouteservice.org", ors_api_key="test-key"),
+        session=FakeORSSession(FakeORSResponse(403, {"error": "Quota exceeded"})),
+    )
+
+    with pytest.raises(RouteProviderError) as exc_info:
+        client.matrix_one_to_many(
+            RouteEndpoint(lat=0.0, lon=0.0),
+            [RouteEndpoint(lat=0.1, lon=0.0)],
+        )
+
+    assert exc_info.value.detail == "route_provider_quota_exhausted"
+    assert exc_info.value.status_code == 503
+
+
+def test_ors_client_keeps_non_quota_403_as_auth_failure(app_config):
+    client = OpenRouteServiceClient(
+        replace(app_config, ors_base_url="https://api.openrouteservice.org", ors_api_key="test-key"),
+        session=FakeORSSession(FakeORSResponse(403, {"error": "Forbidden"})),
+    )
+
+    with pytest.raises(RouteProviderError) as exc_info:
+        client.matrix_one_to_many(
+            RouteEndpoint(lat=0.0, lon=0.0),
+            [RouteEndpoint(lat=0.1, lon=0.0)],
+        )
+
+    assert exc_info.value.detail == "route_provider_auth_failed"
+    assert exc_info.value.status_code == 503
 
 
 def test_route_charger_search_validates_detour_distance_and_prunes_slow_candidates(app_config, tmp_path: Path):

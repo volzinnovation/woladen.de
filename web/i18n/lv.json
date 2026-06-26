@@ -374,6 +374,7 @@
     "notConfigured": "Maršruta plānošana nav konfigurēta.",
     "locationUnavailable": "Jūsu atrašanās vieta nav pieejama.",
     "searchError": "Neizdevās ielādēt uzlādes stacijas maršrutā.",
+    "capacityExhausted": "Maršrutēšanas jauda pašlaik ir izsmelta. Lūdzu, mēģiniet vēlreiz vēlāk.",
     "noFilteredResults": "Neviena uzlādes stacija maršrutā neatbilst pašreizējiem filtriem.",
     "filterChanged": "Filtri ir mainīti kopš šī maršruta aprēķina. Plašākiem filtriem nepieciešama jauna maršruta meklēšana.",
     "recalculate": "Pārrēķināt",

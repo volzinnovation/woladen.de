@@ -237,6 +237,12 @@ COUNTRY_SEO = {
         "fr": ("Hongrie", "hongrie"),
         "nl": ("Hongarije", "hongarije"),
     },
+    "IT": {
+        "en": ("Italy", "italy"),
+        "de": ("Italien", "italien"),
+        "fr": ("Italie", "italie"),
+        "nl": ("Italië", "italie"),
+    },
     "LT": {
         "en": ("Lithuania", "lithuania"),
         "de": ("Litauen", "litauen"),

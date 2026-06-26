@@ -181,6 +181,7 @@ const FALLBACK_BUNDLE = {
     notConfigured: "Route planning is not configured.",
     locationUnavailable: "Current location is not available.",
     searchError: "Charging stations along the route could not be loaded.",
+    capacityExhausted: "Routing capacity is currently exhausted. Please try again later.",
     noFilteredResults: "No charging stations along the route match the current filters.",
     filterChanged: "Filters changed since this route was calculated. Broader filters need a new route search.",
     recalculate: "Recalculate",

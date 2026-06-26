@@ -374,6 +374,7 @@
     "notConfigured": "Načrtovanje poti ni konfigurirano.",
     "locationUnavailable": "Vaša lokacija ni na voljo.",
     "searchError": "Polnilnih postaj ob poti ni bilo mogoče naložiti.",
+    "capacityExhausted": "Zmogljivosti za izračun poti so trenutno izčrpane. Poskusite znova pozneje.",
     "noFilteredResults": "Nobena polnilna postaja ob poti ne ustreza trenutnim filtrom.",
     "filterChanged": "Filtri so se spremenili od izračuna te poti. Širši filtri zahtevajo novo iskanje poti.",
     "recalculate": "Preračunaj",

@@ -374,6 +374,7 @@
     "notConfigured": "Plánování trasy není nakonfigurováno.",
     "locationUnavailable": "Vaše poloha není dostupná.",
     "searchError": "Nabíjecí stanice podél trasy se nepodařilo načíst.",
+    "capacityExhausted": "Kapacita trasování je momentálně vyčerpána. Zkuste to prosím později znovu.",
     "noFilteredResults": "Žádné nabíjecí stanice podél trasy neodpovídají aktuálním filtrům.",
     "filterChanged": "Filtry se od výpočtu této trasy změnily. Širší filtry vyžadují nové hledání trasy.",
     "recalculate": "Přepočítat",

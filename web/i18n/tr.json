@@ -374,6 +374,7 @@
     "notConfigured": "Rota planlama yapılandırılmamış.",
     "locationUnavailable": "Konumunuz kullanılamıyor.",
     "searchError": "Rota üzerindeki şarj istasyonları yüklenemedi.",
+    "capacityExhausted": "Rota hesaplama kapasitesi şu anda tükendi. Lütfen daha sonra tekrar deneyin.",
     "noFilteredResults": "Rota üzerindeki hiçbir şarj istasyonu mevcut filtrelerle eşleşmiyor.",
     "filterChanged": "Bu rota hesaplandıktan sonra filtreler değişti. Daha geniş filtreler için yeni bir rota araması gerekir.",
     "recalculate": "Yeniden hesapla",
