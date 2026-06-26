@@ -20,6 +20,15 @@ from .open_catalog import (
     OpenCatalogStore,
     OpenCatalogUnavailable,
 )
+from .routing import (
+    RouteChargerService,
+    RouteEndpoint,
+    RouteFilters,
+    RouteNotFound,
+    RouteProviderError,
+    RouteProviderUnavailable,
+    RouteTooLong,
+)
 from .service import IngestionService
 from .store import LiveStore
 
@@ -57,6 +66,7 @@ PROFILE_FLAG_VALUES = {"1", "true", "yes", "on"}
 PROFILE_HEADER_NAMES = ("Server-Timing", "Timing-Allow-Origin", "Content-Length")
 MAX_STATION_LOOKUP_IDS = 20
 MAX_RATING_LOOKUP_IDS = 50
+MAX_ROUTE_SELECTED_AMENITIES = 32
 STATION_ID_NAMESPACE = "DE:"
 REDACTED_VALUE = "[redacted]"
 
@@ -73,6 +83,29 @@ class StationRatingRequest(BaseModel):
     station_id: str = Field(min_length=1, max_length=128)
     rating: int = Field(ge=1, le=5)
     client_id: str = Field(min_length=16, max_length=128)
+
+
+class RouteEndpointRequest(BaseModel):
+    lat: float = Field(ge=-90.0, le=90.0)
+    lon: float = Field(ge=-180.0, le=180.0)
+    label: str = Field(default="", max_length=256)
+
+
+class RouteFiltersRequest(BaseModel):
+    operator: str = Field(default="", max_length=128)
+    min_power_kw: float = Field(default=50.0, ge=0.0, le=1000.0)
+    min_amenities_total: int = Field(default=0, ge=0, le=1000)
+    selected_amenities: list[str] = Field(default_factory=list, max_length=MAX_ROUTE_SELECTED_AMENITIES)
+    amenity_name_query: str = Field(default="", max_length=128)
+    available_only: bool = False
+    currently_open_only: bool = False
+
+
+class RouteChargerSearchRequest(BaseModel):
+    origin: RouteEndpointRequest
+    destination: RouteEndpointRequest
+    filters: RouteFiltersRequest = Field(default_factory=RouteFiltersRequest)
+    filter_mode: str = Field(default="route_calculation", pattern="^(route_calculation|current_result)$")
 
 
 def _public_station_id(value: str) -> str:
@@ -150,6 +183,22 @@ def _serialize_evse_detail(payload: dict) -> dict:
             _strip_fields(item, {"provider_uid"}) for item in payload["recent_observations"]
         ],
     }
+
+
+def _route_endpoint_from_request(payload: RouteEndpointRequest) -> RouteEndpoint:
+    return RouteEndpoint(lat=payload.lat, lon=payload.lon, label=payload.label.strip())
+
+
+def _route_filters_from_request(payload: RouteFiltersRequest) -> RouteFilters:
+    return RouteFilters(
+        operator=payload.operator.strip(),
+        min_power_kw=payload.min_power_kw,
+        min_amenities_total=payload.min_amenities_total,
+        selected_amenities=tuple(str(value or "").strip() for value in payload.selected_amenities),
+        amenity_name_query=payload.amenity_name_query.strip(),
+        available_only=payload.available_only,
+        currently_open_only=payload.currently_open_only,
+    )
 
 
 def _normalize_lookup_key(value: str) -> str:
@@ -287,6 +336,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     store = LiveStore(effective_config)
     store.initialize()
     open_catalog_store = OpenCatalogStore(effective_config.open_static_sqlite_path)
+    route_charger_service = RouteChargerService(effective_config, open_catalog_store, store)
     ingestion_service = IngestionService(effective_config, store=store)
     station_catalog_path = effective_config.full_chargers_csv_path or effective_config.chargers_csv_path
     if (
@@ -311,6 +361,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     app.state.config = effective_config
     app.state.store = store
     app.state.open_catalog_store = open_catalog_store
+    app.state.route_charger_service = route_charger_service
     app.state.ingestion_service = ingestion_service
     app.state.receipt_queue = ingestion_service.receipt_queue
 
@@ -465,6 +516,27 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         if payload is None:
             raise HTTPException(status_code=404, detail="catalog_station_not_found")
         return _json_response(request, payload)
+
+    @app.post("/v1/routes/chargers")
+    def route_chargers(request: Request, payload: RouteChargerSearchRequest) -> JSONResponse:
+        try:
+            response_payload = app.state.route_charger_service.search(
+                origin=_route_endpoint_from_request(payload.origin),
+                destination=_route_endpoint_from_request(payload.destination),
+                filters=_route_filters_from_request(payload.filters),
+                filter_mode=payload.filter_mode,
+            )
+        except OpenCatalogUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except RouteProviderUnavailable as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except RouteTooLong as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except RouteNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except RouteProviderError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        return _json_response(request, response_payload)
 
     @app.get("/v1/stations")
     def list_stations(

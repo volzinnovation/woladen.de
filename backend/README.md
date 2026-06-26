@@ -178,6 +178,16 @@ The backend uses `AppConfig` in [config.py](/Users/raphaelvolz/Github/woladen.de
 - `WOLADEN_LIVE_API_PUSH_TOKEN`: shared secret required for `POST /v1/push`
 - `WOLADEN_LIVE_API_CORS_ALLOWED_ORIGINS`: comma-separated explicit CORS allowlist
 - `WOLADEN_LIVE_API_CORS_ALLOW_ORIGIN_REGEX`: regex fallback for local development (`localhost`, `127.0.0.1`, `0.0.0.0`, `[::1]` by default)
+- `WOLADEN_ORS_BASE_URL`: openrouteservice base URL for route planning. Leave unset to keep `/v1/routes/chargers` disabled.
+- `WOLADEN_ORS_API_KEY`: ORS API key for the public ORS service. Private ORS deployments may leave this unset if they do not require a key.
+- `WOLADEN_ORS_TIMEOUT_SECONDS`: outbound ORS request timeout. Default: `6`
+- `WOLADEN_ROUTE_CORRIDOR_RADIUS_M`: validated driving access threshold from the route. Default: `2000`
+- `WOLADEN_ROUTE_CANDIDATE_RADIUS_M`: coarse straight-line corridor radius for catalog candidates before Matrix validation. Default: `3000`
+- `WOLADEN_ROUTE_MAX_VALIDATION_CANDIDATES`: Matrix validation pool size after static filters and straight-line corridor ranking. Default: `250`
+- `WOLADEN_ROUTE_MAX_RESULTS`: maximum returned route chargers. Default: `100`
+- `WOLADEN_ROUTE_MATRIX_BATCH_SIZE`: maximum candidates per Matrix validation batch. Default: `50`
+- `WOLADEN_ROUTE_MAX_DISTANCE_M`: maximum accepted base route distance. Default: `1000000`
+- `WOLADEN_ROUTE_CACHE_TTL_SECONDS`: process-local base-route cache TTL. Default: `600`
 - `WOLADEN_LIVE_POLL_TIMEOUT_SECONDS`: fetch timeout
 - `WOLADEN_LIVE_POLL_INTERVAL_DELTA_SECONDS`: base interval for delta feeds
 - `WOLADEN_LIVE_POLL_INTERVAL_SNAPSHOT_SECONDS`: base interval for snapshot feeds
@@ -604,6 +614,51 @@ Example:
 
 ```bash
 curl 'http://127.0.0.1:8001/v1/catalog/stations/de:example'
+```
+
+### `POST /v1/routes/chargers`
+
+Native route charger search. It is disabled until `WOLADEN_ORS_BASE_URL` is
+configured. The backend keeps ORS credentials server-side, fetches the base
+`driving-car` route, queries the open-static SQLite catalog for coarse route
+corridor candidates, prunes static filters before Matrix validation, then
+returns up to the closest 100 stations whose estimated driving access from the
+route is within `WOLADEN_ROUTE_CORRIDOR_RADIUS_M`.
+
+Request body:
+
+```json
+{
+  "origin": { "lat": 52.52, "lon": 13.405, "label": "Berlin" },
+  "destination": { "lat": 48.1372, "lon": 11.5755, "label": "Munich" },
+  "filters": {
+    "operator": "",
+    "min_power_kw": 50,
+    "min_amenities_total": 0,
+    "selected_amenities": [],
+    "amenity_name_query": "",
+    "available_only": false,
+    "currently_open_only": false
+  },
+  "filter_mode": "route_calculation"
+}
+```
+
+Response:
+
+- `route`: ORS source/profile, base distance/duration, and GeoJSON
+  `LineString` geometry
+- `stations`: catalog station summaries plus route metadata kept outside the
+  station object
+- `query`: normalized filters, corridor settings, validation counts, and result
+  count
+
+Example:
+
+```bash
+curl -X POST 'http://127.0.0.1:8001/v1/routes/chargers' \
+  -H 'content-type: application/json' \
+  --data '{"origin":{"lat":52.52,"lon":13.405},"destination":{"lat":48.1372,"lon":11.5755},"filters":{"min_power_kw":50},"filter_mode":"route_calculation"}'
 ```
 
 ### `GET /v1/stations`

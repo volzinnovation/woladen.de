@@ -48,6 +48,16 @@ def _env_bool(name: str, default: bool) -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
+def _env_float(name: str, default: float) -> float:
+    value = str(os.environ.get(name, "")).strip()
+    return float(value) if value else default
+
+
+def _env_int(name: str, default: int) -> int:
+    value = str(os.environ.get(name, "")).strip()
+    return int(value) if value else default
+
+
 def load_env_file(path: Path, *, allowed_keys: Collection[str] | None = None) -> None:
     """Load simple KEY=value assignments from a runtime env file.
 
@@ -224,6 +234,20 @@ class AppConfig:
     hf_archive_token_file: Path | None = field(
         default_factory=lambda: _env_optional_path("WOLADEN_LIVE_HF_ARCHIVE_TOKEN_FILE")
     )
+    ors_base_url: str = field(
+        default_factory=lambda: str(os.environ.get("WOLADEN_ORS_BASE_URL", "")).strip().rstrip("/")
+    )
+    ors_api_key: str = field(default_factory=lambda: str(os.environ.get("WOLADEN_ORS_API_KEY", "")).strip())
+    ors_timeout_seconds: float = field(default_factory=lambda: _env_float("WOLADEN_ORS_TIMEOUT_SECONDS", 6.0))
+    route_corridor_radius_m: int = field(default_factory=lambda: _env_int("WOLADEN_ROUTE_CORRIDOR_RADIUS_M", 2000))
+    route_candidate_radius_m: int = field(default_factory=lambda: _env_int("WOLADEN_ROUTE_CANDIDATE_RADIUS_M", 3000))
+    route_max_validation_candidates: int = field(
+        default_factory=lambda: _env_int("WOLADEN_ROUTE_MAX_VALIDATION_CANDIDATES", 250)
+    )
+    route_max_results: int = field(default_factory=lambda: _env_int("WOLADEN_ROUTE_MAX_RESULTS", 100))
+    route_matrix_batch_size: int = field(default_factory=lambda: _env_int("WOLADEN_ROUTE_MATRIX_BATCH_SIZE", 50))
+    route_max_distance_m: int = field(default_factory=lambda: _env_int("WOLADEN_ROUTE_MAX_DISTANCE_M", 1_000_000))
+    route_cache_ttl_seconds: float = field(default_factory=lambda: _env_float("WOLADEN_ROUTE_CACHE_TTL_SECONDS", 600.0))
 
     def __post_init__(self) -> None:
         if self.full_chargers_csv_path is None:

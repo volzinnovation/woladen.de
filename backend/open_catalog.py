@@ -11,6 +11,8 @@ from typing import Any
 MAX_CATALOG_LIMIT = 100
 DEFAULT_CATALOG_RADIUS_M = 50_000
 MAX_CATALOG_RADIUS_M = 500_000
+MAX_ROUTE_CORRIDOR_BOXES = 350
+MAX_ROUTE_CORRIDOR_CANDIDATES = 20_000
 
 
 class OpenCatalogUnavailable(RuntimeError):
@@ -124,6 +126,31 @@ class OpenCatalogStore:
                 "source": "open_static.sqlite3",
             }
 
+    def route_corridor_candidates(
+        self,
+        *,
+        route_points: list[dict[str, float]],
+        radius_m: int,
+        candidate_limit: int = MAX_ROUTE_CORRIDOR_CANDIDATES,
+        min_power_kw: float | None = None,
+        operator_query: str = "",
+    ) -> list[dict[str, Any]]:
+        radius_m = max(1, int(radius_m))
+        candidate_limit = max(1, min(int(candidate_limit), MAX_ROUTE_CORRIDOR_CANDIDATES))
+        corridor_boxes = _route_corridor_boxes(route_points, radius_m)
+        if not corridor_boxes:
+            return []
+
+        with self._connect() as connection:
+            rows = self._route_corridor_rows(
+                connection,
+                corridor_boxes=corridor_boxes,
+                candidate_limit=candidate_limit,
+                min_power_kw=min_power_kw,
+                operator_query=operator_query,
+            )
+        return [_station_from_row(row) for row in rows]
+
     def _connect(self) -> sqlite3.Connection:
         if not self.available:
             raise OpenCatalogUnavailable("open_static_sqlite_unavailable")
@@ -230,13 +257,86 @@ class OpenCatalogStore:
             """
         return list(connection.execute(sql, params).fetchall())
 
+    def _route_corridor_rows(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        corridor_boxes: list[tuple[float, float, float, float]],
+        candidate_limit: int,
+        min_power_kw: float | None,
+        operator_query: str,
+    ) -> list[sqlite3.Row]:
+        where_parts = [
+            "s.latitude IS NOT NULL",
+            "s.longitude IS NOT NULL",
+        ]
+        params: dict[str, Any] = {"candidate_limit": candidate_limit}
+        if min_power_kw is not None:
+            where_parts.append("COALESCE(s.max_power_kw, 0) >= :min_power_kw")
+            params["min_power_kw"] = float(min_power_kw)
+        if operator_query:
+            where_parts.append("LOWER(COALESCE(s.operator_name, '')) LIKE :operator_query")
+            params["operator_query"] = f"%{operator_query.lower()}%"
+
+        use_rtree = self._table_exists(connection, "station_rtree")
+        box_conditions = []
+        for index, (min_lat, max_lat, min_lon, max_lon) in enumerate(corridor_boxes):
+            params[f"min_lat_{index}"] = min_lat
+            params[f"max_lat_{index}"] = max_lat
+            params[f"min_lon_{index}"] = min_lon
+            params[f"max_lon_{index}"] = max_lon
+            if use_rtree:
+                box_conditions.append(
+                    f"""
+                    (
+                        r.min_lat <= :max_lat_{index}
+                        AND r.max_lat >= :min_lat_{index}
+                        AND r.min_lon <= :max_lon_{index}
+                        AND r.max_lon >= :min_lon_{index}
+                    )
+                    """
+                )
+            else:
+                box_conditions.append(
+                    f"""
+                    (
+                        s.latitude BETWEEN :min_lat_{index} AND :max_lat_{index}
+                        AND s.longitude BETWEEN :min_lon_{index} AND :max_lon_{index}
+                    )
+                    """
+                )
+
+        where_sql = " AND ".join(where_parts)
+        corridor_sql = " OR ".join(box_conditions)
+        if use_rtree:
+            sql = f"""
+                {self._station_select_sql(connection)}
+                JOIN station_rtree AS r ON r.station_uid = s.station_uid
+                WHERE {where_sql}
+                  AND ({corridor_sql})
+                GROUP BY s.station_uid
+                ORDER BY s.station_uid
+                LIMIT :candidate_limit
+            """
+        else:
+            sql = f"""
+                {self._station_select_sql(connection)}
+                WHERE {where_sql}
+                  AND ({corridor_sql})
+                GROUP BY s.station_uid
+                ORDER BY s.station_uid
+                LIMIT :candidate_limit
+            """
+        return list(connection.execute(sql, params).fetchall())
+
     def _station_select_sql(self, connection: sqlite3.Connection, *, distance_select: str = "") -> str:
         amenity_select = """
             COALESCE(a.amenities_total, 0) AS amenities_total,
             COALESCE(a.nearest_amenity_kind, '') AS nearest_amenity_kind,
             COALESCE(a.nearest_amenity_name, '') AS nearest_amenity_name,
             a.nearest_amenity_distance_m AS nearest_amenity_distance_m,
-            COALESCE(a.amenity_category_counts_json, '{}') AS amenity_category_counts_json
+            COALESCE(a.amenity_category_counts_json, '{}') AS amenity_category_counts_json,
+            COALESCE(a.amenity_examples_json, '[]') AS amenity_examples_json
         """
         amenity_join = ""
         if self._table_exists(connection, "station_amenities"):
@@ -247,7 +347,8 @@ class OpenCatalogStore:
                 '' AS nearest_amenity_kind,
                 '' AS nearest_amenity_name,
                 NULL AS nearest_amenity_distance_m,
-                '{}' AS amenity_category_counts_json
+                '{}' AS amenity_category_counts_json,
+                '[]' AS amenity_examples_json
             """
         maybe_distance = f", {distance_select}" if distance_select else ""
         return f"""
@@ -394,8 +495,48 @@ def _station_from_row(row: sqlite3.Row) -> dict[str, Any]:
         "nearest_amenity_name": str(row["nearest_amenity_name"] or ""),
         "nearest_amenity_distance_m": _float_or_none(row["nearest_amenity_distance_m"]),
         "amenity_category_counts": _json_value(row["amenity_category_counts_json"], default={}),
+        "amenity_examples": _json_value(row["amenity_examples_json"], default=[]),
     }
     return payload
+
+
+def _route_corridor_boxes(
+    route_points: list[dict[str, float]],
+    radius_m: int,
+) -> list[tuple[float, float, float, float]]:
+    points = [
+        (float(point["lat"]), float(point["lon"]))
+        for point in route_points
+        if math.isfinite(float(point.get("lat", math.nan)))
+        and math.isfinite(float(point.get("lon", math.nan)))
+    ]
+    if len(points) < 2:
+        return []
+    boxes = [_segment_box(start, end, radius_m) for start, end in zip(points, points[1:])]
+    if len(boxes) <= MAX_ROUTE_CORRIDOR_BOXES:
+        return boxes
+    step = (len(boxes) - 1) / float(MAX_ROUTE_CORRIDOR_BOXES - 1)
+    sampled = [boxes[round(index * step)] for index in range(MAX_ROUTE_CORRIDOR_BOXES)]
+    return list(dict.fromkeys(sampled))
+
+
+def _segment_box(
+    start: tuple[float, float],
+    end: tuple[float, float],
+    radius_m: int,
+) -> tuple[float, float, float, float]:
+    start_lat, start_lon = start
+    end_lat, end_lon = end
+    center_lat = (start_lat + end_lat) / 2.0
+    lat_delta = radius_m / 111_320.0
+    lon_scale = max(math.cos(math.radians(center_lat)), 0.01)
+    lon_delta = radius_m / (111_320.0 * lon_scale)
+    return (
+        max(-90.0, min(start_lat, end_lat) - lat_delta),
+        min(90.0, max(start_lat, end_lat) + lat_delta),
+        max(-180.0, min(start_lon, end_lon) - lon_delta),
+        min(180.0, max(start_lon, end_lon) + lon_delta),
+    )
 
 
 def _bounding_box(latitude: float, longitude: float, radius_m: int) -> tuple[float, float, float, float]:
