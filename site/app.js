@@ -2321,10 +2321,13 @@ function renderRouteResults() {
 
   if (!state.route.result) {
     hideRouteSummary();
+    if (state.route.error) {
+      return;
+    }
     const empty = document.createElement("div");
     empty.className = "empty-state";
     empty.setAttribute("data-nosnippet", "");
-    empty.textContent = state.route.error ? routeErrorMessage(state.route.error) : t("route.empty");
+    empty.textContent = t("route.empty");
     els.route.results.appendChild(empty);
     return;
   }
