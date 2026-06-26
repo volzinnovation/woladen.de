@@ -54,8 +54,12 @@ jobs:
 
       - name: Download open static SQLite bundle
         env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python scripts/download_latest_open_static_release.py --tag open-static-ios-regional-latest --require-checksum
+          GH_TOKEN: ${{ secrets.WOLADEN_GITHUB_RELEASE_TOKEN }}
+        run: |
+          python scripts/download_latest_open_static_release.py \
+            --repo volzinnovation/woladen.de-analytics \
+            --tag open-static-ios-regional-latest \
+            --require-checksum
 
       - name: Build static site bundle
         run: python scripts/build_site.py

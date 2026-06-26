@@ -70,9 +70,19 @@ def test_pages_deploy_downloads_open_static_bundle_before_build():
     workflow = Path(".github/workflows/pages-deploy.yml").read_text(encoding="utf-8")
 
     assert "Download open static SQLite bundle" in workflow
-    assert "GITHUB_TOKEN: ${{ github.token }}" in workflow
-    assert (
-        "python scripts/download_latest_open_static_release.py "
-        "--tag open-static-ios-regional-latest --require-checksum"
-    ) in workflow
+    assert "GH_TOKEN: ${{ secrets.WOLADEN_GITHUB_RELEASE_TOKEN }}" in workflow
+    assert "--repo volzinnovation/woladen.de-analytics" in workflow
+    assert "--tag open-static-ios-regional-latest" in workflow
+    assert "--require-checksum" in workflow
+    assert workflow.index("Download open static SQLite bundle") < workflow.index("Build static site bundle")
+
+
+def test_daily_management_downloads_open_static_bundle_before_site_build():
+    workflow = Path(".github/workflows/daily-management-analysis.yml").read_text(encoding="utf-8")
+
+    assert "Download open static SQLite bundle" in workflow
+    assert "GH_TOKEN: ${{ secrets.WOLADEN_GITHUB_RELEASE_TOKEN }}" in workflow
+    assert "--repo volzinnovation/woladen.de-analytics" in workflow
+    assert "--tag open-static-ios-regional-latest" in workflow
+    assert "--require-checksum" in workflow
     assert workflow.index("Download open static SQLite bundle") < workflow.index("Build static site bundle")

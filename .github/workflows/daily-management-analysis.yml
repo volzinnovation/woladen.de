@@ -218,6 +218,16 @@ jobs:
             --require-complete \
             --quiet
 
+      - name: Download open static SQLite bundle
+        if: steps.berlin_gate.outputs.should_run == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.WOLADEN_GITHUB_RELEASE_TOKEN }}
+        run: |
+          python scripts/download_latest_open_static_release.py \
+            --repo volzinnovation/woladen.de-analytics \
+            --tag open-static-ios-regional-latest \
+            --require-checksum
+
       - name: Build static site bundle
         if: steps.berlin_gate.outputs.should_run == 'true'
         run: python scripts/build_site.py
