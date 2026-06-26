@@ -56,11 +56,7 @@ export function routeFiltersPayload(filters = {}) {
     amenity_name_query: stringValue(
       raw.amenityNameQuery ?? raw.amenity_name_query ?? ROUTE_FILTER_DEFAULTS.amenityNameQuery,
     ),
-    available_only: typeof raw.availableOnly === "boolean"
-      ? raw.availableOnly
-      : typeof raw.available_only === "boolean"
-        ? raw.available_only
-        : ROUTE_FILTER_DEFAULTS.availableOnly,
+    available_only: false,
     currently_open_only: typeof raw.currentlyOpenOnly === "boolean"
       ? raw.currentlyOpenOnly
       : typeof raw.currently_open_only === "boolean"

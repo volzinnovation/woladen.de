@@ -102,7 +102,8 @@ test("favorite control sits before the detail title and favorites use map star m
   assert.match(appJs, /FAVORITE_MARKER_SIZE/);
   assert.match(appJs, /function getFavoriteStationMarkerIcon\(\)/);
   assert.match(appJs, /state\.favorites\.has\(stationId\)[\s\S]*createFavoriteStationMarker/);
-  assert.match(appJs, /updateMapMarkersForStationIds\(\[id\]\)/);
+  assert.match(appJs, /function refreshFavoriteDependentViews\(stationIds = \[\]\)/);
+  assert.match(appJs, /updateMapMarkersForStationIds\(stationIds\)/);
   assert.match(appJs, /renderDetailStationMarker\(currentDetailFeature\)/);
 });
 

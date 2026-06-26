@@ -126,6 +126,12 @@ const FALLBACK_BUNDLE = {
     sort: "Sort",
     distance: "Distance",
     rating: "Stars",
+    categoryFilterLabel: "Favorite categories",
+    categoryFilterAria: "Show {category} favorites, {count} stations",
+    all: "All",
+    uncategorized: "Uncategorized",
+    groupCountOne: "{count} station",
+    groupCountMany: "{count} stations",
     empty: "No favorites saved yet.",
     emptyHelp: "Tap the star in the detail view to save stations.",
     loading: "Loading favorites in the current search area...",
@@ -357,6 +363,11 @@ const FALLBACK_BUNDLE = {
     notePlaceholder: "e.g. well lit, tight parking, bakery around the corner",
     noteSaved: "Note saved locally",
     noteDeviceOnly: "Stored only on this device",
+    favoriteCategories: "Categories",
+    categoryPlaceholder: "Add category",
+    addCategory: "Add",
+    categoryDeviceOnly: "Stored only on this device",
+    removeCategory: "Remove {category}",
     help: "Help",
     helpTitle: "Help {phone}",
   },
@@ -509,7 +520,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260626-routing-web1`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260626-favorites-web1`, import.meta.url));
     if (!response.ok) {
       return {};
     }

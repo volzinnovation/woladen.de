@@ -5,6 +5,25 @@ import {
   serializeStoredFilterSettings,
 } from "./filter-settings.mjs?v=20260626-routing-web1";
 import {
+  FAVORITES_LEGACY_STORAGE_KEY,
+  FAVORITES_V2_STORAGE_KEY,
+  FAVORITE_CATEGORY_UNCATEGORIZED,
+  FAVORITE_FILTER_ALL,
+  FAVORITE_SOURCE_MANUAL,
+  addFavoriteCategory,
+  createEmptyFavoriteMetadata,
+  ensureFavoriteItem,
+  favoriteCategorySuggestions,
+  getFavoriteCategories,
+  getFavoriteStationIds,
+  migrateLegacyFavorites,
+  normalizeFavoriteCategoryLabel,
+  parseStoredFavoriteMetadata,
+  removeFavoriteCategory,
+  removeFavoriteItem,
+  serializeFavoriteMetadata,
+} from "./favorite-metadata.mjs?v=20260626-favorites-web1";
+import {
   formatOpeningHoursForDisplay,
   getAmenityOpenStatus,
 } from "./opening-hours.mjs?v=20260620-i18n";
@@ -70,7 +89,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260626-routing-web1";
+} from "./i18n.mjs?v=20260626-favorites-web1";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -1031,7 +1050,9 @@ const state = {
   features: [], // All charger features
   staticFeatures: [], // Static fast-charger fallback features
   filtered: [], // Currently filtered features
+  favoriteMetadata: createEmptyFavoriteMetadata(),
   favorites: new Set(), // Set of station_ids
+  favoriteCategoryFilter: FAVORITE_FILTER_ALL,
   ratings: new Map(), // station_id -> 1-5 rating stored locally
   notes: new Map(), // station_id -> personal note stored locally
   favoriteSort: FAVORITE_SORT_DISTANCE,
@@ -1184,6 +1205,7 @@ const els = {
   },
   favorites: {
     sort: document.getElementById("favorites-sort"),
+    categoryFilters: document.getElementById("favorites-category-filters"),
   },
   filter: {
     trigger: document.getElementById("filter-trigger"),
@@ -1243,6 +1265,12 @@ const els = {
     ratingStars: document.getElementById("detail-rating-stars"),
     noteInput: document.getElementById("detail-note-input"),
     noteStatus: document.getElementById("detail-note-status"),
+    categoryEditor: document.getElementById("detail-favorite-categories"),
+    categoryChips: document.getElementById("detail-category-chips"),
+    categoryInput: document.getElementById("detail-category-input"),
+    categoryAddBtn: document.getElementById("detail-category-add"),
+    categorySuggestions: document.getElementById("detail-category-suggestions"),
+    categoryStatus: document.getElementById("detail-category-status"),
     amenityTitle: document.getElementById("detail-amenities-title"),
     amenityList: document.getElementById("detail-amenities-list"),
     detailsSection: document.getElementById("detail-details-section"),
@@ -1339,6 +1367,11 @@ async function init() {
   els.detail.favBtn.addEventListener("click", toggleDetailFavorite);
   els.detail.ratingStars.addEventListener("click", handleRatingClick);
   els.detail.noteInput.addEventListener("input", handleDetailNoteInput);
+  els.detail.categoryInput?.addEventListener("input", renderDetailCategorySuggestions);
+  els.detail.categoryInput?.addEventListener("keydown", handleDetailCategoryKeydown);
+  els.detail.categoryAddBtn?.addEventListener("click", () => addDetailFavoriteCategory());
+  els.detail.categorySuggestions?.addEventListener("click", handleDetailCategorySuggestionClick);
+  els.detail.categoryChips?.addEventListener("click", handleDetailCategoryChipClick);
   els.favorites.sort.addEventListener("change", handleFavoriteSortChange);
   document.addEventListener("keydown", handleGlobalKeydown);
   document.addEventListener("keyup", handleGlobalKeyup);
@@ -2086,7 +2119,7 @@ async function submitRouteSearch() {
   }
 
   const requestId = ++state.route.requestSeq;
-  const filters = routeFiltersPayload(state.filters);
+  const filters = routeFiltersPayload(routeEffectiveFilters());
   state.route.loading = true;
   state.route.error = null;
   renderRouteResults();
@@ -2167,10 +2200,18 @@ function renderRouteStatus(message, tone = "muted") {
   els.route.status.hidden = !message;
 }
 
+function routeEffectiveFilters() {
+  return {
+    ...state.filters,
+    availableOnly: false,
+  };
+}
+
 function getRouteDisplayFeatures() {
   const now = new Date();
+  const filters = routeEffectiveFilters();
   return state.route.features
-    .filter((feature) => matchesFeatureFilters(feature, state.filters, { getDisplayedMaxPowerKw, now }))
+    .filter((feature) => matchesFeatureFilters(feature, filters, { getDisplayedMaxPowerKw, now }))
     .sort(compareRouteFeatures);
 }
 
@@ -2208,7 +2249,7 @@ function routeFiltersRequireRecalculation() {
   if (!state.route.calculatedFilters) {
     return false;
   }
-  const current = routeFiltersPayload(state.filters);
+  const current = routeFiltersPayload(routeEffectiveFilters());
   const baseline = state.route.calculatedFilters;
   if (baseline.operator && current.operator !== baseline.operator) {
     return true;
@@ -4507,6 +4548,10 @@ function updateFilterLabel() {
   const filterCount = countActiveFilters(state.filters);
   const labels = getActiveFilterLabels();
   const labelSummary = labels.join(", ");
+  const routeFilters = routeEffectiveFilters();
+  const routeFilterCount = countActiveFilters(routeFilters);
+  const routeLabels = getActiveFilterLabels(routeFilters);
+  const routeLabelSummary = routeLabels.join(", ");
 
   if (els.filter.label) {
     els.filter.label.textContent =
@@ -4539,14 +4584,16 @@ function updateFilterLabel() {
     els.filter.listFilterBtn.classList.toggle("active", filterCount > 0);
   }
   if (els.filter.routeFilterBtn) {
-    els.filter.routeFilterBtn.textContent = filterCount > 0 ? `${t("filters.title")} (${filterCount})` : t("filters.title");
+    els.filter.routeFilterBtn.textContent = routeFilterCount > 0
+      ? `${t("filters.title")} (${routeFilterCount})`
+      : t("filters.title");
     els.filter.routeFilterBtn.setAttribute(
       "aria-label",
-      filterCount > 0
-        ? t("filters.openWithCount", { count: filterCount, labels: labelSummary })
+      routeFilterCount > 0
+        ? t("filters.openWithCount", { count: routeFilterCount, labels: routeLabelSummary })
         : t("aria.filterOpen"),
     );
-    els.filter.routeFilterBtn.classList.toggle("active", filterCount > 0);
+    els.filter.routeFilterBtn.classList.toggle("active", routeFilterCount > 0);
   }
   renderActiveFilterSummary(filterCount);
 }
@@ -4583,30 +4630,30 @@ function renderActiveFilterSummary(filterCount) {
   }
 }
 
-function getActiveFilterLabels() {
+function getActiveFilterLabels(filters = state.filters) {
   const labels = [];
-  if (state.filters.operator) {
-    labels.push(state.filters.operator);
+  if (filters.operator) {
+    labels.push(filters.operator);
   }
-  const amenityNameQuery = String(state.filters.amenityNameQuery || "").trim();
+  const amenityNameQuery = String(filters.amenityNameQuery || "").trim();
   if (amenityNameQuery) {
     labels.push(t("filters.namePrefix", { value: amenityNameQuery }));
   }
-  if (state.filters.availableOnly) {
+  if (filters.availableOnly) {
     labels.push(t("filters.availableOnly"));
   }
-  if (state.filters.currentlyOpenOnly) {
+  if (filters.currentlyOpenOnly) {
     labels.push(t("filters.currentlyOpen"));
   }
-  const minPower = Number(state.filters.minPower);
+  const minPower = Number(filters.minPower);
   if (Number.isFinite(minPower) && minPower > 0) {
     labels.push(t("filters.minPowerLabel", { value: Math.round(minPower) }));
   }
-  const minAmenityCount = Number(state.filters.minAmenityCount);
+  const minAmenityCount = Number(filters.minAmenityCount);
   if (Number.isFinite(minAmenityCount) && minAmenityCount > 0) {
     labels.push(t("filters.minAmenitiesLabel", { value: Math.round(minAmenityCount) }));
   }
-  Array.from(state.filters.amenities)
+  Array.from(filters.amenities || [])
     .map((key) => getAmenityLabel(key))
     .sort((a, b) => a.localeCompare(b, getLocale()))
     .forEach((label) => labels.push(label));
@@ -4819,9 +4866,221 @@ function renderList() {
   }
 }
 
+function syncFavoriteStationIdsFromMetadata() {
+  state.favorites = getFavoriteStationIds(state.favoriteMetadata);
+}
+
+function getFavoriteCategoryKey(category) {
+  return normalizeFavoriteCategoryLabel(category).toLocaleLowerCase();
+}
+
+function getFavoriteItemForStationId(stationId) {
+  return state.favoriteMetadata.items.get(normalizeStationId(stationId));
+}
+
+function getFavoriteCategoriesForStationId(stationId) {
+  return getFavoriteItemForStationId(stationId)?.categories || [];
+}
+
+function getSortedFavoriteCategories() {
+  return getFavoriteCategories(state.favoriteMetadata)
+    .sort((left, right) => left.localeCompare(right, getLocale()));
+}
+
+function hasUncategorizedFavorites() {
+  return Array.from(state.favorites).some(
+    (stationId) => getFavoriteCategoriesForStationId(stationId).length === 0,
+  );
+}
+
+function favoriteMatchesCategoryFilter(stationId, filter = state.favoriteCategoryFilter) {
+  if (filter === FAVORITE_FILTER_ALL) {
+    return true;
+  }
+  const categories = getFavoriteCategoriesForStationId(stationId);
+  if (filter === FAVORITE_CATEGORY_UNCATEGORIZED) {
+    return categories.length === 0;
+  }
+  return categories.some((category) => getFavoriteCategoryKey(category) === filter);
+}
+
+function favoriteCategoryFilterExists(filter) {
+  if (filter === FAVORITE_FILTER_ALL) {
+    return true;
+  }
+  if (filter === FAVORITE_CATEGORY_UNCATEGORIZED) {
+    return hasUncategorizedFavorites();
+  }
+  return getSortedFavoriteCategories().some(
+    (category) => getFavoriteCategoryKey(category) === filter,
+  );
+}
+
+function normalizeFavoriteCategoryFilter() {
+  if (!favoriteCategoryFilterExists(state.favoriteCategoryFilter)) {
+    state.favoriteCategoryFilter = FAVORITE_FILTER_ALL;
+  }
+}
+
+function getFavoriteCategoryLabelForFilter(filter) {
+  if (filter === FAVORITE_FILTER_ALL) {
+    return t("favorites.all");
+  }
+  if (filter === FAVORITE_CATEGORY_UNCATEGORIZED) {
+    return t("favorites.uncategorized");
+  }
+  return getSortedFavoriteCategories().find(
+    (category) => getFavoriteCategoryKey(category) === filter,
+  ) || filter;
+}
+
+function countFavoritesForFilter(filter) {
+  return Array.from(state.favorites)
+    .filter((stationId) => favoriteMatchesCategoryFilter(stationId, filter))
+    .length;
+}
+
+function renderFavoriteCategoryFilters() {
+  const container = els.favorites.categoryFilters;
+  if (!container) {
+    return;
+  }
+  container.replaceChildren();
+  container.hidden = state.favorites.size === 0;
+  if (state.favorites.size === 0) {
+    return;
+  }
+
+  normalizeFavoriteCategoryFilter();
+  const filterItems = [
+    {
+      key: FAVORITE_FILTER_ALL,
+      label: t("favorites.all"),
+      count: state.favorites.size,
+    },
+    ...getSortedFavoriteCategories().map((category) => ({
+      key: getFavoriteCategoryKey(category),
+      label: category,
+      count: countFavoritesForFilter(getFavoriteCategoryKey(category)),
+    })),
+  ];
+  if (hasUncategorizedFavorites()) {
+    filterItems.push({
+      key: FAVORITE_CATEGORY_UNCATEGORIZED,
+      label: t("favorites.uncategorized"),
+      count: countFavoritesForFilter(FAVORITE_CATEGORY_UNCATEGORIZED),
+    });
+  }
+
+  filterItems.forEach((item) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "favorite-filter-chip";
+    button.dataset.favoriteCategoryFilter = item.key;
+    button.setAttribute("role", "listitem");
+    button.classList.toggle("active", item.key === state.favoriteCategoryFilter);
+    button.setAttribute("aria-pressed", item.key === state.favoriteCategoryFilter ? "true" : "false");
+    button.setAttribute(
+      "aria-label",
+      t("favorites.categoryFilterAria", { category: item.label, count: item.count }),
+    );
+    button.innerHTML = `
+      <span class="favorite-filter-label">${escapeHtml(item.label)}</span>
+      <span class="favorite-filter-count">${escapeHtml(formatLocalizedInteger(item.count) || item.count)}</span>
+    `;
+    button.addEventListener("click", () => {
+      state.favoriteCategoryFilter = item.key;
+      renderFavorites();
+    });
+    container.appendChild(button);
+  });
+}
+
+function favoriteIdsForCurrentFilter() {
+  normalizeFavoriteCategoryFilter();
+  return Array.from(state.favorites)
+    .filter((stationId) => favoriteMatchesCategoryFilter(stationId));
+}
+
+function buildFavoriteFeatureGroups(favoriteFeatures) {
+  const filter = state.favoriteCategoryFilter;
+  if (filter !== FAVORITE_FILTER_ALL) {
+    return [{
+      key: filter,
+      label: getFavoriteCategoryLabelForFilter(filter),
+      features: favoriteFeatures,
+    }];
+  }
+
+  const groups = getSortedFavoriteCategories()
+    .map((category) => {
+      const categoryKey = getFavoriteCategoryKey(category);
+      return {
+        key: categoryKey,
+        label: category,
+        features: favoriteFeatures.filter((feature) => {
+          const stationId = getStationIdFromProps(feature.properties);
+          return favoriteMatchesCategoryFilter(stationId, categoryKey);
+        }),
+      };
+    })
+    .filter((group) => group.features.length > 0);
+
+  const uncategorized = favoriteFeatures.filter((feature) => {
+    const stationId = getStationIdFromProps(feature.properties);
+    return favoriteMatchesCategoryFilter(stationId, FAVORITE_CATEGORY_UNCATEGORIZED);
+  });
+  if (uncategorized.length > 0) {
+    groups.push({
+      key: FAVORITE_CATEGORY_UNCATEGORIZED,
+      label: t("favorites.uncategorized"),
+      features: uncategorized,
+    });
+  }
+  return groups;
+}
+
+function uniqueFeaturesByStationId(features) {
+  const byStationId = new Map();
+  features.forEach((feature) => {
+    const stationId = getStationIdFromProps(feature.properties);
+    if (stationId && !byStationId.has(stationId)) {
+      byStationId.set(stationId, feature);
+    }
+  });
+  return Array.from(byStationId.values());
+}
+
+function renderFavoriteGroup(container, group) {
+  const section = document.createElement("section");
+  section.className = "favorite-group";
+  section.dataset.favoriteGroup = group.key;
+
+  const heading = document.createElement("div");
+  heading.className = "favorite-group-heading";
+  const countText = t(
+    group.features.length === 1 ? "favorites.groupCountOne" : "favorites.groupCountMany",
+    { count: formatLocalizedInteger(group.features.length) || group.features.length },
+  );
+  heading.innerHTML = `
+    <h3>${escapeHtml(group.label)}</h3>
+    <span>${escapeHtml(countText)}</span>
+  `;
+  section.appendChild(heading);
+
+  const list = document.createElement("div");
+  list.className = "favorite-group-list";
+  group.features.forEach((feature) => {
+    list.appendChild(createStationCard(feature, { showNote: true }));
+  });
+  section.appendChild(list);
+  container.appendChild(section);
+}
+
 function renderFavorites() {
   const container = els.lists.favorites;
   container.innerHTML = "";
+  renderFavoriteCategoryFilters();
 
   if (state.favorites.size === 0) {
     container.innerHTML = `<div class="empty-state" style="text-align:center; padding:2rem; color:#888;">
@@ -4857,12 +5116,12 @@ function renderFavorites() {
     return;
   }
 
-  const hasMissingFavorite = Array.from(state.favorites).some((stationId) =>
+  const matchingFavoriteIds = favoriteIdsForCurrentFilter();
+  const hasMissingFavorite = matchingFavoriteIds.some((stationId) =>
     !findFeatureByStationId(stationId),
   );
 
-  // Find feature objects for favorites
-  const favFeatures = Array.from(state.favorites)
+  const favFeatures = matchingFavoriteIds
     .map((stationId) => findFeatureByStationId(stationId))
     .filter(Boolean);
 
@@ -4879,12 +5138,12 @@ function renderFavorites() {
     return;
   }
 
-  favFeatures.forEach((feature) => {
-    const card = createStationCard(feature, { showNote: true });
-    container.appendChild(card);
-  });
-  requestLiveSummariesForFeatures(favFeatures);
-  requestRatingSummariesForFeatures(favFeatures);
+  const groups = buildFavoriteFeatureGroups(favFeatures);
+  groups.forEach((group) => renderFavoriteGroup(container, group));
+
+  const uniqueFeatures = uniqueFeaturesByStationId(favFeatures);
+  requestLiveSummariesForFeatures(uniqueFeatures);
+  requestRatingSummariesForFeatures(uniqueFeatures);
 
   if (hasMissingFavorite) {
     const note = document.createElement("div");
@@ -5855,6 +6114,152 @@ function updateDetailNote(props) {
     : t("detail.noteDeviceOnly");
 }
 
+function currentDetailStationId() {
+  return currentDetailFeature
+    ? getStationIdFromProps(currentDetailFeature.properties)
+    : "";
+}
+
+function renderDetailCategorySuggestions() {
+  const suggestionsEl = els.detail.categorySuggestions;
+  const input = els.detail.categoryInput;
+  if (!suggestionsEl || !input || !currentDetailFeature) {
+    return;
+  }
+  const stationId = currentDetailStationId();
+  const categories = getFavoriteCategoriesForStationId(stationId);
+  const suggestions = favoriteCategorySuggestions(
+    state.favoriteMetadata,
+    input.value,
+    {
+      exclude: categories,
+      locale: getLocale(),
+    },
+  );
+  suggestionsEl.replaceChildren();
+  input.setAttribute("aria-expanded", suggestions.length > 0 ? "true" : "false");
+  suggestionsEl.hidden = suggestions.length === 0;
+  suggestions.forEach((category) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "category-suggestion";
+    button.dataset.category = category;
+    button.textContent = category;
+    suggestionsEl.appendChild(button);
+  });
+}
+
+function updateDetailFavoriteCategories() {
+  const editor = els.detail.categoryEditor;
+  if (!editor || !currentDetailFeature) {
+    return;
+  }
+  const stationId = currentDetailStationId();
+  const isFavorite = Boolean(stationId && state.favorites.has(stationId));
+  editor.hidden = !isFavorite;
+  if (!isFavorite) {
+    els.detail.categoryChips?.replaceChildren();
+    if (els.detail.categoryInput) {
+      els.detail.categoryInput.value = "";
+      els.detail.categoryInput.setAttribute("aria-expanded", "false");
+    }
+    if (els.detail.categorySuggestions) {
+      els.detail.categorySuggestions.replaceChildren();
+      els.detail.categorySuggestions.hidden = true;
+    }
+    return;
+  }
+
+  const categories = getFavoriteCategoriesForStationId(stationId);
+  els.detail.categoryChips.replaceChildren();
+  if (categories.length === 0) {
+    const empty = document.createElement("span");
+    empty.className = "category-empty";
+    empty.textContent = t("favorites.uncategorized");
+    els.detail.categoryChips.appendChild(empty);
+  } else {
+    categories.forEach((category) => {
+      const chip = document.createElement("span");
+      chip.className = "category-chip";
+      chip.innerHTML = `
+        <span>${escapeHtml(category)}</span>
+        <button type="button" data-remove-category="${escapeHtml(category)}" aria-label="${escapeHtml(t("detail.removeCategory", { category }))}">×</button>
+      `;
+      els.detail.categoryChips.appendChild(chip);
+    });
+  }
+  if (els.detail.categoryStatus) {
+    els.detail.categoryStatus.textContent = t("detail.categoryDeviceOnly");
+  }
+  renderDetailCategorySuggestions();
+}
+
+function refreshFavoriteDependentViews(stationIds = []) {
+  updateMapMarkersForStationIds(stationIds);
+  if (currentDetailFeature) {
+    renderDetailStationMarker(currentDetailFeature);
+  }
+  if (els.views.list.classList.contains("active")) {
+    renderList();
+  }
+  if (els.views.favorites.classList.contains("active")) {
+    renderFavorites();
+  }
+}
+
+function addDetailFavoriteCategory(value = els.detail.categoryInput?.value || "") {
+  const stationId = currentDetailStationId();
+  const category = normalizeFavoriteCategoryLabel(value);
+  if (!stationId || !category) {
+    return;
+  }
+  addFavoriteCategory(state.favoriteMetadata, stationId, category, {
+    source: FAVORITE_SOURCE_MANUAL,
+  });
+  syncFavoriteStationIdsFromMetadata();
+  saveFavorites();
+  if (els.detail.categoryInput) {
+    els.detail.categoryInput.value = "";
+  }
+  updateFavBtnState();
+  updateDetailFavoriteCategories();
+  refreshFavoriteDependentViews([stationId]);
+}
+
+function handleDetailCategoryKeydown(event) {
+  if (event.key === "Enter" || event.key === ",") {
+    event.preventDefault();
+    addDetailFavoriteCategory();
+  } else if (event.key === "Escape" && els.detail.categorySuggestions) {
+    els.detail.categorySuggestions.hidden = true;
+    event.currentTarget.setAttribute("aria-expanded", "false");
+  }
+}
+
+function handleDetailCategorySuggestionClick(event) {
+  const button = event.target.closest("[data-category]");
+  if (!button) {
+    return;
+  }
+  addDetailFavoriteCategory(button.dataset.category || "");
+}
+
+function handleDetailCategoryChipClick(event) {
+  const button = event.target.closest("[data-remove-category]");
+  if (!button) {
+    return;
+  }
+  const stationId = currentDetailStationId();
+  if (!stationId) {
+    return;
+  }
+  removeFavoriteCategory(state.favoriteMetadata, stationId, button.dataset.removeCategory || "");
+  syncFavoriteStationIdsFromMetadata();
+  saveFavorites();
+  updateDetailFavoriteCategories();
+  refreshFavoriteDependentViews([stationId]);
+}
+
 function populateDetailContent(feature, liveDetail = null) {
   const p = feature.properties;
   const powerDisplay = t("station.maxPower", {
@@ -5894,6 +6299,7 @@ function populateDetailContent(feature, liveDetail = null) {
 
   updateDetailRating(p);
   updateDetailNote(p);
+  updateDetailFavoriteCategories();
   renderDetailAmenities(p);
   renderDetailStaticInfo(p);
   renderDetailLiveState(feature, liveDetail);
@@ -6133,22 +6539,15 @@ function toggleDetailFavorite() {
   if (!id) return;
 
   if (state.favorites.has(id)) {
-    state.favorites.delete(id);
+    removeFavoriteItem(state.favoriteMetadata, id);
   } else {
-    state.favorites.add(id);
+    ensureFavoriteItem(state.favoriteMetadata, id, { source: FAVORITE_SOURCE_MANUAL });
   }
+  syncFavoriteStationIdsFromMetadata();
 
   updateFavBtnState();
   saveFavorites();
-  updateMapMarkersForStationIds([id]);
-  renderDetailStationMarker(currentDetailFeature);
-
-  if (els.views.list.classList.contains("active")) {
-    renderList();
-  }
-  if (els.views.favorites.classList.contains("active")) {
-    renderFavorites();
-  }
+  refreshFavoriteDependentViews([id]);
 }
 
 function updateFavBtnState() {
@@ -6170,6 +6569,7 @@ function updateFavBtnState() {
     els.detail.favBtn.setAttribute("aria-label", t("aria.saveFavorite"));
     els.detail.favBtn.querySelector("polygon").setAttribute("fill", "none");
   }
+  updateDetailFavoriteCategories();
 }
 
 async function handleRatingClick(event) {
@@ -6658,17 +7058,28 @@ function loadFilters() {
 
 function loadFavorites() {
   try {
-    const raw = localStorage.getItem("woladen_favs");
-    if (raw) {
-      const arr = JSON.parse(raw);
-      state.favorites = new Set(
-        Array.isArray(arr)
-          ? arr.map(normalizeStationId).filter(Boolean)
-          : [],
+    const storedMetadata = parseStoredFavoriteMetadata(
+      localStorage.getItem(FAVORITES_V2_STORAGE_KEY),
+      { normalizeStationId },
+    );
+    if (storedMetadata) {
+      state.favoriteMetadata = storedMetadata;
+    } else {
+      state.favoriteMetadata = migrateLegacyFavorites(
+        localStorage.getItem(FAVORITES_LEGACY_STORAGE_KEY),
+        { normalizeStationId },
       );
+      syncFavoriteStationIdsFromMetadata();
+      if (state.favoriteMetadata.items.size > 0) {
+        saveFavorites();
+      }
+      return;
     }
+    syncFavoriteStationIdsFromMetadata();
   } catch (e) {
     console.error("Error loading favorites", e);
+    state.favoriteMetadata = createEmptyFavoriteMetadata();
+    syncFavoriteStationIdsFromMetadata();
   }
 }
 
@@ -6766,7 +7177,8 @@ function saveFilters() {
 function saveFavorites() {
   try {
     const arr = Array.from(state.favorites);
-    localStorage.setItem("woladen_favs", JSON.stringify(arr));
+    localStorage.setItem(FAVORITES_V2_STORAGE_KEY, serializeFavoriteMetadata(state.favoriteMetadata));
+    localStorage.setItem(FAVORITES_LEGACY_STORAGE_KEY, JSON.stringify(arr));
   } catch (e) {
     console.error("Error saving favorites", e);
   }

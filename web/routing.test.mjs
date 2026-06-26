@@ -24,10 +24,15 @@ test("route filter payload matches backend route API fields", () => {
       min_amenities_total: 6,
       selected_amenities: ["amenity_cafe", "amenity_toilets"],
       amenity_name_query: "Bakery",
-      available_only: true,
+      available_only: false,
       currently_open_only: true,
     },
   );
+});
+
+test("route filter payload ignores current availability for later trips", () => {
+  assert.equal(routeFiltersPayload({ availableOnly: true }).available_only, false);
+  assert.equal(routeFiltersPayload({ available_only: true }).available_only, false);
 });
 
 test("route endpoint normalization accepts lon and lng", () => {

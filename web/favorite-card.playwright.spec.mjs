@@ -61,6 +61,7 @@ test.afterAll(() => {
 test("favoriting from detail shows a star on the main list card", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.removeItem("woladen_favs");
+    localStorage.removeItem("woladen_favorites_v2");
   });
 
   await page.goto(`${baseUrl}/?station=${encodeURIComponent(STATION_ID)}&lang=de`);
@@ -74,6 +75,12 @@ test("favoriting from detail shows a star on the main list card", async ({ page 
   await expect(favoriteButton).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#map .station-map-marker-favorite-icon")).toHaveCount(1);
 
+  const categoryEditor = page.locator("#detail-favorite-categories");
+  await expect(categoryEditor).toBeVisible();
+  await page.locator("#detail-category-input").fill("Home");
+  await page.locator("#detail-category-add").click();
+  await expect(categoryEditor.locator(".category-chip")).toContainText("Home");
+
   await page.locator('[data-close="modal-detail"]').click();
   await expect(detailModal).toHaveClass(/hidden/);
 
@@ -82,4 +89,10 @@ test("favoriting from detail shows a star on the main list card", async ({ page 
   await expect(mainCard.locator(".favorite-station-star")).toHaveText("★");
   await expect(mainCard.locator(".amenity-dot")).toHaveCount(0);
   await expect(mainCard.locator("button")).toHaveCount(0);
+
+  await page.locator('.nav-item[data-target="view-favorites"]').click();
+  await expect(page.locator("#favorites-category-filters")).toBeVisible();
+  await expect(page.locator(".favorite-filter-chip", { hasText: "Home" })).toBeVisible();
+  await expect(page.locator(".favorite-group-heading h3", { hasText: "Home" })).toBeVisible();
+  await expect(page.locator(`#favorites-list .station-card[data-station-id="${STATION_ID}"]`)).toBeVisible();
 });

@@ -108,7 +108,7 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css?v=20260626-routing-web1" />
+    <link rel="stylesheet" href="./styles.css?v=20260626-favorites-web1" />
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -378,6 +378,15 @@
               </label>
             </div>
           </div>
+          <div
+            id="favorites-category-filters"
+            class="favorites-filter-bar"
+            role="list"
+            aria-label="Favorite categories"
+            data-i18n-aria-label="favorites.categoryFilterLabel"
+            hidden
+            data-nosnippet
+          ></div>
           <div id="favorites-list" class="list-container">
             <div class="empty-state" data-nosnippet>
               No favorites saved yet.
@@ -969,6 +978,29 @@
               </a>
             </div>
 
+            <section id="detail-favorite-categories" class="detail-category-editor" hidden data-nosnippet>
+              <div class="detail-category-head">
+                <label class="detail-category-label" for="detail-category-input" data-i18n="detail.favoriteCategories">Categories</label>
+                <span id="detail-category-status" class="detail-note-status" data-i18n="detail.categoryDeviceOnly">Stored only on this device</span>
+              </div>
+              <div id="detail-category-chips" class="category-chip-list"></div>
+              <div class="detail-category-entry">
+                <input
+                  id="detail-category-input"
+                  class="detail-category-input"
+                  type="text"
+                  maxlength="48"
+                  placeholder="Add category"
+                  data-i18n-placeholder="detail.categoryPlaceholder"
+                  autocomplete="off"
+                  aria-controls="detail-category-suggestions"
+                  aria-expanded="false"
+                />
+                <button id="detail-category-add" class="text-btn detail-category-add" type="button" data-i18n="detail.addCategory">Add</button>
+              </div>
+              <div id="detail-category-suggestions" class="category-suggestion-list" hidden></div>
+            </section>
+
             <div class="amenity-list-section">
               <h3 id="detail-amenities-title">5 nearby places</h3>
               <div id="detail-amenities-list" class="amenity-list">
@@ -1093,6 +1125,6 @@
       crossorigin=""
     ></script>
     <script src="./app-install-promo.js?v=20260620-eu-i18n9"></script>
-    <script src="./app.js?v=20260626-routing-web1" type="module"></script>
+    <script src="./app.js?v=20260626-favorites-web1" type="module"></script>
   </body>
 </html>

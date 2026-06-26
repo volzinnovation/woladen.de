@@ -28,6 +28,7 @@ build/
 site/
 !/site/
 site/*
+!/site/favorite-metadata.mjs
 !/site/routing.mjs
 !/site/i18n/
 !/site/i18n/*.json
