@@ -23,6 +23,7 @@ test("feature matcher combines provider, amenity type, power, and amenity-name q
     properties: {
       operator: "EnBW",
       max_power_kw: 300,
+      amenities_total: 8,
       amenity_fast_food: 2,
       amenity_examples: [{ name: "McDonald's" }],
     },
@@ -30,6 +31,7 @@ test("feature matcher combines provider, amenity type, power, and amenity-name q
   const filters = {
     operator: "EnBW",
     minPower: 150,
+    minAmenityCount: 6,
     amenities: new Set(["amenity_fast_food"]),
     amenityNameQuery: "McDonald",
   };
@@ -39,18 +41,23 @@ test("feature matcher combines provider, amenity type, power, and amenity-name q
     matchesFeatureFilters(feature, { ...filters, amenityNameQuery: "Subway" }),
     false,
   );
+  assert.equal(
+    matchesFeatureFilters(feature, { ...filters, minAmenityCount: 9 }),
+    false,
+  );
 });
 
 test("active filter count includes amenity-name query", () => {
   const filters = {
     operator: "IONITY",
     minPower: 150,
+    minAmenityCount: 6,
     amenities: new Set(["amenity_restaurant", "amenity_toilets"]),
     amenityNameQuery: "McDonald",
     currentlyOpenOnly: true,
   };
 
-  assert.equal(countActiveFilters(filters), 6);
+  assert.equal(countActiveFilters(filters), 7);
 });
 
 test("availability filter keeps stations with at least one free charging point", () => {

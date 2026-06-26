@@ -12,12 +12,14 @@ test("filter settings default first visitors to available fast chargers", () => 
   assert.deepEqual(normalizeStoredFilterSettings({}), DEFAULT_FILTER_SETTINGS);
   assert.equal(DEFAULT_FILTER_SETTINGS.availableOnly, true);
   assert.equal(DEFAULT_FILTER_SETTINGS.minPower, 50);
+  assert.equal(DEFAULT_FILTER_SETTINGS.minAmenityCount, 0);
 });
 
 test("filter settings parse and serialize local storage payloads", () => {
   const settings = parseStoredFilterSettings(JSON.stringify({
     operator: " IONITY ",
     minPower: 153,
+    minAmenityCount: 5.7,
     amenities: ["amenity_cafe", "bad-key", "amenity_cafe", "amenity_fast_food"],
     amenityNameQuery: " Bakery ",
     availableOnly: false,
@@ -27,6 +29,7 @@ test("filter settings parse and serialize local storage payloads", () => {
   assert.deepEqual(settings, {
     operator: "IONITY",
     minPower: 150,
+    minAmenityCount: 6,
     amenities: ["amenity_cafe", "amenity_fast_food"],
     amenityNameQuery: "Bakery",
     availableOnly: false,
@@ -44,6 +47,7 @@ test("invalid filter settings fall back without disabling first-visit defaults",
   assert.deepEqual(
     normalizeStoredFilterSettings({
       minPower: "999",
+      min_amenities_total: "999",
       availableOnly: "false",
       currentlyOpenOnly: "true",
       amenities: ["amenity_supermarket", "../x"],
@@ -51,6 +55,7 @@ test("invalid filter settings fall back without disabling first-visit defaults",
     {
       ...DEFAULT_FILTER_SETTINGS,
       minPower: 350,
+      minAmenityCount: 25,
       amenities: ["amenity_supermarket"],
     },
   );

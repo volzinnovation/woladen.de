@@ -1,9 +1,9 @@
-import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs?v=20260620-filter-constraints1";
+import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs?v=20260626-routing-web1";
 import {
   DEFAULT_FILTER_SETTINGS,
   parseStoredFilterSettings,
   serializeStoredFilterSettings,
-} from "./filter-settings.mjs?v=20260621-filter-persistence";
+} from "./filter-settings.mjs?v=20260626-routing-web1";
 import {
   formatOpeningHoursForDisplay,
   getAmenityOpenStatus,
@@ -31,6 +31,11 @@ import {
   normalizeGeocodePayload,
   resolveGeocoderApiBaseUrl as computeGeocoderApiBaseUrl,
 } from "./geocoding.mjs?v=20260618-commercial-merge";
+import {
+  normalizeRouteChargerResponse,
+  normalizeRouteEndpoint,
+  routeFiltersPayload,
+} from "./routing.mjs?v=20260626-routing-web1";
 import {
   formatBundleSourceTitle,
   normalizeBundleSources,
@@ -65,7 +70,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260620-i18n9";
+} from "./i18n.mjs?v=20260626-routing-web1";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -90,6 +95,11 @@ const LIVE_API_TIMEOUT_MS = 3500;
 const LIVE_DETAIL_TIMEOUT_MS = 4000;
 const GEOCODER_API_TIMEOUT_MS = 3500;
 const GEOCODER_SUGGESTION_DEBOUNCE_MS = 250;
+const ROUTE_API_TIMEOUT_MS = 120000;
+const ROUTE_SUGGESTION_DEBOUNCE_MS = 250;
+const ROUTE_FILTER_MODE = "route_calculation";
+const LIVE_STATION_LOOKUP_BATCH_SIZE = 20;
+const RATING_LOOKUP_BATCH_SIZE = 50;
 const CATALOG_SEARCH_RADIUS_M = 20000;
 const CATALOG_SEARCH_LIMIT = 100;
 const CATALOG_ACCUMULATED_FEATURE_LIMIT = 1000;
@@ -1041,6 +1051,7 @@ const state = {
   filters: {
     operator: DEFAULT_FILTER_SETTINGS.operator,
     minPower: DEFAULT_MIN_POWER_KW,
+    minAmenityCount: DEFAULT_FILTER_SETTINGS.minAmenityCount,
     amenities: new Set(DEFAULT_FILTER_SETTINGS.amenities),
     amenityNameQuery: DEFAULT_FILTER_SETTINGS.amenityNameQuery,
     availableOnly: DEFAULT_FILTER_SETTINGS.availableOnly,
@@ -1071,6 +1082,27 @@ const state = {
     requestSeq: 0,
     results: [],
     suggestionTimer: 0,
+  },
+  route: {
+    endpoints: {
+      origin: null,
+      destination: null,
+    },
+    suggestions: {
+      origin: [],
+      destination: [],
+    },
+    loading: false,
+    requestSeq: 0,
+    suggestionSeq: 0,
+    suggestionTimers: {
+      origin: 0,
+      destination: 0,
+    },
+    result: null,
+    features: [],
+    error: null,
+    calculatedFilters: null,
   },
   keyboard: {
     selectedStationId: "",
@@ -1122,6 +1154,7 @@ const state = {
     detailMap: null, // Mini map in detail view
     layers: {
       chargers: null,
+      route: null,
       user: null,
       detailAmenities: null,
     },
@@ -1135,6 +1168,7 @@ const els = {
   views: {
     map: document.getElementById("view-map"),
     list: document.getElementById("view-list"),
+    route: document.getElementById("view-route"),
     favorites: document.getElementById("view-favorites"),
     info: document.getElementById("view-info"),
   },
@@ -1163,10 +1197,28 @@ const els = {
     power: document.getElementById("filter-power"),
     powerLabel: document.getElementById("filter-power-label"),
     powerVal: document.getElementById("filter-power-val"),
+    amenityCount: document.getElementById("filter-amenity-count"),
+    amenityCountLabel: document.getElementById("filter-amenity-count-label"),
+    amenityCountVal: document.getElementById("filter-amenity-count-val"),
     amenities: document.getElementById("filter-amenities"),
     applyBtn: document.getElementById("btn-apply-filter"),
     listFilterBtn: document.getElementById("btn-list-filter"),
+    routeFilterBtn: document.getElementById("btn-route-filter"),
     activeSummary: document.getElementById("active-filter-summary"),
+  },
+  route: {
+    form: document.getElementById("route-form"),
+    originInput: document.getElementById("route-origin-input"),
+    originResults: document.getElementById("route-origin-results"),
+    originCurrent: document.getElementById("route-origin-current"),
+    destinationInput: document.getElementById("route-destination-input"),
+    destinationResults: document.getElementById("route-destination-results"),
+    destinationCurrent: document.getElementById("route-destination-current"),
+    swapBtn: document.getElementById("route-swap"),
+    submitBtn: document.getElementById("route-submit"),
+    status: document.getElementById("route-status"),
+    summary: document.getElementById("route-summary"),
+    results: document.getElementById("route-results"),
   },
   search: {
     form: document.getElementById("location-search-form"),
@@ -1231,13 +1283,18 @@ const els = {
   },
 };
 
-const VIEW_ORDER = ["view-list", "view-map", "view-favorites", "view-info"];
+const VIEW_ORDER = ["view-list", "view-map", "view-route", "view-favorites", "view-info"];
 const VIEW_IDS = new Set(VIEW_ORDER);
 const VIEW_HASH_ALIASES = new Map([
   ["list", "view-list"],
   ["liste", "view-list"],
   ["map", "view-map"],
   ["karte", "view-map"],
+  ["route", "view-route"],
+  ["routes", "view-route"],
+  ["routing", "view-route"],
+  ["route-planer", "view-route"],
+  ["route-planner", "view-route"],
   ["favorites", "view-favorites"],
   ["favoriten", "view-favorites"],
   ["info", "view-info"],
@@ -1257,6 +1314,7 @@ async function init() {
   syncViewWithRequestedHash();
   initFilters();
   initLocationSearch();
+  initRoutePlanner();
   window.addEventListener("popstate", syncDetailModalWithUrl);
   window.addEventListener("hashchange", syncViewWithRequestedHash);
 
@@ -1264,6 +1322,7 @@ async function init() {
   els.buttons.locate.addEventListener("click", requestUserLocation);
   els.filter.trigger.addEventListener("click", () => openModal("filter"));
   els.filter.listFilterBtn.addEventListener("click", () => openModal("filter"));
+  els.filter.routeFilterBtn?.addEventListener("click", () => openModal("filter"));
   els.filter.applyBtn.addEventListener("click", () => closeModal("filter"));
 
   els.buttons.closeFilter.addEventListener("click", () => closeModal("filter"));
@@ -1318,6 +1377,13 @@ function refreshLanguageSensitiveViews() {
   }
   if (els.views.favorites.classList.contains("active")) {
     renderFavorites();
+  }
+  if (state.route.result) {
+    if (els.views.route.classList.contains("active")) {
+      renderRouteResults();
+    } else {
+      renderRouteLayer();
+    }
   }
   if (currentDetailFeature && !els.modals.detail.classList.contains("hidden")) {
     const stationId = getStationIdFromProps(currentDetailFeature.properties);
@@ -1687,6 +1753,700 @@ function selectLocationSearchResult(result) {
     animate: true,
     duration: 0.5,
   });
+}
+
+const ROUTE_FIELDS = ["origin", "destination"];
+
+function routeFieldElements(field) {
+  if (field === "origin") {
+    return {
+      input: els.route.originInput,
+      results: els.route.originResults,
+      current: els.route.originCurrent,
+    };
+  }
+  return {
+    input: els.route.destinationInput,
+    results: els.route.destinationResults,
+    current: els.route.destinationCurrent,
+  };
+}
+
+function initRoutePlanner() {
+  if (!els.route.form) {
+    return;
+  }
+
+  ROUTE_FIELDS.forEach((field) => {
+    const controls = routeFieldElements(field);
+    controls.input?.addEventListener("input", () => {
+      state.route.endpoints[field] = null;
+      queueRouteSuggestions(field);
+      renderRouteStatus("");
+    });
+    controls.input?.addEventListener("focus", () => {
+      if (state.route.suggestions[field].length > 0) {
+        renderRouteSearchResults(field, state.route.suggestions[field]);
+      }
+    });
+    controls.input?.addEventListener("keydown", (event) => handleRouteInputKeydown(field, event));
+    controls.current?.addEventListener("click", () => {
+      void setRouteEndpointFromCurrentLocation(field);
+    });
+  });
+
+  els.route.form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void submitRouteSearch();
+  });
+  els.route.swapBtn?.addEventListener("click", swapRouteEndpoints);
+  document.addEventListener("click", (event) => {
+    if (!els.route.form.contains(event.target)) {
+      ROUTE_FIELDS.forEach(clearRouteSuggestions);
+    }
+  });
+  renderRouteResults();
+}
+
+function handleRouteInputKeydown(field, event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    void resolveRouteEndpointForSubmit(field).then((resolved) => {
+      if (resolved) {
+        const otherField = field === "origin" ? "destination" : "origin";
+        routeFieldElements(otherField).input?.focus();
+      }
+    });
+    return;
+  }
+  if (event.key === "Escape") {
+    clearRouteSuggestions(field);
+    routeFieldElements(field).input?.blur();
+  }
+}
+
+function getRouteSearchFocus() {
+  return getLocationSearchFocus();
+}
+
+function queueRouteSuggestions(field) {
+  cancelQueuedRouteSuggestions(field);
+  const query = String(routeFieldElements(field).input?.value || "").trim();
+  if (query.length < 3) {
+    clearRouteSuggestions(field);
+    return;
+  }
+  state.route.suggestionTimers[field] = window.setTimeout(() => {
+    state.route.suggestionTimers[field] = 0;
+    void runRouteAutocomplete(field, query);
+  }, ROUTE_SUGGESTION_DEBOUNCE_MS);
+}
+
+function cancelQueuedRouteSuggestions(field) {
+  const timer = state.route.suggestionTimers[field];
+  if (!timer) {
+    return;
+  }
+  window.clearTimeout(timer);
+  state.route.suggestionTimers[field] = 0;
+}
+
+function clearRouteSuggestions(field) {
+  cancelQueuedRouteSuggestions(field);
+  state.route.suggestionSeq += 1;
+  state.route.suggestions[field] = [];
+  const controls = routeFieldElements(field);
+  if (!controls.results) {
+    return;
+  }
+  controls.results.hidden = true;
+  controls.results.replaceChildren();
+  controls.input?.setAttribute("aria-expanded", "false");
+}
+
+function renderRouteSearchMessage(field, message, tone = "muted") {
+  const controls = routeFieldElements(field);
+  if (!controls.results) {
+    return;
+  }
+  const item = document.createElement("div");
+  item.className = `location-search-message location-search-message-${tone}`;
+  item.textContent = message;
+  controls.results.replaceChildren(item);
+  controls.results.hidden = false;
+  controls.input?.setAttribute("aria-expanded", "true");
+}
+
+function renderRouteSearchResults(field, results) {
+  const controls = routeFieldElements(field);
+  if (!controls.results) {
+    return;
+  }
+  controls.results.replaceChildren();
+  if (!results.length) {
+    renderRouteSearchMessage(field, t("search.noResults"));
+    return;
+  }
+  const list = document.createElement("div");
+  list.className = "location-search-result-list";
+  list.setAttribute("role", "listbox");
+  results.forEach((result, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "location-search-result";
+    button.setAttribute("role", "option");
+    button.dataset.index = String(index);
+    const title = document.createElement("span");
+    title.className = "location-search-result-title";
+    title.textContent = result.name || result.label;
+    const meta = document.createElement("span");
+    meta.className = "location-search-result-meta";
+    meta.textContent = [
+      result.locality && result.locality !== result.name ? result.locality : "",
+      result.region,
+      result.country,
+    ].filter(Boolean).join(" · ") || result.label;
+    button.append(title, meta);
+    button.addEventListener("click", () => setRouteEndpoint(field, result));
+    list.appendChild(button);
+  });
+  controls.results.appendChild(list);
+  controls.results.hidden = false;
+  controls.input?.setAttribute("aria-expanded", "true");
+}
+
+async function runRouteAutocomplete(field, rawQuery, options = {}) {
+  const { selectFirst = false } = options;
+  const query = String(rawQuery || "").trim();
+  if (query.length < 2) {
+    renderRouteSearchMessage(field, t("search.minChars"));
+    return;
+  }
+
+  const requestId = ++state.route.suggestionSeq;
+  if (selectFirst) {
+    renderRouteSearchMessage(field, t("search.searching"));
+  }
+  const focus = getRouteSearchFocus();
+  const url = geocoderApiUrl("autocomplete", {
+    q: query,
+    lat: focus?.lat,
+    lon: focus?.lon,
+    limit: 5,
+  });
+  if (!url) {
+    renderRouteSearchMessage(field, t("search.notConfigured"), "error");
+    return;
+  }
+
+  try {
+    const payload = normalizeGeocodePayload(
+      await fetchJsonWithTimeout(url, {}, GEOCODER_API_TIMEOUT_MS),
+    );
+    if (requestId !== state.route.suggestionSeq) {
+      return;
+    }
+    state.route.suggestions[field] = payload.results;
+    if (!payload.ok) {
+      renderRouteSearchMessage(field, t("search.unavailable"), "error");
+      return;
+    }
+    if (selectFirst && payload.results.length > 0) {
+      setRouteEndpoint(field, payload.results[0]);
+      return;
+    }
+    renderRouteSearchResults(field, payload.results);
+  } catch (error) {
+    if (requestId !== state.route.suggestionSeq) {
+      return;
+    }
+    renderRouteSearchMessage(field, t("search.unavailable"), "error");
+  }
+}
+
+function formatRouteCoordinateLabel(endpoint) {
+  const normalized = normalizeRouteEndpoint(endpoint);
+  if (!normalized) {
+    return "";
+  }
+  return `${normalized.lat.toFixed(5)}, ${normalized.lon.toFixed(5)}`;
+}
+
+function setRouteEndpoint(field, value) {
+  const endpoint = normalizeRouteEndpoint(value);
+  if (!endpoint) {
+    return false;
+  }
+  const nextEndpoint = {
+    ...endpoint,
+    label: endpoint.label || formatRouteCoordinateLabel(endpoint),
+  };
+  state.route.endpoints[field] = nextEndpoint;
+  const controls = routeFieldElements(field);
+  if (controls.input) {
+    controls.input.value = nextEndpoint.label;
+  }
+  clearRouteSuggestions(field);
+  renderRouteStatus("");
+  return true;
+}
+
+async function setRouteEndpointFromCurrentLocation(field) {
+  try {
+    const position = await ensureRouteUserPosition();
+    setRouteEndpoint(field, {
+      ...position,
+      label: t("route.currentLocation"),
+    });
+  } catch (error) {
+    renderRouteStatus(t("route.locationUnavailable"), "error");
+  }
+}
+
+async function ensureRouteUserPosition() {
+  if (hasResolvedUserLocation()) {
+    return state.userPos;
+  }
+  if (!navigator.geolocation) {
+    throw new Error("geolocation_unavailable");
+  }
+  updateLocationState({
+    requestState: LOCATION_REQUEST_PENDING,
+    errorCode: "",
+  });
+  const position = await requestBrowserLocation(navigator.geolocation, {
+    enableHighAccuracy: false,
+    timeout: 5000,
+    maximumAge: 300000,
+  });
+  state.userPos = {
+    lat: position.lat,
+    lon: position.lon,
+  };
+  updateLocationState({
+    permissionState: LOCATION_PERMISSION_GRANTED,
+    requestState: LOCATION_REQUEST_READY,
+    errorCode: "",
+  });
+  updateUserMarker();
+  return state.userPos;
+}
+
+function swapRouteEndpoints() {
+  const origin = state.route.endpoints.origin;
+  const destination = state.route.endpoints.destination;
+  const originValue = els.route.originInput?.value || "";
+  const destinationValue = els.route.destinationInput?.value || "";
+  state.route.endpoints.origin = destination;
+  state.route.endpoints.destination = origin;
+  if (els.route.originInput) {
+    els.route.originInput.value = destinationValue;
+  }
+  if (els.route.destinationInput) {
+    els.route.destinationInput.value = originValue;
+  }
+  ROUTE_FIELDS.forEach(clearRouteSuggestions);
+}
+
+async function resolveRouteEndpointForSubmit(field) {
+  if (state.route.endpoints[field]) {
+    return true;
+  }
+  const value = String(routeFieldElements(field).input?.value || "").trim();
+  if (value.length < 2) {
+    return false;
+  }
+  await runRouteAutocomplete(field, value, { selectFirst: true });
+  return Boolean(state.route.endpoints[field]);
+}
+
+function routeEndpointsAreSame(origin, destination) {
+  return distanceBetweenCoordinatesMeters(origin, destination) < 25;
+}
+
+async function submitRouteSearch() {
+  ROUTE_FIELDS.forEach(cancelQueuedRouteSuggestions);
+  renderRouteStatus(t("route.resolving"));
+  const hasOrigin = await resolveRouteEndpointForSubmit("origin");
+  const hasDestination = await resolveRouteEndpointForSubmit("destination");
+  const origin = normalizeRouteEndpoint(state.route.endpoints.origin);
+  const destination = normalizeRouteEndpoint(state.route.endpoints.destination);
+
+  if (!hasOrigin || !hasDestination || !origin || !destination) {
+    renderRouteStatus(t("route.missingEndpoints"), "error");
+    return;
+  }
+  if (routeEndpointsAreSame(origin, destination)) {
+    renderRouteStatus(t("route.sameEndpoint"), "error");
+    return;
+  }
+  if (!state.live.baseUrl) {
+    renderRouteStatus(t("route.notConfigured"), "error");
+    return;
+  }
+
+  const requestId = ++state.route.requestSeq;
+  const filters = routeFiltersPayload(state.filters);
+  state.route.loading = true;
+  state.route.error = null;
+  renderRouteResults();
+
+  try {
+    const payload = await fetchJsonWithTimeout(
+      buildLiveApiUrl("/v1/routes/chargers"),
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          origin,
+          destination,
+          filters,
+          filter_mode: ROUTE_FILTER_MODE,
+        }),
+      },
+      ROUTE_API_TIMEOUT_MS,
+    );
+    if (requestId !== state.route.requestSeq) {
+      return;
+    }
+    const result = normalizeRouteChargerResponse(payload);
+    state.route.result = result;
+    state.route.features = result.stations
+      .map(routeStationToFeature)
+      .filter(Boolean);
+    state.route.calculatedFilters = filters;
+    state.route.error = null;
+    state.live.reachable = true;
+    renderRouteStatus("");
+  } catch (error) {
+    if (requestId !== state.route.requestSeq) {
+      return;
+    }
+    console.error("Failed to load route chargers", error);
+    state.route.result = null;
+    state.route.features = [];
+    state.route.calculatedFilters = null;
+    state.route.error = error;
+    renderRouteStatus(t("route.searchError"), "error");
+  } finally {
+    if (requestId === state.route.requestSeq) {
+      state.route.loading = false;
+      renderRouteResults();
+      renderRouteLayer();
+    }
+  }
+}
+
+function routeStationToFeature(item) {
+  if (!item?.station) {
+    return null;
+  }
+  const feature = catalogStationToFeature(item.station);
+  const routeInfo = item.route || {};
+  feature.properties = {
+    ...(feature.properties || {}),
+    route_drive_distance_to_route_m: routeInfo.drive_distance_to_route_m,
+    route_detour_m: routeInfo.route_detour_m,
+    route_straight_line_distance_to_route_m: routeInfo.straight_line_distance_to_route_m,
+    route_position_m: routeInfo.route_position_m,
+    route_nearest_point_lat: routeInfo.nearest_route_point?.lat,
+    route_nearest_point_lon: routeInfo.nearest_route_point?.lon,
+  };
+  applyCachedLiveStationSummaryToFeature(feature);
+  return feature;
+}
+
+function renderRouteStatus(message, tone = "muted") {
+  if (!els.route.status) {
+    return;
+  }
+  els.route.status.className = `route-status route-status-${tone}`;
+  els.route.status.textContent = message || "";
+  els.route.status.hidden = !message;
+}
+
+function getRouteDisplayFeatures() {
+  const now = new Date();
+  return state.route.features
+    .filter((feature) => matchesFeatureFilters(feature, state.filters, { getDisplayedMaxPowerKw, now }))
+    .sort(compareRouteFeatures);
+}
+
+function compareRouteFeatures(a, b) {
+  const positionDiff = routePosition(a) - routePosition(b);
+  if (positionDiff !== 0) {
+    return positionDiff;
+  }
+  const accessDiff = routeAccessDistance(a) - routeAccessDistance(b);
+  if (accessDiff !== 0) {
+    return accessDiff;
+  }
+  const amenitiesDiff = Number(b.properties?.amenities_total || 0) - Number(a.properties?.amenities_total || 0);
+  if (amenitiesDiff !== 0) {
+    return amenitiesDiff;
+  }
+  const powerDiff = getDisplayedMaxPowerKw(b.properties || {}) - getDisplayedMaxPowerKw(a.properties || {});
+  if (powerDiff !== 0) {
+    return powerDiff;
+  }
+  return 0;
+}
+
+function routeAccessDistance(feature) {
+  const distance = Number(feature?.properties?.route_drive_distance_to_route_m);
+  return Number.isFinite(distance) ? distance : Number.POSITIVE_INFINITY;
+}
+
+function routePosition(feature) {
+  const distance = Number(feature?.properties?.route_position_m);
+  return Number.isFinite(distance) ? distance : Number.POSITIVE_INFINITY;
+}
+
+function routeFiltersRequireRecalculation() {
+  if (!state.route.calculatedFilters) {
+    return false;
+  }
+  const current = routeFiltersPayload(state.filters);
+  const baseline = state.route.calculatedFilters;
+  if (baseline.operator && current.operator !== baseline.operator) {
+    return true;
+  }
+  if (!baseline.operator && current.operator) {
+    return false;
+  }
+  if (current.min_power_kw < baseline.min_power_kw) {
+    return true;
+  }
+  if (current.min_amenities_total < baseline.min_amenities_total) {
+    return true;
+  }
+  const currentAmenities = new Set(current.selected_amenities);
+  if (baseline.selected_amenities.some((key) => !currentAmenities.has(key))) {
+    return true;
+  }
+  if (baseline.amenity_name_query) {
+    const baselineName = baseline.amenity_name_query.toLowerCase();
+    const currentName = current.amenity_name_query.toLowerCase();
+    if (!currentName || !currentName.includes(baselineName)) {
+      return true;
+    }
+  }
+  if (baseline.available_only && !current.available_only) {
+    return true;
+  }
+  if (baseline.currently_open_only && !current.currently_open_only) {
+    return true;
+  }
+  return false;
+}
+
+function renderRouteResults() {
+  if (!els.route.results) {
+    return;
+  }
+  els.route.results.replaceChildren();
+
+  if (state.route.loading) {
+    hideRouteSummary();
+    const loading = document.createElement("div");
+    loading.className = "loading-state";
+    loading.setAttribute("data-nosnippet", "");
+    loading.textContent = t("route.loading");
+    els.route.results.appendChild(loading);
+    return;
+  }
+
+  if (!state.route.result) {
+    hideRouteSummary();
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.setAttribute("data-nosnippet", "");
+    empty.textContent = state.route.error ? t("route.searchError") : t("route.empty");
+    els.route.results.appendChild(empty);
+    return;
+  }
+
+  const displayFeatures = getRouteDisplayFeatures();
+  renderRouteSummary(displayFeatures.length);
+  if (routeFiltersRequireRecalculation()) {
+    els.route.results.appendChild(createRouteRecalculateNotice());
+  }
+  if (displayFeatures.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.setAttribute("data-nosnippet", "");
+    empty.textContent = t("route.noFilteredResults");
+    els.route.results.appendChild(empty);
+    renderRouteLayer();
+    return;
+  }
+  displayFeatures.forEach((feature) => {
+    els.route.results.appendChild(createStationCard(feature, { route: true }));
+  });
+  requestLiveSummariesForFeatures(displayFeatures);
+  requestRatingSummariesForFeatures(displayFeatures);
+  renderRouteLayer();
+}
+
+function hideRouteSummary() {
+  if (!els.route.summary) {
+    return;
+  }
+  els.route.summary.hidden = true;
+  els.route.summary.replaceChildren();
+}
+
+function createRouteSummaryStat(label, value) {
+  const item = document.createElement("div");
+  item.className = "route-summary-stat";
+  const labelEl = document.createElement("span");
+  labelEl.textContent = label;
+  const valueEl = document.createElement("strong");
+  valueEl.textContent = value;
+  item.append(labelEl, valueEl);
+  return item;
+}
+
+function renderRouteSummary(resultCount) {
+  if (!els.route.summary || !state.route.result) {
+    return;
+  }
+  const route = state.route.result.route;
+  els.route.summary.replaceChildren(
+    createRouteSummaryStat(t("route.summaryDistance"), formatRouteDistanceMeters(route.distance_m)),
+    createRouteSummaryStat(t("route.summaryDuration"), formatRouteDuration(route.duration_s)),
+    createRouteSummaryStat(t("route.summaryStations"), t("route.resultsCount", { count: resultCount })),
+  );
+  const mapButton = document.createElement("button");
+  mapButton.type = "button";
+  mapButton.className = "text-btn route-map-btn";
+  mapButton.textContent = t("route.showMap");
+  mapButton.addEventListener("click", () => {
+    switchView("view-map");
+    window.requestAnimationFrame(focusMapOnRoute);
+  });
+  els.route.summary.appendChild(mapButton);
+  els.route.summary.hidden = false;
+}
+
+function createRouteRecalculateNotice() {
+  const notice = document.createElement("div");
+  notice.className = "route-filter-notice";
+  const message = document.createElement("span");
+  message.textContent = t("route.filterChanged");
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "text-btn";
+  button.textContent = t("route.recalculate");
+  button.addEventListener("click", () => {
+    void submitRouteSearch();
+  });
+  notice.append(message, button);
+  return notice;
+}
+
+function routeGeometryLatLngs() {
+  const coordinates = state.route.result?.route?.geometry?.coordinates;
+  if (!Array.isArray(coordinates)) {
+    return [];
+  }
+  return coordinates
+    .map((point) => {
+      const lon = Number(point?.[0]);
+      const lat = Number(point?.[1]);
+      return Number.isFinite(lat) && Number.isFinite(lon) ? [lat, lon] : null;
+    })
+    .filter(Boolean);
+}
+
+function renderRouteLayer() {
+  if (!state.views.layers.route) {
+    return;
+  }
+  state.views.layers.route.clearLayers();
+  if (!state.route.result) {
+    return;
+  }
+
+  const latLngs = routeGeometryLatLngs();
+  if (latLngs.length > 1) {
+    L.polyline(latLngs, {
+      color: "#0f766e",
+      weight: 5,
+      opacity: 0.78,
+      lineCap: "round",
+      lineJoin: "round",
+    }).addTo(state.views.layers.route);
+  }
+
+  getRouteDisplayFeatures().forEach((feature) => {
+    applyCachedLiveStationSummaryToFeature(feature);
+    bindStationMarker(createStationMarker(feature), feature)
+      .addTo(state.views.layers.route);
+  });
+}
+
+function focusMapOnRoute() {
+  if (!state.views.map || !state.route.result) {
+    return;
+  }
+  const bounds = L.latLngBounds([]);
+  routeGeometryLatLngs().forEach((latLng) => bounds.extend(latLng));
+  getRouteDisplayFeatures().forEach((feature) => {
+    const coords = getFeatureLatLon(feature);
+    if (coords) {
+      bounds.extend([coords.lat, coords.lon]);
+    }
+  });
+  if (!bounds.isValid()) {
+    return;
+  }
+  state.views.map.invalidateSize({ pan: false });
+  state.views.map.fitBounds(bounds.pad(0.08), {
+    animate: true,
+    maxZoom: 13,
+  });
+}
+
+function formatRouteDistanceMeters(value) {
+  const meters = Number(value);
+  if (!Number.isFinite(meters)) {
+    return "";
+  }
+  if (meters >= 10000) {
+    return `${formatRouteInteger(Math.round(meters / 1000))} km`;
+  }
+  if (meters >= 1000) {
+    return `${(meters / 1000).toFixed(1)} km`;
+  }
+  return `${formatRouteInteger(Math.round(meters))} m`;
+}
+
+function formatRouteInteger(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "";
+  }
+  return new Intl.NumberFormat(getLocale()).format(Math.round(numeric));
+}
+
+function formatRouteDuration(value) {
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return "";
+  }
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (hours > 0 && remainder > 0) {
+    return t("route.durationHoursMinutes", { hours, minutes: remainder });
+  }
+  if (hours > 0) {
+    return t("route.durationHours", { hours });
+  }
+  return t("route.durationMinutes", { minutes });
 }
 
 function prepareChargerFeature(feature, powerClass) {
@@ -2155,6 +2915,10 @@ function upsertLiveStationSummaries(stations, missingStationIds = []) {
     if (feature) {
       applyLiveStationSummaryToProps(feature.properties, summary);
     }
+    const routeFeature = findRouteFeatureByStationId(stationId);
+    if (routeFeature && routeFeature !== feature) {
+      applyLiveStationSummaryToProps(routeFeature.properties, summary);
+    }
   });
 
   missingStationIds.forEach((stationId) => {
@@ -2168,6 +2932,10 @@ function upsertLiveStationSummaries(stations, missingStationIds = []) {
     const feature = findFeatureByStationId(id);
     if (feature) {
       clearLiveStationSummaryFromProps(feature.properties);
+    }
+    const routeFeature = findRouteFeatureByStationId(id);
+    if (routeFeature && routeFeature !== feature) {
+      clearLiveStationSummaryFromProps(routeFeature.properties);
     }
   });
 
@@ -2217,47 +2985,49 @@ function requestLiveSummariesForFeatures(features) {
     const affectedStationIds = [];
     try {
       const groupedIds = groupStationIdsByLiveApiBaseUrl(pendingIds);
-      await Promise.all(Array.from(groupedIds.entries()).map(async ([baseUrl, groupedStationIds]) => {
-        const groupedApiIds = groupedStationIds.map((stationId) =>
-          apiIdByStationId.get(stationId) || stationId,
-        );
-        try {
-          const payload = await fetchJsonWithTimeout(
-            buildApiUrl(baseUrl, "/v1/stations/lookup"),
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ station_ids: groupedApiIds }),
-            },
-            LIVE_API_TIMEOUT_MS,
+      await Promise.all(Array.from(groupedIds.entries()).flatMap(([baseUrl, groupedStationIds]) =>
+        chunkArray(groupedStationIds, LIVE_STATION_LOOKUP_BATCH_SIZE).map(async (batchStationIds) => {
+          const groupedApiIds = batchStationIds.map((stationId) =>
+            apiIdByStationId.get(stationId) || stationId,
           );
-          if (!payload || typeof payload !== "object" || !Array.isArray(payload.stations)) {
-            throw new Error("Unexpected live station lookup payload");
+          try {
+            const payload = await fetchJsonWithTimeout(
+              buildApiUrl(baseUrl, "/v1/stations/lookup"),
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ station_ids: groupedApiIds }),
+              },
+              LIVE_API_TIMEOUT_MS,
+            );
+            if (!payload || typeof payload !== "object" || !Array.isArray(payload.stations)) {
+              throw new Error("Unexpected live station lookup payload");
+            }
+            state.live.reachable = true;
+            const stations = payload.stations.map((station) => {
+              const apiId = String(station?.station_id || "").trim();
+              const normalizedApiId = normalizeStationId(apiId);
+              const appStationId = stationIdByApiId.get(apiId) ||
+                stationIdByApiId.get(normalizedApiId) ||
+                normalizedApiId;
+              return appStationId ? { ...station, station_id: appStationId } : station;
+            });
+            const missingStationIds = (payload.missing_station_ids || []).map((apiId) => {
+              const rawApiId = String(apiId || "").trim();
+              const normalizedApiId = normalizeStationId(rawApiId);
+              return stationIdByApiId.get(rawApiId) || stationIdByApiId.get(normalizedApiId) || normalizedApiId;
+            });
+            affectedStationIds.push(...upsertLiveStationSummaries(
+              stations,
+              missingStationIds,
+            ));
+          } catch (err) {
+            console.error(`Failed to load live station summaries from ${baseUrl}`, err);
           }
-          state.live.reachable = true;
-          const stations = payload.stations.map((station) => {
-            const apiId = String(station?.station_id || "").trim();
-            const normalizedApiId = normalizeStationId(apiId);
-            const appStationId = stationIdByApiId.get(apiId) ||
-              stationIdByApiId.get(normalizedApiId) ||
-              normalizedApiId;
-            return appStationId ? { ...station, station_id: appStationId } : station;
-          });
-          const missingStationIds = (payload.missing_station_ids || []).map((apiId) => {
-            const rawApiId = String(apiId || "").trim();
-            const normalizedApiId = normalizeStationId(rawApiId);
-            return stationIdByApiId.get(rawApiId) || stationIdByApiId.get(normalizedApiId) || normalizedApiId;
-          });
-          affectedStationIds.push(...upsertLiveStationSummaries(
-            stations,
-            missingStationIds,
-          ));
-        } catch (err) {
-          console.error(`Failed to load live station summaries from ${baseUrl}`, err);
-        }
-      }));
+        }),
+      ));
     } catch (err) {
       console.error("Failed to load live station summaries", err);
     } finally {
@@ -2328,23 +3098,29 @@ function requestRatingSummariesForFeatures(features) {
 
   void (async () => {
     try {
-      const payload = await fetchJsonWithTimeout(
-        buildLiveApiUrl("/v1/ratings/lookup"),
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+      let changed = false;
+      await Promise.all(chunkArray(pendingIds, RATING_LOOKUP_BATCH_SIZE).map(async (batchIds) => {
+        const payload = await fetchJsonWithTimeout(
+          buildLiveApiUrl("/v1/ratings/lookup"),
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ station_ids: batchIds }),
           },
-          body: JSON.stringify({ station_ids: pendingIds }),
-        },
-        RATING_API_TIMEOUT_MS,
-      );
-      if (!payload || typeof payload !== "object" || !Array.isArray(payload.ratings)) {
-        throw new Error("Unexpected rating lookup payload");
+          RATING_API_TIMEOUT_MS,
+        );
+        if (!payload || typeof payload !== "object" || !Array.isArray(payload.ratings)) {
+          throw new Error("Unexpected rating lookup payload");
+        }
+        state.live.reachable = true;
+        upsertRatingSummaries(payload.ratings, payload.missing_station_ids || []);
+        changed = true;
+      }));
+      if (changed) {
+        refreshRenderedViews();
       }
-      state.live.reachable = true;
-      upsertRatingSummaries(payload.ratings, payload.missing_station_ids || []);
-      refreshRenderedViews();
     } catch (err) {
       console.error("Failed to load station ratings", err);
     } finally {
@@ -3010,8 +3786,8 @@ function initMap() {
     attribution: "© OpenStreetMap",
   }).addTo(state.views.map);
 
-  state.views.layers.chargers = L.layerGroup();
-  state.views.layers.chargers.addTo(state.views.map);
+  state.views.layers.route = L.layerGroup().addTo(state.views.map);
+  state.views.layers.chargers = L.layerGroup().addTo(state.views.map);
 
   state.views.layers.user = L.layerGroup().addTo(state.views.map);
   ["dragstart", "zoomstart"].forEach((eventName) => {
@@ -3543,6 +4319,7 @@ function switchView(viewId, options = {}) {
 
   // Refresh lists if needed
   if (viewId === "view-list") renderList();
+  if (viewId === "view-route") renderRouteResults();
   if (viewId === "view-favorites") renderFavorites();
 
   // Map resize fix
@@ -3577,7 +4354,9 @@ function syncFilterControlsFromState() {
   els.filter.availableOnly.checked = Boolean(state.filters.availableOnly);
   els.filter.currentlyOpen.checked = Boolean(state.filters.currentlyOpenOnly);
   els.filter.power.value = String(Math.round(Number(state.filters.minPower || DEFAULT_MIN_POWER_KW)));
+  els.filter.amenityCount.value = String(Math.round(Number(state.filters.minAmenityCount || 0)));
   updatePowerFilterLabel();
+  updateAmenityCountFilterLabel();
 }
 
 function initFilters() {
@@ -3614,6 +4393,14 @@ function initFilters() {
     updatePowerFilterLabel();
     updateFilters({ reloadCatalog: true });
   });
+
+  // Amenity count
+  els.filter.amenityCount.addEventListener("input", (e) => {
+    state.filters.minAmenityCount = Number(e.target.value);
+    els.filter.amenityCountVal.textContent = state.filters.minAmenityCount;
+    updateAmenityCountFilterLabel();
+    updateFilters();
+  });
 }
 
 function updatePowerFilterLabel() {
@@ -3624,6 +4411,16 @@ function updatePowerFilterLabel() {
   }
   if (els.filter.powerVal) {
     els.filter.powerVal.textContent = String(Math.round(Number(state.filters.minPower || DEFAULT_MIN_POWER_KW)));
+  }
+}
+
+function updateAmenityCountFilterLabel() {
+  const value = Math.round(Number(state.filters.minAmenityCount || 0));
+  if (els.filter.amenityCountLabel) {
+    els.filter.amenityCountLabel.textContent = t("filters.minAmenities", { value });
+  }
+  if (els.filter.amenityCountVal) {
+    els.filter.amenityCountVal.textContent = String(value);
   }
 }
 
@@ -3741,6 +4538,16 @@ function updateFilterLabel() {
     );
     els.filter.listFilterBtn.classList.toggle("active", filterCount > 0);
   }
+  if (els.filter.routeFilterBtn) {
+    els.filter.routeFilterBtn.textContent = filterCount > 0 ? `${t("filters.title")} (${filterCount})` : t("filters.title");
+    els.filter.routeFilterBtn.setAttribute(
+      "aria-label",
+      filterCount > 0
+        ? t("filters.openWithCount", { count: filterCount, labels: labelSummary })
+        : t("aria.filterOpen"),
+    );
+    els.filter.routeFilterBtn.classList.toggle("active", filterCount > 0);
+  }
   renderActiveFilterSummary(filterCount);
 }
 
@@ -3795,6 +4602,10 @@ function getActiveFilterLabels() {
   if (Number.isFinite(minPower) && minPower > 0) {
     labels.push(t("filters.minPowerLabel", { value: Math.round(minPower) }));
   }
+  const minAmenityCount = Number(state.filters.minAmenityCount);
+  if (Number.isFinite(minAmenityCount) && minAmenityCount > 0) {
+    labels.push(t("filters.minAmenitiesLabel", { value: Math.round(minAmenityCount) }));
+  }
   Array.from(state.filters.amenities)
     .map((key) => getAmenityLabel(key))
     .sort((a, b) => a.localeCompare(b, getLocale()))
@@ -3806,12 +4617,14 @@ function hasClearableFilters() {
   const selectedAmenities =
     state.filters.amenities instanceof Set ? state.filters.amenities.size : 0;
   const minPower = Number(state.filters.minPower);
+  const minAmenityCount = Number(state.filters.minAmenityCount);
   return Boolean(
     state.filters.operator ||
       String(state.filters.amenityNameQuery || "").trim() ||
       state.filters.availableOnly ||
       state.filters.currentlyOpenOnly ||
       selectedAmenities > 0 ||
+      (Number.isFinite(minAmenityCount) && minAmenityCount !== DEFAULT_FILTER_SETTINGS.minAmenityCount) ||
       (Number.isFinite(minPower) && minPower !== DEFAULT_MIN_POWER_KW),
   );
 }
@@ -3819,6 +4632,7 @@ function hasClearableFilters() {
 function clearFilters() {
   state.filters.operator = "";
   state.filters.minPower = DEFAULT_MIN_POWER_KW;
+  state.filters.minAmenityCount = DEFAULT_FILTER_SETTINGS.minAmenityCount;
   state.filters.amenities.clear();
   state.filters.amenityNameQuery = "";
   state.filters.availableOnly = false;
@@ -3829,7 +4643,10 @@ function clearFilters() {
   els.filter.currentlyOpen.checked = false;
   els.filter.power.value = String(DEFAULT_MIN_POWER_KW);
   els.filter.powerVal.textContent = String(DEFAULT_MIN_POWER_KW);
+  els.filter.amenityCount.value = String(DEFAULT_FILTER_SETTINGS.minAmenityCount);
+  els.filter.amenityCountVal.textContent = String(DEFAULT_FILTER_SETTINGS.minAmenityCount);
   updatePowerFilterLabel();
+  updateAmenityCountFilterLabel();
   renderAmenityFilters();
   updateFilters({ reloadCatalog: true });
 }
@@ -3929,6 +4746,11 @@ function applyFilters() {
   }
   if (els.views.favorites.classList.contains("active")) {
     renderFavorites();
+  }
+  if (els.views.route.classList.contains("active")) {
+    renderRouteResults();
+  } else {
+    renderRouteLayer();
   }
 }
 
@@ -4075,6 +4897,19 @@ function renderFavorites() {
   }
 }
 
+function formatRouteCardLine(props) {
+  const accessDistance = Number(props?.route_drive_distance_to_route_m);
+  const routePosition = Number(props?.route_position_m);
+  const parts = [];
+  if (Number.isFinite(accessDistance)) {
+    parts.push(t("route.cardAccess", { distance: formatRouteDistanceMeters(accessDistance) }));
+  }
+  if (Number.isFinite(routePosition)) {
+    parts.push(t("route.cardPosition", { distance: formatRouteDistanceMeters(routePosition) }));
+  }
+  return parts.join(" · ");
+}
+
 function createStationCard(feature, options = {}) {
   const p = feature.properties;
   const stationId = getStationIdFromProps(p);
@@ -4139,6 +4974,10 @@ function createStationCard(feature, options = {}) {
   const noteMarkup = note
     ? `<div class="card-note"><span class="card-note-label">${escapeHtml(t("station.note"))}</span><p>${escapeHtml(note)}</p></div>`
     : "";
+  const routeLine = options.route ? formatRouteCardLine(p) : "";
+  const routeMarkup = routeLine
+    ? `<div class="card-route-meta">${escapeHtml(routeLine)}</div>`
+    : "";
 
   const markerColor = getMarkerColor(p);
   const isFavoriteStation = Boolean(stationId && state.favorites.has(stationId));
@@ -4158,6 +4997,7 @@ function createStationCard(feature, options = {}) {
       ${escapeHtml(p.city || "")}<br>
       ${Math.round(getDisplayedMaxPowerKw(p))} kW max • ${formatChargingPointCount(p)} • ${formatAmenityCount(p.amenities_total)}
     </div>
+    ${routeMarkup}
     <div class="card-badges">
       ${dynamicLine}${amenityLine}
     </div>
@@ -5512,6 +6352,15 @@ function groupStationIdsByLiveApiBaseUrl(stationIds) {
   return groups;
 }
 
+function chunkArray(items, size) {
+  const chunkSize = Math.max(1, Math.floor(Number(size) || 1));
+  const chunks = [];
+  for (let index = 0; index < items.length; index += chunkSize) {
+    chunks.push(items.slice(index, index + chunkSize));
+  }
+  return chunks;
+}
+
 function getRequestedStationId() {
   const params = new URLSearchParams(window.location.search);
   return normalizeStationId(params.get("station") || "");
@@ -5539,7 +6388,14 @@ function findFeatureByStationId(stationId) {
   const normalizedStationId = normalizeStationId(stationId);
   return state.features.find((feature) =>
     normalizeStationId(feature.properties?.station_id || "") === normalizedStationId,
-  ) || state.staticFeatures.find((feature) =>
+  ) || findRouteFeatureByStationId(normalizedStationId) || state.staticFeatures.find((feature) =>
+    normalizeStationId(feature.properties?.station_id || "") === normalizedStationId,
+  ) || null;
+}
+
+function findRouteFeatureByStationId(stationId) {
+  const normalizedStationId = normalizeStationId(stationId);
+  return state.route.features.find((feature) =>
     normalizeStationId(feature.properties?.station_id || "") === normalizedStationId,
   ) || null;
 }
@@ -5783,6 +6639,7 @@ function applyStoredFilterSettings(settings) {
   }
   state.filters.operator = settings.operator;
   state.filters.minPower = settings.minPower;
+  state.filters.minAmenityCount = settings.minAmenityCount;
   state.filters.amenities = new Set(settings.amenities);
   state.filters.amenityNameQuery = settings.amenityNameQuery;
   state.filters.availableOnly = settings.availableOnly;

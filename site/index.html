@@ -108,7 +108,7 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css?v=20260621-map-promo-dismiss" />
+    <link rel="stylesheet" href="./styles.css?v=20260626-routing-web1" />
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -235,6 +235,132 @@
           <div id="charger-list" class="list-container">
             <!-- Cards injected here -->
             <div class="loading-state" data-nosnippet data-i18n="list.loading">Loading charging stations...</div>
+          </div>
+        </div>
+
+        <!-- ROUTE VIEW -->
+        <div id="view-route" class="view hidden">
+          <div class="view-header" data-nosnippet>
+            <h2 data-i18n="route.title">Route planner</h2>
+            <div class="header-actions">
+              <button id="btn-route-filter" class="text-btn" type="button" data-i18n="filters.title">
+                Filters
+              </button>
+            </div>
+          </div>
+          <div class="route-container">
+            <form id="route-form" class="route-form" autocomplete="off">
+              <div class="route-endpoint-grid">
+                <label class="route-endpoint-field">
+                  <span class="label-text" data-i18n="route.origin">From</span>
+                  <span class="route-search-row">
+                    <input
+                      id="route-origin-input"
+                      class="route-input"
+                      type="search"
+                      placeholder="Start address"
+                      data-i18n-placeholder="route.originPlaceholder"
+                      spellcheck="false"
+                      autocomplete="off"
+                      aria-controls="route-origin-results"
+                      aria-expanded="false"
+                    />
+                    <button
+                      id="route-origin-current"
+                      class="route-current-btn"
+                      type="button"
+                      data-i18n-aria-label="route.useCurrent"
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 2L12 22M2 12L22 12" opacity="0.3" />
+                        <circle cx="12" cy="12" r="4" />
+                      </svg>
+                      <span data-i18n="route.useCurrent">My location</span>
+                    </button>
+                  </span>
+                  <div id="route-origin-results" class="location-search-results route-search-results" hidden></div>
+                </label>
+
+                <button
+                  id="route-swap"
+                  class="icon-btn route-swap-btn"
+                  type="button"
+                  aria-label="Swap route endpoints"
+                  data-i18n-aria-label="route.swap"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M7 7h11l-3-3" />
+                    <path d="M17 17H6l3 3" />
+                  </svg>
+                </button>
+
+                <label class="route-endpoint-field">
+                  <span class="label-text" data-i18n="route.destination">To</span>
+                  <span class="route-search-row">
+                    <input
+                      id="route-destination-input"
+                      class="route-input"
+                      type="search"
+                      placeholder="Destination address"
+                      data-i18n-placeholder="route.destinationPlaceholder"
+                      spellcheck="false"
+                      autocomplete="off"
+                      aria-controls="route-destination-results"
+                      aria-expanded="false"
+                    />
+                    <button
+                      id="route-destination-current"
+                      class="route-current-btn"
+                      type="button"
+                      data-i18n-aria-label="route.useCurrent"
+                    >
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 2L12 22M2 12L22 12" opacity="0.3" />
+                        <circle cx="12" cy="12" r="4" />
+                      </svg>
+                      <span data-i18n="route.useCurrent">My location</span>
+                    </button>
+                  </span>
+                  <div id="route-destination-results" class="location-search-results route-search-results" hidden></div>
+                </label>
+              </div>
+              <button id="route-submit" class="primary-btn route-submit-btn" type="submit" data-i18n="route.submit">
+                Charging stations along route
+              </button>
+            </form>
+            <div id="route-status" class="route-status" data-nosnippet></div>
+            <div id="route-summary" class="route-summary" hidden data-nosnippet></div>
+            <div id="route-results" class="route-results list-container">
+              <div class="empty-state" data-nosnippet data-i18n="route.empty">
+                Enter a start and destination to find route chargers.
+              </div>
+            </div>
           </div>
         </div>
 
@@ -509,6 +635,22 @@
           </svg>
           <span data-i18n="nav.map">Map</span>
         </button>
+        <button class="nav-item" data-target="view-route" type="button">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="6" cy="19" r="2"></circle>
+            <circle cx="18" cy="5" r="2"></circle>
+            <path d="M8 19h3.5a3.5 3.5 0 0 0 0-7H12a3.5 3.5 0 0 1 0-7h4"></path>
+          </svg>
+          <span data-i18n="nav.route">Route</span>
+        </button>
         <button class="nav-item" data-target="view-favorites" type="button">
           <svg
             class="nav-icon"
@@ -636,6 +778,27 @@
                 <span style="--pos: 14.2857%">50</span>
                 <span style="--pos: 42.8571%">150</span>
                 <span style="--pos: 85.7143%">300+</span>
+              </div>
+            </label>
+
+            <label class="filter-group">
+              <span class="label-text"
+                ><span id="filter-amenity-count-label">Min. nearby places: 0</span><span id="filter-amenity-count-val" hidden>0</span></span
+              >
+              <input
+                type="range"
+                id="filter-amenity-count"
+                min="0"
+                max="25"
+                step="1"
+                value="0"
+              />
+              <div class="range-labels range-labels-amenities">
+                <span style="--pos: 0%">0</span>
+                <span style="--pos: 4%">Bronze</span>
+                <span style="--pos: 24%">Silver</span>
+                <span style="--pos: 44%">Gold</span>
+                <span style="--pos: 100%">25+</span>
               </div>
             </label>
 
@@ -930,6 +1093,6 @@
       crossorigin=""
     ></script>
     <script src="./app-install-promo.js?v=20260620-eu-i18n9"></script>
-    <script src="./app.js?v=20260622-map-gps-refresh" type="module"></script>
+    <script src="./app.js?v=20260626-routing-web1" type="module"></script>
   </body>
 </html>

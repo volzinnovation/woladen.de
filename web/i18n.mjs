@@ -87,6 +87,7 @@ const FALLBACK_BUNDLE = {
     label: "Main navigation",
     list: "List",
     map: "Map",
+    route: "Route",
     favorites: "Favorites",
     stats: "Stats",
     info: "Info",
@@ -144,6 +145,7 @@ const FALLBACK_BUNDLE = {
     currentlyOpen: "Open now",
     currentlyOpenNote: "Only stations with at least one currently open nearby place",
     minPower: "Min. power: {value} kW",
+    minAmenities: "Min. nearby places: {value}",
     amenities: "Nearby places",
     apply: "Apply",
     reset: "Remove filters",
@@ -153,6 +155,39 @@ const FALLBACK_BUNDLE = {
     selectedOnly: "Selected only: {labels}",
     namePrefix: "Name: {value}",
     minPowerLabel: "from {value} kW",
+    minAmenitiesLabel: "{value}+ nearby places",
+  },
+  route: {
+    title: "Route planner",
+    origin: "From",
+    destination: "To",
+    originPlaceholder: "Start address",
+    destinationPlaceholder: "Destination address",
+    useCurrent: "My location",
+    currentLocation: "My location",
+    swap: "Swap route endpoints",
+    submit: "Charging stations along route",
+    empty: "Enter a start and destination to find charging stations along the route.",
+    resolving: "Resolving route endpoints...",
+    loading: "Calculating charging stations along the route...",
+    missingEndpoints: "Choose a start and destination first.",
+    sameEndpoint: "Start and destination are too close together.",
+    notConfigured: "Route planning is not configured.",
+    locationUnavailable: "Current location is not available.",
+    searchError: "Charging stations along the route could not be loaded.",
+    noFilteredResults: "No charging stations along the route match the current filters.",
+    filterChanged: "Filters changed since this route was calculated. Broader filters need a new route search.",
+    recalculate: "Recalculate",
+    showMap: "Show on map",
+    summaryDistance: "Route",
+    summaryDuration: "Drive time",
+    summaryStations: "Charging stations",
+    resultsCount: "{count} stations",
+    cardAccess: "{distance} from route",
+    cardPosition: "route km {distance}",
+    durationMinutes: "{minutes} min",
+    durationHours: "{hours} h",
+    durationHoursMinutes: "{hours} h {minutes} min",
   },
   info: {
     title: "Info & Help",
@@ -474,7 +509,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260620-i18n9`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260626-routing-web1`, import.meta.url));
     if (!response.ok) {
       return {};
     }

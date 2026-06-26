@@ -28,6 +28,9 @@ build/
 site/
 !/site/
 site/*
+!/site/routing.mjs
+!/site/i18n/
+!/site/i18n/*.json
 !/site/data/
 site/data/*
 !/site/data/station-occupancy/

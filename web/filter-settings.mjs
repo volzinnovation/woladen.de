@@ -1,6 +1,7 @@
 export const DEFAULT_FILTER_SETTINGS = Object.freeze({
   operator: "",
   minPower: 50,
+  minAmenityCount: 0,
   amenities: [],
   amenityNameQuery: "",
   availableOnly: true,
@@ -9,6 +10,7 @@ export const DEFAULT_FILTER_SETTINGS = Object.freeze({
 
 const MAX_MIN_POWER_KW = 350;
 const POWER_STEP_KW = 10;
+const MAX_MIN_AMENITY_COUNT = 25;
 const MAX_TEXT_LENGTH = 120;
 const AMENITY_KEY_PATTERN = /^amenity_[a-z0-9_]+$/;
 
@@ -27,6 +29,19 @@ function normalizeMinPower(value, fallback = DEFAULT_FILTER_SETTINGS.minPower) {
   }
   const clamped = Math.max(0, Math.min(MAX_MIN_POWER_KW, numeric));
   return Math.round(clamped / POWER_STEP_KW) * POWER_STEP_KW;
+}
+
+function normalizeMinAmenityCount(value, fallback = DEFAULT_FILTER_SETTINGS.minAmenityCount) {
+  const fallbackValue = Number(fallback);
+  const numericFallback = Number.isFinite(fallbackValue)
+    ? fallbackValue
+    : DEFAULT_FILTER_SETTINGS.minAmenityCount;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return numericFallback;
+  }
+  const clamped = Math.max(0, Math.min(MAX_MIN_AMENITY_COUNT, numeric));
+  return Math.round(clamped);
 }
 
 function normalizeAmenities(value) {
@@ -54,6 +69,10 @@ export function normalizeStoredFilterSettings(value, defaults = DEFAULT_FILTER_S
   return {
     operator: normalizeText(source.operator ?? fallback.operator),
     minPower: normalizeMinPower(source.minPower ?? source.min_power_kw, fallback.minPower),
+    minAmenityCount: normalizeMinAmenityCount(
+      source.minAmenityCount ?? source.min_amenities_total,
+      fallback.minAmenityCount,
+    ),
     amenities: normalizeAmenities(source.amenities ?? fallback.amenities),
     amenityNameQuery: normalizeText(source.amenityNameQuery ?? source.amenity_name_query ?? fallback.amenityNameQuery),
     availableOnly: typeof source.availableOnly === "boolean"
