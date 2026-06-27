@@ -614,6 +614,43 @@ body {
   pointer-events: none; /* Let clicks pass through around items */
 }
 
+.route-map-lock {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  right: 1rem;
+  z-index: 405;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: min(100% - 2rem, 520px);
+  margin: 0 auto;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-md);
+  color: var(--color-text-main);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.35;
+  pointer-events: auto;
+}
+
+.route-map-lock[hidden] {
+  display: none;
+}
+
+.route-map-lock span {
+  min-width: 0;
+}
+
+.route-map-clear-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .search-bar {
   pointer-events: auto;
   background: var(--color-surface-elevated);
@@ -854,6 +891,36 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+.route-results-header {
+  position: static;
+  top: auto;
+  z-index: auto;
+  gap: 1rem;
+  padding: 0.15rem 0 0;
+  border-bottom: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.route-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.route-favorite-all-btn {
+  border-color: rgba(15, 118, 110, 0.24);
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--color-primary);
+  font-weight: 800;
+}
+
+.route-favorite-all-btn:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .route-endpoint-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -935,6 +1002,11 @@ body {
 
 .route-status-error {
   color: var(--color-danger);
+  font-weight: 700;
+}
+
+.route-status-success {
+  color: var(--color-primary);
   font-weight: 700;
 }
 
@@ -3633,6 +3705,20 @@ select:focus-visible {
     padding: 0.85rem;
   }
 
+  .route-results-header {
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+
+  .route-actions {
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  .route-actions .text-btn {
+    flex: 1 1 9rem;
+  }
+
   .route-endpoint-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 0.65rem;
@@ -3665,6 +3751,18 @@ select:focus-visible {
   .route-map-btn {
     grid-column: 1 / -1;
     justify-self: start;
+  }
+
+  .route-map-lock {
+    bottom: 0.85rem;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.55rem;
+    font-size: 0.84rem;
+  }
+
+  .route-map-clear-btn {
+    align-self: flex-start;
   }
 }
 

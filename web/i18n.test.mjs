@@ -48,6 +48,25 @@ test("German and Dutch app bundles cover all fallback UI keys", () => {
   }
 });
 
+test("localized route bundles include route action labels", () => {
+  const routeActionKeys = [
+    "addAllFavorites",
+    "addAllFavoritesWithCount",
+    "favoriteCategory",
+    "favoritesAdded",
+    "mapFixed",
+    "removeRoute",
+  ];
+  const bundleFiles = fs
+    .readdirSync(new URL("./i18n", import.meta.url))
+    .filter((filename) => filename.endsWith(".json"));
+  for (const filename of bundleFiles) {
+    const route = readBundle(filename.replace(/\.json$/, "")).route || {};
+    const missing = routeActionKeys.filter((key) => !route[key]);
+    assert.deepEqual(missing, [], `${filename} is missing route action labels`);
+  }
+});
+
 test("occupancy history note is bound to the translation bundle", () => {
   const indexHtml = readText(INDEX_HTML_URL);
   const appJs = readText(new URL("./app.js", import.meta.url));
@@ -146,6 +165,38 @@ test("route planner is visible in main navigation", () => {
   assert.match(indexHtml, /class="nav-item"[^>]*data-target="view-route"/);
   assert.match(appJs, /const VIEW_ORDER = \["view-list", "view-map", "view-route", "view-favorites", "view-info"\];/);
   assert.match(appJs, /const VIEW_IDS = new Set\(VIEW_ORDER\);/);
+});
+
+test("route actions sit above route results and can save visible stations as favorites", () => {
+  const indexHtml = readText(INDEX_HTML_URL);
+  const appJs = readText(new URL("./app.js", import.meta.url));
+  const routeFormIndex = indexHtml.indexOf('id="route-form"');
+  const routeTitleIndex = indexHtml.indexOf('data-i18n="route.title"');
+  const routeResultsIndex = indexHtml.indexOf('id="route-results"');
+  const filterButtonIndex = indexHtml.indexOf('id="btn-route-filter"');
+  const favoriteAllIndex = indexHtml.indexOf('id="route-favorite-all"');
+  assert.ok(routeFormIndex > -1, "route form exists");
+  assert.ok(routeTitleIndex > routeFormIndex, "route form is above route section title");
+  assert.ok(filterButtonIndex > routeTitleIndex && filterButtonIndex < routeResultsIndex, "filter button sits above route results");
+  assert.ok(favoriteAllIndex > routeTitleIndex && favoriteAllIndex < routeResultsIndex, "bulk favorite button sits above route results");
+  assert.match(appJs, /function addRouteResultsToFavorites\(\)/);
+  assert.match(appJs, /FAVORITE_SOURCE_ROUTE/);
+  assert.match(appJs, /routeFavoriteCandidateFeatures\(\)/);
+  assert.match(appJs, /function compactRouteFavoriteEndpointLabel\(/);
+  assert.match(appJs, /route\.favoriteCategory/);
+});
+
+test("route map lock prevents standard map station loading while route is displayed", () => {
+  const indexHtml = readText(INDEX_HTML_URL);
+  const appJs = readText(new URL("./app.js", import.meta.url));
+  assert.match(indexHtml, /id="route-map-lock"/);
+  assert.match(indexHtml, /data-i18n="route\.mapFixed"/);
+  assert.match(indexHtml, /id="route-map-clear"/);
+  assert.match(appJs, /function hasPinnedRouteMap\(\)/);
+  assert.match(appJs, /function clearRoute\(\)/);
+  assert.match(appJs, /function loadCatalogStationsFromMapCenter[\s\S]*hasPinnedRouteMap\(\)[\s\S]*return;/);
+  assert.match(appJs, /function queueCatalogSearchFromMapMove[\s\S]*hasPinnedRouteMap\(\)[\s\S]*clearTimeout\(catalogMapMoveTimer\)/);
+  assert.match(appJs, /function getMapMarkerFeatures\(\)[\s\S]*hasPinnedRouteMap\(\)[\s\S]*getRouteDisplayFeatures\(\)/);
 });
 
 test("fallback metadata keeps the canonical English title", () => {

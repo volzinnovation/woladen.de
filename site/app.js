@@ -10,6 +10,7 @@ import {
   FAVORITE_CATEGORY_UNCATEGORIZED,
   FAVORITE_FILTER_ALL,
   FAVORITE_SOURCE_MANUAL,
+  FAVORITE_SOURCE_ROUTE,
   addFavoriteCategory,
   createEmptyFavoriteMetadata,
   ensureFavoriteItem,
@@ -89,7 +90,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260626-favorites-web1";
+} from "./i18n.mjs?v=20260627-route-actions1";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -1238,9 +1239,14 @@ const els = {
     destinationCurrent: document.getElementById("route-destination-current"),
     swapBtn: document.getElementById("route-swap"),
     submitBtn: document.getElementById("route-submit"),
+    favoriteAllBtn: document.getElementById("route-favorite-all"),
     status: document.getElementById("route-status"),
     summary: document.getElementById("route-summary"),
     results: document.getElementById("route-results"),
+  },
+  routeMap: {
+    lock: document.getElementById("route-map-lock"),
+    clearBtn: document.getElementById("route-map-clear"),
   },
   search: {
     form: document.getElementById("location-search-form"),
@@ -1352,6 +1358,8 @@ async function init() {
   els.filter.listFilterBtn.addEventListener("click", () => openModal("filter"));
   els.filter.routeFilterBtn?.addEventListener("click", () => openModal("filter"));
   els.filter.applyBtn.addEventListener("click", () => closeModal("filter"));
+  els.route.favoriteAllBtn?.addEventListener("click", addRouteResultsToFavorites);
+  els.routeMap.clearBtn?.addEventListener("click", clearRoute);
 
   els.buttons.closeFilter.addEventListener("click", () => closeModal("filter"));
   els.buttons.closeDetail.addEventListener("click", () => closeModal("detail"));
@@ -1418,6 +1426,7 @@ function refreshLanguageSensitiveViews() {
       renderRouteLayer();
     }
   }
+  renderRouteMapLock();
   if (currentDetailFeature && !els.modals.detail.classList.contains("hidden")) {
     const stationId = getStationIdFromProps(currentDetailFeature.properties);
     populateDetailContent(currentDetailFeature, state.live.detailByStationId.get(stationId) || null);
@@ -1776,8 +1785,10 @@ function selectLocationSearchResult(result) {
     els.search.input.value = result.label;
   }
   clearLocationSearchResults();
-  setCatalogSearchCenter({ lat: result.lat, lon: result.lon }, "search");
-  void loadCatalogStationsForCurrentCenter({ force: true, reset: true });
+  if (!hasPinnedRouteMap()) {
+    setCatalogSearchCenter({ lat: result.lat, lon: result.lon }, "search");
+    void loadCatalogStationsForCurrentCenter({ force: true, reset: true });
+  }
   if (!state.views.map) {
     return;
   }
@@ -2165,6 +2176,7 @@ async function submitRouteSearch() {
     state.route.error = null;
     state.live.reachable = true;
     renderRouteStatus("");
+    renderRouteMapLock();
   } catch (error) {
     if (requestId !== state.route.requestSeq) {
       return;
@@ -2175,11 +2187,13 @@ async function submitRouteSearch() {
     state.route.calculatedFilters = null;
     state.route.error = error;
     renderRouteStatus(routeErrorMessage(error), "error");
+    renderRouteMapLock();
   } finally {
     if (requestId === state.route.requestSeq) {
       state.route.loading = false;
       renderRouteResults();
       renderRouteLayer();
+      renderMapMarkers();
     }
   }
 }
@@ -2210,6 +2224,69 @@ function renderRouteStatus(message, tone = "muted") {
   els.route.status.className = `route-status route-status-${tone}`;
   els.route.status.textContent = message || "";
   els.route.status.hidden = !message;
+}
+
+function compactRouteFavoriteEndpointLabel(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  return text.split(",").map((part) => part.trim()).find(Boolean) || text;
+}
+
+function routeEndpointFavoriteLabel(field) {
+  const controls = routeFieldElements(field);
+  const endpoint = normalizeRouteEndpoint(state.route.endpoints[field]);
+  return compactRouteFavoriteEndpointLabel(endpoint?.label || controls.input?.value) || t(`route.${field}`);
+}
+
+function routeFavoriteCategoryLabel() {
+  return normalizeFavoriteCategoryLabel(t("route.favoriteCategory", {
+    origin: routeEndpointFavoriteLabel("origin"),
+    destination: routeEndpointFavoriteLabel("destination"),
+  }));
+}
+
+function routeFavoriteCandidateFeatures() {
+  if (!state.route.result || state.route.loading) {
+    return [];
+  }
+  return getRouteDisplayFeatures().filter((feature) => getStationIdFromProps(feature.properties));
+}
+
+function renderRouteActionState() {
+  if (!els.route.favoriteAllBtn) {
+    return;
+  }
+  const candidateCount = routeFavoriteCandidateFeatures().length;
+  els.route.favoriteAllBtn.disabled = candidateCount === 0;
+  els.route.favoriteAllBtn.setAttribute(
+    "aria-label",
+    candidateCount > 0
+      ? t("route.addAllFavoritesWithCount", { count: candidateCount })
+      : t("route.addAllFavorites"),
+  );
+}
+
+function addRouteResultsToFavorites() {
+  const features = routeFavoriteCandidateFeatures();
+  const category = routeFavoriteCategoryLabel();
+  if (features.length === 0 || !category) {
+    return;
+  }
+  const stationIds = [];
+  features.forEach((feature) => {
+    const stationId = getStationIdFromProps(feature.properties);
+    if (!stationId) {
+      return;
+    }
+    ensureFavoriteItem(state.favoriteMetadata, stationId, { source: FAVORITE_SOURCE_ROUTE });
+    addFavoriteCategory(state.favoriteMetadata, stationId, category, { source: FAVORITE_SOURCE_ROUTE });
+    stationIds.push(stationId);
+  });
+  syncFavoriteStationIdsFromMetadata();
+  state.favoriteCategoryFilter = getFavoriteCategoryKey(category);
+  saveFavorites();
+  refreshFavoriteDependentViews(stationIds);
+  renderRouteResults();
+  renderRouteStatus(t("route.favoritesAdded", { count: stationIds.length, category }), "success");
 }
 
 function routeEffectiveFilters() {
@@ -2299,6 +2376,7 @@ function renderRouteResults() {
   if (!els.route.results) {
     return;
   }
+  renderRouteActionState();
   els.route.results.replaceChildren();
 
   if (state.route.loading) {
@@ -2445,11 +2523,57 @@ function renderRouteLayer() {
     }).addTo(state.views.layers.route);
   }
 
-  getRouteDisplayFeatures().forEach((feature) => {
-    applyCachedLiveStationSummaryToFeature(feature);
-    bindStationMarker(createStationMarker(feature), feature)
-      .addTo(state.views.layers.route);
-  });
+  if (!hasPinnedRouteMap()) {
+    getRouteDisplayFeatures().forEach((feature) => {
+      applyCachedLiveStationSummaryToFeature(feature);
+      bindStationMarker(createStationMarker(feature), feature)
+        .addTo(state.views.layers.route);
+    });
+  }
+}
+
+function hasPinnedRouteMap() {
+  return Boolean(state.route.result && isMapViewActive());
+}
+
+function renderRouteMapLock() {
+  if (!els.routeMap.lock) {
+    return;
+  }
+  const pinned = hasPinnedRouteMap();
+  els.routeMap.lock.hidden = !pinned;
+  if (els.buttons.locate) {
+    if (pinned) {
+      els.buttons.locate.setAttribute("aria-describedby", "route-map-lock-message");
+    } else {
+      els.buttons.locate.removeAttribute("aria-describedby");
+    }
+  }
+  if (pinned) {
+    stopMapGPSRefresh();
+  }
+}
+
+function clearRoute() {
+  state.route.requestSeq += 1;
+  state.route.loading = false;
+  state.route.result = null;
+  state.route.features = [];
+  state.route.error = null;
+  state.route.calculatedFilters = null;
+  renderRouteStatus("");
+  renderRouteResults();
+  renderRouteLayer();
+  renderRouteMapLock();
+  applyFilters();
+  if (isMapViewActive()) {
+    startMapGPSRefresh();
+    loadCatalogStationsFromMapCenter({
+      force: true,
+      requireUserInteraction: false,
+      reset: true,
+    });
+  }
 }
 
 function focusMapOnRoute() {
@@ -2842,7 +2966,7 @@ function catalogSearchQueryKey() {
 
 async function loadCatalogStationsForCurrentCenter({ force = false, reset = false } = {}) {
   const center = getCatalogSearchCenter();
-  if (!state.live.baseUrl || !center) {
+  if (!state.live.baseUrl || !center || hasPinnedRouteMap()) {
     return;
   }
 
@@ -3905,8 +4029,15 @@ function initMap() {
   state.views.layers.detailAmenities = L.layerGroup().addTo(state.views.detailMap);
 }
 
-function loadCatalogStationsFromMapCenter({ force = false, requireUserInteraction = false } = {}) {
+function loadCatalogStationsFromMapCenter({
+  force = false,
+  requireUserInteraction = false,
+  reset = false,
+} = {}) {
   if (!state.views.map) {
+    return;
+  }
+  if (hasPinnedRouteMap()) {
     return;
   }
   if (
@@ -3934,11 +4065,15 @@ function loadCatalogStationsFromMapCenter({ force = false, requireUserInteractio
     return;
   }
   setCatalogSearchCenter(nextCenter, "map");
-  void loadCatalogStationsForCurrentCenter({ force });
+  void loadCatalogStationsForCurrentCenter({ force, reset });
 }
 
 function queueCatalogSearchFromMapMove() {
   if (!state.views.map) {
+    return;
+  }
+  if (hasPinnedRouteMap()) {
+    window.clearTimeout(catalogMapMoveTimer);
     return;
   }
   window.clearTimeout(catalogMapMoveTimer);
@@ -3952,11 +4087,11 @@ function isMapViewActive() {
 }
 
 function startMapGPSRefresh() {
-  if (!navigator.geolocation || mapGPSRefreshTimer || document.visibilityState === "hidden") {
+  if (!navigator.geolocation || mapGPSRefreshTimer || document.visibilityState === "hidden" || hasPinnedRouteMap()) {
     return;
   }
   mapGPSRefreshTimer = window.setInterval(() => {
-    if (!isMapViewActive() || document.visibilityState === "hidden") {
+    if (!isMapViewActive() || document.visibilityState === "hidden" || hasPinnedRouteMap()) {
       stopMapGPSRefresh();
       return;
     }
@@ -4182,6 +4317,9 @@ function renderDetailStationMarker(feature) {
 }
 
 function getMapMarkerFeatures() {
+  if (hasPinnedRouteMap()) {
+    return getRouteDisplayFeatures();
+  }
   const zoom = Number(
     state.views.map && typeof state.views.map.getZoom === "function"
       ? state.views.map.getZoom()
@@ -4250,6 +4388,13 @@ function renderMapMarkers() {
   });
 }
 
+function findMapMarkerFeatureByStationId(stationId) {
+  if (hasPinnedRouteMap()) {
+    return findRouteFeatureByStationId(stationId);
+  }
+  return findFeatureByStationId(stationId);
+}
+
 function updateMapMarkersForStationIds(stationIds) {
   if (!state.views.layers.chargers || !Array.isArray(stationIds) || stationIds.length === 0) {
     return;
@@ -4257,9 +4402,9 @@ function updateMapMarkersForStationIds(stationIds) {
 
   const displayedFeatures = new Set(getMapMarkerFeatures());
   Array.from(new Set(stationIds)).forEach((stationId) => {
-    const feature = findFeatureByStationId(stationId);
+    const feature = findMapMarkerFeatureByStationId(stationId);
     const existingMarker = state.views.markersByStationId.get(stationId);
-    const isFiltered = feature ? state.filtered.includes(feature) : false;
+    const isFiltered = hasPinnedRouteMap() || (feature ? state.filtered.includes(feature) : false);
     const isDisplayedOnMap = feature ? displayedFeatures.has(feature) : false;
 
     if (existingMarker) {
@@ -4412,7 +4557,12 @@ function switchView(viewId, options = {}) {
 
   // Map resize fix
   if (viewId === "view-map" && state.views.map) {
-    startMapGPSRefresh();
+    renderRouteLayer();
+    renderRouteMapLock();
+    refreshMapMarkersFromCurrentFeatures();
+    if (!hasPinnedRouteMap()) {
+      startMapGPSRefresh();
+    }
     requestAnimationFrame(() => {
       state.views.map.invalidateSize({ pan: false });
       focusMapOnPendingStation();
@@ -4425,6 +4575,7 @@ function switchView(viewId, options = {}) {
     }, 150);
   } else {
     stopMapGPSRefresh();
+    renderRouteMapLock();
   }
 }
 
@@ -4581,7 +4732,7 @@ function renderAmenityFilters() {
 function updateFilters(options = {}) {
   const { reloadCatalog = false } = options;
   saveFilters();
-  if (reloadCatalog && hasCatalogSearchCenter()) {
+  if (reloadCatalog && hasCatalogSearchCenter() && !hasPinnedRouteMap()) {
     void loadCatalogStationsForCurrentCenter({ force: true, reset: true }).then(updateFilterLabel);
     updateFilterLabel();
     return;
@@ -4846,6 +4997,7 @@ function applyFilters() {
   } else {
     renderRouteLayer();
   }
+  renderRouteMapLock();
 }
 
 /* --- LIST RENDERING --- */
@@ -7014,6 +7166,10 @@ async function refreshCatalogFromGPSPosition({
   showError = true,
   maximumAge = 300000,
 } = {}) {
+  if (hasPinnedRouteMap()) {
+    renderRouteMapLock();
+    return;
+  }
   if (!navigator.geolocation) {
     if (showError) {
       updateLocationState({

@@ -186,6 +186,12 @@ const FALLBACK_BUNDLE = {
     filterChanged: "Filters changed since this route was calculated. Broader filters need a new route search.",
     recalculate: "Recalculate",
     showMap: "Show on map",
+    addAllFavorites: "Add all as favorites",
+    addAllFavoritesWithCount: "Add all {count} as favorites",
+    favoriteCategory: "Route {origin} / {destination}",
+    favoritesAdded: "{count} stations saved as favorites in \"{category}\".",
+    mapFixed: "Map fixed on stations along the route",
+    removeRoute: "Remove route",
     summaryDistance: "Route",
     summaryDuration: "Drive time",
     summaryStations: "Charging stations",
@@ -521,7 +527,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260626-favorites-web1`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260627-route-actions1`, import.meta.url));
     if (!response.ok) {
       return {};
     }
