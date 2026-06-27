@@ -5,6 +5,11 @@ Date: 2026-06-26
 These notes capture the deployment context observed while preparing the backend
 routing API rollout on `live-eu.woladen.de`.
 
+For the separate self-hosted full-Europe OpenRouteService deployment on
+`wingki01` / `141.47.5.55`, including the public `8188` proxy and
+`live-eu.woladen.de:8188` reverse tunnel, see
+[`ors-europe-routing-deployment.md`](ors-europe-routing-deployment.md).
+
 ## Host Snapshot
 
 - Public hostname: `live-eu.woladen.de`
