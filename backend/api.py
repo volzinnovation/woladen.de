@@ -66,6 +66,7 @@ MAX_ROUTE_SELECTED_AMENITIES = 32
 STATION_ID_NAMESPACE = "DE:"
 REDACTED_VALUE = "[redacted]"
 ROUTE_LOGGER = logging.getLogger("woladen.routes")
+ROUTE_ACCESS_LOGGER = logging.getLogger("uvicorn.error")
 
 
 class StationLookupRequest(BaseModel):
@@ -230,7 +231,9 @@ def _log_route_charger_request(
     }
     if detail:
         payload["detail"] = detail
-    ROUTE_LOGGER.info("route_chargers %s", json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+    encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    ROUTE_LOGGER.info("route_chargers %s", encoded)
+    ROUTE_ACCESS_LOGGER.info("route_chargers %s", encoded)
 
 
 def _normalize_lookup_key(value: str) -> str:
