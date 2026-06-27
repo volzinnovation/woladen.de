@@ -26,7 +26,7 @@ SITE_DIR = ROOT / "site"
 SITE_DATA_DIR = SITE_DIR / "data"
 STATION_DIR = SITE_DIR / "station"
 SITE_ORIGIN = "https://woladen.de"
-SITEMAP_MAX_URLS = 20_000
+SITEMAP_MAX_URLS = 10_000
 SOCIAL_IMAGE_VERSION = "20260620-brand1"
 SOCIAL_IMAGE_PATH = f"img/social-card-home.png?v={SOCIAL_IMAGE_VERSION}"
 SOCIAL_IMAGE_WIDTH = "1200"
@@ -2424,7 +2424,7 @@ def structured_data_for_page(page: SeoPage) -> list[dict[str, object]]:
     return [payload]
 
 
-def write_seo_pages() -> dict[str, list[str]]:
+def write_seo_pages() -> tuple[dict[str, list[str]], str]:
     bundles = load_seo_bundles()
     live_counts_by_country = load_dynamic_station_counts_by_country()
     countries, generated_at = load_seo_countries(live_counts_by_country=live_counts_by_country)
@@ -2450,7 +2450,7 @@ def write_seo_pages() -> dict[str, list[str]]:
         groups.setdefault(page.sitemap_group, []).append(page.path)
     for paths in groups.values():
         paths.sort()
-    return groups
+    return groups, generated_at
 
 
 def amenity_summary(properties: dict[str, object]) -> list[str]:
@@ -2764,7 +2764,18 @@ def chunk_paths(paths: list[str], chunk_size: int | None = None) -> list[list[st
     return [paths[index:index + chunk_size] for index in range(0, len(paths), chunk_size)]
 
 
-def write_sitemap(page_paths: list[str], seo_groups: dict[str, list[str]] | None = None) -> None:
+def sitemap_lastmod_date(value: str | None) -> str:
+    if not value:
+        return ""
+    match = re.match(r"^\d{4}-\d{2}-\d{2}", value.strip())
+    return match.group(0) if match else ""
+
+
+def write_sitemap(
+    page_paths: list[str],
+    seo_groups: dict[str, list[str]] | None = None,
+    lastmod: str | None = None,
+) -> None:
     sitemap_paths: list[str] = []
     write_urlset_sitemap("sitemap-pages.xml", ROOT_URLS)
     sitemap_paths.append("sitemap-pages.xml")
@@ -2791,9 +2802,12 @@ def write_sitemap(page_paths: list[str], seo_groups: dict[str, list[str]] | None
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     ]
+    lastmod_date = sitemap_lastmod_date(lastmod)
     for path in sitemap_paths:
         lines.append("  <sitemap>")
         lines.append(f"    <loc>{html.escape(absolute_url(path))}</loc>")
+        if lastmod_date:
+            lines.append(f"    <lastmod>{lastmod_date}</lastmod>")
         lines.append("  </sitemap>")
     lines.append("</sitemapindex>")
     (SITE_DIR / "sitemap.xml").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -2899,9 +2913,9 @@ def main() -> None:
     copy_management_data_tree()
     copy_station_occupancy_tree()
 
-    seo_groups = write_seo_pages()
+    seo_groups, sitemap_lastmod = write_seo_pages()
     station_page_paths = write_station_pages()
-    write_sitemap(station_page_paths, seo_groups)
+    write_sitemap(station_page_paths, seo_groups, sitemap_lastmod)
     write_robots_txt()
 
 

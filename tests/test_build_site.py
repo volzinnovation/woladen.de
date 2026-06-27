@@ -81,6 +81,7 @@ def test_write_sitemap_splits_large_station_url_sets(tmp_path: Path, monkeypatch
             "station/CH/three.html",
         ],
         {"sitemap-seo-home.xml": ["en/index.html", "de/index.html"]},
+        "2026-06-26T22:14:56+00:00",
     )
 
     sitemap_index = (tmp_path / "sitemap.xml").read_text(encoding="utf-8")
@@ -89,6 +90,7 @@ def test_write_sitemap_splits_large_station_url_sets(tmp_path: Path, monkeypatch
     assert "https://woladen.de/sitemap-seo-home.xml" in sitemap_index
     assert "https://woladen.de/sitemap-stations-1.xml" in sitemap_index
     assert "https://woladen.de/sitemap-stations-2.xml" in sitemap_index
+    assert "<lastmod>2026-06-26</lastmod>" in sitemap_index
     assert "https://woladen.de/en/" in (tmp_path / "sitemap-seo-home.xml").read_text(encoding="utf-8")
     assert (tmp_path / "sitemap-stations-1.xml").read_text(encoding="utf-8").count("<url>") == 2
     assert (tmp_path / "sitemap-stations-2.xml").read_text(encoding="utf-8").count("<url>") == 1
