@@ -155,7 +155,7 @@
     "legendFavorite": "Favorisierte Station",
     "legendMarkerOutOfOrder": "Live-Marker: außer Betrieb",
     "legendMarkerFullyOccupied": "Live-Marker: vollständig belegt",
-    "aboutIntro": "Finde verfügbare und zuverlässige Ladestationen mit guter Aufenthaltsqualität, weil gute Bäckereien, Restaurants, Läden, Spielplätze oder Cafés in der Nähe sind. woladen kennt",
+    "aboutIntro": "woladen kennt",
     "aboutStationCountJoin": "Stationen mit",
     "aboutOutro": "Ladepunkten in vielen Ländern und zeigt sie im Umkreis von 20 km um deinen Standort oder die gewählte Kartenposition. Wo Live- und Analysedaten verfügbar sind, helfen Verfügbarkeit, Störungen und Auslastungsmuster bei der Auswahl. Standardmäßig sucht woladen Schnelllader ab 50 kW; über den Leistungsfilter lassen sich auch normale Ladepunkte unter 50 kW einbeziehen.",
     "sourceUnknown": "Datenquelle",

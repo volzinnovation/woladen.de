@@ -67,6 +67,22 @@ test("localized route bundles include route action labels", () => {
   }
 });
 
+test("info about intro stays factual across localized bundles", () => {
+  const fallbackIntro = fallbackBundle().info.aboutIntro;
+  assert.equal(fallbackIntro, "woladen knows");
+  const bundleFiles = fs
+    .readdirSync(new URL("./i18n", import.meta.url))
+    .filter((filename) => filename.endsWith(".json"));
+  for (const filename of bundleFiles) {
+    const intro = readBundle(filename.replace(/\.json$/, "")).info?.aboutIntro;
+    if (!intro) {
+      continue;
+    }
+    assert.ok(intro.length <= 24, `${filename} info.aboutIntro should stay concise`);
+    assert.doesNotMatch(intro, /[.!?]/, `${filename} info.aboutIntro should not include marketing sentences`);
+  }
+});
+
 test("occupancy history note is bound to the translation bundle", () => {
   const indexHtml = readText(INDEX_HTML_URL);
   const appJs = readText(new URL("./app.js", import.meta.url));
@@ -154,7 +170,7 @@ test("app shell uses the canonical woladen brand SEO copy", () => {
   const listIntro = indexHtml.match(/<div id="view-list"[\s\S]*?<\/section>/)?.[0] || "";
   const infoIntro = indexHtml.match(/<div id="view-info"[\s\S]*?<\/section>/)?.[0] || "";
   assert.doesNotMatch(listIntro, /data-i18n="seo\.productMessage"/);
-  assert.match(infoIntro, /data-i18n="seo\.productMessage"/);
+  assert.doesNotMatch(infoIntro, /data-i18n="seo\.productMessage"/);
   assert.doesNotMatch(indexHtml, /charging boredom|No charging boredom|Reliable charging/i);
 });
 

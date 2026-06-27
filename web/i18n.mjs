@@ -228,7 +228,7 @@ const FALLBACK_BUNDLE = {
     legendFavorite: "Favorite station",
     legendMarkerOutOfOrder: "Live marker: out of order",
     legendMarkerFullyOccupied: "Live marker: fully occupied",
-    aboutIntro: "Find available and reliable charging stations with better places to wait nearby, from bakeries and restaurants to shops, playgrounds, and cafés. woladen knows",
+    aboutIntro: "woladen knows",
     aboutStationCountJoin: "stations with",
     aboutOutro: "charging points in many countries and shows them within 20 km of your location or selected map position. Where live and analytical data is available, availability, outages, and occupancy patterns help you choose. By default, woladen searches fast chargers from 50 kW; the power filter can include normal chargers below 50 kW.",
     sourceUnknown: "Data source",
