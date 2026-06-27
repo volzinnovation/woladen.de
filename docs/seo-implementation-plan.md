@@ -18,14 +18,14 @@ The SEO implementation must preserve this hierarchy everywhere:
 
 - Brand/app name: `woladen`
 - SEO name: `woladen - Smart EV Stops in Europe`
-- Primary tagline: `Plugs for Cars. Perks for People.`
-- Human hook: `The human side of charging.`
-- Supporting line: `Because charging time is your time.`
+- Slogan: `The human side of charging`
+- Subtitle: `Because charging time is your time`
 - Product message: `Find EV charging stops near bakeries, restaurants, shops, playgrounds, cafes, and other useful places nearby.`
 
 Avoid falling back to generic charger-directory positioning:
 
 - Do not lead with `EV map` as the main promise.
+- Do not use or revive `Plugs for Cars. Perks for People.` or variants such as `Plugs for cars, Perks for humans`.
 - Do not revive `charging boredom` copy.
 - Do not describe woladen as only a list of charging stations.
 - Do not imply live availability or pricing exists everywhere.
@@ -145,9 +145,9 @@ Add an `seo` namespace to each language file:
   "seo": {
     "brandName": "woladen",
     "seoName": "woladen - Smart EV Stops in Europe",
-    "primaryTagline": "Plugs for Cars. Perks for People.",
-    "humanHook": "The human side of charging.",
-    "timeLine": "Because charging time is your time.",
+    "primaryTagline": "The human side of charging",
+    "humanHook": "The human side of charging",
+    "timeLine": "Because charging time is your time",
     "homeTitle": "woladen - Smart EV Stops in Europe",
     "homeDescription": "Find better EV charging stops across Europe with useful places nearby."
   }
@@ -171,8 +171,8 @@ English content:
 
 - Title: `woladen - Smart EV Stops in Europe`
 - H1: `woladen`
-- Primary line: `Plugs for Cars. Perks for People.`
-- Subtitle: `The human side of charging.`
+- Slogan: `The human side of charging`
+- Subtitle: `Because charging time is your time`
 - Body: `Find EV charging stops across Europe near bakeries, restaurants, shops, playgrounds, cafes, and other useful places nearby. Because charging time is your time.`
 
 Homepage sections:
@@ -197,7 +197,7 @@ English content:
 
 - Title: `EV Charging Coverage Across Europe | woladen`
 - H1: `EV Charging Coverage Across Europe`
-- Tagline: `Plugs for Cars. Perks for People.`
+- Slogan: `The human side of charging`
 - Intro: `woladen helps you find smarter charging stops in the countries we currently serve: fast chargers for the car, useful places for the people inside it.`
 
 Required content:
@@ -221,7 +221,7 @@ English template:
 
 - Title: `EV Charging Stops in Germany | woladen`
 - H1: `EV Charging Stops in Germany`
-- Tagline: `Plugs for Cars. Perks for People.`
+- Slogan: `The human side of charging`
 - Intro: `Find EV charging stops across Germany with useful places nearby: restaurants, bakeries, shops, playgrounds, cafes, and other ways to make charging time yours.`
 
 Required content:
@@ -588,4 +588,3 @@ AMENITY_SLUGS = {
 ```
 
 If an amenity passes the threshold check in `data/open_static_summary.json` but lacks a validated entry in the `AMENITY_SLUGS` matrix for a given language, **the build must fail gracefully or skip that specific language page**, rather than guessing or outputting un-vetted translation string slugs.
-

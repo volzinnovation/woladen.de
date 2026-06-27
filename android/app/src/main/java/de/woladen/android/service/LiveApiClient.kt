@@ -23,6 +23,14 @@ import de.woladen.android.model.LiveJsonValue
 import de.woladen.android.model.LiveStationDetail
 import de.woladen.android.model.LiveStationLookupResponse
 import de.woladen.android.model.LiveStationSummary
+import de.woladen.android.model.RouteChargerResponse
+import de.woladen.android.model.RouteEndpoint
+import de.woladen.android.model.RouteFilterPayload
+import de.woladen.android.model.RouteGeometry
+import de.woladen.android.model.RouteNearestPoint
+import de.woladen.android.model.RouteStationCandidate
+import de.woladen.android.model.RouteStationMetadata
+import de.woladen.android.model.RouteSummary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -34,6 +42,7 @@ import java.net.Proxy
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Locale
+import kotlin.math.roundToInt
 
 class LiveApiClient(
     private val baseUrl: String = DEFAULT_BASE_URL,
@@ -116,6 +125,25 @@ class LiveApiClient(
         )
         connection.setRequestProperty("Accept", "application/json")
         parseCatalogInfoSummaryPayload(readJsonResponse(connection))
+    }
+
+    suspend fun routeChargers(
+        origin: RouteEndpoint,
+        destination: RouteEndpoint,
+        filters: RouteFilterPayload
+    ): RouteChargerResponse = withContext(Dispatchers.IO) {
+        val connection = openConnection(
+            path = "/v1/routes/chargers",
+            method = "POST",
+            timeoutMs = ROUTE_CHARGER_TIMEOUT_MS
+        )
+        connection.setRequestProperty("Accept", "application/json")
+        connection.setRequestProperty("Content-Type", "application/json")
+        connection.doOutput = true
+        connection.outputStream.bufferedWriter().use { writer ->
+            writer.write(routeChargerRequestBody(origin, destination, filters))
+        }
+        parseRouteChargerResponse(readJsonResponse(connection))
     }
 
     suspend fun webOpenStaticSummary(): OpenStaticSummary = withContext(Dispatchers.IO) {
@@ -370,6 +398,66 @@ class LiveApiClient(
             stations = stations,
             source = payload.optCleanString("source"),
             returnedCount = returnedCount
+        )
+    }
+
+    private fun parseRouteChargerResponse(payload: JSONObject): RouteChargerResponse {
+        val stationArray = payload.optJSONArray("stations") ?: JSONArray()
+        val stations = mutableListOf<RouteStationCandidate>()
+        for (index in 0 until stationArray.length()) {
+            val item = stationArray.optJSONObject(index) ?: continue
+            val station = item.optJSONObject("station") ?: continue
+            stations += RouteStationCandidate(
+                station = parseCatalogStation(station),
+                route = parseRouteStationMetadata(item.optJSONObject("route") ?: JSONObject())
+            )
+        }
+
+        return RouteChargerResponse(
+            route = parseRouteSummary(payload.optJSONObject("route") ?: JSONObject()),
+            stations = stations,
+            source = payload.optCleanString("source")
+        )
+    }
+
+    private fun parseRouteSummary(payload: JSONObject): RouteSummary {
+        val geometry = payload.optJSONObject("geometry")
+        return RouteSummary(
+            source = payload.optCleanString("source"),
+            profile = payload.optCleanString("profile"),
+            distanceM = payload.optNullableDouble("distance_m").toNonNegativeInt(),
+            durationS = payload.optNullableDouble("duration_s").toNonNegativeInt(),
+            geometry = RouteGeometry(
+                type = geometry?.optCleanString("type").orEmpty().ifBlank { "LineString" },
+                coordinates = parseRouteCoordinates(geometry?.optJSONArray("coordinates"))
+            )
+        )
+    }
+
+    private fun parseRouteCoordinates(payload: JSONArray?): List<List<Double>> {
+        if (payload == null) return emptyList()
+        val coordinates = mutableListOf<List<Double>>()
+        for (index in 0 until payload.length()) {
+            val point = payload.optJSONArray(index) ?: continue
+            val lon = point.optNullableDouble(0) ?: continue
+            val lat = point.optNullableDouble(1) ?: continue
+            coordinates += listOf(lon, lat)
+        }
+        return coordinates
+    }
+
+    private fun parseRouteStationMetadata(payload: JSONObject): RouteStationMetadata {
+        val nearest = payload.optJSONObject("nearest_route_point")
+        return RouteStationMetadata(
+            driveDistanceToRouteM = payload.optNullableDouble("drive_distance_to_route_m").toNonNegativeInt(),
+            routeDetourM = payload.optNullableDouble("route_detour_m").toNonNegativeInt(),
+            straightLineDistanceToRouteM = payload.optNullableDouble("straight_line_distance_to_route_m").toNonNegativeInt(),
+            routePositionM = payload.optNullableDouble("route_position_m").toNonNegativeInt(),
+            nearestRoutePoint = nearest?.let {
+                val lat = it.optNullableDouble("lat")
+                val lon = it.optNullableDouble("lon") ?: it.optNullableDouble("lng")
+                if (lat != null && lon != null) RouteNearestPoint(lat = lat, lon = lon) else null
+            }
         )
     }
 
@@ -704,6 +792,21 @@ class LiveApiClient(
         }
     }
 
+    private fun JSONArray.optNullableDouble(index: Int): Double? {
+        if (index < 0 || index >= length() || isNull(index)) return null
+        val value = opt(index)
+        return when (value) {
+            is Number -> value.toDouble().takeIf { it.isFinite() }
+            is String -> value.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it.isFinite() }
+            else -> null
+        }
+    }
+
+    private fun Double?.toNonNegativeInt(): Int {
+        val value = this ?: return 0
+        return maxOf(0, value.roundToInt())
+    }
+
     private fun firstNonBlank(vararg values: String): String {
         return values.firstOrNull { it.isNotBlank() }.orEmpty()
     }
@@ -725,8 +828,39 @@ class LiveApiClient(
         private const val CATALOG_SEARCH_TIMEOUT_MS = 4_500
         private const val CATALOG_DETAIL_TIMEOUT_MS = 4_500
         private const val CATALOG_SUMMARY_TIMEOUT_MS = 5_000
+        private const val ROUTE_CHARGER_TIMEOUT_MS = 120_000
         private const val WEB_SUMMARY_TIMEOUT_MS = 5_000
     }
+}
+
+internal fun routeChargerRequestBody(
+    origin: RouteEndpoint,
+    destination: RouteEndpoint,
+    filters: RouteFilterPayload
+): String {
+    return JSONObject()
+        .put("origin", routeEndpointJson(origin))
+        .put("destination", routeEndpointJson(destination))
+        .put(
+            "filters",
+            JSONObject()
+                .put("operator", filters.operator)
+                .put("min_power_kw", filters.minPowerKw)
+                .put("min_amenities_total", filters.minAmenitiesTotal)
+                .put("selected_amenities", JSONArray(filters.selectedAmenities))
+                .put("amenity_name_query", filters.amenityNameQuery)
+                .put("available_only", filters.availableOnly)
+                .put("currently_open_only", filters.currentlyOpenOnly)
+        )
+        .put("filter_mode", "route_calculation")
+        .toString()
+}
+
+private fun routeEndpointJson(endpoint: RouteEndpoint): JSONObject {
+    return JSONObject()
+        .put("lat", endpoint.lat)
+        .put("lon", endpoint.lon)
+        .put("label", endpoint.label)
 }
 
 internal fun catalogInfoSummaryFromJson(rawJson: String): CatalogInfoSummary =

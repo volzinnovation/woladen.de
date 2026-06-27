@@ -70,6 +70,8 @@ struct WoladenApp: App {
         switch screenshotConfig.scene {
         case .list:
             viewModel.selectedTab = .list
+        case .search:
+            viewModel.selectedTab = .list
         case .detail:
             viewModel.selectedTab = .list
             if let feature = screenshotFeature(for: screenshotConfig) {
@@ -77,6 +79,12 @@ struct WoladenApp: App {
             }
         case .map:
             viewModel.selectedTab = .map
+        case .route:
+            viewModel.selectedTab = .route
+            if let routeEndpoints = screenshotConfig.routeEndpoints {
+                viewModel.searchRoute(origin: routeEndpoints.origin, destination: routeEndpoints.destination)
+                await waitForScreenshotRoute()
+            }
         case .favorites:
             viewModel.selectedTab = .favorites
         case .info:
@@ -95,6 +103,17 @@ struct WoladenApp: App {
             return feature
         }
         return viewModel.discoveredFeatures.first ?? viewModel.allFeatures.first
+    }
+
+    @MainActor
+    private func waitForScreenshotRoute() async {
+        let startedAt = Date()
+        while viewModel.isLoadingRoute || (viewModel.routeSummary == nil && viewModel.routeError == nil) {
+            if Date().timeIntervalSince(startedAt) > 130 {
+                return
+            }
+            try? await Task.sleep(nanoseconds: 250_000_000)
+        }
     }
 }
 
@@ -126,8 +145,10 @@ private struct StartupLoadingView: View {
 private struct AppStoreScreenshotConfig {
     enum Scene: String {
         case list
+        case search
         case detail
         case map
+        case route
         case favorites
         case info
     }
@@ -135,13 +156,16 @@ private struct AppStoreScreenshotConfig {
     let scene: Scene
     let outputName: String
     let stationID: String?
+    let routeEndpoints: AppStoreScreenshotRouteEndpoints?
 
     var renderDelayNanoseconds: UInt64 {
         switch scene {
-        case .list, .favorites, .info:
+        case .list, .search, .favorites, .info:
             return 1_000_000_000
         case .detail:
             return 2_000_000_000
+        case .route:
+            return 2_500_000_000
         case .map:
             return 3_500_000_000
         }
@@ -158,8 +182,43 @@ private struct AppStoreScreenshotConfig {
         return AppStoreScreenshotConfig(
             scene: scene,
             outputName: environment["WOLADEN_SCREENSHOT_NAME"]?.trimmedNonEmpty ?? rawScene,
-            stationID: environment["WOLADEN_SCREENSHOT_STATION_ID"]?.trimmedNonEmpty
+            stationID: environment["WOLADEN_SCREENSHOT_STATION_ID"]?.trimmedNonEmpty,
+            routeEndpoints: AppStoreScreenshotRouteEndpoints(environment: environment)
         )
+    }
+}
+
+struct AppStoreScreenshotRouteEndpoints {
+    let origin: RouteEndpoint
+    let destination: RouteEndpoint
+
+    init?(environment: [String: String] = ProcessInfo.processInfo.environment) {
+        guard environment["WOLADEN_SCREENSHOT_MODE"] == "1",
+              environment["WOLADEN_SCREENSHOT_SCENE"] == AppStoreScreenshotConfig.Scene.route.rawValue,
+              let origin = Self.endpoint(
+                prefix: "WOLADEN_SCREENSHOT_ROUTE_ORIGIN",
+                environment: environment
+              ),
+              let destination = Self.endpoint(
+                prefix: "WOLADEN_SCREENSHOT_ROUTE_DESTINATION",
+                environment: environment
+              ) else {
+            return nil
+        }
+
+        self.origin = origin
+        self.destination = destination
+    }
+
+    private static func endpoint(prefix: String, environment: [String: String]) -> RouteEndpoint? {
+        guard let label = environment["\(prefix)_LABEL"]?.trimmedNonEmpty,
+              let rawLat = environment["\(prefix)_LAT"]?.trimmedNonEmpty,
+              let rawLon = environment["\(prefix)_LON"]?.trimmedNonEmpty,
+              let lat = Double(rawLat),
+              let lon = Double(rawLon) else {
+            return nil
+        }
+        return RouteEndpoint(lat: lat, lon: lon, label: label)
     }
 }
 

@@ -73,6 +73,7 @@ struct RootTabView: View {
             VStack(spacing: 8) {
                 wideTabButton(.list, title: String(localized: "nav.list"), systemImage: "list.bullet")
                 wideTabButton(.map, title: String(localized: "nav.map"), systemImage: "map")
+                wideTabButton(.route, title: String(localized: "nav.route"), systemImage: "point.topleft.down.curvedto.point.bottomright.up")
                 wideTabButton(.favorites, title: String(localized: "nav.favorites"), systemImage: "star")
                 wideTabButton(.info, title: String(localized: "nav.info"), systemImage: "info.circle")
             }
@@ -106,6 +107,8 @@ struct RootTabView: View {
             ListTabView(showingFilter: $showingFilter)
         case .map:
             MapTabView(showingFilter: $showingFilter)
+        case .route:
+            RouteTabView(showingFilter: $showingFilter)
         case .favorites:
             FavoritesTabView()
         case .info:
@@ -119,6 +122,7 @@ struct RootTabView: View {
             HStack(spacing: 8) {
                 tabButton(.list, title: String(localized: "nav.list"), systemImage: "list.bullet")
                 tabButton(.map, title: String(localized: "nav.map"), systemImage: "map")
+                tabButton(.route, title: String(localized: "nav.route"), systemImage: "point.topleft.down.curvedto.point.bottomright.up")
                 tabButton(.favorites, title: String(localized: "nav.favorites"), systemImage: "star")
                 tabButton(.info, title: String(localized: "nav.info"), systemImage: "info.circle")
             }
@@ -201,7 +205,7 @@ struct RootTabView: View {
 
     private var shouldShowWideDetail: Bool {
         switch viewModel.selectedTab {
-        case .list, .map, .favorites:
+        case .list, .map, .route, .favorites:
             return true
         case .info:
             return false

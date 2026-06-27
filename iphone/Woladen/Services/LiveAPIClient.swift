@@ -23,6 +23,7 @@ final class LiveAPIClient {
     static let defaultWebOpenStaticSummaryURL = URL(string: "https://woladen.de/data/open_static_summary.json")!
     static let defaultWebBuildSummaryURL = URL(string: "https://woladen.de/data/summary.json")!
     static let maxLookupStationIDs = 20
+    private static let routeChargerTimeout: TimeInterval = 120.0
 
     private let baseURL: URL?
     private let session: URLSession
@@ -139,6 +140,27 @@ final class LiveAPIClient {
         return try await send(request)
     }
 
+    func routeChargers(
+        origin: RouteEndpoint,
+        destination: RouteEndpoint,
+        filters: RouteFilterPayload
+    ) async throws -> RouteChargerResponse {
+        guard let url = endpointURL(path: "/v1/routes/chargers") else {
+            throw LiveAPIError.invalidBaseURL
+        }
+
+        let payload = RouteChargerRequest(
+            origin: origin,
+            destination: destination,
+            filters: filters,
+            filterMode: "route_calculation"
+        )
+        var request = makeRequest(url: url, method: "POST", timeout: Self.routeChargerTimeout)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(payload)
+        return try await send(request)
+    }
+
     func webOpenStaticSummary() async throws -> OpenStaticSummary {
         let request = makeRequest(url: Self.defaultWebOpenStaticSummaryURL, method: "GET", timeout: 5.0)
         return try await send(request)
@@ -197,6 +219,20 @@ final class LiveAPIClient {
         var allowed = CharacterSet.urlPathAllowed
         allowed.remove("/")
         return value.addingPercentEncoding(withAllowedCharacters: allowed)
+    }
+}
+
+private struct RouteChargerRequest: Encodable {
+    let origin: RouteEndpoint
+    let destination: RouteEndpoint
+    let filters: RouteFilterPayload
+    let filterMode: String
+
+    enum CodingKeys: String, CodingKey {
+        case origin
+        case destination
+        case filters
+        case filterMode = "filter_mode"
     }
 }
 

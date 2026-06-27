@@ -90,7 +90,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260627-brand-route1";
+} from "./i18n.mjs?v=20260627-info-copy1";
 
 /**
  * woladen.de - Modern Frontend Logic

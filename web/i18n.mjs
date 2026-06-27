@@ -78,7 +78,7 @@ const FALLBACK_BUNDLE = {
     primaryTagline: "The human side of charging",
     humanHook: "The human side of charging",
     timeLine: "Because charging time is your time",
-    productMessage: "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. Because charging time should be time well spent.",
+    productMessage: "Find available and reliable chargers with better places to wait nearby, from bakeries and restaurants to shops, playgrounds, and cafés.",
   },
   language: {
     label: "Language",
@@ -228,9 +228,9 @@ const FALLBACK_BUNDLE = {
     legendFavorite: "Favorite station",
     legendMarkerOutOfOrder: "Live marker: out of order",
     legendMarkerFullyOccupied: "Live marker: fully occupied",
-    aboutIntro: "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. woladen knows",
+    aboutIntro: "Find available and reliable charging stations with better places to wait nearby, from bakeries and restaurants to shops, playgrounds, and cafés. woladen knows",
     aboutStationCountJoin: "stations with",
-    aboutOutro: "charging points in many countries and shows them within 20 km of your location or selected map position. Because charging time should be time well spent. By default, woladen searches fast chargers from 50 kW; the power filter can include normal chargers below 50 kW.",
+    aboutOutro: "charging points in many countries and shows them within 20 km of your location or selected map position. Where live and analytical data is available, availability, outages, and occupancy patterns help you choose. By default, woladen searches fast chargers from 50 kW; the power filter can include normal chargers below 50 kW.",
     sourceUnknown: "Data source",
     licensesTitle: "Map data & licenses",
     osmNote: "Map data and POI data © OpenStreetMap contributors, available under ODbL v1.0.",
@@ -529,7 +529,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260627-brand-route1`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260627-info-copy1`, import.meta.url));
     if (!response.ok) {
       return {};
     }

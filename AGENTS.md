@@ -14,8 +14,10 @@ This file is the operational guide for coding agents working in this repository.
 
 ## Product Invariants
 
-- `woladen.de` is a Germany-focused fast-charger product.
-- The core static dataset comes from the Bundesnetzagentur charging registry.
+- `woladen.de` is an EU-wide EV charging product covering the European Union plus Switzerland and Norway.
+- The canonical brand slogan is `The human side of charging`; the canonical subtitle is `Because charging time is your time`.
+- Do not use or revive `Plugs for Cars. Perks for People.` or variants such as `Plugs for cars, Perks for humans`.
+- The core static dataset comes from the open-static European charging catalog; Germany/Mobilithek/Bundesnetzagentur is one source path, not the product boundary.
 - The default fast-charger threshold is `>= 50 kW`.
 - The default amenity radius is `250 m`.
 - Live AFIR / OCPI data enriches the product, but the baseline static experience must remain useful when live data is missing.

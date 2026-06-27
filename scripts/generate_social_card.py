@@ -103,10 +103,10 @@ def main() -> None:
     small_font = font(FONT_SEMIBOLD, 24)
 
     draw.text((184, 82), "woladen", fill="#0f2f2d", font=brand_font)
-    draw.text((84, 176), "The human side\nof charging.", fill="#102a28", font=headline_font, spacing=2)
+    draw.text((84, 176), "The human side\nof charging", fill="#102a28", font=headline_font, spacing=2)
     draw.text(
         (88, 318),
-        "Because charging time\nis your time.",
+        "Because charging time\nis your time",
         fill="#31514e",
         font=sub_font,
         spacing=4,

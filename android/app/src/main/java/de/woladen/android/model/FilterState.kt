@@ -3,6 +3,7 @@ package de.woladen.android.model
 data class FilterState(
     val operatorName: String = "",
     val minPowerKw: Double = 50.0,
+    val minAmenityCount: Double = 0.0,
     val selectedAmenities: Set<String> = emptySet(),
     val amenityNameQuery: String = "",
     val availableOnly: Boolean = true,
@@ -13,6 +14,7 @@ data class FilterState(
             var count = 0
             if (operatorName.isNotEmpty()) count += 1
             if (minPowerKw > 0.0) count += 1
+            if (minAmenityCount > 0.0) count += 1
             count += selectedAmenities.size
             if (amenityNameQuery.isNotBlank()) count += 1
             if (availableOnly) count += 1
@@ -24,6 +26,7 @@ data class FilterState(
         get() = FilterState(
             operatorName = "",
             minPowerKw = 50.0,
+            minAmenityCount = 0.0,
             selectedAmenities = emptySet(),
             amenityNameQuery = "",
             availableOnly = false,

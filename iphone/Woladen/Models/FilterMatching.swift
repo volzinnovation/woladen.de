@@ -28,6 +28,9 @@ extension ChargerProperties {
         if maxPowerKW < filterState.minPowerKW {
             return false
         }
+        if filterState.minAmenityCount > 0 && amenitiesTotal < Int(filterState.minAmenityCount.rounded()) {
+            return false
+        }
         if filterState.availableOnly && !hasAvailableChargingPoint {
             return false
         }

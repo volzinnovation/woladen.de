@@ -13,7 +13,7 @@ METADATA_DIR = METADATA_ROOT / "de-DE"
 APP_NAME = "woladen"
 SUBTITLE = "Smarte Ladestopps in Europa"
 PROMOTIONAL_TEXT = (
-    "Plugs for Cars. Perks for People. Finde bessere Ladestopps nahe Cafés, "
+    "The human side of charging. Finde bessere Ladestopps nahe Cafés, "
     "Bäckereien, Restaurants, Läden und Spielplätzen - mit Live-Infos, wo verfügbar."
 )
 DESCRIPTION = """woladen hilft dir, bessere Ladepausen zu finden: Schnelllader für das Auto, nützliche Orte für die Menschen darin.
@@ -34,7 +34,7 @@ woladen bleibt bewusst schlank: kein Nutzerkonto, keine Werbung, keine In-App-K�
 
 Wenn du deinen Standort freigibst, verwendet woladen ihn nur, um Ladepunkte in der Nähe zu sortieren und die Karte auf deine Umgebung auszurichten. Favoriten bleiben lokal auf deinem Gerät.
 
-Plugs for Cars. Perks for People. Denn Ladezeit ist deine Zeit."""
+The human side of charging. Because charging time is your time."""
 KEYWORDS = "E-Auto,Laden,Ladesäule,Schnelllader,EV,Elektroauto,Route,Café,Bäckerei,Restaurant"
 RELEASE_NOTES = """Version 1.0.2 aktualisiert woladen auf den neuen europäischen Live-Katalog.
 

@@ -337,7 +337,8 @@ private val FilterState.hasClearableFilters: Boolean
         availableOnly ||
         currentlyOpenOnly ||
         selectedAmenities.isNotEmpty() ||
-        minPowerKw.toInt() != 50
+        minPowerKw.toInt() != 50 ||
+        minAmenityCount.toInt() != 0
 
 @Composable
 private fun activeFilterLabels(filter: FilterState): List<String> {
@@ -358,6 +359,10 @@ private fun activeFilterLabels(filter: FilterState): List<String> {
     if (filter.minPowerKw > 0.0) {
         labels += stringResource(R.string.i18n_filters_minpowerlabel)
             .replace("{value}", filter.minPowerKw.toInt().toString())
+    }
+    if (filter.minAmenityCount > 0.0) {
+        labels += stringResource(R.string.i18n_filters_minamenitieslabel)
+            .replace("{value}", filter.minAmenityCount.toInt().toString())
     }
     labels += filter.selectedAmenities
         .map { AmenityCatalog.labelFor(it) }

@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Map
+import androidx.compose.material.icons.outlined.NearMe
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -96,6 +97,7 @@ fun WoladenAppScreen(
                     StationDetailSheet(
                         feature = feature,
                         isFavorite = favoritesStore.isFavorite(feature.properties.stationId),
+                        favoritesStore = favoritesStore,
                         onToggleFavorite = {
                             favoritesStore.toggle(feature.properties.stationId)
                         },
@@ -190,6 +192,7 @@ private fun WideAppLayout(
                 StationDetailWideDialog(
                     feature = feature,
                     isFavorite = favoritesStore.isFavorite(feature.properties.stationId),
+                    favoritesStore = favoritesStore,
                     onToggleFavorite = {
                         favoritesStore.toggle(feature.properties.stationId)
                     },
@@ -226,6 +229,14 @@ private fun AppTabContent(
                 locationService = locationService,
                 favoriteStationIds = favoritesStore.favorites,
                 onRequestLocationPermission = onRequestLocationPermission,
+                onShowFilter = onShowFilter
+            )
+        }
+        AppViewModel.AppTab.ROUTE -> {
+            RouteTabView(
+                viewModel = viewModel,
+                locationService = locationService,
+                favoritesStore = favoritesStore,
                 onShowFilter = onShowFilter
             )
         }
@@ -415,6 +426,7 @@ private fun tabItems(): List<TabItem> {
     return listOf(
         TabItem(AppViewModel.AppTab.LIST, stringResource(R.string.i18n_nav_list), Icons.Outlined.Menu),
         TabItem(AppViewModel.AppTab.MAP, stringResource(R.string.i18n_nav_map), Icons.Outlined.Map),
+        TabItem(AppViewModel.AppTab.ROUTE, stringResource(R.string.i18n_nav_route), Icons.Outlined.NearMe),
         TabItem(AppViewModel.AppTab.FAVORITES, stringResource(R.string.i18n_nav_favorites), Icons.Outlined.Star),
         TabItem(AppViewModel.AppTab.INFO, stringResource(R.string.i18n_nav_info), Icons.Outlined.Info)
     )

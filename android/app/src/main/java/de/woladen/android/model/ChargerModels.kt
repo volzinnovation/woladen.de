@@ -19,7 +19,8 @@ data class GeoJsonFeature(
     val geometry: GeoJsonPointGeometry,
     val properties: ChargerProperties,
     val liveSummary: LiveStationSummary? = null,
-    val liveDetail: LiveStationDetail? = null
+    val liveDetail: LiveStationDetail? = null,
+    val routeMetadata: RouteStationMetadata? = null
 ) {
     val latitude: Double get() = geometry.latitude
     val longitude: Double get() = geometry.longitude

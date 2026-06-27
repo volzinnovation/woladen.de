@@ -13,6 +13,7 @@ struct MapTabView: View {
 
     @Binding var showingFilter: Bool
 
+    @StateObject private var locationSearchCompleter = PlaceSearchCompleter()
     @State private var cameraPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 51.1657, longitude: 10.4515),
@@ -25,10 +26,19 @@ struct MapTabView: View {
     @State private var locationSearchQuery = ""
     @State private var isSearchingLocation = false
     @State private var locationSearchError: String?
+    @FocusState private var isLocationSearchFocused: Bool
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Map(position: $cameraPosition) {
+                if let route = viewModel.routeSummary {
+                    let coordinates = routePolylineCoordinates(route)
+                    if coordinates.count > 1 {
+                        MapPolyline(coordinates: coordinates)
+                            .stroke(woladenBrandColor, style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                    }
+                }
+
                 ForEach(mapItems()) { feature in
                     Annotation("", coordinate: feature.coordinate) {
                         Button {
@@ -55,6 +65,7 @@ struct MapTabView: View {
             }
             .ignoresSafeArea(edges: [.top, .horizontal])
             .onMapCameraChange(frequency: .onEnd) { context in
+                guard viewModel.routeSummary == nil else { return }
                 guard hasCenteredInitialLocation else { return }
                 let center = context.region.center
                 guard shouldQuery(for: center) else { return }
@@ -95,13 +106,21 @@ struct MapTabView: View {
             guard newValue == .active else { return }
             handleActivation()
         }
+        .onChange(of: routeMapCameraKey) { _, _ in
+            if viewModel.routeSummary != nil {
+                focusMapOnRoute()
+            }
+        }
         .task {
             await runGPSRefreshLoop()
         }
     }
 
     private func mapItems() -> [GeoJSONFeature] {
-        viewModel.discoveredFeatures
+        if viewModel.routeSummary != nil {
+            return viewModel.routeDisplayFeatures()
+        }
+        return viewModel.discoveredFeatures
     }
 
     private var mapControlsOverlay: some View {
@@ -125,6 +144,14 @@ struct MapTabView: View {
                     .textInputAutocapitalization(.words)
                     .disableAutocorrection(true)
                     .submitLabel(.search)
+                    .focused($isLocationSearchFocused)
+                    .onChange(of: locationSearchQuery) { _, newValue in
+                        locationSearchError = nil
+                        locationSearchCompleter.update(
+                            query: newValue,
+                            region: locationService.currentLocation.map(searchRegion)
+                        )
+                    }
                     .onSubmit(searchLocation)
                     .font(.subheadline)
                     .padding(.horizontal, 12)
@@ -162,6 +189,19 @@ struct MapTabView: View {
             }
             .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 5)
 
+            if isLocationSearchFocused, !locationSearchCompleter.completions.isEmpty {
+                PlaceCompletionList(completions: locationSearchCompleter.completions) { completion in
+                    selectLocationCompletion(completion)
+                }
+                .frame(maxWidth: 620)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color(.separator).opacity(0.55), lineWidth: 1)
+                }
+                .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 5)
+            }
+
             if let locationSearchError {
                 Text(locationSearchError)
                     .font(.caption.weight(.semibold))
@@ -196,16 +236,15 @@ struct MapTabView: View {
         guard !query.isEmpty, !isSearchingLocation else { return }
         isSearchingLocation = true
         locationSearchError = nil
+        locationSearchCompleter.clear()
+        isLocationSearchFocused = false
 
         Task {
             do {
                 let request = MKLocalSearch.Request()
                 request.naturalLanguageQuery = query
                 if let current = locationService.currentLocation {
-                    request.region = MKCoordinateRegion(
-                        center: current.coordinate,
-                        span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
-                    )
+                    request.region = searchRegion(around: current)
                 }
                 let response = try await MKLocalSearch(request: request).start()
                 guard let item = response.mapItems.first else {
@@ -213,21 +252,71 @@ struct MapTabView: View {
                     isSearchingLocation = false
                     return
                 }
-                let coordinate = item.placemark.coordinate
-                cameraPosition = .region(
-                    MKCoordinateRegion(
-                        center: coordinate,
-                        span: MKCoordinateSpan(latitudeDelta: 0.12, longitudeDelta: 0.12)
-                    )
-                )
-                lastQueriedCenter = coordinate
-                hasCenteredInitialLocation = true
-                viewModel.handleMapCenterChange(coordinate)
+                applyMapSearchItem(item)
             } catch {
                 locationSearchError = String(localized: "search.unavailable")
             }
             isSearchingLocation = false
         }
+    }
+
+    private func selectLocationCompletion(_ completion: MKLocalSearchCompletion) {
+        guard !isSearchingLocation else { return }
+        isSearchingLocation = true
+        locationSearchError = nil
+
+        Task {
+            do {
+                let request = MKLocalSearch.Request(completion: completion)
+                if let current = locationService.currentLocation {
+                    request.region = searchRegion(around: current)
+                }
+                let response = try await MKLocalSearch(request: request).start()
+                guard let item = response.mapItems.first else {
+                    locationSearchError = String(localized: "search.noResults")
+                    isSearchingLocation = false
+                    return
+                }
+                locationSearchQuery = placeLabel(for: item, fallback: completion.title)
+                locationSearchCompleter.clear()
+                isLocationSearchFocused = false
+                applyMapSearchItem(item)
+            } catch {
+                locationSearchError = String(localized: "search.unavailable")
+            }
+            isSearchingLocation = false
+        }
+    }
+
+    private func applyMapSearchItem(_ item: MKMapItem) {
+        let coordinate = item.placemark.coordinate
+        cameraPosition = .region(
+            MKCoordinateRegion(
+                center: coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.12, longitudeDelta: 0.12)
+            )
+        )
+        lastQueriedCenter = coordinate
+        hasCenteredInitialLocation = true
+        if viewModel.routeSummary == nil {
+            viewModel.handleMapCenterChange(coordinate)
+        }
+    }
+
+    private func searchRegion(around location: CLLocation) -> MKCoordinateRegion {
+        MKCoordinateRegion(
+            center: location.coordinate,
+            span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
+        )
+    }
+
+    private func placeLabel(for item: MKMapItem, fallback: String) -> String {
+        let name = item.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !name.isEmpty {
+            return name
+        }
+        let title = item.placemark.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return title.isEmpty ? fallback : title
     }
 
     private func centerMap(on location: CLLocation) {
@@ -239,7 +328,9 @@ struct MapTabView: View {
             )
         )
         lastQueriedCenter = location.coordinate
-        viewModel.handleMapCenterChange(location.coordinate)
+        if viewModel.routeSummary == nil {
+            viewModel.handleMapCenterChange(location.coordinate)
+        }
     }
 
     private func shouldQuery(for center: CLLocationCoordinate2D) -> Bool {
@@ -250,6 +341,9 @@ struct MapTabView: View {
     }
 
     private func handleActivation() {
+        if focusMapOnRoute() {
+            return
+        }
         if let current = locationService.currentLocation {
             if !hasCenteredInitialLocation {
                 centerMap(on: current)
@@ -268,11 +362,13 @@ struct MapTabView: View {
         while !Task.isCancelled {
             try? await Task.sleep(nanoseconds: mapGPSRefreshIntervalNanoseconds)
             guard !Task.isCancelled, scenePhase == .active else { continue }
+            guard viewModel.routeSummary == nil else { continue }
             refreshFromGPSPosition()
         }
     }
 
     private func refreshFromGPSPosition() {
+        guard viewModel.routeSummary == nil else { return }
         guard locationService.authorizationStatus == .authorizedWhenInUse ||
                 locationService.authorizationStatus == .authorizedAlways else {
             return
@@ -284,6 +380,49 @@ struct MapTabView: View {
         }
         lastQueriedCenter = current.coordinate
         viewModel.refreshMapForUserLocation(current)
+    }
+
+    private var routeMapCameraKey: String {
+        guard let route = viewModel.routeSummary else { return "" }
+        let ids = viewModel.routeDisplayFeatures().map(\.id).joined(separator: ",")
+        return "\(route.distanceM):\(route.durationS):\(route.geometry.coordinates.count):\(ids)"
+    }
+
+    @discardableResult
+    private func focusMapOnRoute() -> Bool {
+        guard let route = viewModel.routeSummary,
+              let rect = routeMapRect(route: route, features: viewModel.routeDisplayFeatures()) else {
+            return false
+        }
+        cameraPosition = .rect(rect)
+        hasCenteredInitialLocation = true
+        return true
+    }
+
+    private func routePolylineCoordinates(_ route: RouteSummary) -> [CLLocationCoordinate2D] {
+        route.geometry.coordinates.compactMap { point in
+            guard point.count >= 2 else { return nil }
+            let lon = point[0]
+            let lat = point[1]
+            guard lat.isFinite, lon.isFinite else { return nil }
+            return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+        }
+    }
+
+    private func routeMapRect(route: RouteSummary, features: [GeoJSONFeature]) -> MKMapRect? {
+        let coordinates = routePolylineCoordinates(route) + features.map(\.coordinate)
+        guard !coordinates.isEmpty else { return nil }
+
+        var rect = MKMapRect.null
+        for coordinate in coordinates {
+            let point = MKMapPoint(coordinate)
+            let pointRect = MKMapRect(x: point.x, y: point.y, width: 1, height: 1)
+            rect = rect.isNull ? pointRect : rect.union(pointRect)
+        }
+        guard !rect.isNull else { return nil }
+        let insetX = max(rect.width * 0.12, 30_000)
+        let insetY = max(rect.height * 0.12, 30_000)
+        return rect.insetBy(dx: -insetX, dy: -insetY)
     }
 
     private func requestCurrentLocation() {

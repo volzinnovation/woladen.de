@@ -23,6 +23,7 @@ struct StationDetailView: View {
             span: MKCoordinateSpan(latitudeDelta: 7.5, longitudeDelta: 7.5)
         )
     )
+    @State private var favoriteCategoryInput = ""
 
     private var feature: GeoJSONFeature? {
         viewModel.feature(forStationID: stationID) ?? viewModel.selectedFeature
@@ -106,11 +107,107 @@ struct StationDetailView: View {
     private func detailContent(_ feature: GeoJSONFeature) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             headerSection(feature)
+            favoriteCategorySection(feature)
             amenitySection(feature)
             liveSection(feature)
             staticDetailsSection(feature)
             sourceFooterSection(feature)
         }
+    }
+
+    @ViewBuilder
+    private func favoriteCategorySection(_ feature: GeoJSONFeature) -> some View {
+        let stationID = feature.properties.stationID
+        if favoritesStore.isFavorite(stationID) {
+            let categories = favoritesStore.categories(for: stationID)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Text(String(localized: "detail.favoriteCategories"))
+                        .font(.headline)
+                    Spacer()
+                    Text(String(localized: "detail.categoryDeviceOnly"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                if categories.isEmpty {
+                    Text(String(localized: "favorites.uncategorized"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color(.secondarySystemBackground), in: Capsule())
+                } else {
+                    FlowLayout(spacing: 7) {
+                        ForEach(categories, id: \.self) { category in
+                            HStack(spacing: 6) {
+                                Text(category)
+                                Button {
+                                    favoritesStore.removeCategory(category, from: stationID)
+                                } label: {
+                                    Image(systemName: "xmark")
+                                        .font(.caption2.weight(.bold))
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(
+                                    Text(
+                                        String(localized: "detail.removeCategory")
+                                            .replacingOccurrences(of: "{category}", with: category)
+                                    )
+                                )
+                            }
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(woladenBrandColor.opacity(0.12), in: Capsule())
+                            .foregroundStyle(woladenBrandColor)
+                        }
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    TextField(String(localized: "detail.categoryPlaceholder"), text: $favoriteCategoryInput)
+                        .submitLabel(.done)
+                        .onSubmit {
+                            addFavoriteCategory(to: stationID)
+                        }
+                        .padding(.horizontal, 12)
+                        .frame(height: 40)
+                        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
+
+                    Button {
+                        addFavoriteCategory(to: stationID)
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.headline.weight(.semibold))
+                            .frame(width: 40, height: 40)
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityLabel(Text(String(localized: "detail.addCategory")))
+                }
+
+                let suggestions = favoritesStore.categorySuggestions(query: favoriteCategoryInput, excluding: categories)
+                if !suggestions.isEmpty {
+                    FlowLayout(spacing: 7) {
+                        ForEach(suggestions, id: \.self) { suggestion in
+                            Button(suggestion) {
+                                favoriteCategoryInput = suggestion
+                                addFavoriteCategory(to: stationID)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func addFavoriteCategory(to stationID: String) {
+        let category = normalizeCategoryLabel(favoriteCategoryInput)
+        guard !category.isEmpty else { return }
+        favoritesStore.addCategory(category, to: stationID)
+        favoriteCategoryInput = ""
     }
 
     private func mapSection(_ feature: GeoJSONFeature) -> some View {
@@ -567,4 +664,54 @@ private struct MapPoint: Identifiable {
     let coordinate: CLLocationCoordinate2D
     let symbol: String
     let isStation: Bool
+}
+
+private struct FlowLayout: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? 320
+        var width: CGFloat = 0
+        var height: CGFloat = 0
+        var rowWidth: CGFloat = 0
+        var rowHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if rowWidth > 0, rowWidth + spacing + size.width > maxWidth {
+                width = max(width, rowWidth)
+                height += rowHeight + spacing
+                rowWidth = size.width
+                rowHeight = size.height
+            } else {
+                rowWidth += rowWidth == 0 ? size.width : spacing + size.width
+                rowHeight = max(rowHeight, size.height)
+            }
+        }
+
+        width = max(width, rowWidth)
+        height += rowHeight
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX
+        var y = bounds.minY
+        var rowHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > bounds.minX, x + size.width > bounds.maxX {
+                x = bounds.minX
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            subview.place(
+                at: CGPoint(x: x, y: y),
+                proposal: ProposedViewSize(width: size.width, height: size.height)
+            )
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+    }
 }

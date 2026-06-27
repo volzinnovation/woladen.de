@@ -17,6 +17,9 @@ import de.woladen.android.model.GeoJsonFeature
 import de.woladen.android.model.LiveStationDetail
 import de.woladen.android.model.LiveStationSummary
 import de.woladen.android.model.OperatorEntry
+import de.woladen.android.model.RouteEndpoint
+import de.woladen.android.model.RouteFilterPayload
+import de.woladen.android.model.RouteSummary
 import de.woladen.android.model.matches
 import de.woladen.android.repository.ChargerRepository
 import de.woladen.android.service.LiveApiClient
@@ -40,6 +43,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     enum class AppTab {
         LIST,
         MAP,
+        ROUTE,
         FAVORITES,
         INFO
     }
@@ -90,6 +94,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var isLoadingInfoSummary: Boolean by mutableStateOf(false)
         private set
 
+    var routeSummary: RouteSummary? by mutableStateOf(null)
+        private set
+
+    var routeFeatures: List<GeoJsonFeature> by mutableStateOf(emptyList())
+        private set
+
+    var routeError: String? by mutableStateOf(null)
+        private set
+
+    var isLoadingRoute: Boolean by mutableStateOf(false)
+        private set
+
     private val liveApiClient = LiveApiClient()
     private val repository = ChargerRepository(liveApiClient)
 
@@ -111,11 +127,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val pendingLiveSummaryStationIds: MutableSet<String> = mutableSetOf()
     private val pendingLiveDetailStationIds: MutableSet<String> = mutableSetOf()
     private val pendingCatalogDetailStationIds: MutableSet<String> = mutableSetOf()
+    private var routeCalculatedFilters: RouteFilterPayload? = null
 
     private var refreshNearbyJob: Job? = null
     private var liveSummaryRefreshJob: Job? = null
     private var selectedFeatureRefreshJob: Job? = null
     private var infoSummaryJob: Job? = null
+    private var routeSearchJob: Job? = null
 
     init {
         startLiveSummaryRefreshLoop()
@@ -126,6 +144,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         liveSummaryRefreshJob?.cancel()
         selectedFeatureRefreshJob?.cancel()
         infoSummaryJob?.cancel()
+        routeSearchJob?.cancel()
         super.onCleared()
     }
 
@@ -133,6 +152,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         return FilterState(
             operatorName = filterPreferences.getString(FILTER_OPERATOR_NAME_KEY, "").orEmpty(),
             minPowerKw = filterPreferences.getFloat(FILTER_MIN_POWER_KW_KEY, 50f).toDouble(),
+            minAmenityCount = filterPreferences.getFloat(FILTER_MIN_AMENITY_COUNT_KEY, 0f).toDouble(),
             selectedAmenities = filterPreferences
                 .getStringSet(FILTER_SELECTED_AMENITIES_KEY, emptySet())
                 .orEmpty()
@@ -147,6 +167,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         filterPreferences.edit()
             .putString(FILTER_OPERATOR_NAME_KEY, state.operatorName)
             .putFloat(FILTER_MIN_POWER_KW_KEY, state.minPowerKw.toFloat())
+            .putFloat(FILTER_MIN_AMENITY_COUNT_KEY, state.minAmenityCount.toFloat())
             .putStringSet(FILTER_SELECTED_AMENITIES_KEY, state.selectedAmenities)
             .putString(FILTER_AMENITY_NAME_QUERY_KEY, state.amenityNameQuery)
             .putBoolean(FILTER_AVAILABLE_ONLY_KEY, state.availableOnly)
@@ -155,6 +176,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun load(userLocation: Location?) {
+        if (userLocation == null) {
+            waitForLocation()
+            return
+        }
+
         isLoading = true
         loadError = null
 
@@ -174,17 +200,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             )
             loadError = null
 
-            val center = userLocation?.let { location ->
-                didSeedFromUserLocation = true
-                lastUserLocationCenter = location.latitude to location.longitude
-                location.latitude to location.longitude
-            } ?: DEFAULT_CATALOG_CENTER
+            didSeedFromUserLocation = true
+            lastUserLocationCenter = userLocation.latitude to userLocation.longitude
+            val center = userLocation.latitude to userLocation.longitude
             isAwaitingFirstLocationFix = false
             refreshNearbyAsync(center.first, center.second)
         }
     }
 
     fun reloadCatalog(userLocation: Location?) {
+        if (userLocation == null) {
+            waitForLocation()
+            return
+        }
         repository.invalidateCache()
         load(userLocation)
     }
@@ -195,9 +223,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             didSeedFromUserLocation = true
             lastUserLocationCenter = userLocation.latitude to userLocation.longitude
             refreshNearbyAsync(userLocation.latitude, userLocation.longitude)
-        } else {
-            val center = lastCatalogCenter ?: DEFAULT_CATALOG_CENTER
+        } else if (lastCatalogCenter != null) {
+            val center = lastCatalogCenter ?: return
             refreshNearbyAsync(center.first, center.second)
+        } else {
+            waitForLocation()
+            return
         }
         isAwaitingFirstLocationFix = false
     }
@@ -218,8 +249,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun reloadListForCurrentLocation(location: Location?) {
         if (location == null) {
-            val center = lastCatalogCenter ?: DEFAULT_CATALOG_CENTER
-            refreshNearbyAsync(center.first, center.second)
+            waitForLocation()
             return
         }
         applyFilters(location)
@@ -227,8 +257,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun reloadMapForCenter(latitude: Double?, longitude: Double?) {
         if (latitude == null || longitude == null) {
-            val center = lastCatalogCenter ?: DEFAULT_CATALOG_CENTER
-            handleMapCenterChange(center.first, center.second)
+            waitForLocation()
             return
         }
         handleMapCenterChange(latitude, longitude)
@@ -236,9 +265,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshNearbyFromUserLocation(location: Location?, force: Boolean = false) {
         if (location == null) {
-            if (lastCatalogCenter == null || force) {
-                val center = DEFAULT_CATALOG_CENTER
+            if (lastCatalogCenter != null && force) {
+                val center = lastCatalogCenter ?: return
                 refreshNearbyAsync(center.first, center.second)
+            } else if (lastCatalogCenter == null) {
+                waitForLocation()
             }
             return
         }
@@ -252,6 +283,19 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         lastUserLocationCenter = location.latitude to location.longitude
         isAwaitingFirstLocationFix = false
         refreshNearbyAsync(location.latitude, location.longitude)
+    }
+
+    private fun waitForLocation() {
+        refreshNearbyJob?.cancel()
+        isLoading = false
+        loadError = null
+        isAwaitingFirstLocationFix = true
+        if (allFeatures.isEmpty()) {
+            filterPool = emptyList()
+            discoveredFeatures = emptyList()
+            operators = emptyList()
+            activeCatalogInfo = null
+        }
     }
 
     fun selectFeature(feature: GeoJsonFeature) {
@@ -307,6 +351,79 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         return items
+    }
+
+    fun searchRoute(origin: RouteEndpoint, destination: RouteEndpoint) {
+        routeSearchJob?.cancel()
+        isLoadingRoute = true
+        routeError = null
+        routeSummary = null
+        routeFeatures = emptyList()
+        routeCalculatedFilters = null
+        val routeFilter = routeEffectiveFilter()
+        val calculatedFilters = RouteFilterPayload.from(routeFilter)
+        routeSearchJob = viewModelScope.launch {
+            val result = runCatching {
+                repository.routeChargers(
+                    origin = origin,
+                    destination = destination,
+                    filterState = routeFilter
+                )
+            }
+
+            if (!isActive) return@launch
+            isLoadingRoute = false
+            result.onSuccess { routeResult ->
+                routeSummary = routeResult.route
+                routeFeatures = routeResult.features
+                routeCalculatedFilters = calculatedFilters
+                routeError = null
+                requestLiveSummaries(routeResult.features.map { it.properties.stationId }, force = true)
+            }.onFailure {
+                routeSummary = null
+                routeFeatures = emptyList()
+                routeCalculatedFilters = null
+                routeError = AppStrings.get(R.string.i18n_route_searcherror)
+            }
+        }
+    }
+
+    fun clearRoute() {
+        routeSearchJob?.cancel()
+        isLoadingRoute = false
+        routeSummary = null
+        routeFeatures = emptyList()
+        routeCalculatedFilters = null
+        routeError = null
+    }
+
+    fun routeDisplayFeatures(): List<GeoJsonFeature> {
+        val filter = routeEffectiveFilter()
+        return routeFeatures
+            .filter { it.properties.matches(filter) }
+            .sortedWith { left, right -> compareRouteFeatures(left, right) }
+    }
+
+    fun routeFiltersRequireRecalculation(): Boolean {
+        val baseline = routeCalculatedFilters ?: return false
+        val current = RouteFilterPayload.from(routeEffectiveFilter())
+        if (baseline.operator.isNotBlank() && current.operator != baseline.operator) return true
+        if (baseline.operator.isBlank() && current.operator.isNotBlank()) return false
+        if (current.minPowerKw < baseline.minPowerKw) return true
+        if (current.minAmenitiesTotal < baseline.minAmenitiesTotal) return true
+        val currentAmenities = current.selectedAmenities.toSet()
+        if (baseline.selectedAmenities.any { it !in currentAmenities }) return true
+        if (baseline.amenityNameQuery.isNotBlank()) {
+            val baselineName = baseline.amenityNameQuery.lowercase()
+            val currentName = current.amenityNameQuery.lowercase()
+            if (currentName.isBlank() || !currentName.contains(baselineName)) return true
+        }
+        if (baseline.currentlyOpenOnly && !current.currentlyOpenOnly) return true
+        return false
+    }
+
+    fun routeFilterActiveCount(): Int {
+        return routeEffectiveFilter().activeCount
     }
 
     fun distanceText(userLocation: Location?, latitude: Double, longitude: Double): String? {
@@ -474,6 +591,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private fun trackedStationIds(): List<String> {
         val ids = linkedSetOf<String>()
         discoveredFeatures.mapTo(ids) { it.properties.stationId }
+        routeFeatures.mapTo(ids) { it.properties.stationId }
         selectedFeature?.properties?.stationId?.let(ids::add)
         return ids.toList()
     }
@@ -595,6 +713,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         discoveredById.clear()
         discoveredById.putAll(updatedDiscoveredById)
         discoveredFeatures = discoveredFeatures.map { feature ->
+            if (stationIds.contains(feature.properties.stationId)) updater(feature) else feature
+        }
+        routeFeatures = routeFeatures.map { feature ->
             if (stationIds.contains(feature.properties.stationId)) updater(feature) else feature
         }
         selectedFeature = selectedFeature?.let { feature ->
@@ -738,15 +859,31 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         return EARTH_RADIUS_METERS * c
     }
 
+    private fun routeEffectiveFilter(): FilterState {
+        return filterState.copy(availableOnly = false)
+    }
+
+    private fun compareRouteFeatures(left: GeoJsonFeature, right: GeoJsonFeature): Int {
+        val positionDiff = (left.routeMetadata?.routePositionM ?: Int.MAX_VALUE)
+            .compareTo(right.routeMetadata?.routePositionM ?: Int.MAX_VALUE)
+        if (positionDiff != 0) return positionDiff
+        val accessDiff = (left.routeMetadata?.driveDistanceToRouteM ?: Int.MAX_VALUE)
+            .compareTo(right.routeMetadata?.driveDistanceToRouteM ?: Int.MAX_VALUE)
+        if (accessDiff != 0) return accessDiff
+        val amenitiesDiff = right.properties.amenitiesTotal.compareTo(left.properties.amenitiesTotal)
+        if (amenitiesDiff != 0) return amenitiesDiff
+        return right.properties.displayedMaxPowerKw.compareTo(left.properties.displayedMaxPowerKw)
+    }
+
     companion object {
         private const val EARTH_RADIUS_METERS = 6371000.0
         private const val FILTER_OPERATOR_NAME_KEY = "filter.operatorName"
         private const val FILTER_MIN_POWER_KW_KEY = "filter.minPowerKw"
+        private const val FILTER_MIN_AMENITY_COUNT_KEY = "filter.minAmenityCount"
         private const val FILTER_SELECTED_AMENITIES_KEY = "filter.selectedAmenities"
         private const val FILTER_AMENITY_NAME_QUERY_KEY = "filter.amenityNameQuery"
         private const val FILTER_AVAILABLE_ONLY_KEY = "filter.availableOnly"
         private const val FILTER_CURRENTLY_OPEN_ONLY_KEY = "filter.currentlyOpenOnly"
-        private val DEFAULT_CATALOG_CENTER = 52.52 to 13.405
     }
 }
 

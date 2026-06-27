@@ -2,8 +2,6 @@ import Foundation
 import CoreLocation
 
 final class ChargerRepository {
-    static let defaultCatalogCenter = CLLocationCoordinate2D(latitude: 52.52, longitude: 13.405)
-
     struct SearchResult {
         let features: [GeoJSONFeature]
         let operators: [OperatorEntry]
@@ -105,6 +103,22 @@ final class ChargerRepository {
         }
     }
 
+    func routeChargers(
+        origin: RouteEndpoint,
+        destination: RouteEndpoint,
+        filter: FilterState
+    ) async throws -> RouteChargerLoadResult {
+        let response = try await client.routeChargers(
+            origin: origin,
+            destination: destination,
+            filters: RouteFilterPayload(filter: filter)
+        )
+        let features = response.stations.map { candidate in
+            candidate.station.feature(routeMetadata: candidate.route)
+        }
+        return RouteChargerLoadResult(route: response.route, features: features, source: response.source)
+    }
+
     func stationDetail(
         stationID: String,
         preserving existing: GeoJSONFeature?
@@ -134,6 +148,12 @@ struct ChargerRepositoryLoadResult {
     let operators: [OperatorEntry]
     let sourceInfo: ActiveCatalogSourceInfo
     let catalogCenter: CLLocationCoordinate2D
+}
+
+struct RouteChargerLoadResult {
+    let route: RouteSummary
+    let features: [GeoJSONFeature]
+    let source: String
 }
 
 private extension TimeInterval {
@@ -282,7 +302,8 @@ private extension GeoJSONFeature {
             geometry: geometry,
             properties: properties,
             liveSummary: liveSummary ?? existing.liveSummary,
-            liveDetail: liveDetail ?? existing.liveDetail
+            liveDetail: liveDetail ?? existing.liveDetail,
+            routeMetadata: routeMetadata ?? existing.routeMetadata
         )
     }
 }

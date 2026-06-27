@@ -19,6 +19,7 @@ struct GeoJSONFeature: Decodable, Identifiable {
     let properties: ChargerProperties
     var liveSummary: LiveStationSummary?
     var liveDetail: LiveStationDetail?
+    var routeMetadata: RouteStationMetadata?
 
     enum CodingKeys: String, CodingKey {
         case geometry
@@ -32,6 +33,7 @@ struct GeoJSONFeature: Decodable, Identifiable {
         id = properties.stationID
         liveSummary = nil
         liveDetail = nil
+        routeMetadata = nil
     }
 
     init(
@@ -39,13 +41,15 @@ struct GeoJSONFeature: Decodable, Identifiable {
         geometry: GeoJSONPointGeometry,
         properties: ChargerProperties,
         liveSummary: LiveStationSummary? = nil,
-        liveDetail: LiveStationDetail? = nil
+        liveDetail: LiveStationDetail? = nil,
+        routeMetadata: RouteStationMetadata? = nil
     ) {
         self.id = id
         self.geometry = geometry
         self.properties = properties
         self.liveSummary = liveSummary
         self.liveDetail = liveDetail
+        self.routeMetadata = routeMetadata
     }
 
     var coordinate: CLLocationCoordinate2D {

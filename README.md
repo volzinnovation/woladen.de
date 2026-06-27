@@ -151,7 +151,7 @@ source .venv/bin/activate
 python3 -m pip install -r requirements.txt
 ```
 
-Build the Germany product data:
+Build the legacy Germany/Mobilithek data pipeline:
 
 ```bash
 python3 scripts/build_data.py \

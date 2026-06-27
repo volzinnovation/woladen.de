@@ -60,6 +60,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import java.util.Locale
 
@@ -83,6 +84,13 @@ fun MapTabView(
     var isSearchingPlace by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val routeSummary = viewModel.routeSummary
+    val mapFeatures = if (routeSummary != null) {
+        viewModel.routeDisplayFeatures()
+    } else {
+        viewModel.discoveredFeatures
+    }
+    val routeCoordinates = routeSummary?.geometry?.coordinates.orEmpty()
 
     fun centerMap(location: Location) {
         val map = mapViewRef ?: return
@@ -94,7 +102,29 @@ fun MapTabView(
             )
         )
         lastQueriedCenter = location.latitude to location.longitude
-        viewModel.handleMapCenterChange(location.latitude, location.longitude)
+        if (routeSummary == null) {
+            viewModel.handleMapCenterChange(location.latitude, location.longitude)
+        }
+    }
+
+    fun focusMapOnRoute() {
+        val map = mapViewRef ?: return
+        val points = routeCoordinates.mapNotNull { point ->
+            if (point.size < 2) {
+                null
+            } else {
+                val lon = point[0]
+                val lat = point[1]
+                if (lat.isFinite() && lon.isFinite()) LatLng(lat, lon) else null
+            }
+        } + mapFeatures.map { LatLng(it.latitude, it.longitude) }
+        if (points.isEmpty()) return
+        val boundsBuilder = LatLngBounds.Builder()
+        points.forEach(boundsBuilder::include)
+        runCatching {
+            map.animateCamera(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 44))
+        }
+        hasCenteredInitialLocation = true
     }
 
     fun searchPlace() {
@@ -120,7 +150,9 @@ fun MapTabView(
                 map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(lat, lon), 12.8))
                 lastQueriedCenter = lat to lon
                 hasCenteredInitialLocation = true
-                viewModel.handleMapCenterChange(lat, lon)
+                if (routeSummary == null) {
+                    viewModel.handleMapCenterChange(lat, lon)
+                }
             }
             isSearchingPlace = false
         }
@@ -128,13 +160,15 @@ fun MapTabView(
 
     Box(modifier = Modifier.fillMaxSize()) {
         MainMapView(
-            features = viewModel.discoveredFeatures,
+            features = mapFeatures,
+            routeCoordinates = routeCoordinates,
             userLocation = locationService.currentLocation,
             favoriteStationIds = favoriteStationIds,
             markerTint = viewModel::markerTint,
             onFeatureTap = { feature -> viewModel.selectFeature(feature) },
             onFeatureLongPress = { feature -> openGoogleNavigation(context, feature) },
             onMapIdle = { lat, lon ->
+                if (routeSummary != null) return@MainMapView
                 if (!hasCenteredInitialLocation) return@MainMapView
                 val shouldQuery = shouldQuery(lastQueriedCenter, lat, lon)
                 if (shouldQuery) {
@@ -280,6 +314,7 @@ fun MapTabView(
     }
 
     LaunchedEffect(mapViewRef, locationService.authorizationStatus) {
+        if (routeSummary != null) return@LaunchedEffect
         if (mapViewRef == null || hasCenteredInitialLocation) return@LaunchedEffect
         val location = locationService.currentLocation
         if (location != null) {
@@ -289,13 +324,14 @@ fun MapTabView(
             centerOnNextLocationUpdate = true
             locationService.activate()
         } else {
-            lastQueriedCenter = DEFAULT_MAP_CENTER
-            hasCenteredInitialLocation = true
-            viewModel.reloadMapForCenter(DEFAULT_MAP_CENTER.first, DEFAULT_MAP_CENTER.second)
+            centerOnNextLocationUpdate = true
+            locationService.activate()
+            viewModel.reloadMapForCenter(null, null)
         }
     }
 
     LaunchedEffect(mapViewRef, locationService.currentLocation) {
+        if (routeSummary != null) return@LaunchedEffect
         val location = locationService.currentLocation
         if (location != null && (centerOnNextLocationUpdate || !hasCenteredInitialLocation)) {
             centerMap(location)
@@ -307,6 +343,7 @@ fun MapTabView(
         while (isActive) {
             delay(MAP_GPS_REFRESH_INTERVAL_MS)
             if (mapViewRef == null) continue
+            if (viewModel.routeSummary != null) continue
             if (locationService.authorizationStatus != LocationAuthorizationStatus.AUTHORIZED_WHEN_IN_USE) {
                 continue
             }
@@ -321,6 +358,10 @@ fun MapTabView(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 locationService.activate()
+                if (viewModel.routeSummary != null) {
+                    focusMapOnRoute()
+                    return@LifecycleEventObserver
+                }
                 val location = locationService.currentLocation
                 if (location != null) {
                     viewModel.reloadMapForCenter(
@@ -335,9 +376,13 @@ fun MapTabView(
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
-}
 
-private val DEFAULT_MAP_CENTER = 51.1657 to 10.4515
+    LaunchedEffect(mapViewRef, routeSummary, routeCoordinates.size, mapFeatures.size) {
+        if (routeSummary != null) {
+            focusMapOnRoute()
+        }
+    }
+}
 
 private fun shouldQuery(lastQueriedCenter: Pair<Double, Double>?, lat: Double, lon: Double): Boolean {
     val last = lastQueriedCenter ?: return true

@@ -4,6 +4,7 @@ import java.text.Normalizer
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.Locale
+import kotlin.math.roundToInt
 
 private val combiningMarksRegex = "\\p{M}+".toRegex()
 private val nonAlphanumericRegex = "[^\\p{L}\\p{N}]+".toRegex()
@@ -13,6 +14,9 @@ fun ChargerProperties.matches(filterState: FilterState): Boolean {
         return false
     }
     if (maxPowerKw < filterState.minPowerKw) {
+        return false
+    }
+    if (filterState.minAmenityCount > 0.0 && amenitiesTotal < filterState.minAmenityCount.roundToInt()) {
         return false
     }
     if (filterState.availableOnly && !hasAvailableChargingPoint) {

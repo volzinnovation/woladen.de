@@ -24,6 +24,7 @@ import de.woladen.android.model.GeoJsonFeature
 import org.maplibre.android.annotations.Icon
 import org.maplibre.android.annotations.IconFactory
 import org.maplibre.android.annotations.MarkerOptions
+import org.maplibre.android.annotations.PolylineOptions
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
@@ -48,6 +49,7 @@ data class DetailMapPoint(
 @Composable
 fun MainMapView(
     features: List<GeoJsonFeature>,
+    routeCoordinates: List<List<Double>> = emptyList(),
     userLocation: Location?,
     favoriteStationIds: Set<String>,
     markerTint: (GeoJsonFeature) -> String,
@@ -154,14 +156,33 @@ fun MainMapView(
                 val isFavorite = favoriteStationIds.contains(feature.properties.stationId)
                 "${feature.id}:${feature.latitude}:${feature.longitude}:${markerTint(feature)}:$isFavorite"
             }
+            val routePoints = routeCoordinates.mapNotNull { point ->
+                if (point.size < 2) {
+                    null
+                } else {
+                    val lon = point[0]
+                    val lat = point[1]
+                    if (lat.isFinite() && lon.isFinite()) LatLng(lat, lon) else null
+                }
+            }
+            val routeSignature = routePoints.map { "${it.latitude}:${it.longitude}" }
             val currentUserLocation = userLocation?.let { it.latitude to it.longitude }
 
-            if (featureSignature == lastFeatureSignature && currentUserLocation == lastUserLocation) {
+            if (featureSignature + routeSignature == lastFeatureSignature && currentUserLocation == lastUserLocation) {
                 return@AndroidView
             }
 
             featureById = features.associateBy { it.id }
             mapLibreMap.clear()
+
+            if (routePoints.size > 1) {
+                mapLibreMap.addPolyline(
+                    PolylineOptions()
+                        .addAll(routePoints)
+                        .color(Color.rgb(15, 118, 110))
+                        .width(5f)
+                )
+            }
 
             for (feature in features) {
                 val baseIconKey = markerTint(feature)
@@ -189,8 +210,142 @@ fun MainMapView(
                 )
             }
 
-            lastFeatureSignature = featureSignature
+            lastFeatureSignature = featureSignature + routeSignature
             lastUserLocation = currentUserLocation
+        }
+    )
+}
+
+@Composable
+fun RoutePreviewMapView(
+    routeCoordinates: List<List<Double>>,
+    features: List<GeoJsonFeature>,
+    favoriteStationIds: Set<String>,
+    markerTint: (GeoJsonFeature) -> String,
+    onFeatureTap: (GeoJsonFeature) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val mapView = rememberMapLibreMapViewWithLifecycle()
+    var map by remember { mutableStateOf<MapLibreMap?>(null) }
+    var styleReady by remember { mutableStateOf(false) }
+    var lastSignature by remember { mutableStateOf("") }
+    var featureById by remember { mutableStateOf<Map<String, GeoJsonFeature>>(emptyMap()) }
+
+    val iconFactory = remember(context) { IconFactory.getInstance(context) }
+    val stationIcons = remember(context, iconFactory) {
+        val keys = listOf("gold", "silver", "bronze", "gray")
+        buildMap {
+            for (key in keys) {
+                put(key, createMapLibreCircleIcon(iconFactory, context, markerColorForKey(key), diameterDp = 30f, strokeDp = 3f))
+            }
+            put("favorite", iconFactory.fromBitmap(drawableToBitmap(createFavoriteMarkerDrawable(context, diameterDp = 40f))))
+        }
+    }
+
+    AndroidView(
+        modifier = modifier,
+        factory = {
+            mapView.apply {
+                getMapAsync { mapLibreMap ->
+                    map = mapLibreMap
+                    mapLibreMap.uiSettings.setCompassEnabled(false)
+                    mapLibreMap.uiSettings.setLogoEnabled(false)
+                    mapLibreMap.uiSettings.setAttributionEnabled(true)
+                    mapLibreMap.uiSettings.setRotateGesturesEnabled(false)
+
+                    mapLibreMap.setStyle(Style.Builder().fromJson(STANDARD_OSM_STYLE_JSON)) {
+                        styleReady = true
+                    }
+
+                    mapLibreMap.setOnMarkerClickListener { marker ->
+                        val snippet = marker.snippet?.toString()
+                            ?: return@setOnMarkerClickListener false
+                        if (!snippet.startsWith(STATION_SNIPPET_PREFIX)) return@setOnMarkerClickListener false
+                        val featureId = snippet.removePrefix(STATION_SNIPPET_PREFIX)
+                        val feature = featureById[featureId] ?: return@setOnMarkerClickListener false
+                        onFeatureTap(feature)
+                        true
+                    }
+                }
+            }
+        },
+        update = { view ->
+            val mapLibreMap = map ?: return@AndroidView
+            if (!styleReady) return@AndroidView
+
+            val routePoints = routeCoordinates.mapNotNull { point ->
+                if (point.size < 2) {
+                    null
+                } else {
+                    val lon = point[0]
+                    val lat = point[1]
+                    if (lat.isFinite() && lon.isFinite()) LatLng(lat, lon) else null
+                }
+            }
+            val signature = buildString {
+                append(routePoints.joinToString("|") { "${it.latitude},${it.longitude}" })
+                append("::")
+                append(features.joinToString("|") { feature ->
+                    val isFavorite = favoriteStationIds.contains(feature.properties.stationId)
+                    "${feature.id}:${feature.latitude}:${feature.longitude}:${markerTint(feature)}:$isFavorite"
+                })
+            }
+            if (signature == lastSignature) {
+                return@AndroidView
+            }
+
+            featureById = features.associateBy { it.id }
+            mapLibreMap.clear()
+
+            if (routePoints.size > 1) {
+                mapLibreMap.addPolyline(
+                    PolylineOptions()
+                        .addAll(routePoints)
+                        .color(Color.rgb(15, 118, 110))
+                        .width(5f)
+                )
+            }
+
+            for (feature in features) {
+                val baseIconKey = markerTint(feature)
+                val iconKey = if (favoriteStationIds.contains(feature.properties.stationId)) {
+                    "favorite"
+                } else {
+                    baseIconKey
+                }
+                mapLibreMap.addMarker(
+                    MarkerOptions()
+                        .position(LatLng(feature.latitude, feature.longitude))
+                        .title(feature.properties.operatorName)
+                        .snippet("$STATION_SNIPPET_PREFIX${feature.id}")
+                        .icon(stationIcons[iconKey] ?: stationIcons.getValue("gray"))
+                )
+            }
+
+            view.post {
+                val boundsBuilder = LatLngBounds.Builder()
+                var pointCount = 0
+                for (point in routePoints) {
+                    boundsBuilder.include(point)
+                    pointCount += 1
+                }
+                for (feature in features) {
+                    boundsBuilder.include(LatLng(feature.latitude, feature.longitude))
+                    pointCount += 1
+                }
+                if (pointCount == 0) {
+                    return@post
+                }
+                runCatching {
+                    mapLibreMap.easeCamera(
+                        CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 44),
+                        300
+                    )
+                }
+            }
+
+            lastSignature = signature
         }
     )
 }

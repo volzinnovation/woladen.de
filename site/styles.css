@@ -140,6 +140,7 @@ body {
 
 .brand-intro-secondary {
   padding-bottom: 0.8rem;
+  border-bottom: 0;
 }
 
 .brand-intro h1,

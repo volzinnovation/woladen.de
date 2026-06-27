@@ -162,7 +162,8 @@ struct CatalogStation: Decodable {
     func feature(
         chargers: [CatalogCharger] = [],
         amenities: CatalogAmenities? = nil,
-        preserving existing: GeoJSONFeature? = nil
+        preserving existing: GeoJSONFeature? = nil,
+        routeMetadata: RouteStationMetadata? = nil
     ) -> GeoJSONFeature {
         let properties = chargerProperties(chargers: chargers, amenities: amenities)
         return GeoJSONFeature(
@@ -170,7 +171,8 @@ struct CatalogStation: Decodable {
             geometry: GeoJSONPointGeometry(type: "Point", coordinates: [longitude, latitude]),
             properties: properties,
             liveSummary: liveSummary ?? existing?.liveSummary,
-            liveDetail: existing?.liveDetail
+            liveDetail: existing?.liveDetail,
+            routeMetadata: routeMetadata ?? existing?.routeMetadata
         )
     }
 

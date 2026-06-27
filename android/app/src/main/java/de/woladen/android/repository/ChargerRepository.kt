@@ -10,6 +10,9 @@ import de.woladen.android.model.FilterState
 import de.woladen.android.model.GeoJsonFeature
 import de.woladen.android.model.GeoJsonPointGeometry
 import de.woladen.android.model.OperatorEntry
+import de.woladen.android.model.RouteEndpoint
+import de.woladen.android.model.RouteFilterPayload
+import de.woladen.android.model.RouteSummary
 import de.woladen.android.service.LiveApiClient
 import java.io.IOException
 import kotlin.math.roundToInt
@@ -21,6 +24,12 @@ class ChargerRepository(
         val features: List<GeoJsonFeature>,
         val source: String,
         val returnedCount: Int
+    )
+
+    data class RouteLoadResult(
+        val route: RouteSummary,
+        val features: List<GeoJsonFeature>,
+        val source: String
     )
 
     private data class CatalogSearchKey(
@@ -128,6 +137,29 @@ class ChargerRepository(
             stationSummaryCache[normalizedStationId] = feature
         }
         return feature
+    }
+
+    suspend fun routeChargers(
+        origin: RouteEndpoint,
+        destination: RouteEndpoint,
+        filterState: FilterState
+    ): RouteLoadResult {
+        val response = liveApiClient.routeChargers(
+            origin = origin,
+            destination = destination,
+            filters = RouteFilterPayload.from(filterState)
+        )
+        val features = response.stations.map { candidate ->
+            catalogStationToFeature(candidate.station).copy(routeMetadata = candidate.route)
+        }
+        synchronized(cacheLock) {
+            features.forEach { stationSummaryCache[it.properties.stationId] = it }
+        }
+        return RouteLoadResult(
+            route = response.route,
+            features = features,
+            source = response.source
+        )
     }
 
     suspend fun infoSummary(): CatalogInfoSummary {

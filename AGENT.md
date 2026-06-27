@@ -3,18 +3,18 @@
 Date: 2026-02-11
 Project: `woladen.de`
 
-## Projet Goals
+## Project Goals
 
-Find fast chargers for EVs in Germany that have nice amenities nearby. Use the official list of Bundesnetzagentur as a primary data source. Filter to charging points with more than 50 KW power and augment this data with a search of amenties found within 100m around the charging points. 
+Find EV charging stations across the European Union plus Switzerland and Norway, with useful amenities nearby. The open-static European charging catalog is the product baseline, while Bundesnetzagentur/Mobilithek remains one Germany-specific source path. Filter to charging points with at least 50 kW power by default and augment station data with nearby amenities.
 
 Regularly (e.g. once a month) build a database based in static files.
 
 Create a good-looking mobile-ready web frontend in Javascript and HTML that displays charging points on a map and allows to filter by operator brand as well as amenities that are sought for.   Idealy it also contains geolocation of the user and allows to find an optimal car route from the users position to suitable charging points. 
 
-Set up an automated daily data-analysis pipeline that:
+Set up automated data-analysis pipelines that:
 
-- pulls public BNetzA data,
-- computes amenities from German POIs based on OpenStreetMap data
+- pull supported public European charging datasets,
+- compute amenities from OpenStreetMap data around charging stations,
 - versions both source snapshot cache and derived analytics outputs in Git,
 - publishes  the app via Github pages
 - batch job runs on GitHub Actions at fixed noon GMT+1 (`11:00 UTC`).

@@ -3,6 +3,8 @@ package de.woladen.android.ui
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,13 +37,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +69,8 @@ import de.woladen.android.model.hasPrimaryDetailHighlights
 import de.woladen.android.model.liveEvseRows
 import de.woladen.android.model.occupancySourceLabel
 import de.woladen.android.model.occupancySummaryLabel
+import de.woladen.android.store.FavoritesStore
+import de.woladen.android.store.normalizeCategoryLabel
 import de.woladen.android.ui.components.AmenityIcon
 import de.woladen.android.ui.components.DetailMapPoint
 import de.woladen.android.ui.components.DetailMiniMapView
@@ -75,6 +82,7 @@ import kotlinx.coroutines.delay
 fun StationDetailSheet(
     feature: GeoJsonFeature,
     isFavorite: Boolean,
+    favoritesStore: FavoritesStore,
     onToggleFavorite: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -150,6 +158,12 @@ fun StationDetailSheet(
                         modifier = Modifier.weight(1f)
                     )
                 }
+
+                FavoriteCategoryEditor(
+                    feature = feature,
+                    isFavorite = isFavorite,
+                    favoritesStore = favoritesStore
+                )
 
                 if (feature.hasPrimaryDetailHighlights) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -245,6 +259,7 @@ fun StationDetailSheet(
 fun StationDetailPane(
     feature: GeoJsonFeature,
     isFavorite: Boolean,
+    favoritesStore: FavoritesStore,
     onToggleFavorite: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -321,6 +336,12 @@ fun StationDetailPane(
                 )
             }
 
+            FavoriteCategoryEditor(
+                feature = feature,
+                isFavorite = isFavorite,
+                favoritesStore = favoritesStore
+            )
+
             Text(
                 "${feature.properties.address}, ${feature.properties.postcode} ${feature.properties.city}",
                 maxLines = 3,
@@ -384,6 +405,7 @@ fun StationDetailPane(
 fun StationDetailWideDialog(
     feature: GeoJsonFeature,
     isFavorite: Boolean,
+    favoritesStore: FavoritesStore,
     onToggleFavorite: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -462,6 +484,12 @@ fun StationDetailWideDialog(
                                 modifier = Modifier.weight(1f)
                             )
                         }
+
+                        FavoriteCategoryEditor(
+                            feature = feature,
+                            isFavorite = isFavorite,
+                            favoritesStore = favoritesStore
+                        )
 
                         if (feature.hasPrimaryDetailHighlights) {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -548,6 +576,119 @@ fun StationDetailWideDialog(
                     Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.i18n_aria_closedetail))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FavoriteCategoryEditor(
+    feature: GeoJsonFeature,
+    isFavorite: Boolean,
+    favoritesStore: FavoritesStore
+) {
+    if (!isFavorite) return
+
+    val stationId = feature.properties.stationId
+    val categories = favoritesStore.categoriesFor(stationId)
+    var input by rememberSaveable(stationId) { mutableStateOf("") }
+    val suggestions = favoritesStore.categorySuggestions(input, excluding = categories)
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.i18n_detail_favoritecategories),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = stringResource(R.string.i18n_detail_categorydeviceonly),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            if (categories.isEmpty()) {
+                CategoryChip(text = stringResource(R.string.i18n_favorites_uncategorized))
+            } else {
+                for (category in categories) {
+                    CategoryChip(
+                        text = category,
+                        onRemove = {
+                            favoritesStore.removeCategory(stationId, category)
+                        }
+                    )
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it },
+                placeholder = { Text(stringResource(R.string.i18n_detail_categoryplaceholder)) },
+                singleLine = true,
+                modifier = Modifier.weight(1f)
+            )
+            Button(
+                onClick = {
+                    val label = normalizeCategoryLabel(input)
+                    if (label.isNotBlank()) {
+                        favoritesStore.addCategory(stationId, label)
+                        input = ""
+                    }
+                }
+            ) {
+                Text(stringResource(R.string.i18n_detail_addcategory))
+            }
+        }
+
+        if (suggestions.isNotEmpty()) {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                for (suggestion in suggestions) {
+                    TextButton(
+                        onClick = {
+                            favoritesStore.addCategory(stationId, suggestion)
+                            input = ""
+                        }
+                    ) {
+                        Text(suggestion)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CategoryChip(text: String, onRemove: (() -> Unit)? = null) {
+    Row(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 8.dp, vertical = 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        if (onRemove != null) {
+            Icon(
+                imageVector = Icons.Outlined.Close,
+                contentDescription = stringResource(R.string.i18n_detail_removecategory).replace("{category}", text),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .size(16.dp)
+                    .clickable(onClick = onRemove)
+            )
         }
     }
 }

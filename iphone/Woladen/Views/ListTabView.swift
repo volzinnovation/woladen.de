@@ -289,6 +289,12 @@ struct ListTabView: View {
                     .replacingOccurrences(of: "{value}", with: "\(Int(filter.minPowerKW.rounded()))")
             )
         }
+        if filter.minAmenityCount > 0 {
+            labels.append(
+                String(localized: "filters.minAmenitiesLabel")
+                    .replacingOccurrences(of: "{value}", with: "\(Int(filter.minAmenityCount.rounded()))")
+            )
+        }
         filter.selectedAmenities
             .map { AmenityCatalog.label(for: $0) }
             .sorted { $0.localizedCompare($1) == .orderedAscending }
@@ -309,6 +315,7 @@ struct ListTabView: View {
             || filter.currentlyOpenOnly
             || !filter.selectedAmenities.isEmpty
             || Int(filter.minPowerKW.rounded()) != 50
+            || Int(filter.minAmenityCount.rounded()) != 0
     }
 
     @ViewBuilder

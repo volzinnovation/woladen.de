@@ -65,6 +65,7 @@ fun FilterSheetView(
 ) {
     var draftOperator by remember(filter) { mutableStateOf(filter.operatorName) }
     var draftMinPower by remember(filter) { mutableStateOf(filter.minPowerKw) }
+    var draftMinAmenityCount by remember(filter) { mutableStateOf(filter.minAmenityCount) }
     var draftAmenities by remember(filter) { mutableStateOf(filter.selectedAmenities.toMutableSet()) }
     var draftAmenityNameQuery by remember(filter) { mutableStateOf(filter.amenityNameQuery) }
     var draftAvailableOnly by remember(filter) { mutableStateOf(filter.availableOnly) }
@@ -76,6 +77,7 @@ fun FilterSheetView(
             FilterState(
                 operatorName = draftOperator,
                 minPowerKw = draftMinPower,
+                minAmenityCount = draftMinAmenityCount,
                 selectedAmenities = draftAmenities.toSet(),
                 amenityNameQuery = draftAmenityNameQuery,
                 availableOnly = draftAvailableOnly,
@@ -111,6 +113,8 @@ fun FilterSheetView(
                     onCurrentlyOpenOnlyChange = { draftCurrentlyOpenOnly = it },
                     draftMinPower = draftMinPower,
                     onMinPowerChange = { draftMinPower = it },
+                    draftMinAmenityCount = draftMinAmenityCount,
+                    onMinAmenityCountChange = { draftMinAmenityCount = it },
                     draftAmenities = draftAmenities,
                     useWideLayout = true,
                     onDismiss = onDismiss,
@@ -135,6 +139,8 @@ fun FilterSheetView(
                 onCurrentlyOpenOnlyChange = { draftCurrentlyOpenOnly = it },
                 draftMinPower = draftMinPower,
                 onMinPowerChange = { draftMinPower = it },
+                draftMinAmenityCount = draftMinAmenityCount,
+                onMinAmenityCountChange = { draftMinAmenityCount = it },
                 draftAmenities = draftAmenities,
                 useWideLayout = false,
                 onDismiss = onDismiss,
@@ -161,6 +167,8 @@ private fun FilterPanelContent(
     onCurrentlyOpenOnlyChange: (Boolean) -> Unit,
     draftMinPower: Double,
     onMinPowerChange: (Double) -> Unit,
+    draftMinAmenityCount: Double,
+    onMinAmenityCountChange: (Double) -> Unit,
     draftAmenities: MutableSet<String>,
     useWideLayout: Boolean,
     onDismiss: () -> Unit,
@@ -249,6 +257,7 @@ private fun FilterPanelContent(
             }
 
             PowerControl(value = draftMinPower, onChange = onMinPowerChange)
+            AmenityCountControl(value = draftMinAmenityCount, onChange = onMinAmenityCountChange)
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
@@ -419,6 +428,37 @@ private fun PowerControl(
             Text("50")
             Text("150")
             Text("300+")
+        }
+    }
+}
+
+@Composable
+private fun AmenityCountControl(
+    value: Double,
+    onChange: (Double) -> Unit
+) {
+    Column(
+        modifier = Modifier.widthIn(max = 360.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.i18n_filters_minamenities)
+                .replace("{value}", value.toInt().toString()),
+            style = androidx.compose.material3.MaterialTheme.typography.titleSmall
+        )
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { next ->
+                onChange(next.roundToInt().coerceIn(0, 20).toDouble())
+            },
+            valueRange = 0f..20f,
+            steps = 19
+        )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("0")
+            Text("5")
+            Text("10")
+            Text("20+")
         }
     }
 }

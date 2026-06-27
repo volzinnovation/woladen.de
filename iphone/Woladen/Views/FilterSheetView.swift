@@ -76,6 +76,7 @@ struct FilterSheetView: View {
             }
 
             powerControl
+            amenityCountControl
             amenitiesGrid
         }
         .padding(22)
@@ -96,6 +97,7 @@ struct FilterSheetView: View {
                 note: String(localized: "filters.currentlyOpenNote")
             )
             powerControl
+            amenityCountControl
             amenitiesGrid
         }
         .padding(18)
@@ -194,6 +196,27 @@ struct FilterSheetView: View {
         .frame(maxWidth: horizontalSizeClass == .regular ? 360 : .infinity, alignment: .leading)
     }
 
+    private var amenityCountControl: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(minAmenityCountLabel)
+                .font(.headline)
+            Slider(value: $draftFilter.minAmenityCount, in: 0...20, step: 1)
+                .tint(woladenBrandColor)
+            HStack {
+                Text("0")
+                Spacer()
+                Text("5")
+                Spacer()
+                Text("10")
+                Spacer()
+                Text("20+")
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: horizontalSizeClass == .regular ? 360 : .infinity, alignment: .leading)
+    }
+
     private var amenitiesGrid: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(String(localized: "filters.amenities"))
@@ -228,6 +251,11 @@ struct FilterSheetView: View {
     private var minPowerLabel: String {
         String(localized: "filters.minPower")
             .replacingOccurrences(of: "{value}", with: "\(Int(draftFilter.minPowerKW.rounded()))")
+    }
+
+    private var minAmenityCountLabel: String {
+        String(localized: "filters.minAmenities")
+            .replacingOccurrences(of: "{value}", with: "\(Int(draftFilter.minAmenityCount.rounded()))")
     }
 
     private func amenityTile(for key: String) -> some View {

@@ -6,6 +6,7 @@ final class AppViewModel: ObservableObject {
     enum AppTab: Hashable {
         case list
         case map
+        case route
         case favorites
         case info
     }
@@ -27,6 +28,10 @@ final class AppViewModel: ObservableObject {
     @Published private(set) var infoSummary: CatalogInfoSummary?
     @Published private(set) var infoSummaryError: String?
     @Published private(set) var isLoadingInfoSummary: Bool = false
+    @Published private(set) var routeSummary: RouteSummary?
+    @Published private(set) var routeFeatures: [GeoJSONFeature] = []
+    @Published private(set) var routeError: String?
+    @Published private(set) var isLoadingRoute: Bool = false
 
     private let liveAPIClient: LiveAPIClient
     private let repository: ChargerRepository
@@ -39,7 +44,7 @@ final class AppViewModel: ObservableObject {
     private var discoveredOrder: [String] = []
     private var hasRequestedInitialCatalogLoad = false
     private var didSeedFromUserLocation = false
-    private var currentCatalogCenter = ChargerRepository.defaultCatalogCenter
+    private var currentCatalogCenter: CLLocationCoordinate2D?
     private var favoriteDetailFeatures: [String: GeoJSONFeature] = [:]
 
     private var liveSummaryFetchedAtByStationID: [String: Date] = [:]
@@ -47,10 +52,12 @@ final class AppViewModel: ObservableObject {
     private var pendingLiveSummaryStationIDs: Set<String> = []
     private var pendingLiveDetailStationIDs: Set<String> = []
     private var pendingStaticDetailStationIDs: Set<String> = []
+    private var routeCalculatedFilters: RouteFilterPayload?
     private var catalogLoadTask: Task<Void, Never>?
     private var infoSummaryTask: Task<Void, Never>?
     private var liveSummaryRefreshTask: Task<Void, Never>?
     private var selectedFeatureRefreshTask: Task<Void, Never>?
+    private var routeSearchTask: Task<Void, Never>?
 
     init(liveAPIClient: LiveAPIClient = LiveAPIClient()) {
         self.liveAPIClient = liveAPIClient
@@ -63,6 +70,7 @@ final class AppViewModel: ObservableObject {
         infoSummaryTask?.cancel()
         liveSummaryRefreshTask?.cancel()
         selectedFeatureRefreshTask?.cancel()
+        routeSearchTask?.cancel()
     }
 
     func loadIfNeeded(userLocation: CLLocation?) {
@@ -164,7 +172,7 @@ final class AppViewModel: ObservableObject {
         if resetDiscovered {
             resetDiscoveredList()
         }
-        let center = userLocation?.coordinate ?? currentCatalogCenter
+        guard let center = userLocation?.coordinate ?? currentCatalogCenter else { return }
         discoverNearby(
             center: center,
             resetHistory: false,
@@ -267,6 +275,101 @@ final class AppViewModel: ObservableObject {
             items.sort { $0.properties.operatorName < $1.properties.operatorName }
         }
         return items
+    }
+
+    func searchRoute(origin: RouteEndpoint, destination: RouteEndpoint) {
+        routeSearchTask?.cancel()
+        isLoadingRoute = true
+        routeError = nil
+        routeSummary = nil
+        routeFeatures = []
+        routeCalculatedFilters = nil
+        let routeFilter = routeEffectiveFilter()
+        let calculatedFilters = RouteFilterPayload(filter: routeFilter)
+
+        routeSearchTask = Task { [weak self] in
+            guard let self else { return }
+            let result: Result<RouteChargerLoadResult, Error>
+            do {
+                result = .success(
+                    try await self.repository.routeChargers(
+                        origin: origin,
+                        destination: destination,
+                        filter: routeFilter
+                    )
+                )
+            } catch {
+                result = .failure(error)
+            }
+
+            guard !Task.isCancelled else { return }
+            self.isLoadingRoute = false
+            switch result {
+            case .success(let routeResult):
+                self.routeSummary = routeResult.route
+                self.routeFeatures = routeResult.features
+                self.routeCalculatedFilters = calculatedFilters
+                self.routeError = nil
+                await self.requestLiveSummaries(forStationIDs: routeResult.features.map { $0.properties.stationID }, force: true)
+            case .failure(let error):
+                self.routeSummary = nil
+                self.routeFeatures = []
+                self.routeCalculatedFilters = nil
+                self.routeError = self.routeErrorMessage(for: error)
+            }
+        }
+    }
+
+    func clearRoute() {
+        routeSearchTask?.cancel()
+        isLoadingRoute = false
+        routeSummary = nil
+        routeFeatures = []
+        routeError = nil
+        routeCalculatedFilters = nil
+    }
+
+    func routeDisplayFeatures() -> [GeoJSONFeature] {
+        let filter = routeEffectiveFilter()
+        return routeFeatures
+            .filter { $0.properties.matches(filter) }
+            .sorted(by: compareRouteFeatures)
+    }
+
+    func routeFiltersRequireRecalculation() -> Bool {
+        guard let baseline = routeCalculatedFilters else { return false }
+        let current = RouteFilterPayload(filter: routeEffectiveFilter())
+        if !baseline.operator.isEmpty && current.operator != baseline.operator {
+            return true
+        }
+        if baseline.operator.isEmpty && !current.operator.isEmpty {
+            return false
+        }
+        if current.minPowerKW < baseline.minPowerKW {
+            return true
+        }
+        if current.minAmenitiesTotal < baseline.minAmenitiesTotal {
+            return true
+        }
+        let currentAmenities = Set(current.selectedAmenities)
+        if baseline.selectedAmenities.contains(where: { !currentAmenities.contains($0) }) {
+            return true
+        }
+        if !baseline.amenityNameQuery.isEmpty {
+            let baselineName = baseline.amenityNameQuery.lowercased()
+            let currentName = current.amenityNameQuery.lowercased()
+            if currentName.isEmpty || !currentName.contains(baselineName) {
+                return true
+            }
+        }
+        if baseline.currentlyOpenOnly && !current.currentlyOpenOnly {
+            return true
+        }
+        return false
+    }
+
+    func routeFilterActiveCount() -> Int {
+        routeEffectiveFilter().activeCount
     }
 
     func refreshFavoritesLiveSummaries(_ favorites: Set<String>, force: Bool = false) async {
@@ -478,6 +581,7 @@ final class AppViewModel: ObservableObject {
 
     private func trackedStationIDs() -> [String] {
         var ids = Set(discoveredFeatures.map { $0.properties.stationID })
+        routeFeatures.map { $0.properties.stationID }.forEach { ids.insert($0) }
         if let selectedFeature {
             ids.insert(selectedFeature.properties.stationID)
         }
@@ -543,6 +647,9 @@ final class AppViewModel: ObservableObject {
             stationIDs.contains(feature.properties.stationID) ? update(feature) : feature
         }
         discoveredFeatures = discoveredFeatures.map { feature in
+            stationIDs.contains(feature.properties.stationID) ? update(feature) : feature
+        }
+        routeFeatures = routeFeatures.map { feature in
             stationIDs.contains(feature.properties.stationID) ? update(feature) : feature
         }
         if let selectedFeature, stationIDs.contains(selectedFeature.properties.stationID) {
@@ -694,7 +801,8 @@ final class AppViewModel: ObservableObject {
     }
 
     private func shouldReloadCatalog(for center: CLLocationCoordinate2D) -> Bool {
-        distance(from: currentCatalogCenter, to: center) >= catalogReloadDistanceM
+        guard let currentCatalogCenter else { return true }
+        return distance(from: currentCatalogCenter, to: center) >= catalogReloadDistanceM
     }
 
     private func upsertFeature(_ feature: GeoJSONFeature) {
@@ -726,5 +834,39 @@ final class AppViewModel: ObservableObject {
         if let selectedFeature, selectedFeature.properties.stationID == stationID {
             self.selectedFeature = feature
         }
+    }
+
+    private func routeEffectiveFilter() -> FilterState {
+        var filter = filterState
+        filter.availableOnly = false
+        return filter
+    }
+
+    private func routeErrorMessage(for error: Error) -> String {
+        if let urlError = error as? URLError, urlError.code == .timedOut {
+            return urlError.localizedDescription
+        }
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain, nsError.code == NSURLErrorTimedOut {
+            return nsError.localizedDescription
+        }
+        return String(localized: "route.searchError")
+    }
+
+    private func compareRouteFeatures(_ lhs: GeoJSONFeature, _ rhs: GeoJSONFeature) -> Bool {
+        let lhsPosition = lhs.routeMetadata?.routePositionM ?? Int.max
+        let rhsPosition = rhs.routeMetadata?.routePositionM ?? Int.max
+        if lhsPosition != rhsPosition {
+            return lhsPosition < rhsPosition
+        }
+        let lhsAccess = lhs.routeMetadata?.driveDistanceToRouteM ?? Int.max
+        let rhsAccess = rhs.routeMetadata?.driveDistanceToRouteM ?? Int.max
+        if lhsAccess != rhsAccess {
+            return lhsAccess < rhsAccess
+        }
+        if lhs.properties.amenitiesTotal != rhs.properties.amenitiesTotal {
+            return lhs.properties.amenitiesTotal > rhs.properties.amenitiesTotal
+        }
+        return lhs.properties.displayedMaxPowerKW > rhs.properties.displayedMaxPowerKW
     }
 }

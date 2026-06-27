@@ -88,10 +88,10 @@ def generate_feature_graphic() -> Path:
     chip_font = load_font(22, bold=True)
 
     draw.text((82, 92), "woladen", font=title_font, fill="#0e2e2c")
-    draw.text((82, 164), "Plugs for Cars. Perks for People.", font=subtitle_font, fill="#163d3a")
+    draw.text((82, 164), "The human side of charging", font=subtitle_font, fill="#163d3a")
     draw.text(
         (82, 208),
-        "The human side of charging.\nBecause charging time is your time.",
+        "Because charging time is your time",
         font=subtitle_font,
         fill="#163d3a",
         spacing=8,
