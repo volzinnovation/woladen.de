@@ -2,7 +2,7 @@
 
 ## Data coverage
 
-![Data coverage](web/img/chargers_naturalearth_purple_laea_baden_baden.png)
+![Data coverage](web/img/chargers_naturalearth_purple.png)
 
 # About woladen.de
 Purpose: **Find charging stations in Europe where charging your EV is fun.**
@@ -58,6 +58,7 @@ The open static bundle currently supports these country sources:
 | FR | Base nationale IRVE static consolidation |
 | GR | Electrokinisi IDRO static charging-station JSON ZIP |
 | HU | NAP subscription DATEX II static snapshots for Eco-Movement and MVM Mobiliti |
+| IT | PUN public web-app signed static charging API aggregate |
 | LT | Via Lietuva DATEX II public charging infrastructure table, with tracked static fallback during backend challenge periods |
 | LU | Public electrical charging stations WFS GeoJSON |
 | LV | Transportdata Eco-Movement and LVC DATEX energy infrastructure snapshots |
@@ -72,33 +73,34 @@ The open static bundle currently supports these country sources:
 
 ## Bundle Coverage
 
-Counts below are from the `open-static-ios-regional-latest` SQLite bundle. `Fast chargers` counts charger rows with `max_power_kw >= 50`; `Fast chargers with amenities` counts those charger rows when the associated station has at least one nearby amenity.
+Counts below are from `data/open_static_summary.json`, generated from the aggregate `open-static-ios-regional-latest` SQLite bundle. `Fast stations` counts station rows with `max_power_kw >= 50`.
 
-| Country | Stations | Chargers | Fast chargers | Fast chargers with amenities |
-| --- | ---: | ---: | ---: | ---: |
-| AT | 14,660 | 38,771 | 10,518 | 9,223 |
-| BE | 5,804 | 17,232 | 389 | 249 |
-| CH | 8,671 | 18,745 | 4,303 | 4,068 |
-| CY | 100 | 171 | 11 | 6 |
-| CZ | 3,755 | 6,594 | 2,438 | 2,150 |
-| DE | 72,155 | 197,527 | 45,008 | 41,549 |
-| DK | 3,379 | 13,469 | 1,963 | 1,787 |
-| ES | 12,241 | 36,446 | 11,382 | 9,466 |
-| FI | 3,673 | 19,444 | 5,556 | 5,350 |
-| FR | 63,775 | 159,693 | 44,877 | 40,356 |
-| GR | 3,977 | 9,254 | 1,569 | 1,128 |
-| HU | 1,343 | 2,520 | 686 | 586 |
-| LT | 2,496 | 13,814 | 2,767 | 2,112 |
-| LU | 530 | 530 | 17 | 17 |
-| LV | 1,102 | 3,203 | 1,814 | 1,705 |
-| MT | 184 | 184 | 32 | 30 |
-| NL | 61,282 | 157,485 | 6,258 | 4,700 |
-| NO | 5,176 | 32,681 | 15,122 | 13,306 |
-| PL | 6,600 | 13,070 | 5,598 | 4,286 |
-| PT | 7,978 | 19,340 | 7,138 | 6,505 |
-| SE | 8,922 | 61,118 | 11,797 | 10,351 |
-| SI | 1,191 | 3,412 | 542 | 500 |
-| **Total** | **288,994** | **824,703** | **179,785** | **159,430** |
+| Country | Stations | Chargers | Fast stations |
+| --- | ---: | ---: | ---: |
+| AT | 14,661 | 38,771 | 3,435 |
+| BE | 4,219 | 12,907 | 112 |
+| CH | 8,670 | 18,725 | 1,217 |
+| CY | 100 | 171 | 11 |
+| CZ | 3,755 | 6,594 | 1,878 |
+| DE | 72,155 | 197,527 | 16,633 |
+| DK | 3,396 | 13,533 | 503 |
+| ES | 12,237 | 36,432 | 5,441 |
+| FI | 3,674 | 19,430 | 1,254 |
+| FR | 63,728 | 159,613 | 11,911 |
+| GR | 3,975 | 9,250 | 718 |
+| HU | 1,346 | 2,523 | 372 |
+| IT | 27,339 | 69,679 | 7,022 |
+| LT | 2,496 | 13,814 | 760 |
+| LU | 530 | 530 | 17 |
+| LV | 1,102 | 3,203 | 772 |
+| MT | 184 | 184 | 32 |
+| NL | 61,244 | 157,380 | 1,408 |
+| NO | 5,175 | 32,672 | 1,924 |
+| PL | 6,600 | 13,070 | 2,961 |
+| PT | 7,978 | 19,340 | 3,018 |
+| SE | 8,922 | 61,108 | 2,218 |
+| SI | 1,191 | 3,405 | 186 |
+| **Total** | **314,677** | **889,861** | **63,803** |
 
 The generated `source_attribution.json` records source URLs, source UIDs, license review status, static/dynamic boundaries, and credential handling. Treat that file as the bundle's machine-readable attribution contract.
 
@@ -218,7 +220,7 @@ The easiest supported path is the GitHub Actions workflow. It fetches source pay
 gh workflow run build-open-static-sqlite-bundle.yml \
   --repo volzinnovation/woladen.de \
   --ref main \
-  -f countries='AT,BE,CH,CY,CZ,DE,DK,ES,FI,FR,GR,HU,LT,LU,LV,MT,NL,NO,PL,PT,SE,SI' \
+  -f countries='AT,BE,CH,CY,CZ,DE,DK,ES,FI,FR,GR,HU,IT,LT,LU,LV,MT,NL,NO,PL,PT,SE,SI' \
   -f release_tag='open-static-ios-regional-latest' \
   -f refresh_ch_nl_normalized=true \
   -f include_osm_pbf=false \
@@ -235,7 +237,7 @@ For migration runs that need to reuse a prepared bundle artifact from another re
 gh workflow run build-open-static-sqlite-bundle.yml \
   --repo volzinnovation/woladen.de \
   --ref main \
-  -f countries='AT,BE,CH,CY,CZ,DE,DK,ES,FI,FR,GR,HU,LT,LU,LV,MT,NL,NO,PL,PT,SE,SI' \
+  -f countries='AT,BE,CH,CY,CZ,DE,DK,ES,FI,FR,GR,HU,IT,LT,LU,LV,MT,NL,NO,PL,PT,SE,SI' \
   -f source_run_id='<analytics-source-run-id>' \
   -f source_run_repo='volzinnovation/Woladen.de-analytics' \
   -f amenity_reuse_run_id='<analytics-prepared-run-id>' \
@@ -252,7 +254,7 @@ For a fresh enriched rebuild, set `include_osm_pbf=true` and `download_osm_pbf=t
 To build locally from already fetched source archives/caches, or after running the same `commercial_fetch_*` commands used by `.github/workflows/build-open-static-sqlite-bundle.yml`:
 
 ```bash
-export COUNTRIES='AT,BE,CH,CY,CZ,DE,DK,ES,FI,FR,GR,HU,LT,LU,LV,MT,NL,NO,PL,PT,SE,SI'
+export COUNTRIES='AT,BE,CH,CY,CZ,DE,DK,ES,FI,FR,GR,HU,IT,LT,LU,LV,MT,NL,NO,PL,PT,SE,SI'
 export WOLADEN_COMMERCIAL_SQLITE_PATH=data/commercial_state.sqlite3
 export WOLADEN_COMMERCIAL_RAW_PAYLOAD_DIR=data/commercial_raw
 
