@@ -35,6 +35,7 @@ cp "$ROOT_DIR/scripts/live_ingester.py" "$BUNDLE_DIR/scripts/"
 cp "$ROOT_DIR/scripts/live_queue_maintenance.py" "$BUNDLE_DIR/scripts/"
 cp "$ROOT_DIR/scripts/live_queue_worker.py" "$BUNDLE_DIR/scripts/"
 cp "$ROOT_DIR/scripts/live_subscription_registry.py" "$BUNDLE_DIR/scripts/"
+cp "$ROOT_DIR/scripts/refresh_occupancy_stats_sidecar.py" "$BUNDLE_DIR/scripts/"
 cp "$ROOT_DIR/scripts/sync_mobilithek_subscriptions.py" "$BUNDLE_DIR/scripts/"
 cp "$ROOT_DIR/LICENSE" "$BUNDLE_DIR/"
 

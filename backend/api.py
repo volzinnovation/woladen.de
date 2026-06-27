@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from .config import AppConfig
+from .daily_analysis import DailyAnalysisReader
 from .open_catalog import (
     DEFAULT_CATALOG_RADIUS_M,
     MAX_CATALOG_LIMIT,
@@ -64,6 +65,20 @@ MAX_STATION_LOOKUP_IDS = 20
 MAX_RATING_LOOKUP_IDS = 50
 MAX_ROUTE_SELECTED_AMENITIES = 32
 STATION_ID_NAMESPACE = "DE:"
+STATION_DAILY_ANALYSIS_FIELDS = {
+    "daily_analysis_data_available",
+    "frequently_out_of_order_daily_analysis",
+    "frequently_occupied_daily_analysis",
+    "daily_analysis_out_of_order_color",
+    "daily_analysis_occupied_color",
+    "occupancy_probability_status",
+    "occupancy_probability_label",
+    "out_of_order_probability_status",
+    "out_of_order_probability_label",
+    "station_qualification_labels",
+    "daily_analysis",
+    "confidence_label",
+}
 REDACTED_VALUE = "[redacted]"
 ROUTE_LOGGER = logging.getLogger("woladen.routes")
 ROUTE_ACCESS_LOGGER = logging.getLogger("uvicorn.error")
@@ -181,6 +196,55 @@ def _serialize_evse_detail(payload: dict) -> dict:
             _strip_fields(item, {"provider_uid"}) for item in payload["recent_observations"]
         ],
     }
+
+
+def _daily_analysis_by_station_id(
+    daily_analysis: DailyAnalysisReader | None,
+    station_ids: list[str],
+) -> dict[str, dict]:
+    if daily_analysis is None or not station_ids:
+        return {}
+    try:
+        return daily_analysis.station_insights_by_requested_id(station_ids)
+    except Exception:
+        return {}
+
+
+def _merge_station_daily_analysis(station: dict, insight: dict | None) -> dict:
+    if not insight:
+        return station
+    merged = dict(station)
+    for key in STATION_DAILY_ANALYSIS_FIELDS:
+        if key in insight:
+            merged[key] = insight[key]
+    aliases = {
+        "daily_analysis_start_date": "start_date",
+        "daily_analysis_end_date": "end_date",
+        "daily_analysis_included_days": "included_days",
+        "daily_analysis_latest_observed_at": "latest_observed_at",
+        "daily_analysis_generated_at": "generated_at",
+    }
+    for public_key, insight_key in aliases.items():
+        if insight_key in insight:
+            merged[public_key] = insight[insight_key]
+    return merged
+
+
+def _enrich_stations_with_daily_analysis(
+    stations: list[dict],
+    daily_analysis: DailyAnalysisReader | None,
+) -> list[dict]:
+    station_ids = [str(station.get("station_id") or "").strip() for station in stations]
+    insights_by_station_id = _daily_analysis_by_station_id(daily_analysis, station_ids)
+    if not insights_by_station_id:
+        return stations
+    return [
+        _merge_station_daily_analysis(
+            station,
+            insights_by_station_id.get(str(station.get("station_id") or "").strip()),
+        )
+        for station in stations
+    ]
 
 
 def _route_endpoint_from_request(payload: RouteEndpointRequest) -> RouteEndpoint:
@@ -346,6 +410,10 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     store = LiveStore(effective_config)
     store.initialize()
     open_catalog_store = OpenCatalogStore(effective_config.open_static_sqlite_path)
+    daily_analysis = DailyAnalysisReader(
+        effective_config.occupancy_stats_sqlite_path,
+        effective_config.station_occupancy_dir,
+    )
     route_charger_service = RouteChargerService(effective_config, open_catalog_store, store)
     ingestion_service = IngestionService(effective_config, store=store)
     station_catalog_path = effective_config.full_chargers_csv_path or effective_config.chargers_csv_path
@@ -371,6 +439,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     app.state.config = effective_config
     app.state.store = store
     app.state.open_catalog_store = open_catalog_store
+    app.state.daily_analysis = daily_analysis
     app.state.route_charger_service = route_charger_service
     app.state.ingestion_service = ingestion_service
     app.state.receipt_queue = ingestion_service.receipt_queue
@@ -514,6 +583,10 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             )
         except OpenCatalogUnavailable as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
+        payload = dict(payload)
+        stations = payload.get("stations")
+        if isinstance(stations, list):
+            payload["stations"] = _enrich_stations_with_daily_analysis(stations, app.state.daily_analysis)
         return _json_response(request, payload)
 
     @app.get("/v1/catalog/stations/{station_id}")
@@ -524,6 +597,14 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         if payload is None:
             raise HTTPException(status_code=404, detail="catalog_station_not_found")
+        station = payload.get("station")
+        if isinstance(station, dict):
+            lookup_id = str(station.get("station_id") or station_id)
+            payload = dict(payload)
+            payload["station"] = _merge_station_daily_analysis(
+                station,
+                _daily_analysis_by_station_id(app.state.daily_analysis, [lookup_id]).get(lookup_id),
+            )
         return _json_response(request, payload)
 
     @app.post("/v1/routes/chargers")
@@ -595,6 +676,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         _record_store_timings(request, timings)
         payload_started_at = time.perf_counter()
         payload = [_serialize_station_summary(row) for row in rows]
+        payload = _enrich_stations_with_daily_analysis(payload, app.state.daily_analysis)
         _record_profile_metric(
             request,
             "payload",
@@ -621,9 +703,15 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             if matched_station_id and matched_station_id not in found_by_station_id:
                 found_by_station_id[matched_station_id] = _rewrite_station_id(station, matched_station_id)
         missing_station_ids = [station_id for station_id in station_ids if station_id not in found_by_station_id]
+        insights_by_station_id = _daily_analysis_by_station_id(app.state.daily_analysis, station_ids)
         response_payload = {
             "stations": [
-                _serialize_station_summary(found_by_station_id[station_id])
+                _serialize_station_summary(
+                    _merge_station_daily_analysis(
+                        found_by_station_id[station_id],
+                        insights_by_station_id.get(station_id),
+                    )
+                )
                 for station_id in station_ids
                 if station_id in found_by_station_id
             ],
@@ -687,6 +775,10 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="station_not_found")
         payload_started_at = time.perf_counter()
         response_payload = _serialize_station_detail(payload)
+        response_payload["station"] = _merge_station_daily_analysis(
+            response_payload["station"],
+            _daily_analysis_by_station_id(app.state.daily_analysis, [response_station_id]).get(response_station_id),
+        )
         _record_profile_metric(
             request,
             "payload",

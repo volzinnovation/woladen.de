@@ -18,6 +18,7 @@ packages=(
   python3-venv
   rsync
   sqlite3
+  zstd
 )
 
 apt-get update

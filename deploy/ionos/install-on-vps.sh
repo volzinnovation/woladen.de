@@ -111,6 +111,7 @@ ENV_FILE="$CONFIG_DIR/woladen-live.env"
 RENDERED_CADDYFILE="$CONFIG_DIR/${LIVE_DOMAIN}.Caddyfile"
 CADDY_MAIN_CONFIG=/etc/caddy/Caddyfile
 CRON_FILE=/etc/cron.d/woladen-live-log-archive
+OCCUPANCY_STATS_CRON_FILE=/etc/cron.d/woladen-live-occupancy-stats-refresh
 CURRENT_RELEASE_DIR=""
 CADDY_AUTOMATION_STATUS="not-managed"
 RENDERED_CADDYFILE_CHANGED=0
@@ -147,6 +148,7 @@ render_template() {
     -e "s|__APP_DIR__|$CURRENT_LINK|g" \
     -e "s|__VENV_DIR__|$VENV_DIR|g" \
     -e "s|__ENV_FILE__|$ENV_FILE|g" \
+    -e "s|__CONFIG_DIR__|$CONFIG_DIR|g" \
     -e "s|__STATE_DIR__|$STATE_DIR|g" \
     -e "s|live.woladen.de|$LIVE_DOMAIN|g" \
     "$template" >"$target"
@@ -369,6 +371,10 @@ render_template \
   "$RELEASE_DIR/deploy/ionos/woladen-live-log-archive.cron" \
   "$CRON_FILE"
 chmod 0644 "$CRON_FILE"
+render_template \
+  "$RELEASE_DIR/deploy/ionos/woladen-live-occupancy-stats-refresh.cron" \
+  "$OCCUPANCY_STATS_CRON_FILE"
+chmod 0644 "$OCCUPANCY_STATS_CRON_FILE"
 ensure_caddy_integration
 
 ln -sfn "$RELEASE_DIR" "$CURRENT_LINK.next"
@@ -402,5 +408,6 @@ State dir: $STATE_DIR
 Env file: $ENV_FILE
 Rendered Caddyfile: $RENDERED_CADDYFILE
 Cron file: $CRON_FILE
+Occupancy stats cron file: $OCCUPANCY_STATS_CRON_FILE
 Caddy automation: $CADDY_AUTOMATION_STATUS
 EOF

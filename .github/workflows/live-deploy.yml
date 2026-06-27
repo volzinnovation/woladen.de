@@ -17,6 +17,7 @@ on:
       - scripts/live_queue_maintenance.py
       - scripts/live_queue_worker.py
       - scripts/live_subscription_registry.py
+      - scripts/refresh_occupancy_stats_sidecar.py
       - scripts/sync_mobilithek_subscriptions.py
       - .github/workflows/live-deploy.yml
   workflow_run:

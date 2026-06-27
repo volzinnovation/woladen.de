@@ -226,6 +226,8 @@ pwd_target="$config_dir/pwd.txt"
 subscriptions_target="$config_dir/mobilithek_subscriptions.json"
 venv_dir="$install_root/venv"
 current_link="$install_root/current"
+occupancy_stats_target="$state_dir/occupancy_stats.sqlite3"
+occupancy_stats_summary="$state_dir/occupancy_stats_refresh_summary.json"
 
 sudo_cmd() {
   printf '%s\n' "$sudo_password" | sudo -S -p '' "$@"
@@ -239,6 +241,9 @@ remote_needs_bootstrap() {
     return 0
   fi
   if ! command -v curl >/dev/null 2>&1; then
+    return 0
+  fi
+  if ! command -v zstd >/dev/null 2>&1; then
     return 0
   fi
   return 1
@@ -303,6 +308,30 @@ wait_for_api_health() {
   sudo_cmd systemctl --no-pager --full status woladen-live-api.service || true
   sudo_cmd journalctl -u woladen-live-api.service -u woladen-live-ingester.service -u woladen-live-queue-worker.service -n 100 --no-pager || true
   return 1
+}
+
+refresh_occupancy_stats_sidecar() {
+  local repo_id
+
+  if ! sudo_cmd test -f "$current_link/scripts/refresh_occupancy_stats_sidecar.py"; then
+    echo "Occupancy stats refresh skipped: refresh script missing from release"
+    return 0
+  fi
+  if ! sudo_cmd test -s "$hf_token_target"; then
+    echo "Occupancy stats refresh skipped: Hugging Face token file missing at $hf_token_target"
+    return 0
+  fi
+
+  repo_id=${hf_repo_id:-loffenauer/AFIR}
+  sudo_cmd -u "$app_user" env \
+    WOLADEN_LIVE_OCCUPANCY_STATS_SQLITE_PATH="$occupancy_stats_target" \
+    WOLADEN_OCCUPANCY_STATS_HF_REPO_ID="$repo_id" \
+    WOLADEN_OCCUPANCY_STATS_HF_REPO_TYPE=dataset \
+    WOLADEN_OCCUPANCY_STATS_HF_PREFIX=AFIR/commercial/analytics/occupancy/merged \
+    WOLADEN_OCCUPANCY_STATS_HF_TOKEN_FILE="$hf_token_target" \
+    "$venv_dir/bin/python" "$current_link/scripts/refresh_occupancy_stats_sidecar.py" \
+      --output-path "$occupancy_stats_target" \
+      --summary-path "$occupancy_stats_summary"
 }
 
 extract_release_bundle() {
@@ -384,11 +413,18 @@ echo "Runtime config sync: cert=${cert_changed:-0} pwd=${password_changed:-0} su
 
 if [[ -n "$hf_repo_id" ]]; then
   upsert_env_value "WOLADEN_LIVE_HF_ARCHIVE_REPO_ID" "$hf_repo_id"
+  upsert_env_value "WOLADEN_OCCUPANCY_STATS_HF_REPO_ID" "$hf_repo_id"
 fi
 if [[ -f "$remote_tmp_dir/huggingface.token" ]]; then
   upsert_env_value "WOLADEN_LIVE_HF_ARCHIVE_TOKEN_FILE" "$hf_token_target"
+  upsert_env_value "WOLADEN_OCCUPANCY_STATS_HF_TOKEN_FILE" "$hf_token_target"
 fi
 upsert_env_value "WOLADEN_LIVE_QUEUE_DIR" "$state_dir/live_queue"
+upsert_env_value "WOLADEN_LIVE_OCCUPANCY_STATS_SQLITE_PATH" "$occupancy_stats_target"
+upsert_env_value "WOLADEN_OCCUPANCY_STATS_HF_REPO_TYPE" "dataset"
+upsert_env_value "WOLADEN_OCCUPANCY_STATS_HF_PREFIX" "AFIR/commercial/analytics/occupancy/merged"
+
+refresh_occupancy_stats_sidecar
 
 should_restart=$DEPLOY_PLAN_RESTART_SERVICES
 should_bootstrap=$DEPLOY_PLAN_BOOTSTRAP_RUNTIME

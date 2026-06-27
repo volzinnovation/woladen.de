@@ -22,6 +22,8 @@ def app_config(tmp_path: Path) -> AppConfig:
         provider_config_path=tmp_path / "providers.json",
         site_match_path=tmp_path / "matches.csv",
         chargers_csv_path=tmp_path / "chargers.csv",
+        occupancy_stats_sqlite_path=tmp_path / "missing_occupancy_stats.sqlite3",
+        station_occupancy_dir=tmp_path / "missing_station_occupancy",
         subscription_registry_path=tmp_path / "subscriptions.json",
         machine_cert_p12=cert_path,
         machine_cert_password_file=password_file,

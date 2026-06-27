@@ -13,11 +13,21 @@ DEFAULT_FULL_CHARGERS_CSV_PATH = REPO_ROOT / "data" / "chargers_full.csv"
 DEFAULT_OPEN_STATIC_SQLITE_PATH = REPO_ROOT / "data" / "open_static.sqlite3"
 DEFAULT_OPEN_STATIC_SUMMARY_PATH = REPO_ROOT / "data" / "open_static_summary.json"
 DEFAULT_BUILD_SUMMARY_PATH = REPO_ROOT / "data" / "summary.json"
+DEFAULT_OCCUPANCY_STATS_SQLITE_PATH = REPO_ROOT / "data" / "occupancy_stats.sqlite3"
+DEFAULT_STATION_OCCUPANCY_DIR = REPO_ROOT / "data" / "station-occupancy"
 
 
 def _env_path(name: str, default: Path) -> Path:
     value = str(os.environ.get(name, "")).strip()
     return Path(value).expanduser() if value else default
+
+
+def _env_path_any(names: Collection[str], default: Path) -> Path:
+    for name in names:
+        value = str(os.environ.get(name, "")).strip()
+        if value:
+            return Path(value).expanduser()
+    return default
 
 
 def _env_optional_path(name: str) -> Path | None:
@@ -173,6 +183,21 @@ class AppConfig:
         default_factory=lambda: _env_existing_path(
             "WOLADEN_BUILD_SUMMARY_PATH",
             DEFAULT_BUILD_SUMMARY_PATH,
+        )
+    )
+    occupancy_stats_sqlite_path: Path = field(
+        default_factory=lambda: _env_path_any(
+            (
+                "WOLADEN_LIVE_OCCUPANCY_STATS_SQLITE_PATH",
+                "WOLADEN_OCCUPANCY_STATS_SQLITE_PATH",
+            ),
+            DEFAULT_OCCUPANCY_STATS_SQLITE_PATH,
+        )
+    )
+    station_occupancy_dir: Path = field(
+        default_factory=lambda: _env_path(
+            "WOLADEN_LIVE_STATION_OCCUPANCY_DIR",
+            DEFAULT_STATION_OCCUPANCY_DIR,
         )
     )
     raw_payload_dir: Path = field(

@@ -177,6 +177,78 @@ def _write_geojson_fixture(path: Path) -> None:
     )
 
 
+def _write_occupancy_stats_profile(
+    path: Path,
+    station_id: str,
+    *,
+    measured_seconds: int = 7200,
+    occupied_seconds: int = 0,
+    out_of_order_seconds: int = 0,
+    confidence_label: str = "medium",
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    occupancy_share = occupied_seconds / measured_seconds if measured_seconds else None
+    out_of_order_share = out_of_order_seconds / measured_seconds if measured_seconds else None
+    unavailable_seconds = occupied_seconds + out_of_order_seconds
+    unavailable_share = unavailable_seconds / measured_seconds if measured_seconds else None
+    connection = sqlite3.connect(path)
+    connection.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS station_occupancy_profiles (
+            station_id TEXT PRIMARY KEY,
+            country_code TEXT,
+            start_date TEXT,
+            end_date TEXT,
+            requested_days INTEGER,
+            included_days INTEGER,
+            observed_days INTEGER,
+            observed_evses INTEGER,
+            measured_seconds INTEGER,
+            occupied_seconds INTEGER,
+            out_of_order_seconds INTEGER,
+            unavailable_seconds INTEGER,
+            occupancy_share REAL,
+            out_of_order_share REAL,
+            unavailable_share REAL,
+            confidence_label TEXT,
+            latest_observed_at TEXT,
+            generated_at TEXT,
+            timezone TEXT,
+            provider_uids_json TEXT,
+            occupancy_probability_status TEXT,
+            out_of_order_probability_status TEXT
+        );
+        """
+    )
+    connection.execute(
+        """
+        INSERT OR REPLACE INTO station_occupancy_profiles (
+            station_id, country_code, start_date, end_date, requested_days,
+            included_days, observed_days, observed_evses, measured_seconds,
+            occupied_seconds, out_of_order_seconds, unavailable_seconds,
+            occupancy_share, out_of_order_share, unavailable_share,
+            confidence_label, latest_observed_at, generated_at, timezone,
+            provider_uids_json, occupancy_probability_status,
+            out_of_order_probability_status
+        )
+        VALUES (?, 'DE', '2026-06-20', '2026-06-26', 7, 7, 7, 2, ?, ?, ?, ?, ?, ?, ?, ?, '2026-06-26T22:00:00Z', '2026-06-27T00:00:00Z', 'Europe/Berlin', '["qwello"]', '', '')
+        """,
+        (
+            station_id,
+            measured_seconds,
+            occupied_seconds,
+            out_of_order_seconds,
+            unavailable_seconds,
+            occupancy_share,
+            out_of_order_share,
+            unavailable_share,
+            confidence_label,
+        ),
+    )
+    connection.commit()
+    connection.close()
+
+
 def _write_subscription_registry(path: Path) -> None:
     path.write_text(
         json.dumps(
@@ -1961,6 +2033,56 @@ def test_api_station_lookup_returns_requested_station_ids(app_config):
     assert payload["missing_station_ids"] == ["missing"]
     for key in ("operator", "address", "postcode", "city", "lat", "lon", "charging_points_count", "max_power_kw", "provider_uid"):
         assert key not in payload["stations"][0]
+
+
+def test_api_station_list_returns_daily_analysis_out_of_order_flags(app_config, tmp_path: Path):
+    stats_path = tmp_path / "occupancy_stats.sqlite3"
+    config = replace(app_config, occupancy_stats_sqlite_path=stats_path)
+    _write_occupancy_stats_profile(stats_path, "station-1", out_of_order_seconds=2160)
+    payload = json.dumps(_dynamic_payload()).encode("utf-8")
+    fetcher = MockFetcher({"qwello": FetchResponse(payload, "application/json", 200), "ampeco": TimeoutError("skip")})
+    service = _build_service(config, fetcher)
+    service.ingest_provider("qwello")
+
+    client = TestClient(create_app(config))
+    response = client.get("/v1/stations")
+
+    assert response.status_code == 200
+    station = response.json()[0]
+    assert station["station_id"] == "station-1"
+    assert station["daily_analysis_data_available"] is True
+    assert station["frequently_out_of_order_daily_analysis"] is True
+    assert station["daily_analysis_out_of_order_color"] == "sehr_hellrot"
+    assert station["out_of_order_probability_status"] == "often_broken"
+    assert station["station_qualification_labels"] == "h\u00e4ufig gest\u00f6rt laut Tagesanalyse"
+    assert station["daily_analysis"]["frequently_out_of_order"] is True
+    assert station["daily_analysis_start_date"] == "2026-06-20"
+    assert "out_of_order_share" not in station
+
+
+def test_api_station_lookup_matches_de_prefixed_daily_analysis_profiles(app_config, tmp_path: Path):
+    stats_path = tmp_path / "occupancy_stats.sqlite3"
+    config = replace(app_config, occupancy_stats_sqlite_path=stats_path)
+    _write_occupancy_stats_profile(stats_path, "station-1", occupied_seconds=4320)
+    payload = json.dumps(_dynamic_payload()).encode("utf-8")
+    fetcher = MockFetcher({"qwello": FetchResponse(payload, "application/json", 200), "ampeco": TimeoutError("skip")})
+    service = _build_service(config, fetcher)
+    service.ingest_provider("qwello")
+
+    client = TestClient(create_app(config))
+    response = client.post(
+        "/v1/stations/lookup",
+        json={"station_ids": ["DE:station-1"]},
+    )
+
+    assert response.status_code == 200
+    station = response.json()["stations"][0]
+    assert station["station_id"] == "DE:station-1"
+    assert station["frequently_occupied_daily_analysis"] is True
+    assert station["daily_analysis_occupied_color"] == "hellgrau"
+    assert station["occupancy_probability_status"] == "high_demand"
+    assert station["station_qualification_labels"] == "h\u00e4ufig belegt laut Tagesanalyse"
+    assert "occupancy_share" not in station
 
 
 def test_store_upserts_station_ratings_by_client(app_config):

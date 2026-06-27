@@ -6,6 +6,8 @@ This package targets a small IONOS VPS where:
 - the live API is published on `https://live.woladen.de`
 - the live ingester and API run as native `systemd` services
 - a daily cron job archives the previous day of provider response logs
+- a daily cron job refreshes `/var/lib/woladen/occupancy_stats.sqlite3`
+  for daily-analysis station flags
 - the archive job can upload to Hugging Face Hub with a token file
 - releases are staged under `/srv/woladen-live/releases/` and activated via the `current` symlink
 - the first automated deploy can migrate a legacy `/srv/woladen-live/current` directory into the staged release layout automatically
@@ -22,6 +24,7 @@ This package targets a small IONOS VPS where:
 - `woladen-live-api.service`: `systemd` unit template for FastAPI
 - `woladen-live-ingester.service`: `systemd` unit template for the polling loop
 - `woladen-live-log-archive.cron`: daily archive/upload job for provider response logs
+- `woladen-live-occupancy-stats-refresh.cron`: daily private sidecar refresh
 - `Caddyfile`: reverse-proxy config for `live.woladen.de`
 
 ## Runtime Uptake
@@ -35,6 +38,11 @@ Deployments now distinguish between runtime change types:
 
 The API keeps reading `data/chargers_fast.geojson` through `/srv/woladen-live/current`, so GeoJSON-only updates become visible immediately after the symlink switch.
 Runtime state lives under `/var/lib/woladen` by default, including the SQLite database at `/var/lib/woladen/live_state.sqlite3`.
+Daily-analysis station flags are read from the private sidecar
+`/var/lib/woladen/occupancy_stats.sqlite3`. Deploy refreshes it from
+`AFIR/commercial/analytics/occupancy/merged/<date>/occupancy_stats.sqlite3.zst`
+when `/etc/woladen/huggingface.token` is present, and the cron job refreshes it
+daily at `03:37 Europe/Berlin`.
 
 By default the deploy keeps only the current staged release after the post-deploy health check passes. Use `--keep-releases N` if you want to retain more rollback copies.
 
@@ -169,6 +177,16 @@ Run the archive job manually:
 sudo -u woladen /srv/woladen-live/venv/bin/python \
   /srv/woladen-live/current/scripts/live_archive_logs.py \
   --env-file /etc/woladen/woladen-live.env
+```
+
+Refresh the occupancy sidecar manually:
+
+```bash
+sudo -u woladen /srv/woladen-live/venv/bin/python \
+  /srv/woladen-live/current/scripts/refresh_occupancy_stats_sidecar.py \
+  --output-path /var/lib/woladen/occupancy_stats.sqlite3 \
+  --token-file /etc/woladen/huggingface.token \
+  --summary-path /var/lib/woladen/occupancy_stats_refresh_summary.json
 ```
 
 Check the public endpoint after Caddy is reloaded:
