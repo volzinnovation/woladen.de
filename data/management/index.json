@@ -70,11 +70,12 @@
     "2026-06-22",
     "2026-06-23",
     "2026-06-24",
-    "2026-06-25"
+    "2026-06-25",
+    "2026-06-26"
   ],
-  "day_count": 71,
-  "generated_at": "2026-06-26T23:09:59+00:00",
-  "latest_date": "2026-06-25",
+  "day_count": 72,
+  "generated_at": "2026-06-26T23:51:22+00:00",
+  "latest_date": "2026-06-26",
   "snapshot_paths": {
     "2026-04-16": "days/2026/04/16/snapshot.json",
     "2026-04-17": "days/2026/04/17/snapshot.json",
@@ -146,7 +147,8 @@
     "2026-06-22": "days/2026/06/22/snapshot.json",
     "2026-06-23": "days/2026/06/23/snapshot.json",
     "2026-06-24": "days/2026/06/24/snapshot.json",
-    "2026-06-25": "days/2026/06/25/snapshot.json"
+    "2026-06-25": "days/2026/06/25/snapshot.json",
+    "2026-06-26": "days/2026/06/26/snapshot.json"
   },
   "trends_path": "trends.json"
 }
