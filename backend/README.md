@@ -177,8 +177,10 @@ The backend uses `AppConfig` in [config.py](/Users/raphaelvolz/Github/woladen.de
 - `WOLADEN_LIVE_API_PUSH_ENABLED`: enable Mobilithek push routes. Default: `1`
 - `WOLADEN_LIVE_API_CORS_ALLOWED_ORIGINS`: comma-separated explicit CORS allowlist
 - `WOLADEN_LIVE_API_CORS_ALLOW_ORIGIN_REGEX`: regex fallback for local development (`localhost`, `127.0.0.1`, `0.0.0.0`, `[::1]` by default)
-- `WOLADEN_ORS_BASE_URL`: openrouteservice base URL for route planning. Leave unset to keep `/v1/routes/chargers` disabled.
-- `WOLADEN_ORS_API_KEY`: ORS API key for the public ORS service. Private ORS deployments may leave this unset if they do not require a key.
+- `WOLADEN_ORS_BASE_URL`: primary openrouteservice base URL for route planning. Leave unset to keep `/v1/routes/chargers` disabled unless a fallback base URL is configured.
+- `WOLADEN_ORS_API_KEY`: optional API key for the primary ORS endpoint. Private ORS deployments may leave this unset if they do not require a key.
+- `WOLADEN_ORS_FALLBACK_BASE_URL`: optional secondary ORS base URL used when the primary endpoint times out, is unreachable, rate-limits, exhausts quota, returns invalid JSON, or returns a 5xx provider error.
+- `WOLADEN_ORS_FALLBACK_API_KEY`: optional API key for the fallback ORS endpoint. If unset, the backend also checks `WOLADEN_OPENROUTESERVICE_API_KEY`, `OPENROUTESERVICE_API_KEY`, `ORS_API_KEY`, matching `*_FILE` variables, and common local secret file names.
 - `WOLADEN_ORS_TIMEOUT_SECONDS`: outbound ORS request timeout. Default: `6`
 - `WOLADEN_ROUTE_CORRIDOR_RADIUS_M`: validated driving access threshold from the route. Default: `2000`
 - `WOLADEN_ROUTE_CANDIDATE_RADIUS_M`: coarse straight-line corridor radius for catalog candidates before Matrix validation. Default: `3000`

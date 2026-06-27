@@ -6,10 +6,11 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+import requests
 from fastapi.testclient import TestClient
 
 from backend.api import create_app
-from backend.routing import NormalizedRoute, OpenRouteServiceClient, RouteEndpoint, RouteProviderError
+from backend.routing import NormalizedRoute, OpenRouteServiceClient, RouteEndpoint, RouteNotFound, RouteProviderError
 
 
 class FakeORSClient:
@@ -55,9 +56,24 @@ class FakeORSResponse:
 class FakeORSSession:
     def __init__(self, response: FakeORSResponse):
         self.response = response
+        self.requests: list[dict] = []
 
     def post(self, url, *, json, headers, timeout):
+        self.requests.append({"url": url, "json": json, "headers": headers, "timeout": timeout})
         return self.response
+
+
+class SequencedORSSession:
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.requests: list[dict] = []
+
+    def post(self, url, *, json, headers, timeout):
+        self.requests.append({"url": url, "json": json, "headers": headers, "timeout": timeout})
+        response = self.responses.pop(0)
+        if isinstance(response, BaseException):
+            raise response
+        return response
 
 
 def _create_route_sqlite(path: Path, stations: list[dict]) -> None:
@@ -209,6 +225,66 @@ def test_ors_client_keeps_non_quota_403_as_auth_failure(app_config):
 
     assert exc_info.value.detail == "route_provider_auth_failed"
     assert exc_info.value.status_code == 503
+
+
+def test_ors_client_falls_back_when_primary_request_fails(app_config):
+    session = SequencedORSSession(
+        [
+            requests.ConnectionError("primary down"),
+            FakeORSResponse(200, {"distances": [[1234.0]]}),
+        ]
+    )
+    client = OpenRouteServiceClient(
+        replace(
+            app_config,
+            ors_base_url="http://private-ors.test/ors",
+            ors_api_key="",
+            ors_fallback_base_url="https://api.openrouteservice.org",
+            ors_fallback_api_key="fallback-key",
+        ),
+        session=session,
+    )
+
+    distances = client.matrix_one_to_many(
+        RouteEndpoint(lat=0.0, lon=0.0),
+        [RouteEndpoint(lat=0.1, lon=0.0)],
+    )
+
+    assert distances == [1234.0]
+    assert [request["url"] for request in session.requests] == [
+        "http://private-ors.test/ors/v2/matrix/driving-car",
+        "https://api.openrouteservice.org/v2/matrix/driving-car",
+    ]
+    assert "Authorization" not in session.requests[0]["headers"]
+    assert session.requests[1]["headers"]["Authorization"] == "fallback-key"
+
+
+def test_ors_client_does_not_fall_back_for_route_not_found(app_config):
+    session = SequencedORSSession(
+        [
+            FakeORSResponse(404, {"error": "Route not found"}),
+            FakeORSResponse(200, {"distances": [[1234.0]]}),
+        ]
+    )
+    client = OpenRouteServiceClient(
+        replace(
+            app_config,
+            ors_base_url="http://private-ors.test/ors",
+            ors_fallback_base_url="https://api.openrouteservice.org",
+            ors_fallback_api_key="fallback-key",
+        ),
+        session=session,
+    )
+
+    with pytest.raises(RouteNotFound):
+        client.matrix_one_to_many(
+            RouteEndpoint(lat=0.0, lon=0.0),
+            [RouteEndpoint(lat=0.1, lon=0.0)],
+        )
+
+    assert [request["url"] for request in session.requests] == [
+        "http://private-ors.test/ors/v2/matrix/driving-car"
+    ]
 
 
 def test_route_charger_search_validates_detour_distance_and_prunes_slow_candidates(app_config, tmp_path: Path):

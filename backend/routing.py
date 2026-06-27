@@ -32,10 +32,11 @@ class RouteProviderUnavailable(RuntimeError):
 
 
 class RouteProviderError(RuntimeError):
-    def __init__(self, detail: str, *, status_code: int = 502):
+    def __init__(self, detail: str, *, status_code: int = 502, provider_status_code: int | None = None):
         super().__init__(detail)
         self.detail = detail
         self.status_code = status_code
+        self.provider_status_code = provider_status_code
 
 
 class RouteNotFound(RuntimeError):
@@ -104,6 +105,12 @@ class OpeningRange:
 
 
 @dataclass(frozen=True)
+class OrsEndpoint:
+    base_url: str
+    api_key: str = ""
+
+
+@dataclass(frozen=True)
 class OpeningClause:
     selected_days: set[str] | None
     mode: str
@@ -117,7 +124,7 @@ class OpenRouteServiceClient:
 
     @property
     def available(self) -> bool:
-        return bool(self.config.ors_base_url)
+        return bool(self._endpoints())
 
     def directions(self, origin: RouteEndpoint, destination: RouteEndpoint, *, profile: str = ROUTE_PROFILE) -> NormalizedRoute:
         self._require_available()
@@ -184,10 +191,21 @@ class OpenRouteServiceClient:
 
     def _post_json(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         self._require_available()
-        url = f"{self.config.ors_base_url}{path}"
+        endpoints = self._endpoints()
+        for index, endpoint in enumerate(endpoints):
+            try:
+                return self._post_json_to_endpoint(endpoint, path, payload)
+            except RouteProviderError as exc:
+                if index < len(endpoints) - 1 and _route_provider_error_allows_fallback(exc):
+                    continue
+                raise
+        raise RouteProviderUnavailable("route_provider_unavailable")
+
+    def _post_json_to_endpoint(self, endpoint: OrsEndpoint, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        url = f"{endpoint.base_url}{path}"
         headers = {"Content-Type": "application/json"}
-        if self.config.ors_api_key:
-            headers["Authorization"] = self.config.ors_api_key
+        if endpoint.api_key:
+            headers["Authorization"] = endpoint.api_key
         try:
             response = self.session.post(
                 url,
@@ -201,15 +219,31 @@ class OpenRouteServiceClient:
             raise RouteProviderError("route_provider_request_failed", status_code=502) from exc
 
         if response.status_code in {403, 429} and _response_mentions_quota_exceeded(response):
-            raise RouteProviderError("route_provider_quota_exhausted", status_code=503)
+            raise RouteProviderError(
+                "route_provider_quota_exhausted",
+                status_code=503,
+                provider_status_code=response.status_code,
+            )
         if response.status_code == 429:
-            raise RouteProviderError("route_provider_rate_limited", status_code=429)
+            raise RouteProviderError(
+                "route_provider_rate_limited",
+                status_code=429,
+                provider_status_code=response.status_code,
+            )
         if response.status_code in {401, 403}:
-            raise RouteProviderError("route_provider_auth_failed", status_code=503)
+            raise RouteProviderError(
+                "route_provider_auth_failed",
+                status_code=503,
+                provider_status_code=response.status_code,
+            )
         if response.status_code == 404:
             raise RouteNotFound("route_not_found")
         if response.status_code >= 400:
-            raise RouteProviderError("route_provider_error", status_code=502)
+            raise RouteProviderError(
+                "route_provider_error",
+                status_code=502,
+                provider_status_code=response.status_code,
+            )
 
         try:
             decoded = response.json()
@@ -218,6 +252,20 @@ class OpenRouteServiceClient:
         if not isinstance(decoded, dict):
             raise RouteProviderError("route_provider_invalid_json")
         return decoded
+
+    def _endpoints(self) -> tuple[OrsEndpoint, ...]:
+        endpoints: list[OrsEndpoint] = []
+        seen: set[str] = set()
+        for base_url, api_key in (
+            (self.config.ors_base_url, self.config.ors_api_key),
+            (self.config.ors_fallback_base_url, self.config.ors_fallback_api_key),
+        ):
+            normalized_base_url = str(base_url or "").strip().rstrip("/")
+            if not normalized_base_url or normalized_base_url in seen:
+                continue
+            endpoints.append(OrsEndpoint(base_url=normalized_base_url, api_key=str(api_key or "").strip()))
+            seen.add(normalized_base_url)
+        return tuple(endpoints)
 
     def _require_available(self) -> None:
         if not self.available:
@@ -520,6 +568,20 @@ def _first_feature(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _response_mentions_quota_exceeded(response: requests.Response) -> bool:
     return "quota exceeded" in _response_error_text(response).lower()
+
+
+def _route_provider_error_allows_fallback(exc: RouteProviderError) -> bool:
+    if exc.detail in {
+        "route_provider_timeout",
+        "route_provider_request_failed",
+        "route_provider_invalid_json",
+        "route_provider_quota_exhausted",
+        "route_provider_rate_limited",
+    }:
+        return True
+    if exc.detail == "route_provider_error":
+        return exc.provider_status_code is None or exc.provider_status_code >= 500
+    return False
 
 
 def _response_error_text(response: requests.Response) -> str:

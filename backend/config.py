@@ -34,6 +34,69 @@ def _env_existing_path(name: str, default: Path) -> Path | None:
     return None
 
 
+def _unquote_env_value(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1]
+    return value
+
+
+def _read_secret_value_file(path: Path, *, env_names: Collection[str]) -> str:
+    try:
+        text = path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+    if not text:
+        return ""
+    if "=" in text:
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, value = stripped.split("=", 1)
+            if key.strip() in env_names:
+                return _unquote_env_value(value)
+        return ""
+    return _unquote_env_value(text)
+
+
+def _default_openrouteservice_api_key_files() -> tuple[Path, ...]:
+    return (
+        REPO_ROOT / "secret" / "ors_api_key.txt",
+        REPO_ROOT / "secret" / "openrouteservice_api_key.txt",
+        REPO_ROOT / "secrets" / "ors_api_key.txt",
+        REPO_ROOT / "secrets" / "openrouteservice_api_key.txt",
+        Path("/run/secrets/woladen/ors_api_key"),
+        Path("/run/secrets/woladen/ors_api_key.txt"),
+        Path("/run/secrets/woladen-local/ors_api_key"),
+        Path("/run/secrets/woladen-local/ors_api_key.txt"),
+    )
+
+
+def _openrouteservice_api_key_from_env() -> str:
+    env_names = ("WOLADEN_OPENROUTESERVICE_API_KEY", "OPENROUTESERVICE_API_KEY", "ORS_API_KEY")
+    for name in env_names:
+        value = str(os.environ.get(name, "")).strip()
+        if value:
+            return _unquote_env_value(value)
+    file_names = ("WOLADEN_OPENROUTESERVICE_API_KEY_FILE", "OPENROUTESERVICE_API_KEY_FILE")
+    for name in file_names:
+        value = str(os.environ.get(name, "")).strip()
+        if not value:
+            continue
+        path = Path(value).expanduser()
+        if not path.is_absolute():
+            path = REPO_ROOT / path
+        secret = _read_secret_value_file(path, env_names=env_names)
+        if secret:
+            return secret
+    for path in _default_openrouteservice_api_key_files():
+        secret = _read_secret_value_file(path, env_names=env_names)
+        if secret:
+            return secret
+    return ""
+
+
 def _env_csv(name: str) -> tuple[str, ...]:
     value = str(os.environ.get(name, "")).strip()
     if not value:
@@ -237,6 +300,13 @@ class AppConfig:
         default_factory=lambda: str(os.environ.get("WOLADEN_ORS_BASE_URL", "")).strip().rstrip("/")
     )
     ors_api_key: str = field(default_factory=lambda: str(os.environ.get("WOLADEN_ORS_API_KEY", "")).strip())
+    ors_fallback_base_url: str = field(
+        default_factory=lambda: str(os.environ.get("WOLADEN_ORS_FALLBACK_BASE_URL", "")).strip().rstrip("/")
+    )
+    ors_fallback_api_key: str = field(
+        default_factory=lambda: str(os.environ.get("WOLADEN_ORS_FALLBACK_API_KEY", "")).strip()
+        or _openrouteservice_api_key_from_env()
+    )
     ors_timeout_seconds: float = field(default_factory=lambda: _env_float("WOLADEN_ORS_TIMEOUT_SECONDS", 6.0))
     route_corridor_radius_m: int = field(default_factory=lambda: _env_int("WOLADEN_ROUTE_CORRIDOR_RADIUS_M", 2000))
     route_candidate_radius_m: int = field(default_factory=lambda: _env_int("WOLADEN_ROUTE_CANDIDATE_RADIUS_M", 3000))
