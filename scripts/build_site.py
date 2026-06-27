@@ -27,12 +27,12 @@ SITE_DATA_DIR = SITE_DIR / "data"
 STATION_DIR = SITE_DIR / "station"
 SITE_ORIGIN = "https://woladen.de"
 SITEMAP_MAX_URLS = 10_000
-SOCIAL_IMAGE_VERSION = "20260620-brand1"
+SOCIAL_IMAGE_VERSION = "20260627-human1"
 SOCIAL_IMAGE_PATH = f"img/social-card-home.png?v={SOCIAL_IMAGE_VERSION}"
 SOCIAL_IMAGE_WIDTH = "1200"
 SOCIAL_IMAGE_HEIGHT = "630"
 SOCIAL_IMAGE_ALT = (
-    "woladen preview with a Europe map and the tagline: Plugs for Cars. Perks for People."
+    "woladen preview with a Europe charger map and the slogan: The human side of charging."
 )
 IOS_APP_LINK = "https://apps.apple.com/de/app/wo-laden/id6759499459"
 ANDROID_APP_LINK = "https://play.google.com/store/apps/details?id=de.woladen.android"

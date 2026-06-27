@@ -70,7 +70,7 @@ const FALLBACK_BUNDLE = {
     description: "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. Because charging time should be time well spent.",
     ogTitle: "woladen - Smart EV Stops in Europe",
     ogDescription: "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. Because charging time should be time well spent.",
-    socialAlt: "woladen preview with a Europe map and the tagline: Plugs for Cars. Perks for People.",
+    socialAlt: "woladen preview with a Europe charger map and the slogan: The human side of charging.",
   },
   seo: {
     brandName: "woladen",
