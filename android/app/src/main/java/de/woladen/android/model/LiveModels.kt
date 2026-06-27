@@ -36,7 +36,12 @@ data class LiveStationSummary(
     val priceEnergyEurKwhMax: String,
     val sourceObservedAt: String,
     val fetchedAt: String,
-    val ingestedAt: String
+    val ingestedAt: String,
+    val dailyAnalysisDataAvailable: Boolean = false,
+    val frequentlyOutOfOrderDailyAnalysis: Boolean = false,
+    val frequentlyOccupiedDailyAnalysis: Boolean = false,
+    val dailyAnalysisOutOfOrderColor: String = "",
+    val dailyAnalysisOccupiedColor: String = ""
 )
 
 data class LiveEvse(
@@ -93,6 +98,16 @@ data class AvailabilityCounts(
     val outOfOrder: Int,
     val unknown: Int
 )
+
+enum class StationCardState {
+    DEFAULT,
+    UNKNOWN,
+    OUT_OF_ORDER,
+    OCCUPIED,
+    ONE_FREE_LEFT,
+    OFTEN_BROKEN,
+    OFTEN_OCCUPIED
+}
 
 data class LiveDetailNote(
     val label: String,
@@ -157,6 +172,35 @@ val GeoJsonFeature.availabilityStatus: AvailabilityStatus
             counts.occupied > 0 -> AvailabilityStatus.OCCUPIED
             counts.total > 0 && counts.outOfOrder >= counts.total -> AvailabilityStatus.OUT_OF_ORDER
             else -> AvailabilityStatus.UNKNOWN
+        }
+    }
+
+val LiveStationSummary.isOftenBrokenFromDailyAnalysis: Boolean
+    get() = frequentlyOutOfOrderDailyAnalysis ||
+        normalizedDailyAnalysisColor(dailyAnalysisOutOfOrderColor) in setOf("sehr_hellrot", "hellrot")
+
+val LiveStationSummary.isOftenOccupiedFromDailyAnalysis: Boolean
+    get() = frequentlyOccupiedDailyAnalysis ||
+        normalizedDailyAnalysisColor(dailyAnalysisOccupiedColor) == "hellgrau"
+
+val GeoJsonFeature.isOftenBrokenFromDailyAnalysis: Boolean
+    get() = liveSummaryForDisplay?.isOftenBrokenFromDailyAnalysis == true
+
+val GeoJsonFeature.isOftenOccupiedFromDailyAnalysis: Boolean
+    get() = liveSummaryForDisplay?.isOftenOccupiedFromDailyAnalysis == true
+
+val GeoJsonFeature.stationCardState: StationCardState
+    get() {
+        val counts = availabilityCounts
+        val hasAvailability = counts.total > 0
+        return when {
+            hasAvailability && availabilityStatus == AvailabilityStatus.OUT_OF_ORDER -> StationCardState.OUT_OF_ORDER
+            hasAvailability && availabilityStatus == AvailabilityStatus.OCCUPIED -> StationCardState.OCCUPIED
+            hasAvailability && counts.total > 1 && counts.available == 1 -> StationCardState.ONE_FREE_LEFT
+            isOftenBrokenFromDailyAnalysis -> StationCardState.OFTEN_BROKEN
+            isOftenOccupiedFromDailyAnalysis -> StationCardState.OFTEN_OCCUPIED
+            !hasAvailability || availabilityStatus == AvailabilityStatus.UNKNOWN -> StationCardState.UNKNOWN
+            else -> StationCardState.DEFAULT
         }
     }
 
@@ -251,6 +295,13 @@ private val GeoJsonFeature.liveObservedTimestamp: String
         liveSummaryForDisplay?.fetchedAt.orEmpty(),
         liveSummaryForDisplay?.ingestedAt.orEmpty()
     )
+
+private fun normalizedDailyAnalysisColor(value: String): String {
+    return value
+        .trim()
+        .lowercase(Locale.ROOT)
+        .replace(Regex("[\\s-]+"), "_")
+}
 
 private val GeoJsonFeature.liveSourceLabel: String?
     get() {

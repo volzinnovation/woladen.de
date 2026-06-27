@@ -70,6 +70,53 @@ class LiveFeatureFormattingTest {
         assertTrue(feature.liveEvseRows.isEmpty())
     }
 
+    @Test
+    fun dailyAnalysisOccupiedColorMarksOftenOccupiedStations() {
+        val feature = sampleFeature(
+            properties = sampleProperties(),
+            liveSummary = sampleLiveSummary(
+                availabilityStatus = AvailabilityStatus.FREE,
+                totalEvses = 4,
+                availableEvses = 4,
+                dailyAnalysisOccupiedColor = "hellgrau"
+            )
+        )
+
+        assertTrue(feature.isOftenOccupiedFromDailyAnalysis)
+        assertEquals(StationCardState.OFTEN_OCCUPIED, feature.stationCardState)
+    }
+
+    @Test
+    fun dailyAnalysisBrokenFlagMarksOftenBrokenStations() {
+        val feature = sampleFeature(
+            properties = sampleProperties(),
+            liveSummary = sampleLiveSummary(
+                availabilityStatus = AvailabilityStatus.FREE,
+                totalEvses = 2,
+                availableEvses = 2,
+                frequentlyOutOfOrderDailyAnalysis = true
+            )
+        )
+
+        assertTrue(feature.isOftenBrokenFromDailyAnalysis)
+        assertEquals(StationCardState.OFTEN_BROKEN, feature.stationCardState)
+    }
+
+    @Test
+    fun currentAvailabilityOverridesDailyAnalysisCardState() {
+        val feature = sampleFeature(
+            properties = sampleProperties(),
+            liveSummary = sampleLiveSummary(
+                availabilityStatus = AvailabilityStatus.OCCUPIED,
+                totalEvses = 2,
+                occupiedEvses = 2,
+                dailyAnalysisOutOfOrderColor = "sehr_hellrot"
+            )
+        )
+
+        assertEquals(StationCardState.OCCUPIED, feature.stationCardState)
+    }
+
     private fun sampleFeature(
         properties: ChargerProperties,
         liveSummary: LiveStationSummary? = null
@@ -79,6 +126,41 @@ class LiveFeatureFormattingTest {
             geometry = GeoJsonPointGeometry(type = "Point", coordinates = listOf(13.4, 52.5)),
             properties = properties,
             liveSummary = liveSummary
+        )
+    }
+
+    private fun sampleLiveSummary(
+        availabilityStatus: AvailabilityStatus = AvailabilityStatus.UNKNOWN,
+        availableEvses: Int = 0,
+        occupiedEvses: Int = 0,
+        outOfOrderEvses: Int = 0,
+        unknownEvses: Int = 0,
+        totalEvses: Int = 0,
+        frequentlyOutOfOrderDailyAnalysis: Boolean = false,
+        frequentlyOccupiedDailyAnalysis: Boolean = false,
+        dailyAnalysisOutOfOrderColor: String = "",
+        dailyAnalysisOccupiedColor: String = ""
+    ): LiveStationSummary {
+        return LiveStationSummary(
+            stationId = "station-1",
+            availabilityStatus = availabilityStatus,
+            availableEvses = availableEvses,
+            occupiedEvses = occupiedEvses,
+            outOfOrderEvses = outOfOrderEvses,
+            unknownEvses = unknownEvses,
+            totalEvses = totalEvses,
+            priceDisplay = "",
+            priceCurrency = "EUR",
+            priceEnergyEurKwhMin = "",
+            priceEnergyEurKwhMax = "",
+            sourceObservedAt = "2026-06-27T10:00:00Z",
+            fetchedAt = "2026-06-27T10:01:00Z",
+            ingestedAt = "2026-06-27T10:01:00Z",
+            dailyAnalysisDataAvailable = true,
+            frequentlyOutOfOrderDailyAnalysis = frequentlyOutOfOrderDailyAnalysis,
+            frequentlyOccupiedDailyAnalysis = frequentlyOccupiedDailyAnalysis,
+            dailyAnalysisOutOfOrderColor = dailyAnalysisOutOfOrderColor,
+            dailyAnalysisOccupiedColor = dailyAnalysisOccupiedColor
         )
     }
 

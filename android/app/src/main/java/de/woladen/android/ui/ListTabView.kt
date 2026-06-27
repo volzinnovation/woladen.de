@@ -67,11 +67,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import de.woladen.android.R
 import de.woladen.android.model.AvailabilityStatus
 import de.woladen.android.model.FilterState
-import de.woladen.android.model.availabilityCounts
+import de.woladen.android.model.StationCardState
 import de.woladen.android.model.availabilityStatus
 import de.woladen.android.model.GeoJsonFeature
 import de.woladen.android.model.displayPrice
 import de.woladen.android.model.occupancySummaryLabel
+import de.woladen.android.model.stationCardState
 import androidx.compose.material.icons.outlined.NearMe
 import androidx.compose.material.icons.outlined.Star
 import de.woladen.android.service.LocationAuthorizationStatus
@@ -570,19 +571,15 @@ private fun StationRow(
 
 @Composable
 private fun stationCardBackground(feature: GeoJsonFeature): Color {
-    val counts = feature.availabilityCounts
-    val hasAvailability = counts.total > 0
     val isDarkMode = isSystemInDarkTheme()
-    return when {
-        !hasAvailability || feature.availabilityStatus == AvailabilityStatus.UNKNOWN ->
-            if (isDarkMode) Color(0xFF16212B) else Color(0xFFF1F5F9)
-        feature.availabilityStatus == AvailabilityStatus.OUT_OF_ORDER ->
-            if (isDarkMode) Color(0xFF3B121C) else Color(0xFFFFF1F2)
-        feature.availabilityStatus == AvailabilityStatus.OCCUPIED ->
-            if (isDarkMode) Color(0xFF26323D) else Color(0xFFE2E8F0)
-        counts.total > 1 && counts.available == 1 ->
-            if (isDarkMode) Color(0xFF332B12) else Color(0xFFFFFBEB)
-        else -> MaterialTheme.colorScheme.surface
+    return when (feature.stationCardState) {
+        StationCardState.OUT_OF_ORDER -> if (isDarkMode) Color(0xFF3B121C) else Color(0xFFFFF1F2)
+        StationCardState.OCCUPIED -> if (isDarkMode) Color(0xFF26323D) else Color(0xFFE2E8F0)
+        StationCardState.ONE_FREE_LEFT -> if (isDarkMode) Color(0xFF332B12) else Color(0xFFFFFBEB)
+        StationCardState.OFTEN_BROKEN -> if (isDarkMode) Color(0xFF36161F) else Color(0xFFFFF7F8)
+        StationCardState.OFTEN_OCCUPIED -> if (isDarkMode) Color(0xFF0F1E27) else Color(0xFFF8FAFC)
+        StationCardState.UNKNOWN -> if (isDarkMode) Color(0xFF16212B) else Color(0xFFF1F5F9)
+        StationCardState.DEFAULT -> MaterialTheme.colorScheme.surface
     }
 }
 

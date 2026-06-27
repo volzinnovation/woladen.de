@@ -45,6 +45,11 @@ struct LiveStationSummary: Decodable {
     let sourceObservedAt: String
     let fetchedAt: String
     let ingestedAt: String
+    let dailyAnalysisDataAvailable: Bool
+    let frequentlyOutOfOrderDailyAnalysis: Bool
+    let frequentlyOccupiedDailyAnalysis: Bool
+    let dailyAnalysisOutOfOrderColor: String
+    let dailyAnalysisOccupiedColor: String
 
     enum CodingKeys: String, CodingKey {
         case stationID = "station_id"
@@ -61,6 +66,11 @@ struct LiveStationSummary: Decodable {
         case sourceObservedAt = "source_observed_at"
         case fetchedAt = "fetched_at"
         case ingestedAt = "ingested_at"
+        case dailyAnalysisDataAvailable = "daily_analysis_data_available"
+        case frequentlyOutOfOrderDailyAnalysis = "frequently_out_of_order_daily_analysis"
+        case frequentlyOccupiedDailyAnalysis = "frequently_occupied_daily_analysis"
+        case dailyAnalysisOutOfOrderColor = "daily_analysis_out_of_order_color"
+        case dailyAnalysisOccupiedColor = "daily_analysis_occupied_color"
     }
 
     init(
@@ -77,7 +87,12 @@ struct LiveStationSummary: Decodable {
         priceEnergyEURKwhMax: String,
         sourceObservedAt: String,
         fetchedAt: String,
-        ingestedAt: String
+        ingestedAt: String,
+        dailyAnalysisDataAvailable: Bool = false,
+        frequentlyOutOfOrderDailyAnalysis: Bool = false,
+        frequentlyOccupiedDailyAnalysis: Bool = false,
+        dailyAnalysisOutOfOrderColor: String = "",
+        dailyAnalysisOccupiedColor: String = ""
     ) {
         self.stationID = stationID
         self.availabilityStatus = availabilityStatus
@@ -93,6 +108,11 @@ struct LiveStationSummary: Decodable {
         self.sourceObservedAt = sourceObservedAt
         self.fetchedAt = fetchedAt
         self.ingestedAt = ingestedAt
+        self.dailyAnalysisDataAvailable = dailyAnalysisDataAvailable
+        self.frequentlyOutOfOrderDailyAnalysis = frequentlyOutOfOrderDailyAnalysis
+        self.frequentlyOccupiedDailyAnalysis = frequentlyOccupiedDailyAnalysis
+        self.dailyAnalysisOutOfOrderColor = dailyAnalysisOutOfOrderColor
+        self.dailyAnalysisOccupiedColor = dailyAnalysisOccupiedColor
     }
 
     init(from decoder: Decoder) throws {
@@ -111,6 +131,11 @@ struct LiveStationSummary: Decodable {
         sourceObservedAt = container.decodeLossyString(forKey: .sourceObservedAt)
         fetchedAt = container.decodeLossyString(forKey: .fetchedAt)
         ingestedAt = container.decodeLossyString(forKey: .ingestedAt)
+        dailyAnalysisDataAvailable = container.decodeLossyBool(forKey: .dailyAnalysisDataAvailable) ?? false
+        frequentlyOutOfOrderDailyAnalysis = container.decodeLossyBool(forKey: .frequentlyOutOfOrderDailyAnalysis) ?? false
+        frequentlyOccupiedDailyAnalysis = container.decodeLossyBool(forKey: .frequentlyOccupiedDailyAnalysis) ?? false
+        dailyAnalysisOutOfOrderColor = container.decodeLossyString(forKey: .dailyAnalysisOutOfOrderColor)
+        dailyAnalysisOccupiedColor = container.decodeLossyString(forKey: .dailyAnalysisOccupiedColor)
     }
 }
 
@@ -259,6 +284,16 @@ struct LiveEVSERow: Identifiable {
     let notes: [LiveDetailNote]
 }
 
+enum StationCardState: Equatable {
+    case `default`
+    case unknown
+    case outOfOrder
+    case occupied
+    case oneFreeLeft
+    case oftenBroken
+    case oftenOccupied
+}
+
 extension GeoJSONFeature {
     var displayPrice: String {
         if let livePrice = liveSummaryForDisplay?.priceDisplay.trimmingCharacters(in: .whitespacesAndNewlines), !livePrice.isEmpty {
@@ -317,6 +352,26 @@ extension GeoJSONFeature {
             return .outOfOrder
         }
         return .unknown
+    }
+
+    var isOftenBrokenFromDailyAnalysis: Bool {
+        liveSummaryForDisplay?.isOftenBrokenFromDailyAnalysis == true
+    }
+
+    var isOftenOccupiedFromDailyAnalysis: Bool {
+        liveSummaryForDisplay?.isOftenOccupiedFromDailyAnalysis == true
+    }
+
+    var stationCardState: StationCardState {
+        let counts = availabilityCounts
+        let hasAvailability = counts.total > 0
+        if hasAvailability, availabilityStatus == .outOfOrder { return .outOfOrder }
+        if hasAvailability, availabilityStatus == .occupied { return .occupied }
+        if hasAvailability, counts.total > 1, counts.available == 1 { return .oneFreeLeft }
+        if isOftenBrokenFromDailyAnalysis { return .oftenBroken }
+        if isOftenOccupiedFromDailyAnalysis { return .oftenOccupied }
+        if !hasAvailability || availabilityStatus == .unknown { return .unknown }
+        return .default
     }
 
     var occupancySummaryLabel: String? {
@@ -645,6 +700,25 @@ private func firstNonEmpty(_ values: String?...) -> String {
     return ""
 }
 
+private extension LiveStationSummary {
+    var isOftenBrokenFromDailyAnalysis: Bool {
+        frequentlyOutOfOrderDailyAnalysis ||
+        ["sehr_hellrot", "hellrot"].contains(normalizedDailyAnalysisColor(dailyAnalysisOutOfOrderColor))
+    }
+
+    var isOftenOccupiedFromDailyAnalysis: Bool {
+        frequentlyOccupiedDailyAnalysis ||
+        normalizedDailyAnalysisColor(dailyAnalysisOccupiedColor) == "hellgrau"
+    }
+}
+
+private func normalizedDailyAnalysisColor(_ value: String) -> String {
+    value
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+        .lowercased()
+        .replacingOccurrences(of: #"[\s-]+"#, with: "_", options: .regularExpression)
+}
+
 private extension KeyedDecodingContainer {
     func decodeLossyString(forKey key: Key) -> String {
         if let value = try? decode(String.self, forKey: key) {
@@ -676,6 +750,26 @@ private extension KeyedDecodingContainer {
             }
             if let double = Double(normalized) {
                 return Int(double)
+            }
+        }
+        return nil
+    }
+
+    func decodeLossyBool(forKey key: Key) -> Bool? {
+        if let value = try? decode(Bool.self, forKey: key) {
+            return value
+        }
+        if let value = try? decode(Int.self, forKey: key) {
+            return value != 0
+        }
+        if let value = try? decode(String.self, forKey: key) {
+            switch value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+            case "1", "true", "yes", "y", "ja":
+                return true
+            case "0", "false", "no", "n", "nein":
+                return false
+            default:
+                return nil
             }
         }
         return nil

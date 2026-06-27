@@ -168,6 +168,16 @@ const LIVE_STATION_FIELDS = [
   "source_observed_at",
   "fetched_at",
   "ingested_at",
+  "daily_analysis_data_available",
+  "frequently_out_of_order_daily_analysis",
+  "frequently_occupied_daily_analysis",
+  "daily_analysis_out_of_order_color",
+  "daily_analysis_occupied_color",
+  "daily_analysis_start_date",
+  "daily_analysis_end_date",
+  "daily_analysis_included_days",
+  "daily_analysis_latest_observed_at",
+  "daily_analysis_generated_at",
 ];
 const LIVE_DYNAMIC_KEY_LABELS = {
   expectedAvailableFromTime: "Ab",
@@ -831,6 +841,11 @@ const CATALOG_LIVE_SIGNAL_FIELDS = [
   "source_observed_at",
   "fetched_at",
   "ingested_at",
+  "daily_analysis_data_available",
+  "frequently_out_of_order_daily_analysis",
+  "frequently_occupied_daily_analysis",
+  "daily_analysis_out_of_order_color",
+  "daily_analysis_occupied_color",
 ];
 
 function hasCatalogLiveStationSummary(station) {
@@ -4225,12 +4240,37 @@ function stationHasAnalyticsState(props, stateKey) {
   return Boolean(stationId && state.analytics[stateKey]?.has(stationId));
 }
 
+function normalizeDailyAnalysisColor(value) {
+  return String(value || "")
+    .trim()
+    .toLocaleLowerCase("de-DE")
+    .replace(/[\s-]+/g, "_");
+}
+
+function truthyDailyAnalysisFlag(value) {
+  if (value === true) {
+    return true;
+  }
+  const raw = String(value || "").trim().toLocaleLowerCase("de-DE");
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "ja";
+}
+
+function hasDailyAnalysisBrokenSignal(props) {
+  return truthyDailyAnalysisFlag(props.live_frequently_out_of_order_daily_analysis) ||
+    ["sehr_hellrot", "hellrot"].includes(normalizeDailyAnalysisColor(props.live_daily_analysis_out_of_order_color));
+}
+
+function hasDailyAnalysisOccupiedSignal(props) {
+  return truthyDailyAnalysisFlag(props.live_frequently_occupied_daily_analysis) ||
+    normalizeDailyAnalysisColor(props.live_daily_analysis_occupied_color) === "hellgrau";
+}
+
 function isStationOftenBroken(props) {
-  return stationHasAnalyticsState(props, "oftenBrokenStationIds");
+  return hasDailyAnalysisBrokenSignal(props) || stationHasAnalyticsState(props, "oftenBrokenStationIds");
 }
 
 function isStationOftenOccupied(props) {
-  return stationHasAnalyticsState(props, "oftenOccupiedStationIds");
+  return hasDailyAnalysisOccupiedSignal(props) || stationHasAnalyticsState(props, "oftenOccupiedStationIds");
 }
 
 function getStationCardStateClass(props) {

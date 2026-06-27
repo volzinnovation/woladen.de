@@ -280,6 +280,50 @@ final class LiveFeatureFormattingTests: XCTestCase {
         XCTAssertTrue(feature.liveEVSERows.isEmpty)
     }
 
+    func testDailyAnalysisOccupiedColorMarksOftenOccupiedStations() {
+        let feature = sampleFeature(
+            properties: sampleProperties(),
+            liveSummary: sampleLiveSummary(
+                availabilityStatus: .free,
+                availableEVSEs: 4,
+                totalEVSEs: 4,
+                dailyAnalysisOccupiedColor: "hellgrau"
+            )
+        )
+
+        XCTAssertTrue(feature.isOftenOccupiedFromDailyAnalysis)
+        XCTAssertEqual(feature.stationCardState, .oftenOccupied)
+    }
+
+    func testDailyAnalysisBrokenFlagMarksOftenBrokenStations() {
+        let feature = sampleFeature(
+            properties: sampleProperties(),
+            liveSummary: sampleLiveSummary(
+                availabilityStatus: .free,
+                availableEVSEs: 2,
+                totalEVSEs: 2,
+                frequentlyOutOfOrderDailyAnalysis: true
+            )
+        )
+
+        XCTAssertTrue(feature.isOftenBrokenFromDailyAnalysis)
+        XCTAssertEqual(feature.stationCardState, .oftenBroken)
+    }
+
+    func testCurrentAvailabilityOverridesDailyAnalysisCardState() {
+        let feature = sampleFeature(
+            properties: sampleProperties(),
+            liveSummary: sampleLiveSummary(
+                availabilityStatus: .occupied,
+                occupiedEVSEs: 2,
+                totalEVSEs: 2,
+                dailyAnalysisOutOfOrderColor: "sehr_hellrot"
+            )
+        )
+
+        XCTAssertEqual(feature.stationCardState, .occupied)
+    }
+
     private func sampleFeature(
         properties: ChargerProperties,
         liveSummary: LiveStationSummary? = nil
@@ -289,6 +333,41 @@ final class LiveFeatureFormattingTests: XCTestCase {
             geometry: GeoJSONPointGeometry(type: "Point", coordinates: [13.4, 52.5]),
             properties: properties,
             liveSummary: liveSummary
+        )
+    }
+
+    private func sampleLiveSummary(
+        availabilityStatus: AvailabilityStatus = .unknown,
+        availableEVSEs: Int = 0,
+        occupiedEVSEs: Int = 0,
+        outOfOrderEVSEs: Int = 0,
+        unknownEVSEs: Int = 0,
+        totalEVSEs: Int = 0,
+        frequentlyOutOfOrderDailyAnalysis: Bool = false,
+        frequentlyOccupiedDailyAnalysis: Bool = false,
+        dailyAnalysisOutOfOrderColor: String = "",
+        dailyAnalysisOccupiedColor: String = ""
+    ) -> LiveStationSummary {
+        LiveStationSummary(
+            stationID: "station-1",
+            availabilityStatus: availabilityStatus,
+            availableEVSEs: availableEVSEs,
+            occupiedEVSEs: occupiedEVSEs,
+            outOfOrderEVSEs: outOfOrderEVSEs,
+            unknownEVSEs: unknownEVSEs,
+            totalEVSEs: totalEVSEs,
+            priceDisplay: "",
+            priceCurrency: "EUR",
+            priceEnergyEURKwhMin: "",
+            priceEnergyEURKwhMax: "",
+            sourceObservedAt: "2026-06-27T10:00:00Z",
+            fetchedAt: "2026-06-27T10:01:00Z",
+            ingestedAt: "2026-06-27T10:01:00Z",
+            dailyAnalysisDataAvailable: true,
+            frequentlyOutOfOrderDailyAnalysis: frequentlyOutOfOrderDailyAnalysis,
+            frequentlyOccupiedDailyAnalysis: frequentlyOccupiedDailyAnalysis,
+            dailyAnalysisOutOfOrderColor: dailyAnalysisOutOfOrderColor,
+            dailyAnalysisOccupiedColor: dailyAnalysisOccupiedColor
         )
     }
 

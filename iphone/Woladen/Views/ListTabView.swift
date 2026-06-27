@@ -90,19 +90,41 @@ extension GeoJSONFeature {
     }
 
     var stationCardBackground: Color {
-        if isStationOutOfOrder { return StationVisualStyle.cardOutOfOrder }
-        if isStationFullyOccupied { return StationVisualStyle.cardOccupied }
-        if isStationOneFreeLeft { return StationVisualStyle.cardOneFreeLeft }
-        if isStationAvailabilityUnknown { return StationVisualStyle.cardUnknown }
-        return StationVisualStyle.cardDefault
+        switch stationCardState {
+        case .outOfOrder:
+            return StationVisualStyle.cardOutOfOrder
+        case .occupied:
+            return StationVisualStyle.cardOccupied
+        case .oneFreeLeft:
+            return StationVisualStyle.cardOneFreeLeft
+        case .oftenBroken:
+            return StationVisualStyle.cardOftenBroken
+        case .oftenOccupied:
+            return StationVisualStyle.cardOftenOccupied
+        case .unknown:
+            return StationVisualStyle.cardUnknown
+        case .default:
+            return StationVisualStyle.cardDefault
+        }
     }
 
     var stationCardBorder: Color {
-        if isStationOutOfOrder { return StationVisualStyle.borderOutOfOrder }
-        if isStationFullyOccupied { return StationVisualStyle.borderOccupied }
-        if isStationOneFreeLeft { return StationVisualStyle.borderOneFreeLeft }
-        if isStationAvailabilityUnknown { return StationVisualStyle.borderUnknown }
-        return StationVisualStyle.borderDefault
+        switch stationCardState {
+        case .outOfOrder:
+            return StationVisualStyle.borderOutOfOrder
+        case .occupied:
+            return StationVisualStyle.borderOccupied
+        case .oneFreeLeft:
+            return StationVisualStyle.borderOneFreeLeft
+        case .oftenBroken:
+            return StationVisualStyle.borderOftenBroken
+        case .oftenOccupied:
+            return StationVisualStyle.borderOftenOccupied
+        case .unknown:
+            return StationVisualStyle.borderUnknown
+        case .default:
+            return StationVisualStyle.borderDefault
+        }
     }
 }
 

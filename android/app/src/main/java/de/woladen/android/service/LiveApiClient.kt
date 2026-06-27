@@ -300,6 +300,11 @@ class LiveApiClient(
         var sourceObservedAt = ""
         var fetchedAt = ""
         var ingestedAt = ""
+        var dailyAnalysisDataAvailable = false
+        var frequentlyOutOfOrderDailyAnalysis = false
+        var frequentlyOccupiedDailyAnalysis = false
+        var dailyAnalysisOutOfOrderColor = ""
+        var dailyAnalysisOccupiedColor = ""
 
         reader.beginObject()
         while (reader.hasNext()) {
@@ -318,6 +323,11 @@ class LiveApiClient(
                 "source_observed_at" -> sourceObservedAt = nextStringOrNull(reader).orEmpty()
                 "fetched_at" -> fetchedAt = nextStringOrNull(reader).orEmpty()
                 "ingested_at" -> ingestedAt = nextStringOrNull(reader).orEmpty()
+                "daily_analysis_data_available" -> dailyAnalysisDataAvailable = nextLossyBoolean(reader, false)
+                "frequently_out_of_order_daily_analysis" -> frequentlyOutOfOrderDailyAnalysis = nextLossyBoolean(reader, false)
+                "frequently_occupied_daily_analysis" -> frequentlyOccupiedDailyAnalysis = nextLossyBoolean(reader, false)
+                "daily_analysis_out_of_order_color" -> dailyAnalysisOutOfOrderColor = nextStringOrNull(reader).orEmpty()
+                "daily_analysis_occupied_color" -> dailyAnalysisOccupiedColor = nextStringOrNull(reader).orEmpty()
                 else -> reader.skipValue()
             }
         }
@@ -337,7 +347,12 @@ class LiveApiClient(
             priceEnergyEurKwhMax = priceEnergyEurKwhMax,
             sourceObservedAt = sourceObservedAt,
             fetchedAt = fetchedAt,
-            ingestedAt = ingestedAt
+            ingestedAt = ingestedAt,
+            dailyAnalysisDataAvailable = dailyAnalysisDataAvailable,
+            frequentlyOutOfOrderDailyAnalysis = frequentlyOutOfOrderDailyAnalysis,
+            frequentlyOccupiedDailyAnalysis = frequentlyOccupiedDailyAnalysis,
+            dailyAnalysisOutOfOrderColor = dailyAnalysisOutOfOrderColor,
+            dailyAnalysisOccupiedColor = dailyAnalysisOccupiedColor
         )
     }
 
@@ -532,7 +547,12 @@ class LiveApiClient(
             "total_evses",
             "source_observed_at",
             "fetched_at",
-            "ingested_at"
+            "ingested_at",
+            "daily_analysis_data_available",
+            "frequently_out_of_order_daily_analysis",
+            "frequently_occupied_daily_analysis",
+            "daily_analysis_out_of_order_color",
+            "daily_analysis_occupied_color"
         ).any(payload::has)
 
         if (!hasLiveFields) {
@@ -560,7 +580,12 @@ class LiveApiClient(
             priceEnergyEurKwhMax = payload.optCleanString("price_energy_eur_kwh_max"),
             sourceObservedAt = payload.optCleanString("source_observed_at"),
             fetchedAt = payload.optCleanString("fetched_at"),
-            ingestedAt = payload.optCleanString("ingested_at")
+            ingestedAt = payload.optCleanString("ingested_at"),
+            dailyAnalysisDataAvailable = payload.optNullableBoolean("daily_analysis_data_available") ?: false,
+            frequentlyOutOfOrderDailyAnalysis = payload.optNullableBoolean("frequently_out_of_order_daily_analysis") ?: false,
+            frequentlyOccupiedDailyAnalysis = payload.optNullableBoolean("frequently_occupied_daily_analysis") ?: false,
+            dailyAnalysisOutOfOrderColor = payload.optCleanString("daily_analysis_out_of_order_color"),
+            dailyAnalysisOccupiedColor = payload.optCleanString("daily_analysis_occupied_color")
         )
     }
 
@@ -724,6 +749,26 @@ class LiveApiClient(
         return when (reader.peek()) {
             JsonToken.NUMBER -> reader.nextDouble()
             JsonToken.STRING -> reader.nextString().replace(',', '.').toDoubleOrNull() ?: fallback
+            JsonToken.NULL -> {
+                reader.nextNull()
+                fallback
+            }
+            else -> {
+                reader.skipValue()
+                fallback
+            }
+        }
+    }
+
+    private fun nextLossyBoolean(reader: JsonReader, fallback: Boolean): Boolean {
+        return when (reader.peek()) {
+            JsonToken.BOOLEAN -> reader.nextBoolean()
+            JsonToken.NUMBER -> reader.nextDouble().toInt() != 0
+            JsonToken.STRING -> when (reader.nextString().trim().lowercase(Locale.ROOT)) {
+                "1", "true", "yes", "y", "ja" -> true
+                "0", "false", "no", "n", "nein" -> false
+                else -> fallback
+            }
             JsonToken.NULL -> {
                 reader.nextNull()
                 fallback

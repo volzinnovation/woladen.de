@@ -62,6 +62,11 @@ struct CatalogStation: Decodable {
     let sourceObservedAt: String
     let fetchedAt: String
     let ingestedAt: String
+    let dailyAnalysisDataAvailable: Bool
+    let frequentlyOutOfOrderDailyAnalysis: Bool
+    let frequentlyOccupiedDailyAnalysis: Bool
+    let dailyAnalysisOutOfOrderColor: String
+    let dailyAnalysisOccupiedColor: String
 
     enum CodingKeys: String, CodingKey {
         case stationID = "station_id"
@@ -107,6 +112,11 @@ struct CatalogStation: Decodable {
         case sourceObservedAt = "source_observed_at"
         case fetchedAt = "fetched_at"
         case ingestedAt = "ingested_at"
+        case dailyAnalysisDataAvailable = "daily_analysis_data_available"
+        case frequentlyOutOfOrderDailyAnalysis = "frequently_out_of_order_daily_analysis"
+        case frequentlyOccupiedDailyAnalysis = "frequently_occupied_daily_analysis"
+        case dailyAnalysisOutOfOrderColor = "daily_analysis_out_of_order_color"
+        case dailyAnalysisOccupiedColor = "daily_analysis_occupied_color"
     }
 
     init(from decoder: Decoder) throws {
@@ -157,6 +167,11 @@ struct CatalogStation: Decodable {
         sourceObservedAt = container.decodeLossyString(forKey: .sourceObservedAt)
         fetchedAt = container.decodeLossyString(forKey: .fetchedAt)
         ingestedAt = container.decodeLossyString(forKey: .ingestedAt)
+        dailyAnalysisDataAvailable = container.decodeLossyBool(forKey: .dailyAnalysisDataAvailable) ?? false
+        frequentlyOutOfOrderDailyAnalysis = container.decodeLossyBool(forKey: .frequentlyOutOfOrderDailyAnalysis) ?? false
+        frequentlyOccupiedDailyAnalysis = container.decodeLossyBool(forKey: .frequentlyOccupiedDailyAnalysis) ?? false
+        dailyAnalysisOutOfOrderColor = container.decodeLossyString(forKey: .dailyAnalysisOutOfOrderColor)
+        dailyAnalysisOccupiedColor = container.decodeLossyString(forKey: .dailyAnalysisOccupiedColor)
     }
 
     func feature(
@@ -177,10 +192,10 @@ struct CatalogStation: Decodable {
     }
 
     private var liveSummary: LiveStationSummary? {
-        guard let availabilityStatus else { return nil }
+        guard hasLiveSummarySignal else { return nil }
         return LiveStationSummary(
             stationID: stationID,
-            availabilityStatus: availabilityStatus,
+            availabilityStatus: availabilityStatus ?? .unknown,
             availableEVSEs: availableEVSEs,
             occupiedEVSEs: occupiedEVSEs,
             outOfOrderEVSEs: outOfOrderEVSEs,
@@ -192,8 +207,30 @@ struct CatalogStation: Decodable {
             priceEnergyEURKwhMax: priceEnergyEURKwhMax,
             sourceObservedAt: sourceObservedAt,
             fetchedAt: fetchedAt,
-            ingestedAt: ingestedAt
+            ingestedAt: ingestedAt,
+            dailyAnalysisDataAvailable: dailyAnalysisDataAvailable,
+            frequentlyOutOfOrderDailyAnalysis: frequentlyOutOfOrderDailyAnalysis,
+            frequentlyOccupiedDailyAnalysis: frequentlyOccupiedDailyAnalysis,
+            dailyAnalysisOutOfOrderColor: dailyAnalysisOutOfOrderColor,
+            dailyAnalysisOccupiedColor: dailyAnalysisOccupiedColor
         )
+    }
+
+    private var hasLiveSummarySignal: Bool {
+        availabilityStatus != nil ||
+        availableEVSEs > 0 ||
+        occupiedEVSEs > 0 ||
+        outOfOrderEVSEs > 0 ||
+        unknownEVSEs > 0 ||
+        totalEVSEs > 0 ||
+        !sourceObservedAt.isEmpty ||
+        !fetchedAt.isEmpty ||
+        !ingestedAt.isEmpty ||
+        dailyAnalysisDataAvailable ||
+        frequentlyOutOfOrderDailyAnalysis ||
+        frequentlyOccupiedDailyAnalysis ||
+        !dailyAnalysisOutOfOrderColor.isEmpty ||
+        !dailyAnalysisOccupiedColor.isEmpty
     }
 
     private func chargerProperties(chargers: [CatalogCharger], amenities: CatalogAmenities?) -> ChargerProperties {

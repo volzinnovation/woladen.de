@@ -64,9 +64,11 @@ import de.woladen.android.model.GeoJsonFeature
 import de.woladen.android.model.RouteEndpoint
 import de.woladen.android.model.RouteStationMetadata
 import de.woladen.android.model.RouteSummary
+import de.woladen.android.model.StationCardState
 import de.woladen.android.model.availabilityStatus
 import de.woladen.android.model.displayPrice
 import de.woladen.android.model.occupancySummaryLabel
+import de.woladen.android.model.stationCardState
 import de.woladen.android.service.LocationService
 import de.woladen.android.store.FavoritesStore
 import de.woladen.android.store.normalizeCategoryLabel
@@ -829,11 +831,14 @@ private fun formatRouteDuration(seconds: Int): String {
 @Composable
 private fun routeStationBackground(feature: GeoJsonFeature): Color {
     val isDark = isSystemInDarkTheme()
-    return when (feature.availabilityStatus) {
-        AvailabilityStatus.OUT_OF_ORDER -> if (isDark) Color(0xFF3B121C) else Color(0xFFFFF1F2)
-        AvailabilityStatus.OCCUPIED -> if (isDark) Color(0xFF26323D) else Color(0xFFE2E8F0)
-        AvailabilityStatus.UNKNOWN -> if (isDark) Color(0xFF16212B) else Color(0xFFF1F5F9)
-        AvailabilityStatus.FREE -> MaterialTheme.colorScheme.surface
+    return when (feature.stationCardState) {
+        StationCardState.OUT_OF_ORDER -> if (isDark) Color(0xFF3B121C) else Color(0xFFFFF1F2)
+        StationCardState.OCCUPIED -> if (isDark) Color(0xFF26323D) else Color(0xFFE2E8F0)
+        StationCardState.ONE_FREE_LEFT -> if (isDark) Color(0xFF332B12) else Color(0xFFFFFBEB)
+        StationCardState.OFTEN_BROKEN -> if (isDark) Color(0xFF36161F) else Color(0xFFFFF7F8)
+        StationCardState.OFTEN_OCCUPIED -> if (isDark) Color(0xFF0F1E27) else Color(0xFFF8FAFC)
+        StationCardState.UNKNOWN -> if (isDark) Color(0xFF16212B) else Color(0xFFF1F5F9)
+        StationCardState.DEFAULT -> MaterialTheme.colorScheme.surface
     }
 }
 
