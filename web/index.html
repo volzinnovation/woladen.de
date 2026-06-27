@@ -108,7 +108,7 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css?v=20260627-route-actions1" />
+    <link rel="stylesheet" href="./styles.css?v=20260627-route-layout2" />
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -227,13 +227,12 @@
                 decoding="async"
               />
               <span class="brand-intro-title-text">
-                <span class="brand-intro-brand">woladen:</span>
-                <span data-i18n="seo.primaryTagline">Plugs for Cars. Perks for People.</span>
+                <span class="brand-intro-brand">woladen</span>
               </span>
             </h1>
             <p class="brand-intro-hook">
-              <span data-i18n="seo.humanHook">The human side of charging.</span>
-              <span data-i18n="seo.timeLine">Because charging time is your time.</span>
+              <span data-i18n="seo.humanHook">The human side of charging</span>
+              <span data-i18n="seo.timeLine">Because charging time is your time</span>
             </p>
           </section>
           <div class="view-header" data-nosnippet>
@@ -258,6 +257,25 @@
 
         <!-- ROUTE VIEW -->
         <div id="view-route" class="view hidden">
+          <div class="view-header route-header" data-nosnippet>
+            <div class="route-title-lockup">
+              <span class="route-title-icon" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="6" cy="19" r="2"></circle>
+                  <circle cx="18" cy="5" r="2"></circle>
+                  <path d="M8 19h3.5a3.5 3.5 0 0 0 0-7H12a3.5 3.5 0 0 1 0-7h4"></path>
+                </svg>
+              </span>
+              <h2 data-i18n="route.title">Route planner</h2>
+            </div>
+          </div>
           <div class="route-container">
             <form id="route-form" class="route-form" autocomplete="off">
               <div class="route-endpoint-grid">
@@ -364,28 +382,27 @@
                 Charging stations along route
               </button>
             </form>
-            <div class="view-header route-results-header" data-nosnippet>
-              <h2 data-i18n="route.title">Route planner</h2>
-              <div class="header-actions route-actions">
-                <button id="btn-route-filter" class="text-btn" type="button" data-i18n="filters.title">
-                  Filters
-                </button>
-                <button
-                  id="route-favorite-all"
-                  class="text-btn route-favorite-all-btn"
-                  type="button"
-                  data-i18n="route.addAllFavorites"
-                  disabled
-                >
-                  Add all as favorites
-                </button>
-              </div>
-            </div>
             <div id="route-status" class="route-status" data-nosnippet></div>
             <div id="route-summary" class="route-summary" hidden data-nosnippet></div>
             <div id="route-results" class="route-results list-container">
-              <div class="empty-state" data-nosnippet data-i18n="route.empty">
-                Enter a start and destination to find route chargers.
+              <div class="empty-state route-empty-state route-instruction-state" data-nosnippet>
+                <svg
+                  class="route-empty-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="6" cy="19" r="2"></circle>
+                  <circle cx="18" cy="5" r="2"></circle>
+                  <path d="M8 19h3.5a3.5 3.5 0 0 0 0-7H12a3.5 3.5 0 0 1 0-7h4"></path>
+                </svg>
+                <p data-i18n="route.empty">
+                  Enter a start and destination to find route chargers.
+                </p>
               </div>
             </div>
           </div>
@@ -434,13 +451,12 @@
                 decoding="async"
               />
               <span class="brand-intro-title-text">
-                <span class="brand-intro-brand">woladen:</span>
-                <span data-i18n="seo.primaryTagline">Plugs for Cars. Perks for People.</span>
+                <span class="brand-intro-brand">woladen</span>
               </span>
             </h1>
             <p class="brand-intro-hook">
-              <span data-i18n="seo.humanHook">The human side of charging.</span>
-              <span data-i18n="seo.timeLine">Because charging time is your time.</span>
+              <span data-i18n="seo.humanHook">The human side of charging</span>
+              <span data-i18n="seo.timeLine">Because charging time is your time</span>
             </p>
             <p class="brand-intro-message" data-i18n="seo.productMessage">Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. Because charging time should be time well spent.</p>
           </section>
@@ -1152,6 +1168,6 @@
       crossorigin=""
     ></script>
     <script src="./app-install-promo.js?v=20260620-eu-i18n9"></script>
-    <script src="./app.js?v=20260627-route-actions1" type="module"></script>
+    <script src="./app.js?v=20260627-route-layout2" type="module"></script>
   </body>
 </html>

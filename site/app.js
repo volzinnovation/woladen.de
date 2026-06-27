@@ -90,7 +90,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260627-route-actions1";
+} from "./i18n.mjs?v=20260627-brand-route1";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -2265,6 +2265,26 @@ function renderRouteActionState() {
   );
 }
 
+function updateRouteFilterButtonState(button = els.filter.routeFilterBtn) {
+  if (!button) {
+    return;
+  }
+  const routeFilters = routeEffectiveFilters();
+  const routeFilterCount = countActiveFilters(routeFilters);
+  const routeLabels = getActiveFilterLabels(routeFilters);
+  const routeLabelSummary = routeLabels.join(", ");
+  button.textContent = routeFilterCount > 0
+    ? `${t("filters.title")} (${routeFilterCount})`
+    : t("filters.title");
+  button.setAttribute(
+    "aria-label",
+    routeFilterCount > 0
+      ? t("filters.openWithCount", { count: routeFilterCount, labels: routeLabelSummary })
+      : t("aria.filterOpen"),
+  );
+  button.classList.toggle("active", routeFilterCount > 0);
+}
+
 function addRouteResultsToFavorites() {
   const features = routeFavoriteCandidateFeatures();
   const category = routeFavoriteCategoryLabel();
@@ -2372,6 +2392,49 @@ function routeFiltersRequireRecalculation() {
   return false;
 }
 
+function createRouteIcon(className) {
+  const namespace = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(namespace, "svg");
+  svg.setAttribute("class", className);
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.setAttribute("aria-hidden", "true");
+
+  const start = document.createElementNS(namespace, "circle");
+  start.setAttribute("cx", "6");
+  start.setAttribute("cy", "19");
+  start.setAttribute("r", "2");
+
+  const finish = document.createElementNS(namespace, "circle");
+  finish.setAttribute("cx", "18");
+  finish.setAttribute("cy", "5");
+  finish.setAttribute("r", "2");
+
+  const route = document.createElementNS(namespace, "path");
+  route.setAttribute("d", "M8 19h3.5a3.5 3.5 0 0 0 0-7H12a3.5 3.5 0 0 1 0-7h4");
+
+  svg.append(start, finish, route);
+  return svg;
+}
+
+function createRouteEmptyState(message, { showIcon = true } = {}) {
+  const empty = document.createElement("div");
+  empty.className = "empty-state route-empty-state";
+  empty.setAttribute("data-nosnippet", "");
+  if (showIcon) {
+    empty.classList.add("route-instruction-state");
+    empty.appendChild(createRouteIcon("route-empty-icon"));
+  }
+  const text = document.createElement("p");
+  text.textContent = message;
+  empty.appendChild(text);
+  return empty;
+}
+
 function renderRouteResults() {
   if (!els.route.results) {
     return;
@@ -2402,11 +2465,7 @@ function renderRouteResults() {
     if (state.route.error) {
       return;
     }
-    const empty = document.createElement("div");
-    empty.className = "empty-state";
-    empty.setAttribute("data-nosnippet", "");
-    empty.textContent = t("route.empty");
-    els.route.results.appendChild(empty);
+    els.route.results.appendChild(createRouteEmptyState(t("route.empty")));
     return;
   }
 
@@ -2416,11 +2475,7 @@ function renderRouteResults() {
     els.route.results.appendChild(createRouteRecalculateNotice());
   }
   if (displayFeatures.length === 0) {
-    const empty = document.createElement("div");
-    empty.className = "empty-state";
-    empty.setAttribute("data-nosnippet", "");
-    empty.textContent = t("route.noFilteredResults");
-    els.route.results.appendChild(empty);
+    els.route.results.appendChild(createRouteEmptyState(t("route.noFilteredResults"), { showIcon: false }));
     renderRouteLayer();
     return;
   }
@@ -2438,6 +2493,8 @@ function hideRouteSummary() {
   }
   els.route.summary.hidden = true;
   els.route.summary.replaceChildren();
+  els.route.favoriteAllBtn = null;
+  els.filter.routeFilterBtn = null;
 }
 
 function createRouteSummaryStat(label, value) {
@@ -2461,6 +2518,17 @@ function renderRouteSummary(resultCount) {
     createRouteSummaryStat(t("route.summaryDuration"), formatRouteDuration(route.duration_s)),
     createRouteSummaryStat(t("route.summaryStations"), t("route.resultsCount", { count: resultCount })),
   );
+  const actions = document.createElement("div");
+  actions.className = "route-summary-actions";
+
+  const filterButton = document.createElement("button");
+  filterButton.id = "btn-route-filter";
+  filterButton.type = "button";
+  filterButton.className = "text-btn route-filter-btn";
+  filterButton.addEventListener("click", () => openModal("filter"));
+  els.filter.routeFilterBtn = filterButton;
+  updateRouteFilterButtonState(filterButton);
+
   const mapButton = document.createElement("button");
   mapButton.type = "button";
   mapButton.className = "text-btn route-map-btn";
@@ -2469,7 +2537,18 @@ function renderRouteSummary(resultCount) {
     switchView("view-map");
     window.requestAnimationFrame(focusMapOnRoute);
   });
-  els.route.summary.appendChild(mapButton);
+
+  const favoriteButton = document.createElement("button");
+  favoriteButton.id = "route-favorite-all";
+  favoriteButton.type = "button";
+  favoriteButton.className = "text-btn route-favorite-all-btn";
+  favoriteButton.textContent = t("route.addAllFavorites");
+  favoriteButton.addEventListener("click", addRouteResultsToFavorites);
+  els.route.favoriteAllBtn = favoriteButton;
+  renderRouteActionState();
+
+  actions.append(filterButton, mapButton, favoriteButton);
+  els.route.summary.appendChild(actions);
   els.route.summary.hidden = false;
 }
 
@@ -4746,10 +4825,6 @@ function updateFilterLabel() {
   const filterCount = countActiveFilters(state.filters);
   const labels = getActiveFilterLabels();
   const labelSummary = labels.join(", ");
-  const routeFilters = routeEffectiveFilters();
-  const routeFilterCount = countActiveFilters(routeFilters);
-  const routeLabels = getActiveFilterLabels(routeFilters);
-  const routeLabelSummary = routeLabels.join(", ");
 
   if (els.filter.label) {
     els.filter.label.textContent =
@@ -4782,16 +4857,7 @@ function updateFilterLabel() {
     els.filter.listFilterBtn.classList.toggle("active", filterCount > 0);
   }
   if (els.filter.routeFilterBtn) {
-    els.filter.routeFilterBtn.textContent = routeFilterCount > 0
-      ? `${t("filters.title")} (${routeFilterCount})`
-      : t("filters.title");
-    els.filter.routeFilterBtn.setAttribute(
-      "aria-label",
-      routeFilterCount > 0
-        ? t("filters.openWithCount", { count: routeFilterCount, labels: routeLabelSummary })
-        : t("aria.filterOpen"),
-    );
-    els.filter.routeFilterBtn.classList.toggle("active", routeFilterCount > 0);
+    updateRouteFilterButtonState();
   }
   renderActiveFilterSummary(filterCount);
 }

@@ -872,11 +872,56 @@ body {
 }
 
 /* ROUTE VIEW */
+.route-header.route-header {
+  position: static;
+  top: auto;
+  z-index: auto;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  justify-content: flex-start;
+  padding: 1.15rem 1rem 0.15rem;
+  border-bottom: 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+.route-title-lockup {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.route-title-icon {
+  display: grid;
+  place-items: center;
+  width: 2.45rem;
+  height: 2.45rem;
+  flex: 0 0 auto;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  border-radius: var(--radius-full);
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--color-primary);
+}
+
+.route-title-icon svg {
+  width: 1.45rem;
+  height: 1.45rem;
+}
+
+.route-header h2 {
+  color: var(--color-text-main);
+  font-size: clamp(1.45rem, 3vw, 1.85rem);
+  font-weight: 800;
+}
+
 .route-container {
   width: 100%;
   max-width: 980px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0.85rem 1rem 1rem;
   display: grid;
   gap: 1rem;
 }
@@ -889,22 +934,6 @@ body {
   border-radius: var(--radius-md);
   background: var(--color-surface-elevated);
   box-shadow: var(--shadow-sm);
-}
-
-.route-results-header {
-  position: static;
-  top: auto;
-  z-index: auto;
-  gap: 1rem;
-  padding: 0.15rem 0 0;
-  border-bottom: 0;
-  background: transparent;
-  backdrop-filter: none;
-}
-
-.route-actions {
-  flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 .route-favorite-all-btn {
@@ -1000,6 +1029,10 @@ body {
   line-height: 1.4;
 }
 
+.route-status:empty {
+  min-height: 0;
+}
+
 .route-status-error {
   color: var(--color-danger);
   font-weight: 700;
@@ -1048,7 +1081,7 @@ body {
 
 .route-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(max-content, auto);
   align-items: center;
   gap: 0.75rem;
   padding: 0.85rem 1rem;
@@ -1082,8 +1115,53 @@ body {
   white-space: nowrap;
 }
 
+.route-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.route-summary-actions .text-btn {
+  white-space: nowrap;
+}
+
 .route-results.list-container {
-  padding: 0 0 2rem;
+  padding: 0.15rem 0 2rem;
+}
+
+.route-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 0.9rem;
+  width: min(100%, 42rem);
+  min-height: min(28vh, 14rem);
+  margin: 0 auto;
+  padding: 1rem 1rem 2rem;
+  color: var(--color-text-main);
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-weight: 750;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.route-empty-state p {
+  max-width: 38rem;
+  margin: 0;
+}
+
+.route-empty-state:not(.route-instruction-state) {
+  min-height: 7rem;
+  padding-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.route-empty-icon {
+  width: clamp(3.35rem, 8vw, 4.6rem);
+  height: clamp(3.35rem, 8vw, 4.6rem);
+  color: var(--color-primary);
 }
 
 .route-filter-notice {
@@ -3697,26 +3775,34 @@ select:focus-visible {
     height: 22px;
   }
 
+  .route-header.route-header {
+    padding: 0.95rem 0.85rem 0.05rem;
+  }
+
+  .route-title-lockup {
+    gap: 0.55rem;
+  }
+
+  .route-title-icon {
+    width: 2.15rem;
+    height: 2.15rem;
+  }
+
+  .route-title-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .route-header h2 {
+    font-size: 1.35rem;
+  }
+
   .route-container {
     padding: 0.85rem;
   }
 
   .route-form {
     padding: 0.85rem;
-  }
-
-  .route-results-header {
-    align-items: stretch;
-    gap: 0.65rem;
-  }
-
-  .route-actions {
-    justify-content: flex-start;
-    gap: 0.5rem;
-  }
-
-  .route-actions .text-btn {
-    flex: 1 1 9rem;
   }
 
   .route-endpoint-grid {
@@ -3744,13 +3830,23 @@ select:focus-visible {
     width: 100%;
   }
 
+  .route-empty-state {
+    min-height: 11rem;
+    padding: 0.75rem 0.5rem 1.75rem;
+    font-size: 1.2rem;
+  }
+
   .route-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .route-map-btn {
+  .route-summary-actions {
     grid-column: 1 / -1;
-    justify-self: start;
+    justify-content: flex-start;
+  }
+
+  .route-summary-actions .text-btn {
+    flex: 1 1 9rem;
   }
 
   .route-map-lock {

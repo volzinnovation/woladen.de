@@ -75,9 +75,9 @@ const FALLBACK_BUNDLE = {
   seo: {
     brandName: "woladen",
     seoName: "woladen - Smart EV Stops in Europe",
-    primaryTagline: "Plugs for Cars. Perks for People.",
-    humanHook: "The human side of charging.",
-    timeLine: "Because charging time is your time.",
+    primaryTagline: "The human side of charging",
+    humanHook: "The human side of charging",
+    timeLine: "Because charging time is your time",
     productMessage: "Find available chargers near great bakeries, restaurants, shops, playgrounds and cafés. Because charging time should be time well spent.",
   },
   language: {
@@ -188,11 +188,13 @@ const FALLBACK_BUNDLE = {
     showMap: "Show on map",
     addAllFavorites: "Add all as favorites",
     addAllFavoritesWithCount: "Add all {count} as favorites",
+    addAllFavoritesShort: "all {count}",
     favoriteCategory: "Route {origin} / {destination}",
     favoritesAdded: "{count} stations saved as favorites in \"{category}\".",
     mapFixed: "Map fixed on stations along the route",
     removeRoute: "Remove route",
     summaryDistance: "Route",
+    summaryDistanceKm: "Distance (km)",
     summaryDuration: "Drive time",
     summaryStations: "Charging stations",
     resultsCount: "{count} stations",
@@ -527,7 +529,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260627-route-actions1`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260627-brand-route1`, import.meta.url));
     if (!response.ok) {
       return {};
     }
