@@ -1311,8 +1311,8 @@ const els = {
   },
 };
 
-const VIEW_ORDER = ["view-list", "view-map", "view-route", "view-favorites", "view-info"];
-const VIEW_IDS = new Set(VIEW_ORDER);
+const VIEW_ORDER = ["view-list", "view-map", "view-favorites", "view-info"];
+const VIEW_IDS = new Set([...VIEW_ORDER, "view-route"]);
 const VIEW_HASH_ALIASES = new Map([
   ["list", "view-list"],
   ["liste", "view-list"],

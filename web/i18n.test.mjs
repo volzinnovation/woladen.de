@@ -139,6 +139,15 @@ test("app shell uses the canonical woladen brand SEO copy", () => {
   assert.doesNotMatch(indexHtml, /charging boredom|No charging boredom|Reliable charging/i);
 });
 
+test("route planner remains directly addressable but hidden from main navigation", () => {
+  const indexHtml = readText(INDEX_HTML_URL);
+  const appJs = readText(new URL("./app.js", import.meta.url));
+  assert.match(indexHtml, /id="view-route"/);
+  assert.doesNotMatch(indexHtml, /class="nav-item"[^>]*data-target="view-route"/);
+  assert.match(appJs, /const VIEW_ORDER = \["view-list", "view-map", "view-favorites", "view-info"\];/);
+  assert.match(appJs, /const VIEW_IDS = new Set\(\[\.\.\.VIEW_ORDER, "view-route"\]\);/);
+});
+
 test("fallback metadata keeps the canonical English title", () => {
   assert.deepEqual(
     JSON.parse(JSON.stringify(fallbackBundle().meta)),
