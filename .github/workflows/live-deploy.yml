@@ -61,6 +61,37 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Validate Required Secrets
+        shell: bash
+        env:
+          LIVE_DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.LIVE_DEPLOY_SSH_PRIVATE_KEY }}
+          LIVE_DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.LIVE_DEPLOY_SSH_KNOWN_HOSTS }}
+          MOBILITHEK_MACHINE_CERT_P12_BASE64: ${{ secrets.MOBILITHEK_MACHINE_CERT_P12_BASE64 }}
+          MOBILITHEK_MACHINE_CERT_PASSWORD: ${{ secrets.MOBILITHEK_MACHINE_CERT_PASSWORD }}
+        run: |
+          missing=()
+          for secret_name in \
+            LIVE_DEPLOY_HOST \
+            LIVE_DEPLOY_USER \
+            LIVE_DEPLOY_SUDO_PASSWORD \
+            LIVE_DEPLOY_SSH_PRIVATE_KEY \
+            LIVE_DEPLOY_SSH_KNOWN_HOSTS \
+            LIVE_API_PUSH_TOKEN \
+            MOBILITHEK_USERNAME \
+            MOBILITHEK_PASSWORD \
+            MOBILITHEK_MACHINE_CERT_P12_BASE64 \
+            MOBILITHEK_MACHINE_CERT_PASSWORD
+          do
+            if [ -z "${!secret_name:-}" ]; then
+              missing+=("$secret_name")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "Missing required Live Deploy GitHub Actions secrets:" >&2
+            printf ' - %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
       - name: Install Dependencies
         run: pip install -r requirements.txt -r requirements-live.txt
 
@@ -71,7 +102,7 @@ jobs:
           LIVE_DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.LIVE_DEPLOY_SSH_KNOWN_HOSTS }}
         run: |
           if [ -z "$LIVE_DEPLOY_HOST" ] || [ -z "$LIVE_DEPLOY_USER" ] || [ -z "$LIVE_DEPLOY_SUDO_PASSWORD" ] || [ -z "$LIVE_DEPLOY_SSH_PRIVATE_KEY" ] || [ -z "$LIVE_DEPLOY_SSH_KNOWN_HOSTS" ]; then
-            echo "Missing one or more live deploy connection secrets" >&2
+            echo "Missing live deploy connection secrets; see Validate Required Secrets above" >&2
             exit 1
           fi
           mkdir -p "$HOME/.ssh"
@@ -102,7 +133,7 @@ jobs:
           chmod 600 secret/certificate.p12 secret/pwd.txt
 
       - name: Sync Mobilithek Subscriptions
-        run: python scripts/sync_mobilithek_subscriptions.py
+        run: python scripts/sync_mobilithek_subscriptions.py --require-contracts --min-dynamic-entries 15
 
       - name: Prepare Optional Hugging Face Token
         shell: bash

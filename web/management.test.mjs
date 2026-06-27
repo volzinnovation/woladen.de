@@ -48,12 +48,13 @@ test("buildOverviewSeries returns ordered labels and values for the selected met
 
   assert.deepEqual(series.labels, ["16.04.2026", "17.04.2026"]);
   assert.deepEqual(series.values, [14000, 14032]);
-  assert.equal(series.label, "Stationen mit Live-Daten gemäß AFIR");
+  assert.equal(series.label, "Stationen im Tagesarchiv");
 });
 
 test("overview metric options cover the management KPI cards", () => {
   assert.deepEqual(Object.keys(OVERVIEW_METRICS), [
     "afir_stations_observed",
+    "delta_delivery_without_push_provider_count",
     "stations_with_disruptions",
     "disruptions_at_end_of_day",
     "high_utilization_stations",
@@ -65,6 +66,7 @@ test("buildSummaryCards exposes the public-facing station metrics", () => {
   const cards = buildSummaryCards({
     summary: {
       afir_stations_observed: 14032,
+      daily_afir_stations_observed: 14032,
       stations_with_disruptions: 870,
       disruptions_at_end_of_day: 441,
       high_utilization_stations: 1872,
@@ -72,10 +74,26 @@ test("buildSummaryCards exposes the public-facing station metrics", () => {
     },
   });
 
-  assert.equal(cards[0].label, "Stationen mit Live-Daten gemäß AFIR");
+  assert.equal(cards[0].label, "Stationen im Tagesarchiv");
   assert.equal(cards[1].value, "870");
   assert.equal(cards[3].label, "Stationen mit hoher Auslastung");
   assert.equal(cards[4].label, "AFIR Statusbeobachtungen");
+});
+
+test("buildSummaryCards exposes delta delivery warning when daily coverage can undercount", () => {
+  const cards = buildSummaryCards({
+    summary: {
+      daily_afir_stations_observed: 26315,
+      delta_delivery_without_push_provider_count: 1,
+      stations_with_disruptions: 870,
+      disruptions_at_end_of_day: 441,
+      high_utilization_stations: 1872,
+      observations_total: 30970,
+    },
+  });
+
+  assert.equal(cards[1].label, "Delta-Anbieter ohne Push");
+  assert.equal(cards[1].value, "1");
 });
 
 test("buildStationRows sorts broken and busy station tables for the public page", () => {

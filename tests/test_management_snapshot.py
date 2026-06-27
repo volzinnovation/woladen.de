@@ -333,6 +333,8 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
             "publisher",
             "messages_total",
             "parseable_messages_total",
+            "dynamic_delta_delivery",
+            "static_matched_station_count",
             "static_matched_station_count_in_bundle",
             "extracted_observation_count_total",
             "extracted_mapped_observation_count_total",
@@ -356,6 +358,8 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
                 "publisher": "Publisher A",
                 "messages_total": "12",
                 "parseable_messages_total": "11",
+                "dynamic_delta_delivery": "0",
+                "static_matched_station_count": "4",
                 "static_matched_station_count_in_bundle": "3",
                 "extracted_observation_count_total": "120",
                 "extracted_mapped_observation_count_total": "100",
@@ -378,6 +382,8 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
                 "publisher": "Publisher B",
                 "messages_total": "3",
                 "parseable_messages_total": "3",
+                "dynamic_delta_delivery": "1",
+                "static_matched_station_count": "4",
                 "static_matched_station_count_in_bundle": "1",
                 "extracted_observation_count_total": "20",
                 "extracted_mapped_observation_count_total": "10",
@@ -404,6 +410,7 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
             "message_timestamp",
             "http_status",
             "payload_byte_length",
+            "extracted_observation_count",
         ],
         [
             *[
@@ -414,6 +421,7 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
                     "message_timestamp": f"2026-04-17T12:{index:02d}:00+00:00",
                     "http_status": "",
                     "payload_byte_length": "100",
+                    "extracted_observation_count": "1",
                 }
                 for index in range(10)
             ],
@@ -424,6 +432,7 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
                 "message_timestamp": "2026-04-17T13:00:00+00:00",
                 "http_status": "200",
                 "payload_byte_length": "250",
+                "extracted_observation_count": "120",
             },
             {
                 "archive_date": "2026-04-17",
@@ -432,15 +441,17 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
                 "message_timestamp": "2026-04-17T13:05:00+00:00",
                 "http_status": "",
                 "payload_byte_length": "0",
+                "extracted_observation_count": "0",
             },
             *[
                 {
                     "archive_date": "2026-04-17",
                     "provider_uid": "provider-b",
-                    "record_kind": "push_request",
+                    "record_kind": "http_response",
                     "message_timestamp": f"2026-04-17T10:{index:02d}:00+00:00",
-                    "http_status": "",
+                    "http_status": "200",
                     "payload_byte_length": "50",
+                    "extracted_observation_count": "1",
                 }
                 for index in range(3)
             ],
@@ -501,6 +512,11 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
 
     assert result["summary"]["afir_stations_observed"] == 3
     assert result["summary"]["bundle_stations_observed"] == 2
+    assert result["summary"]["daily_afir_stations_observed"] == 3
+    assert result["summary"]["daily_bundle_stations_observed"] == 2
+    assert result["summary"]["delta_delivery_provider_count"] == 1
+    assert result["summary"]["delta_delivery_without_push_provider_count"] == 1
+    assert result["summary"]["live_coverage_warning"] == "delta_delivery_without_push"
     assert result["summary"]["busy_transition_count"] == 3
     assert result["summary"]["high_utilization_stations"] == 2
     assert result["summary"]["stations_with_disruptions"] == 2
@@ -524,6 +540,9 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
     assert result["provider_reports"][0]["unique_bundle_chargers_referenced_total"] == 2
     assert result["provider_reports"][0]["bundle_mapped_chargers_total"] == 3
     assert result["provider_reports"][0]["bundle_chargers_without_updates_total"] == 1
+    assert result["provider_reports"][0]["daily_mapped_stations_observed"] == 3
+    assert result["provider_reports"][0]["static_matched_station_count"] == 4
+    assert result["provider_reports"][0]["delta_delivery_without_push"] == 0
     assert result["provider_reports"][0]["messages_per_charger"] == 4.0
     assert result["provider_reports"][0]["observations_per_charger"] == 40.0
     assert result["provider_reports"][0]["mapped_observations_per_charger"] == 33.333333
@@ -533,6 +552,12 @@ def test_build_management_snapshot_from_analysis_outputs_derives_station_ranking
     assert result["provider_reports"][0]["payload_byte_length_total"] == 1250
     assert result["provider_reports"][0]["mapped_observation_ratio"] == 0.833333
     assert result["provider_reports"][1]["provider_uid"] == "provider-b"
+    assert result["provider_reports"][1]["push_messages_total"] == 0
+    assert result["provider_reports"][1]["http_response_messages_total"] == 3
+    assert result["provider_reports"][1]["daily_station_coverage_ratio"] == 0.25
+    assert result["provider_reports"][1]["delta_delivery_without_push"] == 1
+    assert result["provider_reports"][1]["live_station_coverage_basis"] == "daily_delta_observations_only"
+    assert result["provider_reports"][1]["live_station_coverage_warning"] == "delta_delivery_without_push"
     snapshot_path = output_root / "days" / "2026" / "04" / "17" / "snapshot.json"
     assert snapshot_path.exists()
 

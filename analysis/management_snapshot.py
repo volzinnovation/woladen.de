@@ -375,6 +375,20 @@ def _build_provider_reports(
                 "mapped_observation_ratio": _float_value(meta.get("mapped_observation_ratio")),
                 "mapped_stations_observed": _int_value(meta.get("mapped_stations_observed")),
                 "mapped_stations_observed_in_bundle": _int_value(meta.get("mapped_stations_observed_in_bundle")),
+                "daily_mapped_stations_observed": _int_value(meta.get("mapped_stations_observed")),
+                "daily_mapped_stations_observed_in_bundle": _int_value(
+                    meta.get("mapped_stations_observed_in_bundle")
+                ),
+                "static_matched_station_count": _int_value(meta.get("static_matched_station_count")),
+                "static_matched_station_count_in_bundle": _int_value(
+                    meta.get("static_matched_station_count_in_bundle")
+                ),
+                "dynamic_delta_delivery": _int_value(meta.get("dynamic_delta_delivery")),
+                "daily_station_coverage_ratio": 0.0,
+                "daily_bundle_station_coverage_ratio": 0.0,
+                "delta_delivery_without_push": 0,
+                "live_station_coverage_basis": "daily_archive_observations",
+                "live_station_coverage_warning": "",
                 "unique_chargers_referenced_total": 0,
                 "unique_bundle_chargers_referenced_total": 0,
                 "bundle_mapped_chargers_total": _int_value(meta.get("static_matched_station_count_in_bundle")),
@@ -382,6 +396,7 @@ def _build_provider_reports(
                 "messages_per_charger": 0.0,
                 "observations_per_charger": 0.0,
                 "mapped_observations_per_charger": 0.0,
+                "max_observations_per_message": 0,
                 "first_message_timestamp": "",
                 "latest_message_timestamp": "",
             },
@@ -392,6 +407,10 @@ def _build_provider_reports(
         report["messages_total"] += 1
         report["received_messages_total"] += 1
         report["payload_byte_length_total"] += _int_value(row.get("payload_byte_length"))
+        report["max_observations_per_message"] = max(
+            _int_value(report.get("max_observations_per_message")),
+            _int_value(row.get("extracted_observation_count")),
+        )
         if record_kind == "push_request":
             report["push_messages_total"] += 1
         elif record_kind == "http_response":
@@ -416,12 +435,36 @@ def _build_provider_reports(
             unique_bundle_charger_count = _int_value(report.get("mapped_stations_observed_in_bundle"))
 
         bundle_mapped_charger_count = _int_value(report.get("bundle_mapped_chargers_total"))
+        static_station_count = _int_value(report.get("static_matched_station_count"))
+        static_bundle_station_count = _int_value(report.get("static_matched_station_count_in_bundle"))
+        daily_station_count = _int_value(report.get("daily_mapped_stations_observed"))
+        daily_bundle_station_count = _int_value(report.get("daily_mapped_stations_observed_in_bundle"))
         report["unique_chargers_referenced_total"] = unique_charger_count
         report["unique_bundle_chargers_referenced_total"] = unique_bundle_charger_count
+        report["daily_station_coverage_ratio"] = (
+            round(daily_station_count / static_station_count, 6) if static_station_count > 0 else 0.0
+        )
+        report["daily_bundle_station_coverage_ratio"] = (
+            round(daily_bundle_station_count / static_bundle_station_count, 6)
+            if static_bundle_station_count > 0
+            else 0.0
+        )
         report["bundle_chargers_without_updates_total"] = max(
             0,
             bundle_mapped_charger_count - unique_bundle_charger_count,
         )
+        delta_delivery_without_push = (
+            _int_value(report.get("dynamic_delta_delivery")) > 0
+            and _int_value(report.get("push_messages_total")) <= 0
+            and _int_value(report.get("http_response_messages_total")) > 0
+        )
+        if delta_delivery_without_push:
+            report["live_station_coverage_basis"] = "daily_poll_observations"
+        low_daily_delta_coverage = static_station_count > 0 and daily_station_count < static_station_count * 0.75
+        if delta_delivery_without_push and low_daily_delta_coverage:
+            report["delta_delivery_without_push"] = 1
+            report["live_station_coverage_basis"] = "daily_delta_observations_only"
+            report["live_station_coverage_warning"] = "delta_delivery_without_push"
         report["messages_per_charger"] = (
             round(_int_value(report.get("received_messages_total")) / unique_charger_count, 6)
             if unique_charger_count > 0
@@ -487,11 +530,30 @@ def build_management_snapshot_from_analysis_outputs(
         analysis_output_dir=analysis_output_dir,
         bundle_station_ids=set(bundle_station_metadata),
     )
+    delta_delivery_provider_count = sum(
+        1 for row in provider_reports if _int_value(row.get("dynamic_delta_delivery")) > 0
+    )
+    delta_delivery_without_push_provider_count = sum(
+        1 for row in provider_reports if _int_value(row.get("delta_delivery_without_push")) > 0
+    )
 
     summary = {
         "afir_stations_observed": len(primary_station_rows),
         "bundle_stations_observed": len(primary_bundle_station_rows),
         "bundle_stations_observed_unique": len(primary_bundle_station_rows),
+        "daily_afir_stations_observed": len(primary_station_rows),
+        "daily_bundle_stations_observed": len(primary_bundle_station_rows),
+        "daily_bundle_stations_observed_unique": len(primary_bundle_station_rows),
+        "live_coverage_basis": "daily_archive_observations",
+        "live_coverage_warning": (
+            "delta_delivery_without_push" if delta_delivery_without_push_provider_count > 0 else ""
+        ),
+        "delta_delivery_provider_count": delta_delivery_provider_count,
+        "delta_delivery_without_push_provider_count": delta_delivery_without_push_provider_count,
+        "push_messages_total": sum(_int_value(row.get("push_messages_total")) for row in provider_reports),
+        "http_response_messages_total": sum(
+            _int_value(row.get("http_response_messages_total")) for row in provider_reports
+        ),
         "stations_with_disruptions": status_rollups["any_out_of_order_station_total"],
         "disruptions_at_end_of_day": status_rollups["current_out_of_order_station_total"],
         "current_out_of_order_stations": status_rollups["current_out_of_order_station_total"],

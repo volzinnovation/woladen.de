@@ -258,8 +258,8 @@
                   <th data-sort-type="number">Statusbeobachtungen</th>
                   <th data-sort-type="number">Beobachtungen je Ladestation</th>
                   <th data-sort-type="number">Empfangene AFIR-Meldungen</th>
-                  <th data-sort-type="number">Ladestationen mit Live-Status</th>
-                  <th data-sort-type="number">Ladestationen ohne Live-Status</th>
+                  <th data-sort-type="number">Ladestationen im Tagesarchiv</th>
+                  <th data-sort-type="number">Schnelllader ohne Tagesbeobachtung</th>
                   <th data-sort-type="number">Push</th>
                   <th data-sort-type="number">Pull</th>
                   <th data-sort-type="number">Fehler</th>
@@ -279,9 +279,10 @@
         </div>
         <ul>
           <li>
-            Die Kennzahlen oben betrachten alle Stationen mit angebundenen
-            AFIR- und Live-Daten. In den Top-Listen führen Stationsnamen, wenn verfügbar,
-            direkt zu woladen.de.
+            Die Kennzahl „Stationen im Tagesarchiv“ zählt Stationen, für die
+            an diesem Tag mindestens eine AFIR-Live-Beobachtung im Archiv
+            vorlag. Bei Delta-Anbietern ohne Push-Verkehr kann dieser Tageswert
+            niedriger sein als die aktuelle Live-Abdeckung.
           </li>
           <li>
             Als Störung zählt ein Ladepunkt, wenn er an einem Tag als nicht
@@ -297,8 +298,9 @@
             referenzierter Ladestation-IDs des Tages. Empfangene AFIR-Meldungen
             zählen nur den Transport: Ein Push kann eine einzelne Änderung oder
             viele Statusbeobachtungen enthalten.
-            Ladestationen ohne Live-Status zählt statisch zugeordnete
-            Schnellladestation-IDs ohne Tagesbeobachtung.
+            Schnelllader ohne Tagesbeobachtung zählt statisch zugeordnete
+            Schnellladestation-IDs, für die im Tagesarchiv keine Beobachtung
+            vorlag.
           </li>
           <li>
             Grundlage sind tägliche AFIR- und Live-Datensätze aus den

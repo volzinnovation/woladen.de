@@ -49,7 +49,7 @@ jobs:
           chmod 600 secret/certificate.p12 secret/pwd.txt
 
       - name: Sync Mobilithek subscriptions
-        run: python scripts/sync_mobilithek_subscriptions.py
+        run: python scripts/sync_mobilithek_subscriptions.py --require-contracts --min-dynamic-entries 15
 
       - name: Build data artifacts
         run: |

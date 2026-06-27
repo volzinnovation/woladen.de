@@ -36,6 +36,17 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--dry-run", action="store_true", help="Print the computed registry without writing it")
     parser.add_argument("--access-token", default="", help="Use an explicit Mobilithek bearer token")
+    parser.add_argument(
+        "--require-contracts",
+        action="store_true",
+        help="Fail without writing when Mobilithek contracts cannot be fetched",
+    )
+    parser.add_argument(
+        "--min-dynamic-entries",
+        type=int,
+        default=0,
+        help="Fail without writing unless the registry has at least this many dynamic subscription entries",
+    )
     parser.add_argument("--username-file", default=str(DEFAULT_USERNAME_FILE), help="Path to Mobilithek username file")
     parser.add_argument("--password-file", default=str(DEFAULT_PASSWORD_FILE), help="Path to Mobilithek password file")
     return parser.parse_args()
@@ -131,6 +142,53 @@ def fetch_account_subscriptions(access_token: str) -> dict[str, Any]:
     }
 
 
+def registry_sync_counts(registry: dict[str, Any]) -> dict[str, int]:
+    return {
+        "dynamic_entry_count": sum(
+            1 for entry in registry.values() if str(entry.get("subscription_id") or "").strip()
+        ),
+        "static_entry_count": sum(
+            1 for entry in registry.values() if str(entry.get("static_subscription_id") or "").strip()
+        ),
+        "external_direct_entry_count": sum(
+            1
+            for entry in registry.values()
+            if str(entry.get("fetch_kind") or "").strip() == "direct_url"
+            and str(entry.get("fetch_url") or "").strip()
+        ),
+        "paired_provider_count": sum(
+            1
+            for entry in registry.values()
+            if str(entry.get("subscription_id") or "").strip()
+            and str(entry.get("static_subscription_id") or "").strip()
+        ),
+    }
+
+
+def registry_sync_validation_errors(
+    *,
+    require_contracts: bool,
+    access_token: str | None,
+    fetch_error: str,
+    contracts_total_elements: int,
+    dynamic_entry_count: int,
+    min_dynamic_entries: int,
+) -> list[str]:
+    errors: list[str] = []
+    if require_contracts:
+        if not access_token:
+            errors.append("missing_mobilithek_access_token")
+        if fetch_error:
+            errors.append(f"mobilithek_contract_fetch_failed:{fetch_error}")
+        if contracts_total_elements <= 0:
+            errors.append("no_mobilithek_contracts_fetched")
+    if min_dynamic_entries > 0 and dynamic_entry_count < min_dynamic_entries:
+        errors.append(
+            f"insufficient_dynamic_subscriptions:{dynamic_entry_count}<{min_dynamic_entries}"
+        )
+    return errors
+
+
 def main() -> None:
     args = parse_args()
     config = AppConfig()
@@ -157,6 +215,32 @@ def main() -> None:
         except Exception as exc:
             fetch_error = str(exc)
     registry = build_live_subscription_registry(offers, contracts)
+    counts = registry_sync_counts(registry)
+    contracts_total_elements = int(
+        contracts_payload.get("totalElements", len(contracts)) if contracts_payload else 0
+    )
+    validation_errors = registry_sync_validation_errors(
+        require_contracts=args.require_contracts,
+        access_token=access_token,
+        fetch_error=fetch_error,
+        contracts_total_elements=contracts_total_elements,
+        dynamic_entry_count=counts["dynamic_entry_count"],
+        min_dynamic_entries=max(0, int(args.min_dynamic_entries or 0)),
+    )
+
+    result = {
+        "registry_path": str(config.subscription_registry_path),
+        "offer_count": len(offers),
+        "token_source": token_source,
+        "contracts_total_elements": contracts_total_elements,
+        **counts,
+        "fetch_error": fetch_error,
+        "validation_errors": validation_errors,
+        "providers": registry,
+    }
+    if validation_errors:
+        print(json.dumps(result, ensure_ascii=False, indent=2), file=sys.stderr)
+        raise SystemExit(1)
 
     if not args.dry_run:
         config.subscription_registry_path.parent.mkdir(parents=True, exist_ok=True)
@@ -165,27 +249,6 @@ def main() -> None:
             encoding="utf-8",
         )
 
-    result = {
-        "registry_path": str(config.subscription_registry_path),
-        "offer_count": len(offers),
-        "token_source": token_source,
-        "contracts_total_elements": contracts_payload.get("totalElements", len(contracts)) if contracts_payload else 0,
-        "dynamic_entry_count": sum(1 for entry in registry.values() if str(entry.get("subscription_id") or "").strip()),
-        "static_entry_count": sum(1 for entry in registry.values() if str(entry.get("static_subscription_id") or "").strip()),
-        "external_direct_entry_count": sum(
-            1
-            for entry in registry.values()
-            if str(entry.get("fetch_kind") or "").strip() == "direct_url"
-            and str(entry.get("fetch_url") or "").strip()
-        ),
-        "paired_provider_count": sum(
-            1
-            for entry in registry.values()
-            if str(entry.get("subscription_id") or "").strip() and str(entry.get("static_subscription_id") or "").strip()
-        ),
-        "fetch_error": fetch_error,
-        "providers": registry,
-    }
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

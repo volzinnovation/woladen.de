@@ -78,6 +78,34 @@ def test_fetch_account_subscriptions_uses_tls_verification(monkeypatch):
     assert captured["verify"] is True
 
 
+def test_registry_sync_validation_requires_contract_fetch_when_requested():
+    errors = sync_module.registry_sync_validation_errors(
+        require_contracts=True,
+        access_token=None,
+        fetch_error="",
+        contracts_total_elements=0,
+        dynamic_entry_count=0,
+        min_dynamic_entries=15,
+    )
+
+    assert "missing_mobilithek_access_token" in errors
+    assert "no_mobilithek_contracts_fetched" in errors
+    assert "insufficient_dynamic_subscriptions:0<15" in errors
+
+
+def test_registry_sync_validation_accepts_healthy_contract_inventory():
+    errors = sync_module.registry_sync_validation_errors(
+        require_contracts=True,
+        access_token="token-123",
+        fetch_error="",
+        contracts_total_elements=42,
+        dynamic_entry_count=21,
+        min_dynamic_entries=15,
+    )
+
+    assert errors == []
+
+
 def test_load_subscription_offers_includes_static_dynamic_noauth_and_model_other(tmp_path: Path):
     config_path = tmp_path / "providers.json"
     config_path.write_text(

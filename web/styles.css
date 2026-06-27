@@ -4172,6 +4172,11 @@ select:focus-visible {
   font-size: 0.8rem;
 }
 
+.provider-sub-warning {
+  color: #9a5b18;
+  font-weight: 700;
+}
+
 .tier-pill {
   display: inline-flex;
   align-items: center;

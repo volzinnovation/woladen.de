@@ -5,8 +5,15 @@ const ANDROID_STORE_LINK = "market://details?id=de.woladen.android";
 
 export const OVERVIEW_METRICS = {
   afir_stations_observed: {
-    label: "Stationen mit Live-Daten gemäß AFIR",
-    description: "Stationen mit Live-Daten gemäß AFIR in angebundenen Ländern an diesem Tag.",
+    label: "Stationen im Tagesarchiv",
+    description:
+      "Stationen, für die im Tagesarchiv mindestens eine AFIR-Live-Beobachtung vorlag. Delta-Anbieter ohne Push können hier unterzählen.",
+    kind: "count",
+  },
+  delta_delivery_without_push_provider_count: {
+    label: "Delta-Anbieter ohne Push",
+    description:
+      "Delta-Lieferanten, bei denen im Tagesarchiv nur Polling-Delta-Beobachtungen ohne Push-Verkehr ankamen.",
     kind: "count",
   },
   stations_with_disruptions: {
@@ -135,10 +142,12 @@ export function buildProviderReportMetrics(row) {
   const receivedMessagesTotal = firstNumber(row?.received_messages_total, row?.messages_total) ?? 0;
   const observationsTotal = firstNumber(row?.observations_total) ?? 0;
   const uniqueChargersReferencedTotal = firstNumber(
+    row?.daily_mapped_stations_observed,
     row?.unique_chargers_referenced_total,
     row?.mapped_stations_observed,
   );
   const uniqueBundleChargersReferencedTotal = firstNumber(
+    row?.daily_mapped_stations_observed_in_bundle,
     row?.unique_bundle_chargers_referenced_total,
     row?.mapped_stations_observed_in_bundle,
   );
@@ -222,11 +231,12 @@ export function buildOverviewSeries(trends, metricKey) {
 
 export function buildSummaryCards(snapshot) {
   const summary = snapshot?.summary || {};
-  return [
+  const cards = [
     {
-      label: "Stationen mit Live-Daten gemäß AFIR",
-      value: numberFormat(summary.afir_stations_observed),
-      detail: "Insgesamt Stationen mit Live-Daten gemäß AFIR in angebundenen Ländern an diesem Tag.",
+      label: "Stationen im Tagesarchiv",
+      value: numberFormat(summary.daily_afir_stations_observed ?? summary.afir_stations_observed),
+      detail:
+        "Stationen, für die im Tagesarchiv mindestens eine AFIR-Live-Beobachtung vorlag. Delta-Anbieter ohne Push können hier unterzählen.",
     },
     {
       label: "Stationen mit Störungen",
@@ -249,6 +259,15 @@ export function buildSummaryCards(snapshot) {
       detail: "Extrahierte Ladepunkt-Statusmeldungen im Tagesverlauf.",
     },
   ];
+  const deltaWarningCount = optionalNumber(summary.delta_delivery_without_push_provider_count) ?? 0;
+  if (deltaWarningCount > 0) {
+    cards.splice(1, 0, {
+      label: "Delta-Anbieter ohne Push",
+      value: numberFormat(deltaWarningCount),
+      detail: "Bei diesen Anbietern zählt der Tageswert nur beobachtete Delta-Meldungen.",
+    });
+  }
+  return cards;
 }
 
 export function buildStationRows(snapshot, key) {
@@ -685,10 +704,15 @@ function renderProviderReports(snapshot) {
     const displayName = row.display_name || row.provider_uid || "";
     const publisher = row.publisher || row.provider_uid || "";
     const metrics = buildProviderReportMetrics(row);
+    const coverageWarning =
+      Number(row.delta_delivery_without_push || 0) > 0
+        ? '<div class="provider-sub provider-sub-warning">Delta ohne Push, Tageswert unterzählt</div>'
+        : "";
     tr.innerHTML = `
       <td data-sort-value="${escapeAttribute(displayName)}">
         <span>${escapeHtml(displayName)}</span>
         <div class="provider-sub">${escapeHtml(publisher)}</div>
+        ${coverageWarning}
       </td>
       <td data-sort-value="${numericSortValue(metrics.observationsTotal)}">${numberFormat(metrics.observationsTotal)}</td>
       <td data-sort-value="${numericSortValue(metrics.observationsPerCharger)}">${optionalDecimalFormat(metrics.observationsPerCharger, 1)}</td>
