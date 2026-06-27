@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import time
 import urllib.parse
 from collections.abc import Mapping
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -63,6 +65,7 @@ MAX_RATING_LOOKUP_IDS = 50
 MAX_ROUTE_SELECTED_AMENITIES = 32
 STATION_ID_NAMESPACE = "DE:"
 REDACTED_VALUE = "[redacted]"
+ROUTE_LOGGER = logging.getLogger("woladen.routes")
 
 
 class StationLookupRequest(BaseModel):
@@ -193,6 +196,41 @@ def _route_filters_from_request(payload: RouteFiltersRequest) -> RouteFilters:
         available_only=payload.available_only,
         currently_open_only=payload.currently_open_only,
     )
+
+
+def _route_log_timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def _route_endpoint_log_payload(endpoint: RouteEndpoint) -> dict[str, object]:
+    return {
+        "label": endpoint.label,
+        "lat": round(endpoint.lat, 6),
+        "lon": round(endpoint.lon, 6),
+    }
+
+
+def _log_route_charger_request(
+    *,
+    timestamp: str,
+    origin: RouteEndpoint,
+    destination: RouteEndpoint,
+    station_count: int | None,
+    response_time_ms: float,
+    status_code: int,
+    detail: str = "",
+) -> None:
+    payload: dict[str, object] = {
+        "timestamp": timestamp,
+        "origin": _route_endpoint_log_payload(origin),
+        "destination": _route_endpoint_log_payload(destination),
+        "station_count": station_count,
+        "response_time_ms": round(response_time_ms, 1),
+        "status_code": status_code,
+    }
+    if detail:
+        payload["detail"] = detail
+    ROUTE_LOGGER.info("route_chargers %s", json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
 
 
 def _normalize_lookup_key(value: str) -> str:
@@ -487,23 +525,52 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
     @app.post("/v1/routes/chargers")
     def route_chargers(request: Request, payload: RouteChargerSearchRequest) -> JSONResponse:
+        started_at = time.perf_counter()
+        logged_at = _route_log_timestamp()
+        origin = _route_endpoint_from_request(payload.origin)
+        destination = _route_endpoint_from_request(payload.destination)
+        station_count: int | None = None
+        status_code = 200
+        detail = ""
         try:
             response_payload = app.state.route_charger_service.search(
-                origin=_route_endpoint_from_request(payload.origin),
-                destination=_route_endpoint_from_request(payload.destination),
+                origin=origin,
+                destination=destination,
                 filters=_route_filters_from_request(payload.filters),
                 filter_mode=payload.filter_mode,
             )
+            stations = response_payload.get("stations")
+            station_count = len(stations) if isinstance(stations, list) else None
         except OpenCatalogUnavailable as exc:
+            status_code = 503
+            detail = str(exc)
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except RouteProviderUnavailable as exc:
+            status_code = 503
+            detail = str(exc)
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except RouteTooLong as exc:
+            status_code = 422
+            detail = str(exc)
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         except RouteNotFound as exc:
+            status_code = 404
+            detail = str(exc)
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         except RouteProviderError as exc:
+            status_code = exc.status_code
+            detail = exc.detail
             raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+        finally:
+            _log_route_charger_request(
+                timestamp=logged_at,
+                origin=origin,
+                destination=destination,
+                station_count=station_count,
+                response_time_ms=(time.perf_counter() - started_at) * 1000,
+                status_code=status_code,
+                detail=detail,
+            )
         return _json_response(request, response_payload)
 
     @app.get("/v1/stations")

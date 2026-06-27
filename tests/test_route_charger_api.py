@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 from dataclasses import replace
 from pathlib import Path
@@ -287,7 +288,7 @@ def test_ors_client_does_not_fall_back_for_route_not_found(app_config):
     ]
 
 
-def test_route_charger_search_validates_detour_distance_and_prunes_slow_candidates(app_config, tmp_path: Path):
+def test_route_charger_search_validates_detour_distance_and_prunes_slow_candidates(app_config, tmp_path: Path, caplog):
     sqlite_path = tmp_path / "open_static.sqlite3"
     _create_route_sqlite(
         sqlite_path,
@@ -338,6 +339,7 @@ def test_route_charger_search_validates_detour_distance_and_prunes_slow_candidat
     )
     app.state.route_charger_service.ors_client = fake_ors
     client = TestClient(app)
+    caplog.set_level(logging.INFO, logger="woladen.routes")
 
     response = client.post("/v1/routes/chargers", json=_route_request())
 
@@ -349,6 +351,16 @@ def test_route_charger_search_validates_detour_distance_and_prunes_slow_candidat
     validated_labels = [label for batch in fake_ors.one_to_many_batches for label in batch]
     assert "test:slow" not in validated_labels
     assert "test:close-but-bad-detour" in validated_labels
+    route_logs = [record for record in caplog.records if record.name == "woladen.routes"]
+    assert len(route_logs) == 1
+    _, log_json = route_logs[0].getMessage().split(" ", 1)
+    log_payload = json.loads(log_json)
+    assert log_payload["origin"] == {"label": "Origin", "lat": 0.0, "lon": 0.0}
+    assert log_payload["destination"] == {"label": "Destination", "lat": 0.1, "lon": 0.0}
+    assert log_payload["station_count"] == 1
+    assert log_payload["status_code"] == 200
+    assert isinstance(log_payload["response_time_ms"], float)
+    assert log_payload["timestamp"].endswith("Z")
 
 
 def test_route_charger_search_applies_static_filters_before_matrix_validation(app_config, tmp_path: Path):
