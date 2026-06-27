@@ -2415,7 +2415,7 @@ def test_api_push_endpoint_accepts_get_post_and_head(app_config):
     _write_provider_fixture(app_config.provider_config_path)
     _write_matches_fixture(app_config.site_match_path)
     _write_chargers_fixture(app_config.chargers_csv_path)
-    app = create_app(replace(app_config, api_push_token="test-push-token"))
+    app = create_app(app_config)
     client = TestClient(app)
 
     get_response = client.get("/v1/push/ampeco")
@@ -2431,7 +2431,6 @@ def test_api_push_endpoint_accepts_get_post_and_head(app_config):
         headers={
             "Content-Type": "application/json",
             "subscriptionID": "2000001",
-            "x-woladen-push-token": "test-push-token",
         },
     )
     assert push_response.status_code == 200
@@ -2444,12 +2443,12 @@ def test_api_push_endpoint_accepts_get_post_and_head(app_config):
     assert evse["current"]["price_display"] == "0,81 €/kWh"
 
 
-def test_api_push_endpoint_rejects_unauthenticated_post(app_config):
+def test_api_push_endpoint_accepts_tokenless_mobilithek_post(app_config):
     _write_subscription_registry(app_config.subscription_registry_path)
     _write_provider_fixture(app_config.provider_config_path)
     _write_matches_fixture(app_config.site_match_path)
     _write_chargers_fixture(app_config.chargers_csv_path)
-    app = create_app(replace(app_config, api_push_token="test-push-token"))
+    app = create_app(app_config)
     client = TestClient(app)
 
     response = client.post(
@@ -2461,32 +2460,14 @@ def test_api_push_endpoint_rejects_unauthenticated_post(app_config):
         },
     )
 
-    assert response.status_code == 401
-    assert response.json()["detail"] == "push_auth_failed"
+    assert response.status_code == 200
+    assert response.content == b""
     app.state.ingestion_service.drain_receipt_queue()
 
     store = LiveStore(app_config)
-    assert store.get_evse_detail("ampeco", "DEQWEE1") is None
-
-
-def test_api_push_endpoint_fails_closed_without_configured_token(app_config):
-    _write_subscription_registry(app_config.subscription_registry_path)
-    _write_provider_fixture(app_config.provider_config_path)
-    _write_matches_fixture(app_config.site_match_path)
-    _write_chargers_fixture(app_config.chargers_csv_path)
-    client = TestClient(create_app(app_config))
-
-    response = client.post(
-        "/v1/push",
-        content=json.dumps(_dynamic_payload(status="FAULTED", price_kwh=0.81)).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "subscriptionID": "2000001",
-        },
-    )
-
-    assert response.status_code == 503
-    assert response.json()["detail"] == "push_auth_not_configured"
+    evse = store.get_evse_detail("ampeco", "DEQWEE1")
+    assert evse is not None
+    assert evse["current"]["price_display"] == "0,81 €/kWh"
 
 
 def test_api_push_endpoint_can_be_disabled(app_config):
@@ -2755,12 +2736,12 @@ def test_api_push_endpoint_returns_404_for_unknown_provider(app_config):
     _write_provider_fixture(app_config.provider_config_path)
     _write_matches_fixture(app_config.site_match_path)
     _write_chargers_fixture(app_config.chargers_csv_path)
-    client = TestClient(create_app(replace(app_config, api_push_token="test-push-token")))
+    client = TestClient(create_app(app_config))
 
     response = client.post(
         "/v1/push/unknown-provider",
         content=json.dumps(_dynamic_payload()).encode("utf-8"),
-        headers={"Content-Type": "application/json", "x-woladen-push-token": "test-push-token"},
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 404
 

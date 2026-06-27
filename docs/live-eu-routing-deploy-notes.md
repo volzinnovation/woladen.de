@@ -129,27 +129,22 @@ sudo systemctl reload caddy
 ## GitHub Actions Deploy Blocker
 
 The local commit was pushed to `origin/main`, but the GitHub Actions deploy run
-failed in its SSH preparation step. The failed run showed these required secrets
-as empty:
+failed before deployment. The failed run showed these values as empty:
 
 ```text
 LIVE_DEPLOY_SSH_KNOWN_HOSTS
 LIVE_API_PUSH_TOKEN
 ```
 
-That is not a server package problem. Fixing the Actions deploy path requires
-setting repository/environment secrets, not sudo on the host.
+That is not a server package problem. `LIVE_DEPLOY_SSH_KNOWN_HOSTS` was a
+workflow regression: the historical `live.woladen.de` deploy did not have this
+secret and should derive `known_hosts` with `ssh-keyscan` from
+`LIVE_DEPLOY_HOST` when the optional secret is absent.
 
-Suggested secret setup:
-
-```bash
-ssh-keyscan -H live-eu.woladen.de
-```
-
-Store the resulting known-hosts line as `LIVE_DEPLOY_SSH_KNOWN_HOSTS`.
-
-Set `LIVE_API_PUSH_TOKEN` to the production push token expected by the live API.
-Do not print the token in logs or commit it to the repository.
+`LIVE_API_PUSH_TOKEN` was also a workflow/app mismatch. Mobilithek subscriber
+push delivery calls the registered callback URL directly and does not supply a
+Woladen-specific shared token. The live API no longer requires this secret for
+`POST /v1/push`.
 
 ## Sudo Bootstrap Instructions
 

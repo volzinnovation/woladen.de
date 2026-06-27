@@ -49,6 +49,16 @@ This file is the operational guide for coding agents working in this repository.
 - Prefer targeted validation over assumptions. If you did not run a relevant test or smoke check, say so explicitly.
 - Develop features for web app first, when prompted to port to Android and iPhone stick as faithfully as possible to the web app design and features.
 
+## Live Deployment Boundary
+
+- Keep `live.woladen.de` and `live-eu.woladen.de` mentally separate.
+- `live.woladen.de` is the Germany/Mobilithek live-ingester deployment from this repository. It is deployed by `.github/workflows/live-deploy.yml` via `deploy/ionos/*`, uses systemd services on the IONOS host, and expects Mobilithek machine certificate, subscription registry, and SSH secrets.
+- `live-eu.woladen.de` is the EU/open-static routing and catalog API from the private sister repository `volzinnovation/Woladen.de-analytics`. It is a Docker Compose stack under `deploy/onboarded-ingest/` in that repo and must not be deployed with this repository's `deploy/ionos/*` scripts.
+- A failing `Live Deploy` run in this repository is a `live.woladen.de` deployment problem unless proven otherwise. Do not treat it as a `live-eu.woladen.de` deployment failure just because the public frontend defaults to `live-eu` for catalog/routing calls.
+- If `live-eu.woladen.de/v1/providers` returns an empty list, that alone is not evidence of a broken EU deployment; `live-eu` is not the Mobilithek provider ingester. Use `/healthz`, `/v1/catalog/search`, geocoding, and routing endpoints for EU API smoke checks.
+- `LIVE_DEPLOY_SSH_KNOWN_HOSTS` is optional. The workflow may derive `known_hosts` with `ssh-keyscan` from `LIVE_DEPLOY_HOST`, matching the historical deployment setup.
+- Do not add `LIVE_API_PUSH_TOKEN` back as a required deploy secret. Mobilithek subscriber push calls the registered callback URL directly; the old `push_auth_not_configured` failure was a Woladen-side shared-token gate, not a Mobilithek-auth change.
+
 ## Provider Onboarding And Device Mapping
 
 - New provider work usually touches `data/mobilithek_afir_provider_configs.json`, `data/mobilithek_afir_static_matches.csv`, `backend/loaders.py`, and analysis outputs under `analysis/output/reports/`.

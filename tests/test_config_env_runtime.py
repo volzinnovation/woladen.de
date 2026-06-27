@@ -113,11 +113,3 @@ def test_app_config_reads_api_push_enabled_env(monkeypatch):
     config = AppConfig()
 
     assert config.api_push_enabled is False
-
-
-def test_app_config_reads_api_push_token_env(monkeypatch):
-    monkeypatch.setenv("WOLADEN_LIVE_API_PUSH_TOKEN", "push-token-123")
-
-    config = AppConfig()
-
-    assert config.api_push_token == "push-token-123"
