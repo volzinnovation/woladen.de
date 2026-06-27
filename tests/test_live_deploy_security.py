@@ -30,6 +30,7 @@ def test_live_deploy_packages_and_refreshes_occupancy_sidecar():
     assert "command -v zstd" in deploy_release
     assert "zstd" in bootstrap
     assert "WOLADEN_LIVE_OCCUPANCY_STATS_SQLITE_PATH" in deploy_release
+    assert "--allow-missing" in deploy_release
     assert "woladen-live-occupancy-stats-refresh.cron" in install
     assert "__CONFIG_DIR__/huggingface.token" in cron
     assert "/occupancy_stats.sqlite3" in cron

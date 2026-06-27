@@ -331,7 +331,8 @@ refresh_occupancy_stats_sidecar() {
     WOLADEN_OCCUPANCY_STATS_HF_TOKEN_FILE="$hf_token_target" \
     "$venv_dir/bin/python" "$current_link/scripts/refresh_occupancy_stats_sidecar.py" \
       --output-path "$occupancy_stats_target" \
-      --summary-path "$occupancy_stats_summary"
+      --summary-path "$occupancy_stats_summary" \
+      --allow-missing
 }
 
 extract_release_bundle() {
