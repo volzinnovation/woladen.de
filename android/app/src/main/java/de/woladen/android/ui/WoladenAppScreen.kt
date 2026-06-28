@@ -17,17 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Menu
-import androidx.compose.material.icons.outlined.Map
-import androidx.compose.material.icons.outlined.NearMe
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
@@ -41,15 +33,16 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import de.woladen.android.R
 import de.woladen.android.model.FilterState
 import de.woladen.android.service.LocationService
@@ -270,8 +263,8 @@ private fun availableAmenityKeys(viewModel: AppViewModel): List<String> {
 private data class TabItem(
     val tab: AppViewModel.AppTab,
     val title: String,
-    val icon: ImageVector
-    )
+    val iconResId: Int
+)
 
 @Composable
 private fun WideNavigationRail(
@@ -303,7 +296,7 @@ private fun WideNavigationRail(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(
-                        imageVector = item.icon,
+                        painter = painterResource(item.iconResId),
                         contentDescription = item.title,
                         tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(34.dp)
@@ -311,9 +304,10 @@ private fun WideNavigationRail(
                     Text(
                         text = item.title,
                         color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = bottomNavigationLabelStyle(),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
@@ -400,22 +394,27 @@ private fun BottomTabBar(
                             }
                         )
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = item.icon,
-                        contentDescription = item.title,
-                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(34.dp)
-                    )
-                    Text(
-                        text = item.title,
-                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            painter = painterResource(item.iconResId),
+                            contentDescription = item.title,
+                            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(34.dp)
+                        )
+                        Text(
+                            text = item.title,
+                            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = bottomNavigationLabelStyle(),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
-            }
             }
         }
     }
@@ -424,10 +423,16 @@ private fun BottomTabBar(
 @Composable
 private fun tabItems(): List<TabItem> {
     return listOf(
-        TabItem(AppViewModel.AppTab.LIST, stringResource(R.string.i18n_nav_list), Icons.Outlined.Menu),
-        TabItem(AppViewModel.AppTab.MAP, stringResource(R.string.i18n_nav_map), Icons.Outlined.Map),
-        TabItem(AppViewModel.AppTab.ROUTE, stringResource(R.string.i18n_nav_route), Icons.Outlined.NearMe),
-        TabItem(AppViewModel.AppTab.FAVORITES, stringResource(R.string.i18n_nav_favorites), Icons.Outlined.Star),
-        TabItem(AppViewModel.AppTab.INFO, stringResource(R.string.i18n_nav_info), Icons.Outlined.Info)
+        TabItem(AppViewModel.AppTab.LIST, stringResource(R.string.i18n_nav_list), R.drawable.ic_nav_list),
+        TabItem(AppViewModel.AppTab.MAP, stringResource(R.string.i18n_nav_map), R.drawable.ic_nav_map),
+        TabItem(AppViewModel.AppTab.ROUTE, stringResource(R.string.i18n_nav_route), R.drawable.ic_nav_route),
+        TabItem(AppViewModel.AppTab.FAVORITES, stringResource(R.string.i18n_nav_favorites), R.drawable.ic_nav_favorites),
+        TabItem(AppViewModel.AppTab.INFO, stringResource(R.string.i18n_nav_info), R.drawable.ic_nav_info)
     )
 }
+
+@Composable
+private fun bottomNavigationLabelStyle() = MaterialTheme.typography.labelSmall.copy(
+    fontSize = 14.sp,
+    lineHeight = 18.sp
+)

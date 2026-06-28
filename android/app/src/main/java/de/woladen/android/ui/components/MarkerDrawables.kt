@@ -90,9 +90,9 @@ fun createFavoriteMarkerDrawable(
 
 fun markerColorForKey(key: String): Int {
     return when (key) {
-        "gold" -> Color.rgb(255, 215, 0)
-        "silver" -> Color.GRAY
-        "bronze" -> Color.rgb(150, 75, 0)
-        else -> Color.DKGRAY
+        "gold" -> Color.rgb(245, 158, 11)
+        "silver" -> Color.rgb(148, 163, 184)
+        "bronze" -> Color.rgb(180, 83, 9)
+        else -> Color.rgb(14, 165, 233)
     }
 }

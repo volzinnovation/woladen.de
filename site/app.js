@@ -4212,7 +4212,7 @@ function getMarkerColor(props) {
   if (total > 10) return "#f59e0b"; // Gold
   if (total > 5) return "#94a3b8"; // Silver
   if (total > 0) return "#b45309"; // Bronze
-  return "#64748b"; // Grey
+  return "#0ea5e9"; // No nearby places
 }
 
 function hasAvailabilitySummary(props) {

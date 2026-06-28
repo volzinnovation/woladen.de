@@ -2,6 +2,8 @@ package de.woladen.android.ui
 
 import android.content.Intent
 import android.net.Uri
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -31,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -116,10 +119,16 @@ fun InfoTabView(
                     MarkerLegendRow(Color(0xFFF59E0B), stringResource(R.string.i18n_info_legendgold))
                     MarkerLegendRow(Color(0xFF94A3B8), stringResource(R.string.i18n_info_legendsilver))
                     MarkerLegendRow(Color(0xFFB45309), stringResource(R.string.i18n_info_legendbronze))
-                    MarkerLegendRow(infoMuted, stringResource(R.string.i18n_info_legendgrey))
+                    MarkerLegendRow(Color(0xFF0EA5E9), stringResource(R.string.i18n_info_legendgrey))
                     FavoriteLegendRow(stringResource(R.string.i18n_info_legendfavorite))
-                    MarkerOutOfOrderLegendRow(stringResource(R.string.i18n_info_legendmarkeroutoforder))
-                    MarkerFullyOccupiedLegendRow(stringResource(R.string.i18n_info_legendmarkerfullyoccupied))
+                    MarkerIconLegendRow(
+                        iconResId = R.drawable.ic_live_marker_out_of_order,
+                        text = stringResource(R.string.i18n_info_legendmarkeroutoforder)
+                    )
+                    MarkerIconLegendRow(
+                        iconResId = R.drawable.ic_live_marker_fully_occupied,
+                        text = stringResource(R.string.i18n_info_legendmarkerfullyoccupied)
+                    )
                 }
 
                 InfoSection(title = stringResource(R.string.i18n_info_abouttitle)) {
@@ -415,35 +424,18 @@ private fun FavoriteLegendRow(text: String) {
 }
 
 @Composable
-private fun MarkerOutOfOrderLegendRow(text: String) {
+private fun MarkerIconLegendRow(
+    @DrawableRes iconResId: Int,
+    text: String
+) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(20.dp)
-                .background(Color(0xFFB91C1C), CircleShape)
-                .border(1.dp, Color.White, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("X", color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-        }
-        Text(text)
-    }
-}
-
-@Composable
-private fun MarkerFullyOccupiedLegendRow(text: String) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(20.dp)
-                .background(Color.White, CircleShape)
-                .border(2.dp, Color(0xFFB45309), CircleShape)
+        Image(
+            painter = painterResource(iconResId),
+            contentDescription = null,
+            modifier = Modifier.size(20.dp)
         )
         Text(text)
     }
