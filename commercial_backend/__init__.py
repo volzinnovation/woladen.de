@@ -1,2 +1,0 @@
-"""Commercial Woladen backend components."""
-

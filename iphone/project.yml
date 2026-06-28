@@ -27,6 +27,20 @@ targets:
         buildPhase: resources
       - path: Woladen/Resources/InfoPlist.xcstrings
         buildPhase: resources
+      - path: Woladen/Resources/ReleaseAccess
+        buildPhase: resources
+        type: folder
+      - path: Woladen/Resources/Data
+        buildPhase: resources
+        type: folder
+    dependencies:
+      - sdk: libsqlite3.tbd
+      - sdk: libcompression.tbd
+    preBuildScripts:
+      - name: Generate GitHub Release Access Config
+        script: |
+          "$SRCROOT/scripts/write_github_release_access_config.sh"
+        basedOnDependencyAnalysis: false
     settings:
       base:
         ENABLE_DEBUG_DYLIB: NO

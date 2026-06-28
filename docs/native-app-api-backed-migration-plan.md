@@ -233,11 +233,11 @@ Current repo files to update tomorrow:
 - Android app state: `/Users/raphaelvolz/Github/woladen.de/android/app/src/main/java/de/woladen/android/viewmodel/AppViewModel.kt`
 - Android strings: `/Users/raphaelvolz/Github/woladen.de/android/app/src/main/res/values/strings.xml`
 
-Useful sibling-repo references, as backend/data contract examples only:
+Useful local references for app-side bundle handling:
 
-- `/Users/raphaelvolz/Github/woladen.de-analytics/iphone/Woladen/Services/OpenStaticSQLiteStore.swift`
-- `/Users/raphaelvolz/Github/woladen.de-analytics/iphone/Woladen/Services/DataBundleManager.swift`
-- `/Users/raphaelvolz/Github/woladen.de-analytics/iphone/Woladen/Models/CountryPackCatalog.swift`
+- `/Users/raphaelvolz/Github/woladen.de/iphone/Woladen/Services/ChargerRepository.swift`
+- `/Users/raphaelvolz/Github/woladen.de/iphone/Woladen/Models/CatalogModels.swift`
+- `/Users/raphaelvolz/Github/woladen.de/iphone/scripts/sync_data_bundle.sh`
 
 Do not port the sibling repo's native SQLite-pack install flow into this repo under the API-backed decision.
 

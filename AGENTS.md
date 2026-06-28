@@ -28,24 +28,31 @@ This file is the operational guide for coding agents working in this repository.
 - Edit `web/` for frontend source code.
 - Treat `site/` as generated output created by `python3 scripts/build_site.py`.
 - Do not hand-edit `site/` unless the user explicitly asks for generated-only surgery.
-- Edit `scripts/` for data generation and site-build logic.
-- Edit `backend/` for the live API and ingestion pipeline.
-- Treat `data/chargers_fast.geojson`, `data/operators.json`, `data/summary.json`, and `site/data/` as generated artifacts.
-- Treat generated data schema as a shared contract across the web app, generated site, analysis scripts, and native clients. If you rename or remove fields, audit consumers first.
-- Treat `data/mobilithek_afir_provider_configs.json` as the canonical provider catalog for AFIR/static-live onboarding.
-- Treat `data/mobilithek_afir_static_matches.csv` as the canonical reviewed site-to-station match inventory consumed by the live backend.
+- Edit `iphone/` and `android/` for native app source code and assets.
+- Edit `scripts/build_site.py` and frontend/native asset helpers for public
+  web/app bundle work.
+- Do not add backend runtime, provider ingestion, deployment, credential, or
+  analytics code here. Those belong in the private sister repository
+  `Woladen.de-analytics`.
+- Treat `data/chargers_fast.geojson`, `data/operators.json`,
+  `data/summary.json`, and `site/data/` as generated frontend contract
+  artifacts consumed by the web/native clients.
+- Treat generated data schema as a shared contract across the web app, generated
+  site, analytics scripts, and native clients. If you rename or remove fields,
+  audit consumers first.
+- German/Mobilithek and EU provider catalogs, static-live matches,
+  subscriptions, raw payloads, live state, open-static bundle generation,
+  derived station characteristics, and management reports are owned by
+  `Woladen.de-analytics`.
 
 ## Workflow Expectations
 
 - Frontend change:
   Run `node --test web/filtering.test.mjs web/location.test.mjs`.
   Then run `python3 scripts/build_site.py`.
-- Data-pipeline change:
-  Run targeted tests with `python3 -m pytest`, at minimum the affected data tests such as `tests/test_build_data.py`.
-- Backend change:
-  Run targeted tests with `python3 -m pytest`, especially `tests/test_live_backend.py` and related backend tests.
-- Provider onboarding or mapping change:
-  Run targeted tests with `python3 -m pytest`, especially `tests/test_live_backend.py`, `tests/test_provider_mapping_gap_report.py`, and the affected build-data tests.
+- Backend, data-pipeline, provider onboarding, provider mapping, deployment, or
+  management-report change:
+  Work in `Woladen.de-analytics` and run the targeted backend/data tests there.
 - If the site bundle or generated data changes:
   Smoke-test locally with `python3 -m http.server 4173 --directory site` and inspect the relevant flow in a browser.
 - Prefer targeted validation over assumptions. If you did not run a relevant test or smoke check, say so explicitly.
@@ -54,16 +61,25 @@ This file is the operational guide for coding agents working in this repository.
 ## Live Deployment Boundary
 
 - Keep `live.woladen.de` and `live-eu.woladen.de` mentally separate.
-- `live.woladen.de` is the Germany/Mobilithek live-ingester deployment from this repository. It is deployed by `.github/workflows/live-deploy.yml` via `deploy/ionos/*`, uses systemd services on the IONOS host, and expects Mobilithek machine certificate, subscription registry, and SSH secrets.
-- `live-eu.woladen.de` is the EU/open-static routing and catalog API from the private sister repository `volzinnovation/Woladen.de-analytics`. It is a Docker Compose stack under `deploy/onboarded-ingest/` in that repo and must not be deployed with this repository's `deploy/ionos/*` scripts.
-- A failing `Live Deploy` run in this repository is a `live.woladen.de` deployment problem unless proven otherwise. Do not treat it as a `live-eu.woladen.de` deployment failure just because the public frontend defaults to `live-eu` for catalog/routing calls.
+- Both live backend deployments are owned by `Woladen.de-analytics`.
+- `live.woladen.de` is the Germany/Mobilithek live-ingester deployment from
+  `Woladen.de-analytics` via `deploy/ionos/*`.
+- `live-eu.woladen.de` is the EU/open-static routing and catalog API from
+  `Woladen.de-analytics` via `deploy/onboarded-ingest/*`.
+- Do not add or revive live backend deploy workflows in this frontend repo.
+- A failing backend deploy is an analytics repository problem unless proven
+  otherwise. Do not treat it as a frontend regression just because the public
+  frontend defaults to `live-eu` for catalog/routing calls.
 - If `live-eu.woladen.de/v1/providers` returns an empty list, that alone is not evidence of a broken EU deployment; `live-eu` is not the Mobilithek provider ingester. Use `/healthz`, `/v1/catalog/search`, geocoding, and routing endpoints for EU API smoke checks.
-- `LIVE_DEPLOY_SSH_KNOWN_HOSTS` is optional. The workflow may derive `known_hosts` with `ssh-keyscan` from `LIVE_DEPLOY_HOST`, matching the historical deployment setup.
-- Do not add `LIVE_API_PUSH_TOKEN` back as a required deploy secret. Mobilithek subscriber push calls the registered callback URL directly; the old `push_auth_not_configured` failure was a Woladen-side shared-token gate, not a Mobilithek-auth change.
+- `LIVE_DEPLOY_SSH_KNOWN_HOSTS` is optional in the analytics deploy workflow.
+- Do not add `LIVE_API_PUSH_TOKEN` back as a required deploy secret. Mobilithek
+  subscriber push calls the registered callback URL directly; the old
+  `push_auth_not_configured` failure was a Woladen-side shared-token gate, not a
+  Mobilithek-auth change.
 
 ## Provider Onboarding And Device Mapping
 
-- New provider work usually touches `data/mobilithek_afir_provider_configs.json`, `data/mobilithek_afir_static_matches.csv`, `backend/loaders.py`, and analysis outputs under `analysis/output/reports/`.
+- New provider work belongs in `Woladen.de-analytics`.
 - The goal is not just to ingest a provider feed. The goal is to map its sites and EVSEs onto existing internal `station_id` records with evidence that survives future payload changes.
 - Prefer exact identifier reconciliation before any location approximation.
 - Matching priority order:
@@ -77,13 +93,15 @@ This file is the operational guide for coding agents working in this repository.
 - When a provider exposes usable EVSE IDs or station refs in dynamic payloads, expand the identifier inventory and matching rules first instead of relying on nearest-station heuristics.
 - Avoid many-to-one mappings caused only by proximity. Check station count, EVSE overlap, and operator/address consistency.
 - Keep new providers out of competitive comparison until mapping quality is demonstrated by the analysis reports, not just by a successful fetch.
-- Use `analysis.provider_mapping_gap_report` first for unmapped EVSE evidence and remediation category.
-- Use `analysis.provider_quality_report` to decide whether a provider is `eligible`, `review`, or still `exclude`.
+- Use the analytics repository's provider mapping and quality reports for
+  unmapped EVSE evidence, remediation category, and eligibility decisions.
 
 ## Known Regression Traps
 
 - Never leave `web/` and `site/` out of sync after a frontend change.
-- Do not patch generated JSON or GeoJSON to hide an upstream bug. Fix the producer in `scripts/build_data.py` or `scripts/build_site.py`.
+- Do not patch generated JSON or GeoJSON to hide an upstream bug. Fix frontend
+  bundle issues in `scripts/build_site.py`; fix backend/data producer issues in
+  `Woladen.de-analytics`.
 - Sanity-check amenity coverage after pipeline changes. This project has already regressed once when the build fell back to `overpass` with an ineffective query budget and almost all stations lost amenities.
 - Treat `data/summary.json`, `data/operators.json`, and `data/chargers_fast.geojson` as contract artifacts. If one changes shape unexpectedly, expect frontend regressions.
 - Provider mapping regressions are product regressions. A feed can look healthy while coverage silently collapses because identifiers stopped matching.
@@ -96,8 +114,8 @@ This file is the operational guide for coding agents working in this repository.
 
 ## Release Discipline
 
-- The safe release order is:
-  `build_data -> build_site -> local smoke check`.
+- The safe frontend release order is:
+  `analytics bundle/API ready -> build_site -> local smoke check`.
 - Before finishing, review `git status --short` and make sure only intended files changed.
 - Mention regenerated artifacts explicitly in the final update.
 - Do not deploy, push, or clean up branches unless the user explicitly asks.

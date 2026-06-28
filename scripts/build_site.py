@@ -58,8 +58,8 @@ LIVE_MATCH_CANDIDATES = (
 MANAGEMENT_INDEX_ENV = "WOLADEN_MANAGEMENT_INDEX_PATH"
 MANAGEMENT_INDEX_CANDIDATES = (
     DATA_DIR / "management" / "index.json",
-    ROOT.parent / "Woladen.de-analytics" / "commercial_web" / "data" / "management" / "index.json",
-    ROOT.parent / "woladen.de-analytics" / "commercial_web" / "data" / "management" / "index.json",
+    ROOT.parent / "Woladen.de-analytics" / "data" / "management" / "index.json",
+    ROOT.parent / "woladen.de-analytics" / "data" / "management" / "index.json",
 )
 MANAGEMENT_SNAPSHOT_ENV = "WOLADEN_MANAGEMENT_SNAPSHOT_PATH"
 COUNTRY_STATION_ID_RE = re.compile(r"^([A-Za-z]{2}):(.*)$")

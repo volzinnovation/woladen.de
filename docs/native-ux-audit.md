@@ -10,16 +10,11 @@ The review used the OpenAI product design audit lenses: task entry, information 
 
 ## Screenshots Reviewed
 
-Primary final screenshots:
-
-- `analysis/output/native-ux-audit/screenshots/ios-phone-70-list-grid.png`
-- `analysis/output/native-ux-audit/screenshots/ios-tablet-70-list-grid.png`
-- `analysis/output/native-ux-audit/screenshots/android-phone-80-cold-default-list.png`
-- `analysis/output/native-ux-audit/screenshots/android-tablet-80-cold-default-list.png`
-- `analysis/output/native-ux-audit/screenshots/android-phone-71-list-grid-after-wait.png`
-- `analysis/output/native-ux-audit/screenshots/android-tablet-71-list-grid-after-wait.png`
-
-Earlier comparison screenshots covered list, map, detail, favorites, and info screens on both platforms.
+Primary final screenshots covered iPhone, iPad, Android phone, and Android
+tablet list-grid startup states plus post-wait Android states. Earlier
+comparison screenshots covered list, map, detail, favorites, and info screens
+on both platforms. The screenshot archive was generated analysis output and is
+not part of this frontend source tree.
 
 ## Implementation Status
 

@@ -1,5 +1,0 @@
-SHELL=/bin/bash
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-CRON_TZ=Europe/Berlin
-
-37 3 * * * __APP_USER__ /usr/bin/flock -n __STATE_DIR__/occupancy-stats-refresh.lock /bin/bash -lc 'cd __APP_DIR__ && __VENV_DIR__/bin/python -u scripts/refresh_occupancy_stats_sidecar.py --output-path __STATE_DIR__/occupancy_stats.sqlite3 --token-file __CONFIG_DIR__/huggingface.token --summary-path __STATE_DIR__/occupancy_stats_refresh_summary.json' >> __STATE_DIR__/occupancy-stats-refresh.log 2>&1

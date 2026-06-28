@@ -32,7 +32,13 @@ This folder contains a fresh native iPhone implementation of the Woladen web app
 - `Woladen/ViewModels`: app state and filtering/sorting logic
 - `Woladen/Views`: UI tabs, filter sheet, station detail
 - `Woladen/Resources/Data/baseline`: bundled offline baseline dataset
-- `scripts/sync_data_bundle.sh`: sync latest generated data into iPhone baseline bundle
+- `Woladen/Resources/ReleaseAccess`: optional GitHub Release access config for
+  downloading analytics-published regional SQLite packages
+- `scripts/sync_data_bundle.sh`: prepare the small bootstrap manifest, or sync a
+  local SQLite baseline for debug builds
+- `scripts/build_iphone_app.sh`: command-line build/archive/upload helper
+- `scripts/write_github_release_access_config.sh`: generate the ignored release
+  access config from `secret/gh_iphone_download_token.txt`
 
 ## Build
 
@@ -90,3 +96,7 @@ From repo root:
 ```bash
 ./iphone/scripts/sync_data_bundle.sh
 ```
+
+The regional open-static SQLite packages are built and published from
+`Woladen.de-analytics`. This repository contains the iPhone client code and
+app-facing release access assets, not the backend bundle generation pipeline.
