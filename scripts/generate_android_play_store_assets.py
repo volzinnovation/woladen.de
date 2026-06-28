@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -12,6 +13,7 @@ OUTPUT_DIR = ROOT / "output" / "play-store" / "android"
 ASSET_DIR = OUTPUT_DIR / "assets"
 PLAY_METADATA_DIR = OUTPUT_DIR / "metadata"
 METADATA_DIR = OUTPUT_DIR / "metadata" / "de-DE"
+I18N_DIR = ROOT / "web" / "i18n"
 ICON_SOURCE = (
     ROOT
     / "iphone"
@@ -21,6 +23,67 @@ ICON_SOURCE = (
     / "AppIcon.appiconset"
     / "icon-1024.png"
 )
+
+GERMAN_TITLE = "woladen"
+GERMAN_SHORT_DESCRIPTION = "Bessere Ladestopps in Europa"
+GERMAN_FULL_DESCRIPTION = """woladen hilft dir, bessere Ladepausen zu finden: Ladestopps, die frei, verlässlich und angenehm sind.
+
+Du suchst nicht nur eine Ladesäule. Du suchst einen Ort, an dem die Pause funktioniert: genug Leistung, möglichst freie Ladepunkte und etwas Sinnvolles in der Nähe. woladen zeigt dir Ladestationen in Europa zusammen mit Cafés, Bäckereien, Restaurants, Läden, Toiletten, Spielplätzen und anderen Orten rund um den Stopp.
+
+Für längere Fahrten kannst du Start und Ziel eingeben und Ladestationen entlang deiner Route finden.
+
+Mit woladen kannst du:
+- verfügbare Ladestopps in Karte, Liste, Route und Favoriten finden
+- Schnelllader ab 50 kW als Standard sehen
+- nach freien Ladepunkten, Leistung, Steckertyp, Betreiber und Ausstattung filtern
+- schnell erkennen, was du während der Ladepause in der Nähe machen kannst
+- Live-Status und Details nutzen, wo sie verfügbar sind
+- gute Stopps als Favoriten lokal auf deinem Gerät speichern
+- deinen Standort optional nutzen, um passende Stopps in der Nähe zu sehen
+
+woladen ist bewusst schlicht: kein Nutzerkonto, keine Werbung, keine In-App-Käufe.
+
+Wenn du deinen Standort freigibst, nutzt woladen ihn nur, um passende Ladestopps in der Nähe zu sortieren und die Karte auszurichten. Favoriten bleiben auf deinem Gerät.
+
+The human side of charging. Because charging time is your time."""
+RELEASE_NOTES = """Version 1.3.1 aktualisiert woladen auf den europäischen Live-Katalog.
+
+- API-gestützter europäischer Katalog
+- Karte, Liste, Route, Filter und Favoriten
+- Mehrsprachige native Texte aus dem Web-Katalog
+- Live-Status und Stationsdetails, wo Anbieter sie bereitstellen
+- Angepasste Layouts für Android-Smartphones und Tablets"""
+
+PLAY_LOCALE_SOURCES = {
+    "cs-CZ": "cs",
+    "da-DK": "da",
+    "de-DE": "de",
+    "el-GR": "el",
+    "en-GB": "en",
+    "en-US": "en",
+    "es-ES": "es",
+    "fi-FI": "fi",
+    "fr-FR": "fr",
+    "hu-HU": "hu",
+    "it-IT": "it",
+    "lt": "lt",
+    "lv": "lv",
+    "nl-NL": "nl",
+    "no-NO": "nb",
+    "pl-PL": "pl",
+    "pt-PT": "pt",
+    "rm": "rm",
+    "sl": "sl",
+    "sv-SE": "sv",
+    "tr-TR": "tr",
+}
+
+FIELD_LIMITS = {
+    "title": 30,
+    "short_description": 80,
+    "full_description": 4000,
+    "release_notes": 500,
+}
 
 
 def load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -142,41 +205,69 @@ def generate_feature_graphic() -> Path:
     return out_path
 
 
+def checked(label: str, value: str) -> str:
+    length = len(value)
+    limit = FIELD_LIMITS[label]
+    if length > limit:
+        raise ValueError(f"{label} has {length} characters, Google Play limit is {limit}")
+    return value.rstrip() + "\n"
+
+
+def nested_value(data: dict[str, object], path: tuple[str, ...]) -> str:
+    current: object = data
+    for key in path:
+        if not isinstance(current, dict):
+            return ""
+        current = current.get(key, "")
+    return current if isinstance(current, str) else ""
+
+
+def localized_short_description(data: dict[str, object]) -> str:
+    title = nested_value(data, ("meta", "title")) or nested_value(data, ("seo", "homeTitle"))
+    if title.startswith("woladen - "):
+        return title.removeprefix("woladen - ")
+    return title or GERMAN_SHORT_DESCRIPTION
+
+
+def localized_full_description(data: dict[str, object]) -> str:
+    parts = [
+        nested_value(data, ("seo", "homeIntro")),
+        nested_value(data, ("seo", "productMessage")),
+        nested_value(data, ("route", "empty")),
+        "The human side of charging. Because charging time is your time.",
+    ]
+    return "\n\n".join(part for part in parts if part)
+
+
+def localized_metadata(locale: str, source_code: str) -> tuple[str, str, str]:
+    if locale == "de-DE":
+        return GERMAN_TITLE, GERMAN_SHORT_DESCRIPTION, GERMAN_FULL_DESCRIPTION
+
+    data = json.loads((I18N_DIR / f"{source_code}.json").read_text(encoding="utf-8"))
+    return GERMAN_TITLE, localized_short_description(data), localized_full_description(data)
+
+
 def write_metadata() -> None:
     PLAY_METADATA_DIR.mkdir(parents=True, exist_ok=True)
-    METADATA_DIR.mkdir(parents=True, exist_ok=True)
-    title = "woladen"
-    short_description = "woladen - Smart EV Stops in Europe"
-    full_description = """woladen zeigt dir verfügbare Ladestationen in Europa und hilft dir, gute Ladepausen zu finden. So findest du nicht nur den passenden Ladepunkt, sondern auch Bäckereien, Restaurants, Läden, Spielplätze und Cafés in der Nähe.
+    for locale, source_code in PLAY_LOCALE_SOURCES.items():
+        metadata_dir = PLAY_METADATA_DIR / locale
+        metadata_dir.mkdir(parents=True, exist_ok=True)
+        title, short_description, full_description = localized_metadata(locale, source_code)
+        (metadata_dir / "title.txt").write_text(checked("title", title), encoding="utf-8")
+        (metadata_dir / "short-description.txt").write_text(
+            checked("short_description", short_description),
+            encoding="utf-8",
+        )
+        (metadata_dir / "full-description.txt").write_text(
+            checked("full_description", full_description),
+            encoding="utf-8",
+        )
+        if locale == "de-DE":
+            (metadata_dir / "release-notes.txt").write_text(
+                checked("release_notes", RELEASE_NOTES),
+                encoding="utf-8",
+            )
 
-Mit woladen kannst du:
-- verfügbare Ladestationen in vielen europäischen Ländern finden
-- Ladepunkte in Karte und Liste durchsuchen
-- nach Anbieter, Verfügbarkeit und Annehmlichkeiten filtern
-- Favoriten lokal auf deinem Gerät speichern
-- deinen Standort optional nutzen, um Ladepunkte in der Nähe schneller zu sehen
-
-woladen kombiniert offene europäische Ladeinfrastruktur-Daten, Live-Daten wo verfügbar und Informationen aus OpenStreetMap. Dadurch siehst du zu vielen Standorten direkt, was es in der Umgebung gibt, zum Beispiel Gastronomie, Einkauf, Toiletten oder weitere nützliche Stopps.
-
-Die App ist bewusst schlank gehalten:
-- kein Nutzerkonto
-- keine Werbung
-- keine In-App-Käufe
-
-Wenn du deinen Standort freigibst, wird er verwendet, um die Karte auf deine Umgebung zu fokussieren und nahe Schnelllader zu sortieren. Favoriten bleiben lokal auf deinem Gerät.
-
-woladen ist ideal für alle, die unterwegs schnell laden und die Ladepause sinnvoll nutzen möchten."""
-    release_notes = """Erstveröffentlichung von woladen für Android.
-
-- Schnelllader ab 50 kW in ganz Deutschland
-- Karte, Liste, Filter und Favoriten
-- Hinweise zur Aufenthaltsqualität aus OpenStreetMap
-- Optionaler Standortzugriff für Ladepunkte in der Nähe"""
-
-    (METADATA_DIR / "title.txt").write_text(title + "\n", encoding="utf-8")
-    (METADATA_DIR / "short-description.txt").write_text(short_description + "\n", encoding="utf-8")
-    (METADATA_DIR / "full-description.txt").write_text(full_description + "\n", encoding="utf-8")
-    (METADATA_DIR / "release-notes.txt").write_text(release_notes + "\n", encoding="utf-8")
     (PLAY_METADATA_DIR / "support-email.txt").write_text("studios@moonshots.gmbh\n", encoding="utf-8")
     (PLAY_METADATA_DIR / "website-url.txt").write_text("https://woladen.de/\n", encoding="utf-8")
     (PLAY_METADATA_DIR / "privacy-policy-url.txt").write_text("https://woladen.de/privacy.html\n", encoding="utf-8")

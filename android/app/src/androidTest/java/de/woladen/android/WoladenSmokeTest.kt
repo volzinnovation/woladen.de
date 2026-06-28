@@ -175,8 +175,11 @@ class WoladenSmokeTest {
             By.res(PACKAGE_NAME, tag),
             By.res(tag)
         )
-        fallbackTextForTag(tag)?.let { selectors += By.text(it) }
-        fallbackDescForTag(tag)?.let { selectors += By.desc(it) }
+        fallbackTextForTag(tag).forEach { selectors += By.text(it) }
+        fallbackDescForTag(tag).forEach { description ->
+            selectors += By.desc(description)
+            selectors += By.descContains(description)
+        }
         return selectors
     }
 
@@ -190,27 +193,33 @@ class WoladenSmokeTest {
         return found.values.toList()
     }
 
-    private fun fallbackTextForTag(tag: String): String? {
+    private fun fallbackTextForTag(tag: String): List<String> {
         return when (tag) {
-            "tab-list" -> "Liste"
-            "tab-map" -> "Karte"
-            "tab-favorites" -> "Favoriten"
-            "tab-info" -> "Info"
-            "filter-apply-button" -> "Anwenden"
-            "detail-google-nav-button" -> "Google Navi"
-            "detail-system-nav-button" -> "System Navi"
-            "info-location-refresh-button" -> "Standort aktualisieren"
-            else -> null
+            "tab-list" -> listOf("Liste", "List")
+            "tab-map" -> listOf("Karte", "Map")
+            "tab-favorites" -> listOf("Favoriten", "Favorites")
+            "tab-info" -> listOf("Info")
+            "filter-apply-button" -> listOf("Anwenden", "Apply")
+            "detail-google-nav-button" -> listOf("Google Navi")
+            "detail-system-nav-button" -> listOf("System Navi")
+            "info-location-refresh-button" -> listOf("Standort aktualisieren", "Update location")
+            else -> emptyList()
         }
     }
 
-    private fun fallbackDescForTag(tag: String): String? {
+    private fun fallbackDescForTag(tag: String): List<String> {
         return when (tag) {
-            "map-location-button" -> "Standort"
-            "map-filter-button", "list-filter-button" -> "Filter"
-            "detail-favorite-button" -> "Favorit"
-            "detail-close-button" -> "Zurück"
-            else -> null
+            "map-location-button" -> listOf("Standort", "Locate")
+            "map-filter-button", "list-filter-button" -> listOf("Filter")
+            "detail-favorite-button" -> listOf(
+                "Favorit",
+                "Favorit speichern",
+                "Favorit entfernen",
+                "Save favorite",
+                "Remove favorite"
+            )
+            "detail-close-button" -> listOf("Zurück", "Details schließen", "Close details")
+            else -> emptyList()
         }
     }
 

@@ -7,16 +7,6 @@
     "%@" : {
 
     },
-    "%@ (%@)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@)"
-          }
-        }
-      }
-    },
     "%@ • %@ kW • %@" : {
       "localizations" : {
         "en" : {
@@ -59,27 +49,6 @@
           }
         }
       }
-    },
-    "0" : {
-
-    },
-    "5" : {
-
-    },
-    "10" : {
-
-    },
-    "20+" : {
-
-    },
-    "50" : {
-
-    },
-    "150" : {
-
-    },
-    "300+" : {
-
     },
     "amenity.closed" : {
       "extractionState" : "manual",
@@ -18242,40 +18211,6 @@
         }
       }
     },
-    "filters.routeRange" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Max. Entfernung ab GPS: {value}"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Max. distance from GPS: {value}"
-          }
-        }
-      }
-    },
-    "filters.routeRangeLabel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "bis {value} ab GPS"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "within {value} from GPS"
-          }
-        }
-      }
-    },
     "filters.reset" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -18415,6 +18350,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sıfırla"
+          }
+        }
+      }
+    },
+    "filters.routeRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Max. Entfernung ab GPS: {value}"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Max. distance from GPS: {value}"
+          }
+        }
+      }
+    },
+    "filters.routeRangeLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bis {value} ab GPS"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "within {value} from GPS"
           }
         }
       }

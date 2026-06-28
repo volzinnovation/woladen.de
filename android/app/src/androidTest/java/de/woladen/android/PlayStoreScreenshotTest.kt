@@ -54,6 +54,7 @@ class PlayStoreScreenshotTest {
         if (!packageVisible) {
             throw AssertionError("App did not reach foreground package=$PACKAGE_NAME")
         }
+        acceptLocationPromptIfPresent(10_000)
         clickByResIfPresent("tab-list", 4_000)
         ensureNearbyChargersVisible()
         waitByRes("station-row", 30_000)
@@ -86,10 +87,15 @@ class PlayStoreScreenshotTest {
         waitByRes("favorites-row", 20_000)
         capture("04-favorites")
 
+        clickByRes("tab-route")
+        waitByRes("route-root", 20_000)
+        SystemClock.sleep(1_000)
+        capture("05-route")
+
         clickByRes("tab-info")
         waitByRes("info-root", 20_000)
         SystemClock.sleep(1_000)
-        capture("05-info")
+        capture("06-info")
     }
 
     private fun capture(name: String) {
@@ -205,8 +211,11 @@ class PlayStoreScreenshotTest {
             By.res(PACKAGE_NAME, tag),
             By.res(tag)
         )
-        fallbackTextForTag(tag)?.let { selectors += By.text(it) }
-        fallbackDescForTag(tag)?.let { selectors += By.desc(it) }
+        fallbackTextForTag(tag).forEach { selectors += By.text(it) }
+        fallbackDescForTag(tag).forEach { description ->
+            selectors += By.desc(description)
+            selectors += By.descContains(description)
+        }
         return selectors
     }
 
@@ -220,25 +229,32 @@ class PlayStoreScreenshotTest {
         return found.values.toList()
     }
 
-    private fun fallbackTextForTag(tag: String): String? {
+    private fun fallbackTextForTag(tag: String): List<String> {
         return when (tag) {
-            "tab-list" -> "Liste"
-            "tab-map" -> "Karte"
-            "tab-favorites" -> "Favoriten"
-            "tab-info" -> "Info"
-            "detail-google-nav-button" -> "Google Navi"
-            "detail-system-nav-button" -> "System Navi"
-            else -> null
+            "tab-list" -> listOf("Liste", "List")
+            "tab-map" -> listOf("Karte", "Map")
+            "tab-route" -> listOf("Route")
+            "tab-favorites" -> listOf("Favoriten", "Favorites")
+            "tab-info" -> listOf("Info")
+            "detail-google-nav-button" -> listOf("Google Navi")
+            "detail-system-nav-button" -> listOf("System Navi")
+            else -> emptyList()
         }
     }
 
-    private fun fallbackDescForTag(tag: String): String? {
+    private fun fallbackDescForTag(tag: String): List<String> {
         return when (tag) {
-            "map-location-button" -> "Standort"
-            "map-filter-button", "list-filter-button" -> "Filter"
-            "detail-favorite-button" -> "Favorit"
-            "detail-close-button" -> "Zurück"
-            else -> null
+            "map-location-button" -> listOf("Standort", "Locate")
+            "map-filter-button", "list-filter-button" -> listOf("Filter")
+            "detail-favorite-button" -> listOf(
+                "Favorit",
+                "Favorit speichern",
+                "Favorit entfernen",
+                "Save favorite",
+                "Remove favorite"
+            )
+            "detail-close-button" -> listOf("Zurück", "Details schließen", "Close details")
+            else -> emptyList()
         }
     }
 

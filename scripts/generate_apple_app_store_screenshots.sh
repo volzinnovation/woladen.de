@@ -24,7 +24,8 @@ declare -a SCREENS=(
   "02-detail:detail:"
   "03-map:map:"
   "04-favorites:favorites:$SCREENSHOT_FAVORITES"
-  "05-info:info:"
+  "05-route:route:"
+  "06-info:info:"
 )
 
 if [[ -n "${SCREENSHOT_SCENES:-}" ]]; then
@@ -208,6 +209,7 @@ capture_profile() {
   local marker_path
 
   mkdir -p "$output_dir"
+  rm -f "$output_dir"/*.png
 
   if ! device_udid="$(find_device_udid "$explicit_udid" "$explicit_name" "$@")"; then
     echo "Unable to find simulator for $profile. Set SIMULATOR_UDID/SIMULATOR_NAME or the profile-specific IPHONE_SIMULATOR_* / IPAD_SIMULATOR_* override." >&2

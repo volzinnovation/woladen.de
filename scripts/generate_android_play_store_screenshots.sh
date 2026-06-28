@@ -24,8 +24,8 @@ detect_connected_emulators() {
     [[ "$serial" =~ ^emulator- ]] || continue
     [[ "$state" == "device" ]] || continue
 
-    avd_name="$(adb -s "$serial" emu avd name | sed -n '1p' | tr -d '\r')"
-    smallest_edge="$(adb -s "$serial" shell wm size | tr -d '\r' | sed -E 's/.*: ([0-9]+)x([0-9]+)/\1 \2/' | awk '{print ($1 < $2) ? $1 : $2}')"
+    avd_name="$(adb -s "$serial" emu avd name </dev/null | sed -n '1p' | tr -d '\r')"
+    smallest_edge="$(adb -s "$serial" shell wm size </dev/null | tr -d '\r' | sed -E 's/.*: ([0-9]+)x([0-9]+)/\1 \2/' | awk '{print ($1 < $2) ? $1 : $2}')"
 
     if [[ "$avd_name" == *Tablet* ]] || [[ "${smallest_edge:-0}" -ge 1400 ]]; then
       TABLET_SERIAL="$serial"
@@ -62,6 +62,7 @@ for entry in "${PROFILES[@]}"; do
   target_dir="$OUTPUT_DIR/$profile"
 
   mkdir -p "$target_dir"
+  rm -f "$target_dir"/*.png
 
   adb -s "$serial" shell settings put system accelerometer_rotation 0
   adb -s "$serial" shell settings put system user_rotation "$rotation"
@@ -70,7 +71,7 @@ for entry in "${PROFILES[@]}"; do
   adb -s "$serial" shell pm clear de.woladen.android >/dev/null || true
   adb -s "$serial" shell am instrument -w -e class "$TEST_CLASS" "$RUNNER"
 
-  for name in 01-list 02-detail 03-map 04-favorites 05-info; do
+  for name in 01-list 02-detail 03-map 04-favorites 05-route 06-info; do
     adb -s "$serial" pull \
       "/sdcard/Download/play-store-screenshots/$profile/$name.png" "$target_dir/$name.png" >/dev/null
   done
