@@ -23,6 +23,7 @@ final class LiveAPIClient {
     static let defaultWebOpenStaticSummaryURL = URL(string: "https://woladen.de/data/open_static_summary.json")!
     static let defaultWebBuildSummaryURL = URL(string: "https://woladen.de/data/summary.json")!
     static let maxLookupStationIDs = 20
+    private static let catalogSearchTimeout: TimeInterval = 12.0
     private static let routeChargerTimeout: TimeInterval = 120.0
 
     private let baseURL: URL?
@@ -117,7 +118,7 @@ final class LiveAPIClient {
             throw LiveAPIError.invalidBaseURL
         }
 
-        let request = makeRequest(url: url, method: "GET", timeout: 5.0)
+        let request = makeRequest(url: url, method: "GET", timeout: Self.catalogSearchTimeout)
         return try await send(request)
     }
 

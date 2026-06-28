@@ -120,6 +120,12 @@ final class ChargerRepository {
             await cache.storeSearchResult(result, for: key)
             return result
         } catch {
+            if Self.isScreenshotMode {
+                let features = Self.screenshotFallbackFeatures(center: center)
+                let result = SearchResult(features: features, operators: operators(from: features))
+                await cache.storeSearchResult(result, for: key)
+                return result
+            }
             if let stale = await cache.searchResult(for: key, maxAge: .searchStale) {
                 return stale
             }
@@ -165,6 +171,124 @@ final class ChargerRepository {
         }
     }
 
+}
+
+private extension ChargerRepository {
+    static var isScreenshotMode: Bool {
+        ProcessInfo.processInfo.environment["WOLADEN_SCREENSHOT_MODE"] == "1"
+    }
+
+    static func screenshotFallbackFeatures(center: CLLocationCoordinate2D) -> [GeoJSONFeature] {
+        let rawPrimaryStationID = ProcessInfo.processInfo.environment["WOLADEN_SCREENSHOT_STATION_ID"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let selectedStationID: String
+        if let rawPrimaryStationID, !rawPrimaryStationID.isEmpty {
+            selectedStationID = rawPrimaryStationID
+        } else {
+            selectedStationID = "DE:fb23ac5910c5e002"
+        }
+        let stationIDs = [
+            selectedStationID,
+            "DE:f7b16ecb8c2cd608",
+            "DE:f694335d99a838f6",
+            "DE:dedcfd246d7ad4ac",
+            "DE:fadd10a6403a2cbe",
+            "DE:ba60752547e033b4"
+        ]
+        let operators = ["EnBW", "IONITY", "Aral pulse", "Allego", "Fastned", "EWE Go"]
+        let amenityNames = ["Café Fleetblick", "Bäckerei am Park", "REWE City", "Spielplatz Hafen", "Restaurant Kontor", "Apotheke Mitte"]
+        return stationIDs.enumerated().map { index, stationID in
+            screenshotFallbackFeature(
+                stationID: stationID,
+                operatorName: operators[index % operators.count],
+                amenityName: amenityNames[index % amenityNames.count],
+                coordinate: CLLocationCoordinate2D(
+                    latitude: center.latitude + (Double(index) * 0.006),
+                    longitude: center.longitude + (Double(index % 3) * 0.007)
+                ),
+                availableEVSEs: max(0, 5 - index),
+                occupiedEVSEs: min(4, index),
+                outOfOrderEVSEs: index == 2 ? 1 : 0
+            )
+        }
+    }
+
+    static func screenshotFallbackFeature(
+        stationID: String,
+        operatorName: String,
+        amenityName: String,
+        coordinate: CLLocationCoordinate2D,
+        availableEVSEs: Int,
+        occupiedEVSEs: Int,
+        outOfOrderEVSEs: Int
+    ) -> GeoJSONFeature {
+        let totalEVSEs = max(availableEVSEs + occupiedEVSEs + outOfOrderEVSEs, 4)
+        let properties = ChargerProperties(
+            stationID: stationID,
+            operatorName: operatorName,
+            status: "live-screenshot-fallback",
+            maxPowerKW: 300,
+            chargingPointsCount: totalEVSEs,
+            maxIndividualPowerKW: 300,
+            postcode: "20095",
+            city: "Hamburg",
+            address: "Woladen Screenshot Standort",
+            occupancySourceUID: "screenshot",
+            occupancySourceName: "Screenshot fallback",
+            occupancyStatus: outOfOrderEVSEs > 0 ? "out_of_order" : "available",
+            occupancyLastUpdated: ISO8601DateFormatter().string(from: Date()),
+            occupancyTotalEVSEs: totalEVSEs,
+            occupancyAvailableEVSEs: availableEVSEs,
+            occupancyOccupiedEVSEs: occupiedEVSEs,
+            occupancyChargingEVSEs: occupiedEVSEs,
+            occupancyOutOfOrderEVSEs: outOfOrderEVSEs,
+            occupancyUnknownEVSEs: 0,
+            detailSourceUID: "screenshot",
+            detailSourceName: "Screenshot fallback",
+            detailLastUpdated: ISO8601DateFormatter().string(from: Date()),
+            datexSiteID: stationID,
+            datexStationIDs: stationID,
+            datexChargePointIDs: stationID,
+            priceDisplay: "0,59 EUR/kWh",
+            priceEnergyEURKwhMin: "0.59",
+            priceEnergyEURKwhMax: "0.59",
+            priceCurrency: "EUR",
+            priceQuality: "known",
+            openingHoursDisplay: "24/7",
+            openingHoursIs24_7: true,
+            helpdeskPhone: "+49 40 000000",
+            paymentMethodsDisplay: "App, Kreditkarte",
+            authMethodsDisplay: "App, RFID",
+            connectorTypesDisplay: "CCS",
+            currentTypesDisplay: "DC",
+            connectorCount: totalEVSEs,
+            greenEnergy: true,
+            serviceTypesDisplay: "Schnellladen",
+            detailsJSON: "{}",
+            amenitiesTotal: 6,
+            amenitiesSource: "screenshot",
+            amenityExamples: [
+                AmenityExample(
+                    category: "cafe",
+                    name: amenityName,
+                    openingHours: "Mo-Su 07:00-22:00",
+                    distanceM: 80,
+                    lat: coordinate.latitude + 0.0004,
+                    lon: coordinate.longitude + 0.0004
+                )
+            ],
+            amenityCounts: [
+                "amenity_cafe": 1,
+                "amenity_restaurant": 2,
+                "amenity_shop": 3
+            ]
+        )
+        return GeoJSONFeature(
+            id: stationID,
+            geometry: GeoJSONPointGeometry(coordinates: [coordinate.longitude, coordinate.latitude]),
+            properties: properties
+        )
+    }
 }
 
 struct ChargerRepositoryLoadResult {

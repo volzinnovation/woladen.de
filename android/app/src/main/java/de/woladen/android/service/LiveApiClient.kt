@@ -870,7 +870,7 @@ class LiveApiClient(
         const val MAX_CATALOG_SEARCH_RESULTS = 100
         private const val LOOKUP_TIMEOUT_MS = 3_500
         private const val DETAIL_TIMEOUT_MS = 4_000
-        private const val CATALOG_SEARCH_TIMEOUT_MS = 4_500
+        private const val CATALOG_SEARCH_TIMEOUT_MS = 12_000
         private const val CATALOG_DETAIL_TIMEOUT_MS = 4_500
         private const val CATALOG_SUMMARY_TIMEOUT_MS = 5_000
         private const val ROUTE_CHARGER_TIMEOUT_MS = 120_000
