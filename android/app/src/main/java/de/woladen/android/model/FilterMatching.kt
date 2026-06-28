@@ -10,7 +10,8 @@ private val combiningMarksRegex = "\\p{M}+".toRegex()
 private val nonAlphanumericRegex = "[^\\p{L}\\p{N}]+".toRegex()
 
 fun ChargerProperties.matches(filterState: FilterState): Boolean {
-    if (filterState.operatorName.isNotEmpty() && operatorName != filterState.operatorName) {
+    val selectedOperators = filterState.normalizedOperatorNames
+    if (selectedOperators.isNotEmpty() && operatorName !in selectedOperators) {
         return false
     }
     if (maxPowerKw < filterState.minPowerKw) {

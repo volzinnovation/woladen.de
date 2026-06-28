@@ -1,7 +1,9 @@
 package de.woladen.android.ui
 
 import android.content.Context
+import android.location.Address
 import android.location.Geocoder
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -9,12 +11,14 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -42,6 +46,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,12 +79,17 @@ import de.woladen.android.service.LocationService
 import de.woladen.android.store.FavoritesStore
 import de.woladen.android.store.normalizeCategoryLabel
 import de.woladen.android.ui.components.RoutePreviewMapView
+import de.woladen.android.ui.components.markerColorForKey
 import de.woladen.android.viewmodel.AppViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.math.roundToInt
+
+private const val ROUTE_SUGGESTION_DEBOUNCE_MS = 350L
+private const val ROUTE_SUGGESTION_LIMIT = 5
 
 @Composable
 fun RouteTabView(
@@ -88,11 +99,16 @@ fun RouteTabView(
     onShowFilter: () -> Unit
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
     var originText by rememberSaveable { mutableStateOf("") }
     var destinationText by rememberSaveable { mutableStateOf("") }
     var originEndpoint by remember { mutableStateOf<RouteEndpoint?>(null) }
     var destinationEndpoint by remember { mutableStateOf<RouteEndpoint?>(null) }
+    var originSuggestions by remember { mutableStateOf<List<RoutePlaceSuggestion>>(emptyList()) }
+    var destinationSuggestions by remember { mutableStateOf<List<RoutePlaceSuggestion>>(emptyList()) }
+    var originSuggestionMessage by rememberSaveable { mutableStateOf("") }
+    var destinationSuggestionMessage by rememberSaveable { mutableStateOf("") }
     var isResolving by rememberSaveable { mutableStateOf(false) }
     var statusMessage by rememberSaveable { mutableStateOf("") }
     var statusIsError by rememberSaveable { mutableStateOf(false) }
@@ -100,6 +116,7 @@ fun RouteTabView(
     val currentLocationLabel = stringResource(R.string.i18n_route_currentlocation)
     val routeOriginFallback = stringResource(R.string.i18n_route_origin)
     val routeDestinationFallback = stringResource(R.string.i18n_route_destination)
+    val routeDisplayFeatures = viewModel.routeDisplayFeatures(locationService.currentLocation)
 
     fun endpointIsDistinct(endpoint: RouteEndpoint, forOrigin: Boolean): Boolean {
         val other = if (forOrigin) destinationEndpoint else originEndpoint
@@ -116,12 +133,17 @@ fun RouteTabView(
         if (forOrigin) {
             originEndpoint = endpoint
             originText = endpoint.label
+            originSuggestions = emptyList()
+            originSuggestionMessage = ""
         } else {
             destinationEndpoint = endpoint
             destinationText = endpoint.label
+            destinationSuggestions = emptyList()
+            destinationSuggestionMessage = ""
         }
         statusMessage = ""
         statusIsError = false
+        focusManager.clearFocus(force = true)
     }
 
     fun useCurrentLocation(forOrigin: Boolean) {
@@ -142,6 +164,11 @@ fun RouteTabView(
 
     fun resolveTypedEndpoint(forOrigin: Boolean) {
         if (isResolving || viewModel.isLoadingRoute) return
+        val existingSuggestions = if (forOrigin) originSuggestions else destinationSuggestions
+        if (existingSuggestions.isNotEmpty()) {
+            setEndpoint(existingSuggestions.first().endpoint, forOrigin)
+            return
+        }
         scope.launch {
             isResolving = true
             val endpoint = resolveEndpoint(
@@ -189,6 +216,42 @@ fun RouteTabView(
         }
     }
 
+    LaunchedEffect(originText, originEndpoint) {
+        val query = originText.trim()
+        if (originEndpoint != null || query.length < 2) {
+            originSuggestions = emptyList()
+            originSuggestionMessage = ""
+            return@LaunchedEffect
+        }
+        originSuggestionMessage = context.getString(R.string.i18n_search_searching)
+        delay(ROUTE_SUGGESTION_DEBOUNCE_MS)
+        val suggestions = lookupRouteSuggestions(context, query)
+        originSuggestions = suggestions
+        originSuggestionMessage = if (suggestions.isEmpty()) {
+            context.getString(R.string.i18n_search_noresults)
+        } else {
+            ""
+        }
+    }
+
+    LaunchedEffect(destinationText, destinationEndpoint) {
+        val query = destinationText.trim()
+        if (destinationEndpoint != null || query.length < 2) {
+            destinationSuggestions = emptyList()
+            destinationSuggestionMessage = ""
+            return@LaunchedEffect
+        }
+        destinationSuggestionMessage = context.getString(R.string.i18n_search_searching)
+        delay(ROUTE_SUGGESTION_DEBOUNCE_MS)
+        val suggestions = lookupRouteSuggestions(context, query)
+        destinationSuggestions = suggestions
+        destinationSuggestionMessage = if (suggestions.isEmpty()) {
+            context.getString(R.string.i18n_search_noresults)
+        } else {
+            ""
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         RouteHeader()
         LazyColumn(
@@ -220,6 +283,11 @@ fun RouteTabView(
                                     originEndpoint = null
                                     statusMessage = ""
                                 },
+                                suggestions = originSuggestions,
+                                suggestionMessage = originSuggestionMessage,
+                                onSuggestionSelected = { suggestion ->
+                                    setEndpoint(suggestion.endpoint, forOrigin = true)
+                                },
                                 onUseCurrentLocation = { useCurrentLocation(forOrigin = true) },
                                 onSearch = { resolveTypedEndpoint(forOrigin = true) }
                             )
@@ -234,6 +302,10 @@ fun RouteTabView(
                                         originEndpoint = destinationEndpoint
                                         destinationText = oldOriginText
                                         destinationEndpoint = oldOriginEndpoint
+                                        originSuggestions = emptyList()
+                                        destinationSuggestions = emptyList()
+                                        originSuggestionMessage = ""
+                                        destinationSuggestionMessage = ""
                                         statusMessage = ""
                                     }
                                 ) {
@@ -250,6 +322,11 @@ fun RouteTabView(
                                     destinationText = it
                                     destinationEndpoint = null
                                     statusMessage = ""
+                                },
+                                suggestions = destinationSuggestions,
+                                suggestionMessage = destinationSuggestionMessage,
+                                onSuggestionSelected = { suggestion ->
+                                    setEndpoint(suggestion.endpoint, forOrigin = false)
                                 },
                                 onUseCurrentLocation = { useCurrentLocation(forOrigin = false) },
                                 onSearch = { resolveTypedEndpoint(forOrigin = false) }
@@ -291,7 +368,7 @@ fun RouteTabView(
                     }
 
                     viewModel.routeSummary?.let { summary ->
-                        RouteSummaryRow(summary = summary, stationCount = viewModel.routeDisplayFeatures().size)
+                        RouteSummaryRow(summary = summary, stationCount = routeDisplayFeatures.size)
                     }
 
                     if (viewModel.routeSummary != null && viewModel.routeFiltersRequireRecalculation()) {
@@ -319,7 +396,7 @@ fun RouteTabView(
                         }
                     }
 
-                    val features = viewModel.routeDisplayFeatures()
+                    val features = routeDisplayFeatures
                     if (viewModel.routeSummary != null && !viewModel.isLoadingRoute && features.isNotEmpty()) {
                         RouteActions(
                             features = features,
@@ -375,10 +452,11 @@ fun RouteTabView(
                 }
             }
 
-            items(viewModel.routeDisplayFeatures(), key = { it.id }) { feature ->
+            items(routeDisplayFeatures, key = { it.id }) { feature ->
                 RouteStationRow(
                     feature = feature,
                     isFavorite = favoritesStore.isFavorite(feature.properties.stationId),
+                    markerColor = Color(markerColorForKey(viewModel.markerTint(feature))),
                     onClick = { viewModel.selectFeature(feature) },
                     modifier = Modifier
                         .widthIn(max = 880.dp)
@@ -426,6 +504,9 @@ private fun RouteEndpointRow(
     placeholder: String,
     value: String,
     onValueChange: (String) -> Unit,
+    suggestions: List<RoutePlaceSuggestion>,
+    suggestionMessage: String,
+    onSuggestionSelected: (RoutePlaceSuggestion) -> Unit,
     onUseCurrentLocation: () -> Unit,
     onSearch: () -> Unit
 ) {
@@ -446,16 +527,97 @@ private fun RouteEndpointRow(
             Icon(Icons.Filled.MyLocation, contentDescription = stringResource(R.string.i18n_route_usecurrent))
         }
 
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            label = { Text(label) },
-            placeholder = { Text(placeholder) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
-            modifier = Modifier.weight(1f)
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                label = { Text(label) },
+                placeholder = { Text(placeholder) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+                modifier = Modifier.fillMaxWidth()
+            )
+            RouteSuggestionList(
+                suggestions = suggestions,
+                message = suggestionMessage,
+                onSuggestionSelected = onSuggestionSelected
+            )
+        }
+    }
+}
+
+@Composable
+private fun RouteSuggestionList(
+    suggestions: List<RoutePlaceSuggestion>,
+    message: String,
+    onSuggestionSelected: (RoutePlaceSuggestion) -> Unit
+) {
+    if (suggestions.isEmpty() && message.isBlank()) return
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 236.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f), RoundedCornerShape(8.dp)),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(8.dp),
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp
+    ) {
+        if (suggestions.isEmpty()) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+            )
+        } else {
+            Column {
+                suggestions.forEachIndexed { index, suggestion ->
+                    RouteSuggestionRow(
+                        suggestion = suggestion,
+                        onClick = { onSuggestionSelected(suggestion) }
+                    )
+                    if (index < suggestions.lastIndex) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RouteSuggestionRow(
+    suggestion: RoutePlaceSuggestion,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            text = suggestion.title,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
+        if (suggestion.meta.isNotBlank()) {
+            Text(
+                text = suggestion.meta,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -517,7 +679,7 @@ private fun RouteSummaryRow(summary: RouteSummary, stationCount: Int) {
             modifier = Modifier.weight(1f)
         )
         RouteSummaryStat(
-            label = stringResource(R.string.i18n_route_summarystations),
+            label = stringResource(R.string.i18n_route_summarystationsshort),
             value = stationCount.toString(),
             modifier = Modifier.weight(1f)
         )
@@ -617,6 +779,7 @@ private fun routeActionButtonColors() = ButtonDefaults.outlinedButtonColors(
 private fun RouteStationRow(
     feature: GeoJsonFeature,
     isFavorite: Boolean,
+    markerColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -633,11 +796,21 @@ private fun RouteStationRow(
             verticalArrangement = Arrangement.spacedBy(7.dp)
         ) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.NearMe,
-                    contentDescription = null,
-                    tint = if (isFavorite) Color(0xFFF59E0B) else MaterialTheme.colorScheme.primary
-                )
+                if (isFavorite) {
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = stringResource(R.string.i18n_info_legendfavorite),
+                        tint = Color(0xFFF59E0B),
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 4.dp)
+                            .size(18.dp)
+                            .background(markerColor, CircleShape)
+                    )
+                }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
                         text = feature.properties.operatorName,
@@ -718,6 +891,12 @@ private fun EmptyRouteState(text: String) {
     }
 }
 
+private data class RoutePlaceSuggestion(
+    val endpoint: RouteEndpoint,
+    val title: String,
+    val meta: String
+)
+
 private suspend fun resolveEndpoint(
     context: Context,
     existing: RouteEndpoint?,
@@ -726,22 +905,68 @@ private suspend fun resolveEndpoint(
     existing?.let { return it }
     val query = text.trim()
     if (query.length < 2) return null
+    return lookupRouteSuggestions(context, query, limit = 1).firstOrNull()?.endpoint
+}
+
+private suspend fun lookupRouteSuggestions(
+    context: Context,
+    query: String,
+    limit: Int = ROUTE_SUGGESTION_LIMIT
+): List<RoutePlaceSuggestion> {
+    val normalizedQuery = query.trim()
+    if (normalizedQuery.length < 2 || limit <= 0) return emptyList()
+    if (!Geocoder.isPresent()) return emptyList()
+
     return withContext(Dispatchers.IO) {
         @Suppress("DEPRECATION")
         runCatching {
             Geocoder(context, Locale.getDefault())
-                .getFromLocationName(query, 1)
-                ?.firstOrNull()
-                ?.let { address ->
-                    RouteEndpoint(
-                        lat = address.latitude,
-                        lon = address.longitude,
-                        label = address.featureName?.takeIf { it.isNotBlank() } ?: query
-                    )
+                .getFromLocationName(normalizedQuery, limit)
+                .orEmpty()
+                .mapNotNull { address -> routeSuggestionFromAddress(address, normalizedQuery) }
+                .distinctBy { suggestion ->
+                    "${suggestion.title}:${(suggestion.endpoint.lat * 10_000).roundToInt()}:${(suggestion.endpoint.lon * 10_000).roundToInt()}"
                 }
-        }.getOrNull()
+        }.getOrDefault(emptyList())
     }
 }
+
+private fun routeSuggestionFromAddress(address: Address, fallback: String): RoutePlaceSuggestion? {
+    if (!address.hasLatitude() || !address.hasLongitude()) return null
+    val lat = address.latitude
+    val lon = address.longitude
+    if (!lat.isFinite() || !lon.isFinite()) return null
+
+    val title = firstNonBlank(
+        address.featureName,
+        address.locality,
+        address.subAdminArea,
+        address.adminArea,
+        address.getAddressLine(0),
+        fallback
+    ) ?: return null
+
+    val meta = listOf(
+        address.locality,
+        address.subAdminArea,
+        address.adminArea,
+        address.countryName
+    )
+        .mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }
+        .filterNot { it.equals(title, ignoreCase = true) }
+        .distinct()
+        .joinToString(" · ")
+
+    val label = if (meta.isBlank()) title else "$title, $meta"
+    return RoutePlaceSuggestion(
+        endpoint = RouteEndpoint(lat = lat, lon = lon, label = label),
+        title = title,
+        meta = meta
+    )
+}
+
+private fun firstNonBlank(vararg values: String?): String? =
+    values.firstOrNull { !it.isNullOrBlank() }?.trim()
 
 private fun routeFavoriteCategoryLabel(
     origin: String,
@@ -837,7 +1062,7 @@ private fun routeStationBackground(feature: GeoJsonFeature): Color {
         StationCardState.ONE_FREE_LEFT -> if (isDark) Color(0xFF332B12) else Color(0xFFFFFBEB)
         StationCardState.OFTEN_BROKEN -> if (isDark) Color(0xFF36161F) else Color(0xFFFFF7F8)
         StationCardState.OFTEN_OCCUPIED -> if (isDark) Color(0xFF0F1E27) else Color(0xFFF8FAFC)
-        StationCardState.UNKNOWN -> if (isDark) Color(0xFF16212B) else Color(0xFFF1F5F9)
+        StationCardState.UNKNOWN -> MaterialTheme.colorScheme.surface
         StationCardState.DEFAULT -> MaterialTheme.colorScheme.surface
     }
 }

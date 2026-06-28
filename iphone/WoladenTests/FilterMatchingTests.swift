@@ -57,13 +57,24 @@ final class FilterMatchingTests: XCTestCase {
 
     func testActiveCountIncludesAmenityNameQuery() {
         let filters = FilterState(
-            operatorName: "IONITY",
+            selectedOperatorNames: ["IONITY", "EnBW"],
             minPowerKW: 150,
             selectedAmenities: ["amenity_restaurant", "amenity_toilets"],
             amenityNameQuery: "McDonald"
         )
 
         XCTAssertEqual(filters.activeCount, 6)
+    }
+
+    func testFilterStateMatchesAnySelectedOperator() {
+        let ionity = sampleProperties(operatorName: "IONITY")
+        let enbw = sampleProperties(operatorName: "EnBW")
+        let other = sampleProperties(operatorName: "Other")
+        let filter = FilterState(selectedOperatorNames: ["IONITY", "EnBW"])
+
+        XCTAssertTrue(ionity.matches(filter))
+        XCTAssertTrue(enbw.matches(filter))
+        XCTAssertFalse(other.matches(filter))
     }
 
     func testAvailableOnlyRequiresKnownFreeChargingPoint() {

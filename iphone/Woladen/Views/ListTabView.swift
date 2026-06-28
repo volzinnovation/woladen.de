@@ -38,7 +38,7 @@ enum StationVisualStyle {
     static let amenityGold = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
     static let amenitySilver = Color(red: 148.0 / 255.0, green: 163.0 / 255.0, blue: 184.0 / 255.0)
     static let amenityBronze = Color(red: 180.0 / 255.0, green: 83.0 / 255.0, blue: 9.0 / 255.0)
-    static let amenityGrey = Color(red: 100.0 / 255.0, green: 116.0 / 255.0, blue: 139.0 / 255.0)
+    static let amenityGrey = Color(red: 14.0 / 255.0, green: 165.0 / 255.0, blue: 233.0 / 255.0)
 
     static let cardOutOfOrder = adaptiveColor(light: woladenUIColor(255, 241, 242), dark: woladenUIColor(59, 18, 28))
     static let cardOccupied = adaptiveColor(light: woladenUIColor(226, 232, 240), dark: woladenUIColor(38, 50, 61))
@@ -102,7 +102,7 @@ extension GeoJSONFeature {
         case .oftenOccupied:
             return StationVisualStyle.cardOftenOccupied
         case .unknown:
-            return StationVisualStyle.cardUnknown
+            return StationVisualStyle.cardDefault
         case .default:
             return StationVisualStyle.cardDefault
         }
@@ -121,7 +121,7 @@ extension GeoJSONFeature {
         case .oftenOccupied:
             return StationVisualStyle.borderOftenOccupied
         case .unknown:
-            return StationVisualStyle.borderUnknown
+            return StationVisualStyle.borderDefault
         case .default:
             return StationVisualStyle.borderDefault
         }
@@ -289,9 +289,7 @@ struct ListTabView: View {
     private var activeFilterLabels: [String] {
         let filter = viewModel.filterState
         var labels: [String] = []
-        if !filter.operatorName.isEmpty {
-            labels.append(filter.operatorName)
-        }
+        labels.append(contentsOf: filter.selectedOperatorNames.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending })
         let query = filter.amenityNameQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         if !query.isEmpty {
             labels.append(
@@ -317,6 +315,12 @@ struct ListTabView: View {
                     .replacingOccurrences(of: "{value}", with: "\(Int(filter.minAmenityCount.rounded()))")
             )
         }
+        if let routeMaxDistanceKM = filter.routeMaxDistanceFromLocationKM {
+            labels.append(
+                String(localized: "filters.routeRangeLabel")
+                    .replacingOccurrences(of: "{value}", with: "\(Int(routeMaxDistanceKM.rounded())) km")
+            )
+        }
         filter.selectedAmenities
             .map { AmenityCatalog.label(for: $0) }
             .sorted { $0.localizedCompare($1) == .orderedAscending }
@@ -331,11 +335,12 @@ struct ListTabView: View {
 
     private var hasClearableFilters: Bool {
         let filter = viewModel.filterState
-        return !filter.operatorName.isEmpty
+        return !filter.selectedOperatorNames.isEmpty
             || !filter.amenityNameQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || filter.availableOnly
             || filter.currentlyOpenOnly
             || !filter.selectedAmenities.isEmpty
+            || filter.routeMaxDistanceFromLocationKM != nil
             || Int(filter.minPowerKW.rounded()) != 50
             || Int(filter.minAmenityCount.rounded()) != 0
     }

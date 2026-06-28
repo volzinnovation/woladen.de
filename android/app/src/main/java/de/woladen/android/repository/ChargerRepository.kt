@@ -38,7 +38,7 @@ class ChargerRepository(
         val radiusMeters: Int,
         val limit: Int,
         val minPowerKwTenth: Int,
-        val operatorName: String,
+        val operatorNames: List<String>,
         val availableOnly: Boolean
     )
 
@@ -66,7 +66,7 @@ class ChargerRepository(
             radiusMeters = radiusMeters,
             limit = limit,
             minPowerKwTenth = (filterState.minPowerKw * 10).roundToInt(),
-            operatorName = filterState.operatorName.trim(),
+            operatorNames = filterState.normalizedOperatorNames.sorted(),
             availableOnly = filterState.availableOnly
         )
 
@@ -83,23 +83,40 @@ class ChargerRepository(
             }
         }
 
-        val response = runCatching {
-            liveApiClient.catalogSearch(
-                latitude = latitude,
-                longitude = longitude,
-                radiusMeters = radiusMeters,
-                limit = limit,
-                filterState = filterState
-            )
+        val responses = runCatching {
+            val operatorNames = filterState.normalizedOperatorNames.sorted()
+            if (operatorNames.size <= 1) {
+                listOf(
+                    liveApiClient.catalogSearch(
+                        latitude = latitude,
+                        longitude = longitude,
+                        radiusMeters = radiusMeters,
+                        limit = limit,
+                        filterState = filterState
+                    )
+                )
+            } else {
+                operatorNames.map { operatorName ->
+                    liveApiClient.catalogSearch(
+                        latitude = latitude,
+                        longitude = longitude,
+                        radiusMeters = radiusMeters,
+                        limit = limit,
+                        filterState = filterState.copy(selectedOperatorNames = setOf(operatorName))
+                    )
+                }
+            }
         }.getOrElse { error ->
             staleSearch?.let { return it }
             throw error
         }
-        val features = response.stations.map(::catalogStationToFeature)
+        val features = responses
+            .flatMap { response -> response.stations.map(::catalogStationToFeature) }
+            .distinctBy { it.properties.stationId }
         val result = CatalogLoadResult(
             features = features,
-            source = response.source,
-            returnedCount = response.returnedCount
+            source = responses.firstOrNull()?.source.orEmpty(),
+            returnedCount = responses.sumOf { it.returnedCount }
         )
 
         synchronized(cacheLock) {

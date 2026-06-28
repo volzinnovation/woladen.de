@@ -28,6 +28,10 @@ struct RouteTabView: View {
     @State private var routeMapCameraPosition: MapCameraPosition = .automatic
     @FocusState private var focusedEndpointField: RouteEndpointField?
 
+    private var routeDisplayFeatures: [GeoJSONFeature] {
+        viewModel.routeDisplayFeatures(userLocation: locationService.currentLocation)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             routeHeader
@@ -250,7 +254,7 @@ struct RouteTabView: View {
             HStack(spacing: 8) {
                 routeSummaryStat(label: String(localized: "route.summaryDistanceKm"), value: formatRouteDistanceKilometers(route.distanceM))
                 routeSummaryStat(label: String(localized: "route.summaryDuration"), value: formatRouteClockDuration(route.durationS))
-                routeSummaryStat(label: String(localized: "route.summaryStations"), value: "\(viewModel.routeDisplayFeatures().count)")
+                routeSummaryStat(label: String(localized: "route.summaryStations"), value: "\(routeDisplayFeatures.count)")
             }
         }
     }
@@ -285,7 +289,7 @@ struct RouteTabView: View {
 
     @ViewBuilder
     private var routeActionsSection: some View {
-        let features = viewModel.routeDisplayFeatures()
+        let features = routeDisplayFeatures
         if viewModel.routeSummary != nil, !viewModel.isLoadingRoute, !features.isEmpty {
             HStack(spacing: 8) {
                 Button {
@@ -349,7 +353,7 @@ struct RouteTabView: View {
 
     @ViewBuilder
     private var routeMapSection: some View {
-        let features = viewModel.routeDisplayFeatures()
+        let features = routeDisplayFeatures
         if let route = viewModel.routeSummary, !viewModel.isLoadingRoute {
             let coordinates = routePolylineCoordinates(route)
             if coordinates.count > 1 || !features.isEmpty {
@@ -407,7 +411,7 @@ struct RouteTabView: View {
 
     @ViewBuilder
     private var routeResults: some View {
-        let features = viewModel.routeDisplayFeatures()
+        let features = routeDisplayFeatures
         if viewModel.isLoadingRoute {
             EmptyView()
         } else if viewModel.routeSummary == nil {

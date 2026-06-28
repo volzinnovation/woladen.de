@@ -85,8 +85,9 @@ fun MapTabView(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val routeSummary = viewModel.routeSummary
+    val currentLocation = locationService.currentLocation
     val mapFeatures = if (routeSummary != null) {
-        viewModel.routeDisplayFeatures()
+        viewModel.routeDisplayFeatures(currentLocation)
     } else {
         viewModel.discoveredFeatures
     }
@@ -162,7 +163,7 @@ fun MapTabView(
         MainMapView(
             features = mapFeatures,
             routeCoordinates = routeCoordinates,
-            userLocation = locationService.currentLocation,
+            userLocation = currentLocation,
             favoriteStationIds = favoriteStationIds,
             markerTint = viewModel::markerTint,
             onFeatureTap = { feature -> viewModel.selectFeature(feature) },

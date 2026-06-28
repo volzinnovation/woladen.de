@@ -149,8 +149,22 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun loadSavedFilterState(): FilterState {
+        val selectedOperators = filterPreferences
+            .getStringSet(FILTER_SELECTED_OPERATOR_NAMES_KEY, emptySet())
+            .orEmpty()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .toSet()
+            .ifEmpty {
+                filterPreferences.getString(FILTER_OPERATOR_NAME_KEY, "").orEmpty()
+                    .trim()
+                    .takeIf { it.isNotBlank() }
+                    ?.let { setOf(it) }
+                    .orEmpty()
+            }
+        val savedRouteMaxDistanceKm = filterPreferences.getFloat(FILTER_ROUTE_MAX_DISTANCE_KM_KEY, -1f).toDouble()
         return FilterState(
-            operatorName = filterPreferences.getString(FILTER_OPERATOR_NAME_KEY, "").orEmpty(),
+            selectedOperatorNames = selectedOperators,
             minPowerKw = filterPreferences.getFloat(FILTER_MIN_POWER_KW_KEY, 50f).toDouble(),
             minAmenityCount = filterPreferences.getFloat(FILTER_MIN_AMENITY_COUNT_KEY, 0f).toDouble(),
             selectedAmenities = filterPreferences
@@ -159,19 +173,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 .toSet(),
             amenityNameQuery = filterPreferences.getString(FILTER_AMENITY_NAME_QUERY_KEY, "").orEmpty(),
             availableOnly = filterPreferences.getBoolean(FILTER_AVAILABLE_ONLY_KEY, true),
-            currentlyOpenOnly = filterPreferences.getBoolean(FILTER_CURRENTLY_OPEN_ONLY_KEY, false)
+            currentlyOpenOnly = filterPreferences.getBoolean(FILTER_CURRENTLY_OPEN_ONLY_KEY, false),
+            routeMaxDistanceFromLocationKm = savedRouteMaxDistanceKm.takeIf { it > 0.0 }?.coerceAtMost(400.0)
         )
     }
 
     private fun saveFilterState(state: FilterState) {
+        val selectedOperators = state.normalizedOperatorNames
         filterPreferences.edit()
-            .putString(FILTER_OPERATOR_NAME_KEY, state.operatorName)
+            .putStringSet(FILTER_SELECTED_OPERATOR_NAMES_KEY, selectedOperators)
+            .putString(FILTER_OPERATOR_NAME_KEY, selectedOperators.singleOrNull().orEmpty())
             .putFloat(FILTER_MIN_POWER_KW_KEY, state.minPowerKw.toFloat())
             .putFloat(FILTER_MIN_AMENITY_COUNT_KEY, state.minAmenityCount.toFloat())
             .putStringSet(FILTER_SELECTED_AMENITIES_KEY, state.selectedAmenities)
             .putString(FILTER_AMENITY_NAME_QUERY_KEY, state.amenityNameQuery)
             .putBoolean(FILTER_AVAILABLE_ONLY_KEY, state.availableOnly)
             .putBoolean(FILTER_CURRENTLY_OPEN_ONLY_KEY, state.currentlyOpenOnly)
+            .putFloat(FILTER_ROUTE_MAX_DISTANCE_KM_KEY, state.routeMaxDistanceFromLocationKm?.toFloat() ?: -1f)
             .apply()
     }
 
@@ -397,10 +415,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         routeError = null
     }
 
-    fun routeDisplayFeatures(): List<GeoJsonFeature> {
+    fun routeDisplayFeatures(userLocation: Location? = null): List<GeoJsonFeature> {
         val filter = routeEffectiveFilter()
         return routeFeatures
             .filter { it.properties.matches(filter) }
+            .filter { feature -> feature.matchesRouteRange(filter, userLocation) }
             .sortedWith { left, right -> compareRouteFeatures(left, right) }
     }
 
@@ -690,7 +709,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             .groupingBy { it }
             .eachCount()
             .map { (name, count) -> OperatorEntry(name = name, stations = count) }
-            .sortedWith(compareByDescending<OperatorEntry> { it.stations }.thenBy { it.name })
+            .sortedWith(compareBy<OperatorEntry> { it.name.lowercase() }.thenBy { it.name })
     }
 
     private fun updateFeatureCollections(
@@ -794,24 +813,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 pool = poolSnapshot,
                 centerLat = centerLat,
                 centerLon = centerLon,
+                maxDistanceMeters = catalogSearchRadiusMeters.toDouble(),
                 maxCount = maxVisibleChargers
             )
         }
-        if (nearest.isEmpty()) {
-            discoveredById.clear()
-            discoveredOrder.clear()
-            discoveredFeatures = emptyList()
-            return
-        }
+        discoveredById.clear()
+        discoveredOrder.clear()
         for (feature in nearest) {
-            if (!discoveredById.containsKey(feature.id)) {
-                discoveredOrder += feature.id
-            }
+            discoveredOrder += feature.id
             discoveredById[feature.id] = feature
-        }
-        while (discoveredOrder.size > maxVisibleChargers) {
-            val removedId = discoveredOrder.removeAt(0)
-            discoveredById.remove(removedId)
         }
         discoveredFeatures = discoveredOrder.mapNotNull { discoveredById[it] }
     }
@@ -820,12 +830,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         pool: List<GeoJsonFeature>,
         centerLat: Double,
         centerLon: Double,
+        maxDistanceMeters: Double,
         maxCount: Int
     ): List<GeoJsonFeature> {
         if (pool.isEmpty() || maxCount <= 0) return emptyList()
         val heap = PriorityQueue<Pair<GeoJsonFeature, Double>>(compareByDescending { it.second })
         for (feature in pool) {
             val distance = distanceMeters(centerLat, centerLon, feature.latitude, feature.longitude)
+            if (distance > maxDistanceMeters) continue
             if (heap.size < maxCount) {
                 heap += feature to distance
             } else {
@@ -863,6 +875,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         return filterState.copy(availableOnly = false)
     }
 
+    private fun GeoJsonFeature.matchesRouteRange(filter: FilterState, userLocation: Location?): Boolean {
+        val maxDistanceKm = filter.routeMaxDistanceFromLocationKm ?: return true
+        val location = userLocation ?: return false
+        val maxDistanceMeters = maxDistanceKm.coerceAtLeast(0.0) * 1000.0
+        return distanceMeters(location.latitude, location.longitude, latitude, longitude) <= maxDistanceMeters
+    }
+
     private fun compareRouteFeatures(left: GeoJsonFeature, right: GeoJsonFeature): Int {
         val positionDiff = (left.routeMetadata?.routePositionM ?: Int.MAX_VALUE)
             .compareTo(right.routeMetadata?.routePositionM ?: Int.MAX_VALUE)
@@ -878,12 +897,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         private const val EARTH_RADIUS_METERS = 6371000.0
         private const val FILTER_OPERATOR_NAME_KEY = "filter.operatorName"
+        private const val FILTER_SELECTED_OPERATOR_NAMES_KEY = "filter.selectedOperatorNames"
         private const val FILTER_MIN_POWER_KW_KEY = "filter.minPowerKw"
         private const val FILTER_MIN_AMENITY_COUNT_KEY = "filter.minAmenityCount"
         private const val FILTER_SELECTED_AMENITIES_KEY = "filter.selectedAmenities"
         private const val FILTER_AMENITY_NAME_QUERY_KEY = "filter.amenityNameQuery"
         private const val FILTER_AVAILABLE_ONLY_KEY = "filter.availableOnly"
         private const val FILTER_CURRENTLY_OPEN_ONLY_KEY = "filter.currentlyOpenOnly"
+        private const val FILTER_ROUTE_MAX_DISTANCE_KM_KEY = "filter.routeMaxDistanceFromLocationKm"
     }
 }
 

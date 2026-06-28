@@ -76,7 +76,7 @@ final class ChargerRepository {
             radiusM: radiusM,
             limit: limit,
             minPowerKW: Int((filter.minPowerKW * 10).rounded()),
-            operatorName: filter.operatorName.trimmingCharacters(in: .whitespacesAndNewlines)
+            operatorNames: filter.selectedOperatorNames.sorted()
         )
 
         if let cached = await cache.searchResult(for: key, maxAge: .searchFresh) {
@@ -84,14 +84,38 @@ final class ChargerRepository {
         }
 
         do {
-            let response = try await client.searchCatalog(
-                center: center,
-                radiusM: radiusM,
-                limit: limit,
-                minPowerKW: filter.minPowerKW,
-                operatorName: filter.operatorName
+            let operatorNames = filter.selectedOperatorNames.sorted()
+            let responses: [CatalogSearchResponse]
+            if operatorNames.count <= 1 {
+                responses = [
+                    try await client.searchCatalog(
+                        center: center,
+                        radiusM: radiusM,
+                        limit: limit,
+                        minPowerKW: filter.minPowerKW,
+                        operatorName: filter.operatorName
+                    )
+                ]
+            } else {
+                var fetchedResponses: [CatalogSearchResponse] = []
+                for operatorName in operatorNames {
+                    fetchedResponses.append(
+                        try await client.searchCatalog(
+                            center: center,
+                            radiusM: radiusM,
+                            limit: limit,
+                            minPowerKW: filter.minPowerKW,
+                            operatorName: operatorName
+                        )
+                    )
+                }
+                responses = fetchedResponses
+            }
+            let features = uniqueFeatures(
+                responses.flatMap { response in
+                    response.stations.map { $0.feature() }
+                }
             )
-            let features = response.stations.map { $0.feature() }
             let result = SearchResult(features: features, operators: operators(from: features))
             await cache.storeSearchResult(result, for: key)
             return result
@@ -171,7 +195,7 @@ private struct CatalogSearchCacheKey: Hashable {
     let radiusM: Int
     let limit: Int
     let minPowerKW: Int
-    let operatorName: String
+    let operatorNames: [String]
 }
 
 private actor CatalogRepositoryCache {
@@ -289,9 +313,20 @@ private func operators(from features: [GeoJSONFeature]) -> [OperatorEntry] {
     return counts
         .map { OperatorEntry(name: $0.key, stations: $0.value) }
         .sorted {
-            if $0.stations == $1.stations { return $0.name < $1.name }
-            return $0.stations > $1.stations
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
+}
+
+private func uniqueFeatures(_ features: [GeoJSONFeature]) -> [GeoJSONFeature] {
+    var seenStationIDs = Set<String>()
+    var result: [GeoJSONFeature] = []
+    for feature in features {
+        let stationID = feature.properties.stationID
+        guard !stationID.isEmpty else { continue }
+        guard seenStationIDs.insert(stationID).inserted else { continue }
+        result.append(feature)
+    }
+    return result
 }
 
 private extension GeoJSONFeature {

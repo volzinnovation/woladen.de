@@ -118,7 +118,7 @@ struct MapTabView: View {
 
     private func mapItems() -> [GeoJSONFeature] {
         if viewModel.routeSummary != nil {
-            return viewModel.routeDisplayFeatures()
+            return viewModel.routeDisplayFeatures(userLocation: locationService.currentLocation)
         }
         return viewModel.discoveredFeatures
     }
@@ -384,14 +384,14 @@ struct MapTabView: View {
 
     private var routeMapCameraKey: String {
         guard let route = viewModel.routeSummary else { return "" }
-        let ids = viewModel.routeDisplayFeatures().map(\.id).joined(separator: ",")
+        let ids = viewModel.routeDisplayFeatures(userLocation: locationService.currentLocation).map(\.id).joined(separator: ",")
         return "\(route.distanceM):\(route.durationS):\(route.geometry.coordinates.count):\(ids)"
     }
 
     @discardableResult
     private func focusMapOnRoute() -> Bool {
         guard let route = viewModel.routeSummary,
-              let rect = routeMapRect(route: route, features: viewModel.routeDisplayFeatures()) else {
+              let rect = routeMapRect(route: route, features: viewModel.routeDisplayFeatures(userLocation: locationService.currentLocation)) else {
             return false
         }
         cameraPosition = .rect(rect)

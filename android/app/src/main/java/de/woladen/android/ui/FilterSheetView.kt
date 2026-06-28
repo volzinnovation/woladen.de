@@ -41,9 +41,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import de.woladen.android.R
@@ -63,25 +65,27 @@ fun FilterSheetView(
     onDismiss: () -> Unit,
     onApply: (FilterState) -> Unit
 ) {
-    var draftOperator by remember(filter) { mutableStateOf(filter.operatorName) }
+    var draftOperators by remember(filter) { mutableStateOf(filter.normalizedOperatorNames) }
     var draftMinPower by remember(filter) { mutableStateOf(filter.minPowerKw) }
     var draftMinAmenityCount by remember(filter) { mutableStateOf(filter.minAmenityCount) }
     var draftAmenities by remember(filter) { mutableStateOf(filter.selectedAmenities.toMutableSet()) }
     var draftAmenityNameQuery by remember(filter) { mutableStateOf(filter.amenityNameQuery) }
     var draftAvailableOnly by remember(filter) { mutableStateOf(filter.availableOnly) }
     var draftCurrentlyOpenOnly by remember(filter) { mutableStateOf(filter.currentlyOpenOnly) }
+    var draftRouteMaxDistanceKm by remember(filter) { mutableStateOf(filter.routeMaxDistanceFromLocationKm) }
     var operatorMenuExpanded by remember { mutableStateOf(false) }
 
     val applyDraft = {
         onApply(
             FilterState(
-                operatorName = draftOperator,
+                selectedOperatorNames = draftOperators,
                 minPowerKw = draftMinPower,
                 minAmenityCount = draftMinAmenityCount,
                 selectedAmenities = draftAmenities.toSet(),
                 amenityNameQuery = draftAmenityNameQuery,
                 availableOnly = draftAvailableOnly,
-                currentlyOpenOnly = draftCurrentlyOpenOnly
+                currentlyOpenOnly = draftCurrentlyOpenOnly,
+                routeMaxDistanceFromLocationKm = draftRouteMaxDistanceKm
             )
         )
     }
@@ -101,8 +105,15 @@ fun FilterSheetView(
                 FilterPanelContent(
                     operators = operators,
                     availableAmenityKeys = availableAmenityKeys,
-                    draftOperator = draftOperator,
-                    onOperatorChange = { draftOperator = it },
+                    draftOperators = draftOperators,
+                    onOperatorToggle = { operatorName ->
+                        draftOperators = if (draftOperators.contains(operatorName)) {
+                            draftOperators - operatorName
+                        } else {
+                            draftOperators + operatorName
+                        }
+                    },
+                    onOperatorsClear = { draftOperators = emptySet() },
                     operatorMenuExpanded = operatorMenuExpanded,
                     onOperatorMenuExpandedChange = { operatorMenuExpanded = it },
                     draftAmenityNameQuery = draftAmenityNameQuery,
@@ -115,6 +126,8 @@ fun FilterSheetView(
                     onMinPowerChange = { draftMinPower = it },
                     draftMinAmenityCount = draftMinAmenityCount,
                     onMinAmenityCountChange = { draftMinAmenityCount = it },
+                    draftRouteMaxDistanceKm = draftRouteMaxDistanceKm,
+                    onRouteMaxDistanceChange = { draftRouteMaxDistanceKm = it },
                     draftAmenities = draftAmenities,
                     useWideLayout = true,
                     onDismiss = onDismiss,
@@ -127,8 +140,15 @@ fun FilterSheetView(
             FilterPanelContent(
                 operators = operators,
                 availableAmenityKeys = availableAmenityKeys,
-                draftOperator = draftOperator,
-                onOperatorChange = { draftOperator = it },
+                draftOperators = draftOperators,
+                onOperatorToggle = { operatorName ->
+                    draftOperators = if (draftOperators.contains(operatorName)) {
+                        draftOperators - operatorName
+                    } else {
+                        draftOperators + operatorName
+                    }
+                },
+                onOperatorsClear = { draftOperators = emptySet() },
                 operatorMenuExpanded = operatorMenuExpanded,
                 onOperatorMenuExpandedChange = { operatorMenuExpanded = it },
                 draftAmenityNameQuery = draftAmenityNameQuery,
@@ -141,6 +161,8 @@ fun FilterSheetView(
                 onMinPowerChange = { draftMinPower = it },
                 draftMinAmenityCount = draftMinAmenityCount,
                 onMinAmenityCountChange = { draftMinAmenityCount = it },
+                draftRouteMaxDistanceKm = draftRouteMaxDistanceKm,
+                onRouteMaxDistanceChange = { draftRouteMaxDistanceKm = it },
                 draftAmenities = draftAmenities,
                 useWideLayout = false,
                 onDismiss = onDismiss,
@@ -155,8 +177,9 @@ fun FilterSheetView(
 private fun FilterPanelContent(
     operators: List<OperatorEntry>,
     availableAmenityKeys: List<String>,
-    draftOperator: String,
-    onOperatorChange: (String) -> Unit,
+    draftOperators: Set<String>,
+    onOperatorToggle: (String) -> Unit,
+    onOperatorsClear: () -> Unit,
     operatorMenuExpanded: Boolean,
     onOperatorMenuExpandedChange: (Boolean) -> Unit,
     draftAmenityNameQuery: String,
@@ -169,6 +192,8 @@ private fun FilterPanelContent(
     onMinPowerChange: (Double) -> Unit,
     draftMinAmenityCount: Double,
     onMinAmenityCountChange: (Double) -> Unit,
+    draftRouteMaxDistanceKm: Double?,
+    onRouteMaxDistanceChange: (Double?) -> Unit,
     draftAmenities: MutableSet<String>,
     useWideLayout: Boolean,
     onDismiss: () -> Unit,
@@ -204,11 +229,12 @@ private fun FilterPanelContent(
             if (useWideLayout) {
                 Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
                     OperatorControl(
-                        value = draftOperator,
+                        selectedValues = draftOperators,
                         operators = operators,
                         expanded = operatorMenuExpanded,
                         onExpandedChange = onOperatorMenuExpandedChange,
-                        onChange = onOperatorChange,
+                        onToggle = onOperatorToggle,
+                        onClear = onOperatorsClear,
                         modifier = Modifier.weight(1f)
                     )
                     AmenityNameControl(
@@ -235,11 +261,12 @@ private fun FilterPanelContent(
                 }
             } else {
                 OperatorControl(
-                    value = draftOperator,
+                    selectedValues = draftOperators,
                     operators = operators,
                     expanded = operatorMenuExpanded,
                     onExpandedChange = onOperatorMenuExpandedChange,
-                    onChange = onOperatorChange
+                    onToggle = onOperatorToggle,
+                    onClear = onOperatorsClear
                 )
                 AmenityNameControl(value = draftAmenityNameQuery, onChange = onAmenityNameQueryChange)
                 ToggleCard(
@@ -258,6 +285,7 @@ private fun FilterPanelContent(
 
             PowerControl(value = draftMinPower, onChange = onMinPowerChange)
             AmenityCountControl(value = draftMinAmenityCount, onChange = onMinAmenityCountChange)
+            RouteRangeControl(value = draftRouteMaxDistanceKm, onChange = onRouteMaxDistanceChange)
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
@@ -297,20 +325,27 @@ private fun FilterPanelContent(
 
 @Composable
 private fun OperatorControl(
-    value: String,
+    selectedValues: Set<String>,
     operators: List<OperatorEntry>,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
-    onChange: (String) -> Unit,
+    onToggle: (String) -> Unit,
+    onClear: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val sortedOperators = operators.sortedWith(compareBy<OperatorEntry> { it.name.lowercase() }.thenBy { it.name })
+    val selected = selectedValues.map { it.trim() }.filter { it.isNotBlank() }.toSet()
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringResource(R.string.i18n_filters_operator),
             style = androidx.compose.material3.MaterialTheme.typography.titleSmall
         )
         OutlinedButton(onClick = { onExpandedChange(true) }, modifier = Modifier.fillMaxWidth()) {
-            Text(if (value.isEmpty()) stringResource(R.string.i18n_filters_alloperators) else value)
+            Text(
+                text = operatorSelectionLabel(selected, stringResource(R.string.i18n_filters_alloperators)),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
         DropdownMenu(
             expanded = expanded,
@@ -319,21 +354,32 @@ private fun OperatorControl(
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.i18n_filters_alloperators)) },
                 onClick = {
-                    onChange("")
+                    onClear()
                     onExpandedChange(false)
                 }
             )
-            for (entry in operators) {
+            for (entry in sortedOperators) {
+                val checked = entry.name in selected
                 DropdownMenuItem(
                     text = { Text("${entry.name} (${entry.stations})") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (checked) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                            contentDescription = null
+                        )
+                    },
                     onClick = {
-                        onChange(entry.name)
-                        onExpandedChange(false)
+                        onToggle(entry.name)
                     }
                 )
             }
         }
     }
+}
+
+private fun operatorSelectionLabel(selectedValues: Set<String>, allLabel: String): String {
+    if (selectedValues.isEmpty()) return allLabel
+    return selectedValues.sortedWith(compareBy<String> { it.lowercase() }.thenBy { it }).joinToString(" · ")
 }
 
 @Composable
@@ -423,12 +469,15 @@ private fun PowerControl(
             },
             valueRange = 0f..350f
         )
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("0")
-            Text("50")
-            Text("150")
-            Text("300+")
-        }
+        SliderTickLabels(
+            ticks = listOf(
+                SliderTick(0f, "0"),
+                SliderTick(50f, "50"),
+                SliderTick(150f, "150"),
+                SliderTick(300f, "300+")
+            ),
+            maxValue = 350f
+        )
     }
 }
 
@@ -454,11 +503,112 @@ private fun AmenityCountControl(
             valueRange = 0f..20f,
             steps = 19
         )
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("0")
-            Text("5")
-            Text("10")
-            Text("20+")
+        SliderTickLabels(
+            ticks = listOf(
+                SliderTick(0f, "0"),
+                SliderTick(5f, "5"),
+                SliderTick(10f, "10"),
+                SliderTick(20f, "20+")
+            ),
+            maxValue = 20f
+        )
+    }
+}
+
+@Composable
+private fun RouteRangeControl(
+    value: Double?,
+    onChange: (Double?) -> Unit
+) {
+    val selectedIndex = routeRangeIndex(value)
+    Column(
+        modifier = Modifier.widthIn(max = 360.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.i18n_filters_routerange)
+                .replace("{value}", routeRangeLabel(value)),
+            style = androidx.compose.material3.MaterialTheme.typography.titleSmall
+        )
+        Slider(
+            value = selectedIndex.toFloat(),
+            onValueChange = { next ->
+                val snapped = next.roundToInt().coerceIn(0, ROUTE_RANGE_OPTIONS_KM.lastIndex)
+                onChange(ROUTE_RANGE_OPTIONS_KM[snapped])
+            },
+            valueRange = 0f..ROUTE_RANGE_OPTIONS_KM.lastIndex.toFloat(),
+            steps = (ROUTE_RANGE_OPTIONS_KM.size - 2).coerceAtLeast(0)
+        )
+        SliderTickLabels(
+            ticks = listOf(
+                SliderTick(0f, "50"),
+                SliderTick(3f, "200"),
+                SliderTick(7f, "400"),
+                SliderTick(8f, "∞")
+            ),
+            maxValue = ROUTE_RANGE_OPTIONS_KM.lastIndex.toFloat()
+        )
+    }
+}
+
+private val ROUTE_RANGE_OPTIONS_KM = listOf<Double?>(50.0, 100.0, 150.0, 200.0, 250.0, 300.0, 350.0, 400.0, null)
+
+private fun routeRangeIndex(value: Double?): Int {
+    if (value == null) return ROUTE_RANGE_OPTIONS_KM.lastIndex
+    val match = ROUTE_RANGE_OPTIONS_KM.indexOfFirst { option -> option != null && option == value }
+    if (match >= 0) return match
+    return ROUTE_RANGE_OPTIONS_KM
+        .withIndex()
+        .filter { it.value != null }
+        .minByOrNull { kotlin.math.abs((it.value ?: 0.0) - value) }
+        ?.index ?: ROUTE_RANGE_OPTIONS_KM.lastIndex
+}
+
+private fun routeRangeLabel(value: Double?): String {
+    return value?.let { "${it.roundToInt()} km" } ?: "∞"
+}
+
+private data class SliderTick(
+    val value: Float,
+    val label: String
+)
+
+@Composable
+private fun SliderTickLabels(
+    ticks: List<SliderTick>,
+    maxValue: Float
+) {
+    Layout(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 18.dp),
+        content = {
+            ticks.forEach { tick ->
+                Text(
+                    text = tick.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    ) { measurables, constraints ->
+        val placeables = measurables.map { measurable ->
+            measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
+        }
+        val width = constraints.maxWidth
+        val height = maxOf(
+            constraints.minHeight,
+            placeables.maxOfOrNull { it.height } ?: 0
+        )
+
+        layout(width, height) {
+            placeables.forEachIndexed { index, placeable ->
+                val fraction = (ticks[index].value / maxValue).coerceIn(0f, 1f)
+                val targetX = (width * fraction - placeable.width / 2f)
+                    .roundToInt()
+                    .coerceIn(0, (width - placeable.width).coerceAtLeast(0))
+                placeable.placeRelative(targetX, 0)
+            }
         }
     }
 }
@@ -471,7 +621,7 @@ private fun AmenityTile(
 ) {
     Column(
         modifier = Modifier
-            .widthIn(min = 72.dp, max = 86.dp)
+            .widthIn(min = 92.dp, max = 112.dp)
             .heightIn(min = 76.dp)
             .background(
                 if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent,
@@ -495,7 +645,8 @@ private fun AmenityTile(
             text = AmenityCatalog.labelFor(key),
             style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
-            maxLines = 2
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

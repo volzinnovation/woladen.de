@@ -46,7 +46,7 @@ class FilterMatchingTest {
         )
 
         val matching = FilterState(
-            operatorName = "EnBW",
+            selectedOperatorNames = setOf("EnBW"),
             minPowerKw = 150.0,
             selectedAmenities = setOf("amenity_fast_food"),
             amenityNameQuery = "McDonald"
@@ -60,13 +60,25 @@ class FilterMatchingTest {
     @Test
     fun activeCount_includesAmenityNameQuery() {
         val filters = FilterState(
-            operatorName = "IONITY",
+            selectedOperatorNames = setOf("IONITY", "EnBW"),
             minPowerKw = 150.0,
             selectedAmenities = setOf("amenity_restaurant", "amenity_toilets"),
             amenityNameQuery = "McDonald"
         )
 
         assertEquals(6, filters.activeCount)
+    }
+
+    @Test
+    fun filterState_matchesAnySelectedOperator() {
+        val ionity = sampleProperties(operatorName = "IONITY")
+        val enbw = sampleProperties(operatorName = "EnBW")
+        val other = sampleProperties(operatorName = "Other")
+        val filter = FilterState(selectedOperatorNames = setOf("IONITY", "EnBW"))
+
+        assertTrue(ionity.matches(filter))
+        assertTrue(enbw.matches(filter))
+        assertFalse(other.matches(filter))
     }
 
     @Test

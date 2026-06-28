@@ -1080,7 +1080,7 @@ internal fun catalogSearchPath(
         "mode" to "travel",
         "min_power_kw" to "%.1f".format(Locale.ROOT, filterState.minPowerKw.coerceAtLeast(0.0))
     )
-    val operator = filterState.operatorName.trim()
+    val operator = filterState.normalizedOperatorNames.singleOrNull().orEmpty()
     if (operator.isNotBlank()) {
         params["operator"] = operator
     }

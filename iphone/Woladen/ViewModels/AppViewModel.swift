@@ -329,10 +329,11 @@ final class AppViewModel: ObservableObject {
         routeCalculatedFilters = nil
     }
 
-    func routeDisplayFeatures() -> [GeoJSONFeature] {
+    func routeDisplayFeatures(userLocation: CLLocation? = nil) -> [GeoJSONFeature] {
         let filter = routeEffectiveFilter()
         return routeFeatures
             .filter { $0.properties.matches(filter) }
+            .filter { feature in routeRangeMatches(feature, filter: filter, userLocation: userLocation) }
             .sorted(by: compareRouteFeatures)
     }
 
@@ -742,8 +743,7 @@ final class AppViewModel: ObservableObject {
         operators = counts
             .map { OperatorEntry(name: $0.key, stations: $0.value) }
             .sorted {
-                if $0.stations == $1.stations { return $0.name < $1.name }
-                return $0.stations > $1.stations
+                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
             }
     }
 
@@ -840,6 +840,12 @@ final class AppViewModel: ObservableObject {
         var filter = filterState
         filter.availableOnly = false
         return filter
+    }
+
+    private func routeRangeMatches(_ feature: GeoJSONFeature, filter: FilterState, userLocation: CLLocation?) -> Bool {
+        guard let maxDistanceKM = filter.routeMaxDistanceFromLocationKM else { return true }
+        guard let userLocation else { return false }
+        return distance(from: userLocation, to: feature.coordinate) <= max(0, maxDistanceKM) * 1000
     }
 
     private func routeErrorMessage(for error: Error) -> String {

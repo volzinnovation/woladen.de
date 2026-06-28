@@ -81,6 +81,7 @@ import de.woladen.android.ui.components.AmenityIcon
 import de.woladen.android.ui.components.markerColorForKey
 import de.woladen.android.util.AmenityCatalog
 import de.woladen.android.viewmodel.AppViewModel
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -333,20 +334,19 @@ private fun ActiveFilterSummary(
 }
 
 private val FilterState.hasClearableFilters: Boolean
-    get() = operatorName.isNotBlank() ||
+    get() = normalizedOperatorNames.isNotEmpty() ||
         amenityNameQuery.isNotBlank() ||
         availableOnly ||
         currentlyOpenOnly ||
         selectedAmenities.isNotEmpty() ||
+        routeMaxDistanceFromLocationKm != null ||
         minPowerKw.toInt() != 50 ||
         minAmenityCount.toInt() != 0
 
 @Composable
 private fun activeFilterLabels(filter: FilterState): List<String> {
     val labels = mutableListOf<String>()
-    if (filter.operatorName.isNotBlank()) {
-        labels += filter.operatorName
-    }
+    labels += filter.normalizedOperatorNames.sorted()
     val query = filter.amenityNameQuery.trim()
     if (query.isNotBlank()) {
         labels += stringResource(R.string.i18n_filters_nameprefix).replace("{value}", query)
@@ -364,6 +364,10 @@ private fun activeFilterLabels(filter: FilterState): List<String> {
     if (filter.minAmenityCount > 0.0) {
         labels += stringResource(R.string.i18n_filters_minamenitieslabel)
             .replace("{value}", filter.minAmenityCount.toInt().toString())
+    }
+    filter.routeMaxDistanceFromLocationKm?.let { maxDistanceKm ->
+        labels += stringResource(R.string.i18n_filters_routerangelabel)
+            .replace("{value}", "${maxDistanceKm.roundToInt()} km")
     }
     labels += filter.selectedAmenities
         .map { AmenityCatalog.labelFor(it) }
@@ -578,7 +582,7 @@ private fun stationCardBackground(feature: GeoJsonFeature): Color {
         StationCardState.ONE_FREE_LEFT -> if (isDarkMode) Color(0xFF332B12) else Color(0xFFFFFBEB)
         StationCardState.OFTEN_BROKEN -> if (isDarkMode) Color(0xFF36161F) else Color(0xFFFFF7F8)
         StationCardState.OFTEN_OCCUPIED -> if (isDarkMode) Color(0xFF0F1E27) else Color(0xFFF8FAFC)
-        StationCardState.UNKNOWN -> if (isDarkMode) Color(0xFF16212B) else Color(0xFFF1F5F9)
+        StationCardState.UNKNOWN -> MaterialTheme.colorScheme.surface
         StationCardState.DEFAULT -> MaterialTheme.colorScheme.surface
     }
 }

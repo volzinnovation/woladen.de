@@ -20,7 +20,7 @@ data class RouteFilterPayload(
     companion object {
         fun from(filterState: FilterState): RouteFilterPayload {
             return RouteFilterPayload(
-                operator = filterState.operatorName.trim(),
+                operator = filterState.normalizedOperatorNames.singleOrNull().orEmpty(),
                 minPowerKw = filterState.minPowerKw.coerceAtLeast(0.0).toInt(),
                 minAmenitiesTotal = filterState.minAmenityCount.coerceAtLeast(0.0).roundToInt(),
                 selectedAmenities = filterState.selectedAmenities

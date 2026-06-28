@@ -18242,6 +18242,40 @@
         }
       }
     },
+    "filters.routeRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Max. Entfernung ab GPS: {value}"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Max. distance from GPS: {value}"
+          }
+        }
+      }
+    },
+    "filters.routeRangeLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "bis {value} ab GPS"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "within {value} from GPS"
+          }
+        }
+      }
+    },
     "filters.reset" : {
       "extractionState" : "manual",
       "localizations" : {

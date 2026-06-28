@@ -128,6 +128,8 @@
     <string name="i18n_filters_nameprefix">Name: {value}</string>
     <string name="i18n_filters_openwithcount">Open filters, {count} active: {labels}</string>
     <string name="i18n_filters_operator">Operator</string>
+    <string name="i18n_filters_routerange">Max. distance from GPS: {value}</string>
+    <string name="i18n_filters_routerangelabel">within {value} from GPS</string>
     <string name="i18n_filters_reset">Remove filters</string>
     <string name="i18n_filters_selectedonly">Selected only: {labels}</string>
     <string name="i18n_filters_title">Filters</string>
@@ -266,6 +268,7 @@
     <string name="i18n_route_summarydistancekm">Distance (km)</string>
     <string name="i18n_route_summaryduration">Drive time</string>
     <string name="i18n_route_summarystations">Charging stations</string>
+    <string name="i18n_route_summarystationsshort">Stations</string>
     <string name="i18n_route_swap">Swap route endpoints</string>
     <string name="i18n_route_title">Route planner</string>
     <string name="i18n_route_usecurrent">My location</string>
