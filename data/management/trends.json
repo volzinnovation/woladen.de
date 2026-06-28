@@ -71,9 +71,10 @@
     "2026-06-23",
     "2026-06-24",
     "2026-06-25",
-    "2026-06-26"
+    "2026-06-26",
+    "2026-06-27"
   ],
-  "generated_at": "2026-06-27T09:34:32+00:00",
+  "generated_at": "2026-06-28T00:00:35+00:00",
   "summary_series": [
     {
       "afir_stations_observed": 0,
@@ -1667,6 +1668,37 @@
       "stations_all_evses_out_of_order_end_of_day": 1469,
       "stations_with_disruptions": 6289,
       "status_changes_total": 355345
+    },
+    {
+      "afir_stations_observed": 33032,
+      "archive_messages_total": 733573,
+      "bundle_stations_observed": 9051,
+      "bundle_stations_observed_unique": 9051,
+      "busy_evse_count": 52924,
+      "busy_station_count": 21871,
+      "busy_transition_count": 457387,
+      "charger_changes_total": 734569,
+      "current_out_of_order_evses": 8555,
+      "current_out_of_order_stations": 3817,
+      "daily_afir_stations_observed": 33032,
+      "daily_bundle_stations_observed": 9051,
+      "daily_bundle_stations_observed_unique": 9051,
+      "delta_delivery_provider_count": 22,
+      "delta_delivery_without_push_provider_count": 1,
+      "disruptions_at_end_of_day": 3817,
+      "fully_out_of_service_stations": 1775,
+      "high_utilization_stations": 21871,
+      "http_response_messages_total": 50551,
+      "live_coverage_basis": "daily_archive_observations",
+      "live_coverage_warning": "delta_delivery_without_push",
+      "observations_total": 22385388,
+      "out_of_order_duration_seconds_total": 1447754063,
+      "out_of_order_evses_end_of_day": 8555,
+      "push_messages_total": 682116,
+      "snapshot_date": "2026-06-27",
+      "stations_all_evses_out_of_order_end_of_day": 1775,
+      "stations_with_disruptions": 9611,
+      "status_changes_total": 734569
     }
   ]
 }
