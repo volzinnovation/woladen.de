@@ -168,23 +168,3 @@ node --test web/filtering.test.mjs web/location.test.mjs
 ## Data Build Status
 
 - Last build (UTC): `2026-06-28T01:46:27+00:00`
-- Source: `https://data.bundesnetzagentur.de/Bundesnetzagentur/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/Ladesaeulenregister_BNetzA_2026-06-03.xlsx`
-- Full registry stations: `73224`
-- Fast chargers (>= 50.0 kW): `15464`
-- Fast chargers with live occupancy: `1501`
-- Fast chargers with static AFIR details: `10168` (price: `8248`, opening hours: `11247`)
-- Chargers with >=1 nearby amenity: `15464`
-- Occupancy sources scanned: `33` (matched EVSEs: `6931`)
-- Static AFIR sources used: `24` (helpdesk phones: `5817`)
-- Amenity backend: `osm-pbf`
-- Live amenity lookups this run: `0` (cache hits: `0`, deferred: `0`)
-
-Generated files:
-- `data/bnetza_cache.csv`
-- `data/chargers_full.csv`
-- `data/chargers_fast.csv`
-- `data/chargers_fast.geojson`
-- `data/chargers_under_50.geojson`
-- `data/operators.json`
-- `data/summary.json`
-<!-- DATA_STATUS_END -->
