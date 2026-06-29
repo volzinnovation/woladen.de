@@ -1045,41 +1045,48 @@ body {
 }
 
 .route-loading-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  min-height: 6.5rem;
-  padding: 1.4rem 1rem 2rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.85rem;
+  min-height: 7rem;
+  padding: 1.6rem 1rem 2rem;
   color: var(--color-text-main);
   font-size: clamp(1.1rem, 2vw, 1.35rem);
   font-weight: 700;
   text-align: center;
 }
 
-.route-loading-spinner {
-  width: 1.4rem;
-  height: 1.4rem;
-  flex: 0 0 auto;
-  border: 3px solid rgba(15, 118, 110, 0.18);
-  border-top-color: var(--color-primary);
-  border-radius: 999px;
-  animation: route-loading-spin 0.75s linear infinite;
-}
-
 .route-loading-text {
+  max-width: 34rem;
   min-width: 0;
 }
 
-@keyframes route-loading-spin {
-  to {
-    transform: rotate(360deg);
-  }
+.route-loading-progress {
+  width: min(100%, 30rem);
+  height: 0.6rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.08);
+}
+
+.route-loading-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-primary), #14b8a6);
+  transition: width 240ms ease;
+}
+
+.route-loading-progress-label {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .route-loading-spinner {
-    animation: none;
+  .route-loading-progress-fill {
+    transition: none;
   }
 }
 

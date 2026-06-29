@@ -40,6 +40,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -91,6 +92,9 @@ import kotlin.math.roundToInt
 
 private const val ROUTE_SUGGESTION_DEBOUNCE_MS = 350L
 private const val ROUTE_SUGGESTION_LIMIT = 5
+private const val ROUTE_PROGRESS_DURATION_MS = 60_000L
+private const val ROUTE_PROGRESS_INTERVAL_MS = 250L
+private const val ROUTE_PROGRESS_MAX = 0.95f
 
 @Composable
 fun RouteTabView(
@@ -642,26 +646,59 @@ private fun RouteStatus(
         else -> MaterialTheme.colorScheme.primary
     }
     if (isLoading) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(18.dp),
-                strokeWidth = 2.dp,
-                color = color
-            )
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelLarge,
-                color = color
-            )
-        }
+        RouteLoadingProgress()
     } else {
         Text(
             text = text,
             style = MaterialTheme.typography.labelLarge,
             color = color
+        )
+    }
+}
+
+@Composable
+private fun RouteLoadingProgress() {
+    var progress by remember { mutableStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val startedAt = System.currentTimeMillis()
+        while (true) {
+            val elapsedMs = System.currentTimeMillis() - startedAt
+            val ratio = (elapsedMs.toFloat() / ROUTE_PROGRESS_DURATION_MS).coerceIn(0f, 1f)
+            val eased = 1f - ((1f - ratio) * (1f - ratio))
+            progress = (ROUTE_PROGRESS_MAX * eased).coerceAtMost(ROUTE_PROGRESS_MAX)
+            delay(ROUTE_PROGRESS_INTERVAL_MS)
+        }
+    }
+    val isHoldingProgress = progress >= ROUTE_PROGRESS_MAX
+    val message = stringResource(
+        if (isHoldingProgress) R.string.i18n_route_loadingstill else R.string.i18n_route_loading
+    )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 14.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
+        )
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier
+                .fillMaxWidth(0.84f)
+                .height(8.dp)
+                .clip(RoundedCornerShape(999.dp)),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+        )
+        Text(
+            text = "${(progress * 100).roundToInt()}%",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

@@ -176,6 +176,7 @@ const FALLBACK_BUNDLE = {
     empty: "Enter a start and destination to find charging stations along the route.",
     resolving: "Resolving route endpoints...",
     loading: "Calculating charging stations along the route...",
+    loadingStill: "Still checking the full route. Long routes can take over a minute.",
     missingEndpoints: "Choose a start and destination first.",
     sameEndpoint: "Start and destination are too close together.",
     notConfigured: "Route planning is not configured.",
@@ -534,7 +535,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260629-route-errors1`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260629-route-progress1`, import.meta.url));
     if (!response.ok) {
       return {};
     }

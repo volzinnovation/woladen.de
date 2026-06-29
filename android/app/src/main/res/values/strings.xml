@@ -249,6 +249,7 @@
     <string name="i18n_route_favoritesadded">{count} stations saved as favorites in &quot;{category}&quot;.</string>
     <string name="i18n_route_filterchanged">Filters changed since this route was calculated. Broader filters need a new route search.</string>
     <string name="i18n_route_loading">Calculating charging stations along the route...</string>
+    <string name="i18n_route_loadingstill">Still checking the full route. Long routes can take over a minute.</string>
     <string name="i18n_route_locationunavailable">Your location is not available.</string>
     <string name="i18n_route_mapfixed">Map fixed on stations along the route</string>
     <string name="i18n_route_missingendpoints">Choose a start and destination first.</string>

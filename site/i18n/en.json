@@ -78,6 +78,7 @@
     "empty": "Enter a start and destination to find charging stations along the route.",
     "resolving": "Resolving route endpoints...",
     "loading": "Calculating charging stations along the route...",
+    "loadingStill": "Still checking the full route. Long routes can take over a minute.",
     "missingEndpoints": "Choose a start and destination first.",
     "sameEndpoint": "Start and destination are too close together.",
     "notConfigured": "Route planning is not configured.",

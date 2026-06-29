@@ -35262,6 +35262,23 @@
         }
       }
     },
+    "route.loadingStill" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die vollständige Route wird weiter geprüft. Lange Routen können länger als eine Minute dauern."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Still checking the full route. Long routes can take over a minute."
+          }
+        }
+      }
+    },
     "route.locationUnavailable" : {
       "extractionState" : "manual",
       "localizations" : {

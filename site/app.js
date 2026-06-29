@@ -90,7 +90,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260629-route-errors1";
+} from "./i18n.mjs?v=20260629-route-progress1";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -116,6 +116,9 @@ const LIVE_DETAIL_TIMEOUT_MS = 4000;
 const GEOCODER_API_TIMEOUT_MS = 3500;
 const GEOCODER_SUGGESTION_DEBOUNCE_MS = 250;
 const ROUTE_API_TIMEOUT_MS = 120000;
+const ROUTE_PROGRESS_DURATION_MS = 60000;
+const ROUTE_PROGRESS_INTERVAL_MS = 250;
+const ROUTE_PROGRESS_MAX_PERCENT = 95;
 const ROUTE_SUGGESTION_DEBOUNCE_MS = 250;
 const ROUTE_FILTER_MODE = "route_calculation";
 const LIVE_STATION_LOOKUP_BATCH_SIZE = 20;
@@ -1130,6 +1133,9 @@ const state = {
       destination: [],
     },
     loading: false,
+    progressPercent: 0,
+    progressStartedAt: 0,
+    progressTimer: 0,
     requestSeq: 0,
     suggestionSeq: 0,
     suggestionTimers: {
@@ -2153,6 +2159,40 @@ function routeErrorMessage(error) {
   return t("route.searchError");
 }
 
+function routeProgressPercentForElapsed(elapsedMs) {
+  const ratio = Math.min(Math.max(elapsedMs / ROUTE_PROGRESS_DURATION_MS, 0), 1);
+  const eased = 1 - ((1 - ratio) * (1 - ratio));
+  return Math.min(ROUTE_PROGRESS_MAX_PERCENT, eased * ROUTE_PROGRESS_MAX_PERCENT);
+}
+
+function updateRouteLoadingProgress() {
+  if (!state.route.loading || !state.route.progressStartedAt) {
+    return;
+  }
+  const nextProgress = routeProgressPercentForElapsed(performance.now() - state.route.progressStartedAt);
+  if (Math.abs(nextProgress - state.route.progressPercent) < 0.1) {
+    return;
+  }
+  state.route.progressPercent = nextProgress;
+  renderRouteResults();
+}
+
+function startRouteLoadingProgress() {
+  stopRouteLoadingProgress();
+  state.route.progressStartedAt = performance.now();
+  state.route.progressPercent = 0;
+  state.route.progressTimer = window.setInterval(updateRouteLoadingProgress, ROUTE_PROGRESS_INTERVAL_MS);
+}
+
+function stopRouteLoadingProgress({ complete = false } = {}) {
+  if (state.route.progressTimer) {
+    window.clearInterval(state.route.progressTimer);
+  }
+  state.route.progressTimer = 0;
+  state.route.progressStartedAt = 0;
+  state.route.progressPercent = complete ? 100 : 0;
+}
+
 async function submitRouteSearch() {
   ROUTE_FIELDS.forEach(cancelQueuedRouteSuggestions);
   renderRouteStatus(t("route.resolving"));
@@ -2178,6 +2218,7 @@ async function submitRouteSearch() {
   const filters = routeFiltersPayload(routeEffectiveFilters());
   state.route.loading = true;
   state.route.error = null;
+  startRouteLoadingProgress();
   renderRouteStatus("");
   renderRouteResults();
 
@@ -2224,6 +2265,9 @@ async function submitRouteSearch() {
     renderRouteMapLock();
   } finally {
     if (requestId === state.route.requestSeq) {
+      stopRouteLoadingProgress({
+        complete: Boolean(state.route.result) && !state.route.error,
+      });
       state.route.loading = false;
       renderRouteResults();
       renderRouteLayer();
@@ -2478,18 +2522,32 @@ function renderRouteResults() {
 
   if (state.route.loading) {
     hideRouteSummary();
+    const progress = Math.min(Math.max(state.route.progressPercent || 0, 0), 100);
+    const roundedProgress = Math.round(progress);
+    const isHoldingProgress = progress >= ROUTE_PROGRESS_MAX_PERCENT;
     const loading = document.createElement("div");
     loading.className = "loading-state route-loading-state";
     loading.setAttribute("data-nosnippet", "");
     loading.setAttribute("role", "status");
     loading.setAttribute("aria-live", "polite");
-    const spinner = document.createElement("span");
-    spinner.className = "route-loading-spinner";
-    spinner.setAttribute("aria-hidden", "true");
     const text = document.createElement("span");
     text.className = "route-loading-text";
-    text.textContent = t("route.loading");
-    loading.append(spinner, text);
+    text.textContent = isHoldingProgress ? t("route.loadingStill") : t("route.loading");
+    const progressBar = document.createElement("div");
+    progressBar.className = "route-loading-progress";
+    progressBar.setAttribute("role", "progressbar");
+    progressBar.setAttribute("aria-valuemin", "0");
+    progressBar.setAttribute("aria-valuemax", "100");
+    progressBar.setAttribute("aria-valuenow", String(roundedProgress));
+    progressBar.setAttribute("aria-label", text.textContent);
+    const progressFill = document.createElement("span");
+    progressFill.className = "route-loading-progress-fill";
+    progressFill.style.width = `${progress}%`;
+    progressBar.appendChild(progressFill);
+    const progressLabel = document.createElement("span");
+    progressLabel.className = "route-loading-progress-label";
+    progressLabel.textContent = `${roundedProgress}%`;
+    loading.append(text, progressBar, progressLabel);
     els.route.results.appendChild(loading);
     return;
   }
@@ -2669,6 +2727,7 @@ function renderRouteMapLock() {
 
 function clearRoute() {
   state.route.requestSeq += 1;
+  stopRouteLoadingProgress();
   state.route.loading = false;
   state.route.result = null;
   state.route.features = [];

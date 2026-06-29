@@ -3,6 +3,9 @@ import MapKit
 import CoreLocation
 
 private let routeFavoriteStarColor = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
+private let routeProgressDuration: TimeInterval = 60.0
+private let routeProgressIntervalNanoseconds: UInt64 = 250_000_000
+private let routeProgressMaximum = 0.95
 
 private enum RouteEndpointField: Hashable {
     case origin
@@ -230,13 +233,7 @@ struct RouteTabView: View {
     private var statusView: some View {
         let routeError = viewModel.routeError
         if viewModel.isLoadingRoute {
-            HStack(spacing: 8) {
-                ProgressView()
-                    .controlSize(.small)
-                Text(String(localized: "route.loading"))
-                    .font(.subheadline.weight(.semibold))
-            }
-            .foregroundStyle(.secondary)
+            RouteLoadingProgressView()
         } else if !statusMessage.isEmpty {
             Text(statusMessage)
                 .font(.subheadline.weight(.semibold))
@@ -804,6 +801,48 @@ struct RouteTabView: View {
             return Color.red
         case .unknown:
             return Color.secondary
+        }
+    }
+}
+
+private struct RouteLoadingProgressView: View {
+    @State private var progress = 0.0
+
+    var body: some View {
+        let isHoldingProgress = progress >= routeProgressMaximum
+        let messageKey: String.LocalizationValue = isHoldingProgress ? "route.loadingStill" : "route.loading"
+
+        VStack(spacing: 10) {
+            Text(String(localized: messageKey))
+                .font(.headline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.primary)
+            ProgressView(value: progress, total: 1)
+                .progressViewStyle(.linear)
+                .tint(woladenBrandColor)
+                .frame(maxWidth: 420)
+            Text("\(Int((progress * 100).rounded()))%")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 18)
+        .task {
+            await runProgress()
+        }
+    }
+
+    private func runProgress() async {
+        let startedAt = Date()
+        while !Task.isCancelled {
+            let elapsed = Date().timeIntervalSince(startedAt)
+            let ratio = min(max(elapsed / routeProgressDuration, 0), 1)
+            let eased = 1 - ((1 - ratio) * (1 - ratio))
+            let nextProgress = min(routeProgressMaximum, routeProgressMaximum * eased)
+            await MainActor.run {
+                progress = nextProgress
+            }
+            try? await Task.sleep(nanoseconds: routeProgressIntervalNanoseconds)
         }
     }
 }

@@ -103,6 +103,7 @@
     "empty": "Gib Start und Ziel ein, um Ladestationen entlang der Route zu finden.",
     "resolving": "Routenpunkte werden gesucht...",
     "loading": "Ladestationen entlang der Route werden berechnet...",
+    "loadingStill": "Die vollständige Route wird weiter geprüft. Lange Routen können länger als eine Minute dauern.",
     "missingEndpoints": "Wähle zuerst Start und Ziel.",
     "sameEndpoint": "Start und Ziel liegen zu nah beieinander.",
     "notConfigured": "Routenplanung ist nicht konfiguriert.",

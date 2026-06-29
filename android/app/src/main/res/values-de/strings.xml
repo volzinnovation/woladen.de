@@ -249,6 +249,7 @@
     <string name="i18n_route_favoritesadded">{count} Ladestationen als Favoriten in „{category}“ gespeichert.</string>
     <string name="i18n_route_filterchanged">Filter wurden seit der Routenberechnung geändert. Für weiter gefasste Filter muss die Route neu berechnet werden.</string>
     <string name="i18n_route_loading">Ladestationen entlang der Route werden berechnet...</string>
+    <string name="i18n_route_loadingstill">Die vollständige Route wird weiter geprüft. Lange Routen können länger als eine Minute dauern.</string>
     <string name="i18n_route_locationunavailable">Dein Standort ist nicht verfügbar.</string>
     <string name="i18n_route_mapfixed">Karte auf Ladestationen entlang der Route fixiert</string>
     <string name="i18n_route_missingendpoints">Wähle zuerst Start und Ziel.</string>
