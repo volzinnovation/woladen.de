@@ -1,8 +1,7 @@
 # AGENTS.md
 
-This file is the operational guide for coding agents working in this repository.
-
-`AGENT.md` is historical project context. Use this file for day-to-day guardrails.
+This file is the single operational guide for coding agents working in this
+repository.
 
 ## Non-Negotiables
 
@@ -10,7 +9,9 @@ This file is the operational guide for coding agents working in this repository.
 - Never create or switch branches unless the user explicitly asks.
 - Never open a pull request unless the user explicitly asks.
 - Prefer small, surgical fixes. If the request is to fix a bug, do not refactor unrelated parts of the app.
-- Do not overwrite unrelated user changes. This repository is often dirty because generated artifacts and analysis outputs are tracked.
+- Do not overwrite unrelated user changes. This repository is often dirty because generated data contract artifacts are tracked.
+- Keep only `README.md` and this `AGENTS.md` in the repository root. Put other
+  Markdown documentation in `docs/`.
 
 ## Product Invariants
 
@@ -31,12 +32,15 @@ This file is the operational guide for coding agents working in this repository.
 - Edit `iphone/` and `android/` for native app source code and assets.
 - Edit `scripts/build_site.py` and frontend/native asset helpers for public
   web/app bundle work.
+- Treat `site/`, `output/`, and `test-results/` as local/generated outputs.
+  They must stay ignored and must not be committed.
 - Do not add backend runtime, provider ingestion, deployment, credential, or
   analytics code here. Those belong in the private sister repository
   `Woladen.de-analytics`.
 - Treat `data/chargers_fast.geojson`, `data/operators.json`,
-  `data/summary.json`, and `site/data/` as generated frontend contract
-  artifacts consumed by the web/native clients.
+  `data/open_static_summary.json`, `data/management/`, and
+  `data/station-occupancy/` as generated frontend contract artifacts consumed
+  by the web/native clients.
 - Treat generated data schema as a shared contract across the web app, generated
   site, analytics scripts, and native clients. If you rename or remove fields,
   audit consumers first.
@@ -53,8 +57,10 @@ This file is the operational guide for coding agents working in this repository.
 - Backend, data-pipeline, provider onboarding, provider mapping, deployment, or
   management-report change:
   Work in `Woladen.de-analytics` and run the targeted backend/data tests there.
-- If the site bundle or generated data changes:
-  Smoke-test locally with `python3 -m http.server 4173 --directory site` and inspect the relevant flow in a browser.
+- If web code or generated data changes:
+  Build the local `site/` bundle, smoke-test it with
+  `python3 -m http.server 4173 --directory site`, and inspect the relevant flow
+  in a browser. Do not commit the generated `site/` directory.
 - Prefer targeted validation over assumptions. If you did not run a relevant test or smoke check, say so explicitly.
 - Develop features for web app first, when prompted to port to Android and iPhone stick as faithfully as possible to the web app design and features.
 
@@ -98,7 +104,8 @@ This file is the operational guide for coding agents working in this repository.
 
 ## Known Regression Traps
 
-- Never leave `web/` and `site/` out of sync after a frontend change.
+- Never finish frontend work without confirming the generated `site/` bundle can
+  be rebuilt from `web/` and `data/`.
 - Do not patch generated JSON or GeoJSON to hide an upstream bug. Fix frontend
   bundle issues in `scripts/build_site.py`; fix backend/data producer issues in
   `Woladen.de-analytics`.
@@ -117,8 +124,19 @@ This file is the operational guide for coding agents working in this repository.
 - The safe frontend release order is:
   `analytics bundle/API ready -> build_site -> local smoke check`.
 - Before finishing, review `git status --short` and make sure only intended files changed.
-- Mention regenerated artifacts explicitly in the final update.
+- Mention regenerated local artifacts explicitly in the final update.
 - Do not deploy, push, or clean up branches unless the user explicitly asks.
+
+## Historical Context
+
+- The original project goal was a mobile-ready web frontend that helps EV
+  drivers find fast chargers with useful nearby amenities.
+- Static bundle generation should be reproducible: fetch public source data,
+  cache inputs where appropriate, derive deterministic frontend/app contract
+  outputs, and publish the static site through GitHub Pages.
+- GitHub Actions remains suitable for recurring low-volume frontend/data bundle
+  publication, while provider ingestion and analytics execution live in
+  `Woladen.de-analytics`.
 
 ## Communication
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -33,7 +34,12 @@ SUMMARY_PATH = ROOT / "data" / "summary.json"
 OPERATORS_PATH = ROOT / "data" / "operators.json"
 CHARGERS_PATH = ROOT / "data" / "chargers_fast.csv"
 GERMANY_PATH = ROOT / "data" / "apple-abdeckung-DE.geojson"
-SCREENSHOT_PATH = ROOT / "test-results" / "mobile_test.webp"
+SCREENSHOT_PATH = Path(
+    os.environ.get(
+        "WOLADEN_POSTER_SCREENSHOT",
+        ROOT / "output" / "playwright" / "mobile_test.webp",
+    )
+)
 ICON_PATH = ROOT / "web" / "favicon-512.png"
 
 POSTER_PATH = OUTPUT_DIR / "woladen_poster_a0_de.pdf"

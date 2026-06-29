@@ -28,6 +28,11 @@ Our aim is cover all of EU27 (subject to AFIR regulation), CH and NO.
 - `iphone/`: Native iPhone app (SwiftUI + MapKit).
 - `android/`: Native Android app (Jetpack Compose + OSMDroid).
 - `data/`: Generated frontend contract data consumed by web/native builds.
+- `docs/`: Technical plans, native app notes, audits, and historical project docs.
+- `site/`: Generated locally by `scripts/build_site.py` and deployed by GitHub
+  Pages; it is intentionally ignored by git.
+- `output/` and `test-results/`: Local generated screenshots, release assets,
+  reports, and test artifacts; they are intentionally ignored by git.
 - `.github/workflows/pages-deploy.yml`: GitHub Pages build + deploy.
 
 ## Data Sources
@@ -155,14 +160,16 @@ node --test web/filtering.test.mjs web/location.test.mjs
 
 - `pages-deploy.yml` builds and deploys only the static GitHub Pages site.
 - Backend/data/bundle/deploy workflows live in private `Woladen.de-analytics`.
+- Native app notes live in `docs/android.md` and `docs/iphone.md`.
 
 ## Notes
 
-- Keep frontend and generated `site/` in sync after web changes.
+- Rebuild and smoke-test generated `site/` after web changes, but do not commit
+  the generated bundle.
 - Keep user-facing docs/help in German and technical docs in English.
 - If BNetzA fetch fails and no local cache exists, the pipeline fails intentionally.
 - On a successful data run, generated artifacts in `data/` and the data-status block below are updated and committed by CI.
-- Treat `site/`, `data/eu27_ch_static/`, `data/onboarded_static/`, `data/osm_pbf_cache/`, `data/commercial_raw/`, and `data/commercial_archives/` as generated or cached outputs.
+- Treat `site/`, `output/`, `test-results/`, `data/eu27_ch_static/`, `data/onboarded_static/`, `data/osm_pbf_cache/`, `data/commercial_raw/`, and `data/commercial_archives/` as generated or cached outputs.
 
 <!-- DATA_STATUS_START -->
 ## Data Build Status
