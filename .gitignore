@@ -16,7 +16,7 @@ secret/
 .venv/
 venv/
 node_modules/
-data/germany-latest.osm.pbf
+*.pbf
 test-results/desktop_test.mp4
 test-results/mobile_test.mp4
 output/play-store/
