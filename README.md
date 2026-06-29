@@ -1,21 +1,25 @@
 # woladen.de
 
-## Data coverage
+# About woladen.de
+Purpose: **Find charging stations in Europe where charging your EV is fun.** Fun is defined as: Stations should be reliable and available and humans have someting to do in the vicinity of the charger. Chargers are classified into Gold/Silver/Bronce depending on the number of amenities nearby-
+
+[woladen.de](https://woladen.de/) allows you to discover recharging stations in Europe, we currently have data for 20+ countries and aim to pick up national data sources, as soon as they become available ( AFIR is in effect since Apr 2026, but adoption is slow in some countries).
+
+This repository contains the public web frontend, native app source trees, and frontend/app assets. Backend ingestion, deployment, provider configuration, open-static bundle generation, analytics, and management reporting live in the private sister repository `volzinnovation/Woladen.de-analytics` (and is not open source).
+
+## Current data coverage
 
 ![Data coverage](web/img/chargers_naturalearth_purple.png)
 
-# About woladen.de
-Purpose: **Find charging stations in Europe where charging your EV is fun.**
-
-[woladen.de](https://woladen.de/) allows you to discover recharging stations in Europe. This repository owns the public web frontend, generated static site, native app source trees, and frontend/app assets. Backend ingestion, deployment, provider configuration, open-static bundle generation, analytics, and management reporting live in the private sister repository `volzinnovation/Woladen.de-analytics`.
+Our aim is cover all of EU27 (subject to AFIR regulation), CH and NO.
 
 ## What This Repo Does
 
-- Filters the European recharging stations depending on criteria, e.g. to active fast chargers with at least `50 kW` nominal power by default or certain nearby amenities.
-- Consumes analytics-published static bundle and API artifacts.
+- Finds European recharging stations depending on user criteria
+- Augments stations with nearby amenities, e.h. Restaurants, etc., such that humans have something to do while charging the car.
+- The commercial backend provides AFIR live status data from the various NAP in the EU and national open data providers.
 - Displays live occupancy from `https://live.woladen.de` and `https://live-eu.woladen.de`, where available.
-- Publishes a mobile-ready static web map with filters (operator + amenities).
-- Provides iPhone and Android app source and assets.
+- Provides web, iPhone and Android app source and assets. Web site works perfectly fine, e.g. on a Tesla or NIO in-car browser.
 
 ## Project Structure
 
@@ -147,30 +151,10 @@ Run the focused frontend checks after web changes:
 node --test web/filtering.test.mjs web/location.test.mjs
 ```
 
-## Open Static Bundle
-
-`Woladen.de-analytics` builds, validates, and publishes the open-static SQLite
-bundle and regional mobile packages. This repository consumes those release
-assets for the public web/native clients. The app-facing release tag is
-`open-static-ios-regional-latest`.
-
-The analytics bundle workflow publishes:
-
-- `open_static.sqlite3.zst`
-- `open_static.sqlite3.zst.sha256`
-- `open_static.sqlite3.sha256`
-- `open-static-<GROUP>.sqlite3.zlib`
-- `open-static-<GROUP>.sqlite3.zlib.sha256`
-- `open-static-<GROUP>.sqlite3.sha256`
-- `open-static-<GROUP>.manifest.json`
-- `regional_pack_index.json`
-
-The regional groups are `DACH`, `BENELUX`, `ROMANIC`, `NORDICS`, and `REST-EUROPE`.
-
 ## Workflow Notes
 
 - `pages-deploy.yml` builds and deploys only the static GitHub Pages site.
-- Backend/data/bundle/deploy workflows live in `Woladen.de-analytics`.
+- Backend/data/bundle/deploy workflows live in private `Woladen.de-analytics`.
 
 ## Notes
 
