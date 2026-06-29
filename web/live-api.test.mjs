@@ -61,14 +61,26 @@ test("resolveLiveApiBaseUrl maps the public site to live-eu", () => {
   );
 });
 
-test("resolveGermanLiveApiBaseUrl maps German live data to live.woladen.de", () => {
+test("resolveGermanLiveApiBaseUrl maps German live data to live-eu", () => {
   assert.equal(
     resolveGermanLiveApiBaseUrl({
       configuredValue: "",
       locationHref: "https://woladen.de/",
       locationHostname: "woladen.de",
     }),
-    "https://live.woladen.de",
+    "https://live-eu.woladen.de",
+  );
+});
+
+test("resolveGermanLiveApiBaseUrl falls back to the primary configured backend", () => {
+  assert.equal(
+    resolveGermanLiveApiBaseUrl({
+      configuredValue: "",
+      locationHref: "https://example.test/",
+      locationHostname: "example.test",
+      primaryBaseUrl: "http://127.0.0.1:8010",
+    }),
+    "http://127.0.0.1:8010",
   );
 });
 

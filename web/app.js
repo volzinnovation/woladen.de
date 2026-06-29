@@ -45,7 +45,7 @@ import {
 import {
   resolveGermanLiveApiBaseUrl as computeGermanLiveApiBaseUrl,
   resolveLiveApiBaseUrl as computeLiveApiBaseUrl,
-} from "./live-api.mjs?v=20260618-split-live-routing";
+} from "./live-api.mjs?v=20260630-live-eu1";
 import {
   buildGeocoderApiUrl,
   normalizeGeocodePayload,
@@ -413,7 +413,7 @@ function resolveLiveApiBaseUrl() {
   return resolved;
 }
 
-function resolveGermanLiveApiBaseUrl() {
+function resolveGermanLiveApiBaseUrl(primaryBaseUrl = "") {
   const configuredValue = typeof window.WOLADEN_DE_LIVE_API_BASE_URL === "string"
     ? window.WOLADEN_DE_LIVE_API_BASE_URL.trim()
     : "";
@@ -421,6 +421,7 @@ function resolveGermanLiveApiBaseUrl() {
     configuredValue,
     locationHref: window.location.href,
     locationHostname: window.location.hostname,
+    primaryBaseUrl,
   });
   if (!resolved && configuredValue) {
     console.warn("Ignoring invalid German live API base URL", configuredValue);
@@ -444,7 +445,7 @@ function resolveGeocoderApiBaseUrl() {
 }
 
 const LIVE_API_BASE_URL = resolveLiveApiBaseUrl();
-const LIVE_DE_API_BASE_URL = resolveGermanLiveApiBaseUrl();
+const LIVE_DE_API_BASE_URL = resolveGermanLiveApiBaseUrl(LIVE_API_BASE_URL);
 const GEOCODER_API_BASE_URL = resolveGeocoderApiBaseUrl();
 
 function normalizeAvailabilityStatus(value) {

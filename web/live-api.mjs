@@ -1,11 +1,9 @@
 const LIVE_LOCAL_HOSTS = new Set(["127.0.0.1", "localhost", "0.0.0.0", "::1", "[::1]"]);
 const LIVE_EU_API_BASE_URL = "https://live-eu.woladen.de";
-const LIVE_DE_API_BASE_URL = "https://live.woladen.de";
 const LIVE_REMOTE_HOSTS = new Map([
   ["woladen.de", LIVE_EU_API_BASE_URL],
   ["www.woladen.de", LIVE_EU_API_BASE_URL],
   ["live-eu.woladen.de", LIVE_EU_API_BASE_URL],
-  ["live.woladen.de", LIVE_DE_API_BASE_URL],
 ]);
 const LIVE_API_QUERY_PARAM = "liveApiBaseUrl";
 const LIVE_DE_API_QUERY_PARAM = "deLiveApiBaseUrl";
@@ -73,6 +71,7 @@ export function resolveGermanLiveApiBaseUrl({
   configuredValue = "",
   locationHref = "",
   locationHostname = "",
+  primaryBaseUrl = "",
 } = {}) {
   const germanQueryOverride = queryGermanLiveApiBaseUrl(locationHref);
   if (germanQueryOverride) {
@@ -89,9 +88,9 @@ export function resolveGermanLiveApiBaseUrl({
     return primaryQueryOverride;
   }
 
-  const hostname = String(locationHostname || "").trim();
-  if (LIVE_LOCAL_HOSTS.has(hostname) || LIVE_REMOTE_HOSTS.has(hostname)) {
-    return normalizeLiveApiBaseUrl(LIVE_DE_API_BASE_URL);
-  }
-  return "";
+  return normalizeLiveApiBaseUrl(primaryBaseUrl) || resolveLiveApiBaseUrl({
+    configuredValue: "",
+    locationHref,
+    locationHostname,
+  });
 }
