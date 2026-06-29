@@ -95,6 +95,7 @@ final class LiveFeatureFormattingTests: XCTestCase {
         XCTAssertEqual(query["mode"], "travel")
         XCTAssertEqual(query["min_power_kw"], "50.0")
         XCTAssertEqual(query["operator"], "Fast")
+        XCTAssertEqual(request.timeoutInterval, 30.0)
     }
 
     func testCatalogStationDetailConvertsChargersAndAmenitiesToFeature() throws {

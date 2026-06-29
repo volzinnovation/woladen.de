@@ -128,8 +128,15 @@ extension LocationService: CLLocationManagerDelegate {
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         guard screenshotLocation == nil else { return }
+        let status = manager.authorizationStatus
         DispatchQueue.main.async {
-            self.lastError = error.localizedDescription
+            if let locationError = error as? CLError, locationError.code == .denied {
+                self.authorizationStatus = .denied
+                self.lastError = nil
+            } else {
+                self.authorizationStatus = status
+                self.lastError = error.localizedDescription
+            }
         }
     }
 }

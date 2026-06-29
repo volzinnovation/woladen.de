@@ -93,8 +93,8 @@ fun MapTabView(
     }
     val routeCoordinates = routeSummary?.geometry?.coordinates.orEmpty()
 
-    fun centerMap(location: Location) {
-        val map = mapViewRef ?: return
+    fun centerMap(location: Location): Boolean {
+        val map = mapViewRef ?: return false
         centerOnNextLocationUpdate = false
         map.animateCamera(
             CameraUpdateFactory.newLatLngZoom(
@@ -106,6 +106,7 @@ fun MapTabView(
         if (routeSummary == null) {
             viewModel.handleMapCenterChange(location.latitude, location.longitude)
         }
+        return true
     }
 
     fun focusMapOnRoute() {
@@ -308,6 +309,24 @@ fun MapTabView(
                 }
             }
         }
+
+        Surface(
+            onClick = { openOsmCopyright(context) },
+            shape = RoundedCornerShape(3.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+            tonalElevation = 1.dp,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(8.dp)
+                .testTag("map-osm-attribution")
+        ) {
+            Text(
+                text = OSM_ATTRIBUTION_TEXT,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+            )
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -319,8 +338,7 @@ fun MapTabView(
         if (mapViewRef == null || hasCenteredInitialLocation) return@LaunchedEffect
         val location = locationService.currentLocation
         if (location != null) {
-            centerMap(location)
-            hasCenteredInitialLocation = true
+            hasCenteredInitialLocation = centerMap(location)
         } else if (locationService.authorizationStatus == LocationAuthorizationStatus.AUTHORIZED_WHEN_IN_USE) {
             centerOnNextLocationUpdate = true
             locationService.activate()
@@ -334,9 +352,8 @@ fun MapTabView(
     LaunchedEffect(mapViewRef, locationService.currentLocation) {
         if (routeSummary != null) return@LaunchedEffect
         val location = locationService.currentLocation
-        if (location != null && (centerOnNextLocationUpdate || !hasCenteredInitialLocation)) {
-            centerMap(location)
-            hasCenteredInitialLocation = true
+        if (mapViewRef != null && location != null && (centerOnNextLocationUpdate || !hasCenteredInitialLocation)) {
+            hasCenteredInitialLocation = centerMap(location)
         }
     }
 
@@ -400,6 +417,16 @@ private fun openGoogleNavigation(context: Context, feature: GeoJsonFeature) {
         context.startActivity(intent)
     }
 }
+
+private fun openOsmCopyright(context: Context) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(OSM_COPYRIGHT_URL))
+    runCatching {
+        context.startActivity(intent)
+    }
+}
+
+private const val OSM_ATTRIBUTION_TEXT = "\u00a9 OpenStreetMap contributors"
+private const val OSM_COPYRIGHT_URL = "https://www.openstreetmap.org/copyright"
 
 @Composable
 private fun mapInitialLocationTitle(status: LocationAuthorizationStatus): String {
