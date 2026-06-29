@@ -90,7 +90,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260627-info-copy1";
+} from "./i18n.mjs?v=20260629-route-errors1";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -2125,12 +2125,30 @@ function routeEndpointsAreSame(origin, destination) {
 
 function routeErrorMessage(error) {
   const detail = apiErrorDetailText(error?.detail);
+  if (detail === "route_too_long") {
+    return t("route.tooLong");
+  }
+  if (detail === "route_not_found" || Number(error?.status) === 404) {
+    return t("route.notFound");
+  }
+  if (detail === "route_provider_timeout" || isAbortError(error)) {
+    return t("route.providerTimeout");
+  }
   if (
     detail === "route_provider_quota_exhausted" ||
-    detail === "route_provider_rate_limited" ||
-    (detail === "route_provider_auth_failed" && Number(error?.status) === 503)
+    detail === "route_provider_rate_limited"
   ) {
     return t("route.capacityExhausted");
+  }
+  if (
+    detail === "route_provider_unavailable" ||
+    detail === "route_provider_auth_failed" ||
+    detail === "route_provider_request_failed"
+  ) {
+    return t("route.providerUnavailable");
+  }
+  if (detail.startsWith("route_provider_") || detail.startsWith("route_")) {
+    return t("route.providerError");
   }
   return t("route.searchError");
 }
@@ -2160,6 +2178,7 @@ async function submitRouteSearch() {
   const filters = routeFiltersPayload(routeEffectiveFilters());
   state.route.loading = true;
   state.route.error = null;
+  renderRouteStatus("");
   renderRouteResults();
 
   try {

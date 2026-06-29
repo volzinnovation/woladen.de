@@ -1047,11 +1047,14 @@ body {
 .route-loading-state {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.75rem;
-  min-height: 4rem;
-  padding: 1rem 0;
+  min-height: 6.5rem;
+  padding: 1.4rem 1rem 2rem;
   color: var(--color-text-main);
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
   font-weight: 700;
+  text-align: center;
 }
 
 .route-loading-spinner {

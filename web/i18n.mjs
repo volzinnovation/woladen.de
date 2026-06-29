@@ -181,6 +181,11 @@ const FALLBACK_BUNDLE = {
     notConfigured: "Route planning is not configured.",
     locationUnavailable: "Current location is not available.",
     searchError: "Charging stations along the route could not be loaded.",
+    tooLong: "That route is too long for charger search. Split it into shorter legs.",
+    notFound: "The routing service could not find a drivable route between those points. Try nearby addresses.",
+    providerTimeout: "The routing service did not respond in time. Try again in a moment.",
+    providerUnavailable: "Route planning is temporarily unavailable. Try again later.",
+    providerError: "The routing service returned an error. Try again or adjust the route endpoints.",
     capacityExhausted: "Routing capacity is currently exhausted. Please try again later.",
     noFilteredResults: "No charging stations along the route match the current filters.",
     filterChanged: "Filters changed since this route was calculated. Broader filters need a new route search.",
@@ -529,7 +534,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260627-info-copy1`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260629-route-errors1`, import.meta.url));
     if (!response.ok) {
       return {};
     }
