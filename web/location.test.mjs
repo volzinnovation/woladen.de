@@ -9,6 +9,7 @@ import {
   mapGeolocationError,
   requestBrowserLocation,
   shouldAttemptStartupLocation,
+  shouldCenterMapOnLocationViewOpen,
 } from "./location.mjs";
 
 test("browser location lookup resolves coordinates from geolocation", async () => {
@@ -90,4 +91,39 @@ test("startup location request runs unless access is blocked or already resolved
   assert.equal(shouldAttemptStartupLocation({ geolocationSupported: false }), false);
   assert.equal(shouldAttemptStartupLocation({ alreadyRequested: true }), false);
   assert.equal(shouldAttemptStartupLocation({ hasLocation: true }), false);
+});
+
+test("first map view opening centers on the resolved browser location", () => {
+  assert.equal(
+    shouldCenterMapOnLocationViewOpen({ hasLocation: true, mapViewOpened: false }),
+    true,
+  );
+  assert.equal(
+    shouldCenterMapOnLocationViewOpen({
+      hasLocation: true,
+      mapViewOpened: true,
+      userInteracted: false,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldCenterMapOnLocationViewOpen({
+      hasLocation: true,
+      mapViewOpened: true,
+      userInteracted: true,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldCenterMapOnLocationViewOpen({ hasLocation: false, mapViewOpened: false }),
+    false,
+  );
+  assert.equal(
+    shouldCenterMapOnLocationViewOpen({
+      hasLocation: true,
+      mapViewOpened: false,
+      routePinned: true,
+    }),
+    false,
+  );
 });

@@ -107,6 +107,21 @@ export function shouldAttemptStartupLocation({
   ].includes(normalizedPermission);
 }
 
+export function shouldCenterMapOnLocationViewOpen({
+  hasLocation = false,
+  mapViewOpened = false,
+  userInteracted = false,
+  routePinned = false,
+} = {}) {
+  if (!hasLocation || routePinned) {
+    return false;
+  }
+  if (!mapViewOpened) {
+    return true;
+  }
+  return !userInteracted;
+}
+
 export function getLocationLookupViewModel({
   hasLocation = false,
   isRequesting = false,

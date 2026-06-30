@@ -41,7 +41,8 @@ import {
   getLocationLookupViewModel,
   normalizeLocationPermissionState,
   requestBrowserLocation,
-} from "./location.mjs?v=20260620-eu-i18n8";
+  shouldCenterMapOnLocationViewOpen,
+} from "./location.mjs?v=20260630-map-location1";
 import {
   resolveGermanLiveApiBaseUrl as computeGermanLiveApiBaseUrl,
   resolveLiveApiBaseUrl as computeLiveApiBaseUrl,
@@ -1156,6 +1157,7 @@ const state = {
   },
   mapInteraction: {
     hasUserInteracted: false,
+    hasOpenedMapView: false,
   },
   analytics: {
     oftenBrokenStationIds: new Set(),
@@ -4550,6 +4552,30 @@ function centerMapOnFeature(feature, options = {}) {
   state.views.map.setView([coords.lat, coords.lon], zoom, { animate: false });
 }
 
+function centerMapOnUserLocation(options = {}) {
+  if (!state.views.map || !hasResolvedUserLocation()) {
+    return false;
+  }
+  const { animate = false, minZoom = 13 } = options;
+  const zoom = Math.max(state.views.map.getZoom(), minZoom);
+  const latLng = [state.userPos.lat, state.userPos.lon];
+  if (animate) {
+    state.views.map.flyTo(latLng, zoom);
+  } else {
+    state.views.map.setView(latLng, zoom, { animate: false });
+  }
+  return true;
+}
+
+function shouldCenterMapOnUserLocationForViewOpen() {
+  return shouldCenterMapOnLocationViewOpen({
+    hasLocation: hasResolvedUserLocation(),
+    mapViewOpened: state.mapInteraction.hasOpenedMapView,
+    userInteracted: state.mapInteraction.hasUserInteracted,
+    routePinned: hasPinnedRouteMap(),
+  });
+}
+
 function focusMapOnPendingStation() {
   const stationId = normalizeStationId(state.mapFocus.stationId || "");
   if (!stationId || !state.views.map) {
@@ -4755,21 +4781,28 @@ function switchView(viewId, options = {}) {
 
   // Map resize fix
   if (viewId === "view-map" && state.views.map) {
+    const centerOnUserLocation = shouldCenterMapOnUserLocationForViewOpen();
+    state.mapInteraction.hasOpenedMapView = true;
     renderRouteLayer();
     renderRouteMapLock();
     refreshMapMarkersFromCurrentFeatures();
     if (!hasPinnedRouteMap()) {
       startMapGPSRefresh();
     }
-    requestAnimationFrame(() => {
+    const stabilizeMapView = ({ focusPendingStation = true } = {}) => {
       state.views.map.invalidateSize({ pan: false });
-      focusMapOnPendingStation();
+      const focusedPendingStation = focusPendingStation ? focusMapOnPendingStation() : false;
+      if (!focusedPendingStation && centerOnUserLocation) {
+        centerMapOnUserLocation({ animate: false, minZoom: 13 });
+      }
       state.views.map.invalidateSize({ pan: false });
       refreshMapMarkersFromCurrentFeatures();
+    };
+    requestAnimationFrame(() => {
+      stabilizeMapView();
     });
     setTimeout(() => {
-      state.views.map.invalidateSize({ pan: false });
-      refreshMapMarkersFromCurrentFeatures();
+      stabilizeMapView({ focusPendingStation: false });
     }, 150);
   } else {
     stopMapGPSRefresh();
@@ -7392,8 +7425,8 @@ async function refreshCatalogFromGPSPosition({
     setCatalogSearchCenter(state.userPos, "location");
     updateUserMarker();
 
-    if (recenter && state.views.map) {
-      state.views.map.flyTo([state.userPos.lat, state.userPos.lon], 13);
+    if (recenter) {
+      centerMapOnUserLocation({ animate: true, minZoom: 13 });
     }
     await loadCatalogStationsForCurrentCenter({ force: true, reset });
   } catch (err) {
