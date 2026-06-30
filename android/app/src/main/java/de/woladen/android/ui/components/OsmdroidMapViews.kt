@@ -369,7 +369,13 @@ fun DetailMiniMapView(
         iconFactory.fromBitmap(drawableToBitmap(createFavoriteMarkerDrawable(context, diameterDp = 40f)))
     }
     val defaultAmenityIcon = remember(context, iconFactory) {
-        createMapLibreCircleIcon(iconFactory, context, Color.rgb(250, 173, 20), diameterDp = 22f, strokeDp = 2f)
+        createMapLibreCircleIcon(
+            iconFactory,
+            context,
+            Color.rgb(250, 173, 20),
+            diameterDp = DETAIL_MAP_AMENITY_ICON_SIZE_DP,
+            strokeDp = 1.2f
+        )
     }
     val amenityIconsByKey = remember(context, iconFactory) {
         mutableMapOf<String, Icon>()
@@ -421,7 +427,7 @@ fun DetailMiniMapView(
                                                 iconFactory = iconFactory,
                                                 context = context,
                                                 resId = resId,
-                                                scaleFactor = 1.15f
+                                                targetSizeDp = DETAIL_MAP_AMENITY_ICON_SIZE_DP
                                             )
                                         } else {
                                             defaultAmenityIcon
@@ -514,15 +520,16 @@ private fun createMapLibreResourceIcon(
     iconFactory: IconFactory,
     context: Context,
     resId: Int,
-    scaleFactor: Float = 1f
+    targetSizeDp: Float
 ): Icon {
     val sourceBitmap = drawableToBitmap(
         requireNotNull(context.getDrawable(resId)) {
             "Drawable not found for resId=$resId"
         }
     )
-    val targetWidth = (sourceBitmap.width * scaleFactor).toInt().coerceAtLeast(1)
-    val targetHeight = (sourceBitmap.height * scaleFactor).toInt().coerceAtLeast(1)
+    val targetSizePx = (targetSizeDp * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
+    val targetWidth = targetSizePx
+    val targetHeight = targetSizePx
     val scaledBitmap = if (targetWidth == sourceBitmap.width && targetHeight == sourceBitmap.height) {
         sourceBitmap
     } else {
@@ -599,6 +606,7 @@ private const val STATION_SNIPPET = "station"
 private const val USER_SNIPPET = "user"
 private const val AMENITY_SNIPPET = "amenity"
 private const val EARTH_RADIUS_METERS = 6_371_000.0
+private const val DETAIL_MAP_AMENITY_ICON_SIZE_DP = 12f
 
 private const val STANDARD_OSM_STYLE_JSON = """
 {
