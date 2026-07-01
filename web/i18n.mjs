@@ -106,6 +106,7 @@ const FALLBACK_BUNDLE = {
     locate: "Use my location",
     filterOpen: "Open filters",
     closeFilter: "Close filters",
+    closeChargePlan: "Close rating settings",
     closeDetail: "Close details",
     closeAmenity: "Close amenity",
     saveFavorite: "Save favorite",
@@ -122,7 +123,13 @@ const FALLBACK_BUNDLE = {
     more: "...and {count} more",
   },
   chargePlan: {
-    kicker: "Stop planner",
+    button: "Rate",
+    openWithSummary: "Open rating settings, current plan: {summary}",
+    modalTitle: "Rate chargers",
+    modalIntro: "Adjust how much energy you need during this stop.",
+    apply: "Apply",
+    reset: "Reset",
+    compactSummary: "{minutes} min · {kwh} kWh",
     title: "Match chargers to this break",
     summary: "{minutes} min stop, {kwh} kWh needed",
     minutesLabel: "Stop",
@@ -553,7 +560,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260701-charge-plan1`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260701-rate-modal1`, import.meta.url));
     if (!response.ok) {
       return {};
     }

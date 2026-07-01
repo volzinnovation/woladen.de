@@ -283,7 +283,8 @@
     "saveFavorite": "Spara favorit",
     "removeFavorite": "Ta bort favorit",
     "detailsOpen": "Öppna detaljer",
-    "activeFilters": "Aktiva filter: {labels}"
+    "activeFilters": "Aktiva filter: {labels}",
+    "closeChargePlan": "Stäng bedömning"
   },
   "common": {
     "yes": "Ja",
@@ -399,5 +400,14 @@
     "durationMinutes": "{minutes} min",
     "durationHours": "{hours} tim",
     "durationHoursMinutes": "{hours} tim {minutes} min"
+  },
+  "chargePlan": {
+    "button": "Bedöm",
+    "openWithSummary": "Öppna bedömning, aktuellt: {summary}",
+    "modalTitle": "Bedöm laddare",
+    "modalIntro": "Justera hur mycket energi du behöver under detta stopp.",
+    "apply": "Använd",
+    "reset": "Återställ",
+    "compactSummary": "{minutes} min · {kwh} kWh"
   }
 }

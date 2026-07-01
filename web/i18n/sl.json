@@ -283,7 +283,8 @@
     "saveFavorite": "Shrani priljubljeno",
     "removeFavorite": "Odstrani priljubljeno",
     "detailsOpen": "Odpri podrobnosti",
-    "activeFilters": "Aktivni filtri: {labels}"
+    "activeFilters": "Aktivni filtri: {labels}",
+    "closeChargePlan": "Zapri ocenjevanje"
   },
   "common": {
     "yes": "ja",
@@ -399,5 +400,14 @@
     "durationMinutes": "{minutes} min",
     "durationHours": "{hours} h",
     "durationHoursMinutes": "{hours} h {minutes} min"
+  },
+  "chargePlan": {
+    "button": "Oceni",
+    "openWithSummary": "Odpri ocenjevanje, trenutno: {summary}",
+    "modalTitle": "Oceni polnilnice",
+    "modalIntro": "Prilagodite, koliko energije potrebujete med tem postankom.",
+    "apply": "Uporabi",
+    "reset": "Ponastavi",
+    "compactSummary": "{minutes} min · {kwh} kWh"
   }
 }

@@ -283,7 +283,8 @@
     "saveFavorite": "Uložit oblíbené",
     "removeFavorite": "Odebrat oblíbené",
     "detailsOpen": "Otevřete podrobnosti",
-    "activeFilters": "Aktivní filtry: {labels}"
+    "activeFilters": "Aktivní filtry: {labels}",
+    "closeChargePlan": "Zavrit hodnoceni"
   },
   "common": {
     "yes": "Ano",
@@ -399,5 +400,14 @@
     "durationMinutes": "{minutes} min",
     "durationHours": "{hours} h",
     "durationHoursMinutes": "{hours} h {minutes} min"
+  },
+  "chargePlan": {
+    "button": "Hodnotit",
+    "openWithSummary": "Otevrit hodnoceni, aktualne: {summary}",
+    "modalTitle": "Hodnotit nabijecky",
+    "modalIntro": "Upravte, kolik energie potrebujete behem teto zastavky.",
+    "apply": "Pouzit",
+    "reset": "Obnovit",
+    "compactSummary": "{minutes} min · {kwh} kWh"
   }
 }

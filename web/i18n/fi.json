@@ -283,7 +283,8 @@
     "saveFavorite": "Tallenna suosikki",
     "removeFavorite": "Poista suosikki",
     "detailsOpen": "Avaa tiedot",
-    "activeFilters": "Aktiiviset suodattimet: {labels}"
+    "activeFilters": "Aktiiviset suodattimet: {labels}",
+    "closeChargePlan": "Sulje arviointi"
   },
   "common": {
     "yes": "Kyllä",
@@ -399,5 +400,14 @@
     "durationMinutes": "{minutes} min",
     "durationHours": "{hours} h",
     "durationHoursMinutes": "{hours} h {minutes} min"
+  },
+  "chargePlan": {
+    "button": "Arvioi",
+    "openWithSummary": "Avaa arviointi, nykyinen: {summary}",
+    "modalTitle": "Arvioi laturit",
+    "modalIntro": "Saada, kuinka paljon energiaa tarvitset taman pysahdyksen aikana.",
+    "apply": "Kayta",
+    "reset": "Palauta",
+    "compactSummary": "{minutes} min · {kwh} kWh"
   }
 }

@@ -38,7 +38,8 @@
     "saveFavorite": "Favoriet opslaan",
     "removeFavorite": "Favoriet verwijderen",
     "detailsOpen": "Details openen",
-    "activeFilters": "Actieve filters: {labels}"
+    "activeFilters": "Actieve filters: {labels}",
+    "closeChargePlan": "Beoordeling sluiten"
   },
   "list": {
     "title": "Laadpunten in de buurt",
@@ -49,7 +50,6 @@
     "more": "...en nog {count}"
   },
   "chargePlan": {
-    "kicker": "Stopplanner",
     "title": "Kies laders voor deze pauze",
     "summary": "{minutes} min stop, {kwh} kWh nodig",
     "minutesLabel": "Stop",
@@ -64,7 +64,14 @@
       "slow": "Langzaam",
       "busy": "Nu bezet",
       "unavailable": "Offline"
-    }
+    },
+    "button": "Beoordelen",
+    "openWithSummary": "Beoordeling openen, huidig: {summary}",
+    "modalTitle": "Laders beoordelen",
+    "modalIntro": "Pas aan hoeveel energie je tijdens deze stop nodig hebt.",
+    "apply": "Toepassen",
+    "reset": "Resetten",
+    "compactSummary": "{minutes} min · {kwh} kWh"
   },
   "favorites": {
     "title": "Favorieten",

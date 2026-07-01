@@ -283,7 +283,8 @@
     "saveFavorite": "Kedvenc mentése",
     "removeFavorite": "Kedvenc eltávolítása",
     "detailsOpen": "Nyissa meg a részleteket",
-    "activeFilters": "Aktív szűrők: {labels}"
+    "activeFilters": "Aktív szűrők: {labels}",
+    "closeChargePlan": "Értékelés bezárása"
   },
   "common": {
     "yes": "Igen",
@@ -399,5 +400,14 @@
     "durationMinutes": "{minutes} perc",
     "durationHours": "{hours} ó",
     "durationHoursMinutes": "{hours} ó {minutes} perc"
+  },
+  "chargePlan": {
+    "button": "Értékelés",
+    "openWithSummary": "Értékelés megnyitása, jelenleg: {summary}",
+    "modalTitle": "Töltők értékelése",
+    "modalIntro": "Állítsa be, mennyi energiára van szüksége ezen a megállón.",
+    "apply": "Alkalmaz",
+    "reset": "Visszaállítás",
+    "compactSummary": "{minutes} min · {kwh} kWh"
   }
 }

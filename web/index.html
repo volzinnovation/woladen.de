@@ -10,6 +10,7 @@
     <meta name="theme-color" content="#0f766e" />
     <meta name="application-name" content="woladen" />
     <meta name="apple-mobile-web-app-title" content="woladen" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta
@@ -114,7 +115,7 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css?v=20260701-charge-plan1" />
+    <link rel="stylesheet" href="./styles.css?v=20260701-rate-modal1" />
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -244,6 +245,18 @@
           <div class="view-header" data-nosnippet>
             <h2 data-i18n="list.title">Charging stations nearby</h2>
             <div class="header-actions">
+              <button
+                id="btn-charge-plan"
+                class="text-btn charge-plan-trigger"
+                type="button"
+              >
+                <span data-i18n="chargePlan.button">Rate</span>
+                <span
+                  id="charge-plan-action-summary"
+                  class="charge-plan-trigger-summary"
+                  hidden
+                ></span>
+              </button>
               <button id="btn-list-filter" class="text-btn" type="button" data-i18n="filters.title">
                 Filters
               </button>
@@ -255,48 +268,6 @@
             hidden
             data-nosnippet
           ></div>
-          <section
-            id="charge-plan"
-            class="charge-plan-panel"
-            aria-labelledby="charge-plan-title"
-            data-nosnippet
-          >
-            <div class="charge-plan-copy">
-              <span class="charge-plan-kicker" data-i18n="chargePlan.kicker">Stop planner</span>
-              <h3 id="charge-plan-title" data-i18n="chargePlan.title">Match chargers to this break</h3>
-              <p id="charge-plan-summary" class="charge-plan-summary"></p>
-            </div>
-            <div class="charge-plan-fields">
-              <label class="charge-plan-field" for="charge-plan-minutes">
-                <span data-i18n="chargePlan.minutesLabel">Stop</span>
-                <input
-                  id="charge-plan-minutes"
-                  class="charge-plan-input"
-                  type="number"
-                  min="5"
-                  max="90"
-                  step="5"
-                  value="30"
-                  inputmode="numeric"
-                />
-                <span data-i18n="chargePlan.minutesUnit">min</span>
-              </label>
-              <label class="charge-plan-field" for="charge-plan-kwh">
-                <span data-i18n="chargePlan.targetLabel">Need</span>
-                <input
-                  id="charge-plan-kwh"
-                  class="charge-plan-input"
-                  type="number"
-                  min="5"
-                  max="120"
-                  step="5"
-                  value="35"
-                  inputmode="numeric"
-                />
-                <span data-i18n="chargePlan.kwhUnit">kWh</span>
-              </label>
-            </div>
-          </section>
           <div id="charger-list" class="list-container">
             <!-- Cards injected here -->
             <div class="loading-state" data-nosnippet data-i18n="list.loading">Loading charging stations...</div>
@@ -914,6 +885,88 @@
         </div>
       </div>
 
+      <!-- CHARGE PLAN MODAL (Overlay) -->
+      <div id="modal-charge-plan" class="modal-overlay hidden">
+        <div
+          class="modal-content bottom-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="charge-plan-modal-title"
+          tabindex="-1"
+        >
+          <header class="modal-header">
+            <h3 id="charge-plan-modal-title" data-i18n="chargePlan.modalTitle">Rate chargers</h3>
+            <button
+              class="close-btn"
+              data-close="modal-charge-plan"
+              type="button"
+              aria-label="Close rating settings"
+              data-i18n-aria-label="aria.closeChargePlan"
+            >
+              &times;
+            </button>
+          </header>
+          <div class="modal-body">
+            <p class="charge-plan-modal-intro" data-i18n="chargePlan.modalIntro">
+              Adjust how much energy you need during this stop.
+            </p>
+            <div class="charge-plan-modal-fields">
+              <label class="charge-plan-field" for="charge-plan-minutes">
+                <span data-i18n="chargePlan.minutesLabel">Stop</span>
+                <span class="charge-plan-input-wrap">
+                  <input
+                    id="charge-plan-minutes"
+                    class="charge-plan-input"
+                    type="number"
+                    min="5"
+                    max="90"
+                    step="5"
+                    value="30"
+                    inputmode="numeric"
+                  />
+                  <span data-i18n="chargePlan.minutesUnit">min</span>
+                </span>
+              </label>
+              <label class="charge-plan-field" for="charge-plan-kwh">
+                <span data-i18n="chargePlan.targetLabel">Need</span>
+                <span class="charge-plan-input-wrap">
+                  <input
+                    id="charge-plan-kwh"
+                    class="charge-plan-input"
+                    type="number"
+                    min="5"
+                    max="120"
+                    step="5"
+                    value="35"
+                    inputmode="numeric"
+                  />
+                  <span data-i18n="chargePlan.kwhUnit">kWh</span>
+                </span>
+              </label>
+            </div>
+            <p id="charge-plan-summary" class="charge-plan-summary"></p>
+          </div>
+          <footer class="modal-footer charge-plan-modal-footer">
+            <button
+              id="btn-reset-charge-plan"
+              class="text-btn"
+              type="button"
+              data-i18n="chargePlan.reset"
+            >
+              Reset
+            </button>
+            <button
+              id="btn-apply-charge-plan"
+              class="primary-btn"
+              type="button"
+              data-i18n="chargePlan.apply"
+            >
+              Apply
+            </button>
+          </footer>
+        </div>
+      </div>
+
       <!-- DETAIL MODAL -->
       <div id="modal-detail" class="modal-overlay hidden">
         <div
@@ -1216,6 +1269,6 @@
     ></script>
     <script src="./app-install-promo.js?v=20260620-eu-i18n9"></script>
     <script src="./pwa-register.js?v=20260701-pwa1"></script>
-    <script src="./app.js?v=20260701-charge-plan1" type="module"></script>
+    <script src="./app.js?v=20260701-rate-modal1" type="module"></script>
   </body>
 </html>

@@ -283,7 +283,8 @@
     "saveFavorite": "Gem favorit",
     "removeFavorite": "Fjern favorit",
     "detailsOpen": "Åbn detaljer",
-    "activeFilters": "Aktive filtre: {labels}"
+    "activeFilters": "Aktive filtre: {labels}",
+    "closeChargePlan": "Luk vurdering"
   },
   "common": {
     "yes": "Ja",
@@ -399,5 +400,14 @@
     "durationMinutes": "{minutes} min",
     "durationHours": "{hours} t",
     "durationHoursMinutes": "{hours} t {minutes} min"
+  },
+  "chargePlan": {
+    "button": "Vurder",
+    "openWithSummary": "Abn vurdering, aktuelt: {summary}",
+    "modalTitle": "Vurder ladere",
+    "modalIntro": "Tilpas hvor meget energi du har brug for under dette stop.",
+    "apply": "Anvend",
+    "reset": "Nulstil",
+    "compactSummary": "{minutes} min · {kwh} kWh"
   }
 }

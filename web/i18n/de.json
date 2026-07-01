@@ -33,6 +33,7 @@
     "locate": "Mein Standort",
     "filterOpen": "Filter öffnen",
     "closeFilter": "Filter schließen",
+    "closeChargePlan": "Bewertung schließen",
     "closeDetail": "Details schließen",
     "closeAmenity": "Angebot schließen",
     "saveFavorite": "Favorit speichern",
@@ -49,7 +50,13 @@
     "more": "...und {count} weitere"
   },
   "chargePlan": {
-    "kicker": "Stopp-Planer",
+    "button": "Bewerten",
+    "openWithSummary": "Bewerten öffnen, aktuell: {summary}",
+    "modalTitle": "Lader bewerten",
+    "modalIntro": "Passe an, wie viel Energie du während deiner Pause brauchst.",
+    "apply": "Anwenden",
+    "reset": "Zurücksetzen",
+    "compactSummary": "{minutes} min · {kwh} kWh",
     "title": "Lader für diese Pause bewerten",
     "summary": "{minutes} min Pause, {kwh} kWh benötigt",
     "minutesLabel": "Stopp",

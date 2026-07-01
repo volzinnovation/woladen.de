@@ -283,7 +283,8 @@
     "saveFavorite": "Αποθήκευση αγαπημένου",
     "removeFavorite": "Αφαιρέστε το αγαπημένο",
     "detailsOpen": "Ανοίξτε τις λεπτομέρειες",
-    "activeFilters": "Ενεργά φίλτρα: {labels}"
+    "activeFilters": "Ενεργά φίλτρα: {labels}",
+    "closeChargePlan": "Κλείσιμο αξιολόγησης"
   },
   "common": {
     "yes": "Ναι",
@@ -399,5 +400,14 @@
     "durationMinutes": "{minutes} λεπ.",
     "durationHours": "{hours} ώ",
     "durationHoursMinutes": "{hours} ώ {minutes} λεπ."
+  },
+  "chargePlan": {
+    "button": "Αξιολόγηση",
+    "openWithSummary": "Άνοιγμα αξιολόγησης, τρέχον: {summary}",
+    "modalTitle": "Αξιολόγηση φορτιστών",
+    "modalIntro": "Προσαρμόστε πόση ενέργεια χρειάζεστε σε αυτή τη στάση.",
+    "apply": "Εφαρμογή",
+    "reset": "Επαναφορά",
+    "compactSummary": "{minutes} min · {kwh} kWh"
   }
 }

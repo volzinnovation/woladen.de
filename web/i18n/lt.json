@@ -283,7 +283,8 @@
     "saveFavorite": "Išsaugoti mėgstamiausią",
     "removeFavorite": "Pašalinti mėgstamiausią",
     "detailsOpen": "Atidarykite išsamią informaciją",
-    "activeFilters": "Aktyvūs filtrai: {labels}"
+    "activeFilters": "Aktyvūs filtrai: {labels}",
+    "closeChargePlan": "Uždaryti vertinimą"
   },
   "common": {
     "yes": "Taip",
@@ -399,5 +400,14 @@
     "durationMinutes": "{minutes} min",
     "durationHours": "{hours} val.",
     "durationHoursMinutes": "{hours} val. {minutes} min"
+  },
+  "chargePlan": {
+    "button": "Vertinti",
+    "openWithSummary": "Atidaryti vertinimą, dabar: {summary}",
+    "modalTitle": "Vertinti įkroviklius",
+    "modalIntro": "Nustatykite, kiek energijos reikia šio sustojimo metu.",
+    "apply": "Taikyti",
+    "reset": "Atkurti",
+    "compactSummary": "{minutes} min · {kwh} kWh"
   }
 }

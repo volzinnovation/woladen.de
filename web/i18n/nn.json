@@ -283,7 +283,8 @@
     "saveFavorite": "Lagre favoritt",
     "removeFavorite": "Fjern favoritt",
     "detailsOpen": "Åpne detaljer",
-    "activeFilters": "Aktive filtre: {labels}"
+    "activeFilters": "Aktive filtre: {labels}",
+    "closeChargePlan": "Lukk vurdering"
   },
   "common": {
     "yes": "Ja",
@@ -399,5 +400,14 @@
     "durationMinutes": "{minutes} min",
     "durationHours": "{hours} t",
     "durationHoursMinutes": "{hours} t {minutes} min"
+  },
+  "chargePlan": {
+    "button": "Vurder",
+    "openWithSummary": "Opne vurdering, gjeldande: {summary}",
+    "modalTitle": "Vurder ladarar",
+    "modalIntro": "Juster kor mykje energi du treng under dette stoppet.",
+    "apply": "Bruk",
+    "reset": "Nullstill",
+    "compactSummary": "{minutes} min · {kwh} kWh"
   }
 }

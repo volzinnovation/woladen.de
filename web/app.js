@@ -30,6 +30,7 @@ import {
 } from "./opening-hours.mjs?v=20260620-i18n";
 import {
   LOCATION_ERROR_PERMISSION_DENIED,
+  LOCATION_ERROR_UNKNOWN,
   LOCATION_PERMISSION_DENIED,
   LOCATION_PERMISSION_GRANTED,
   LOCATION_PERMISSION_UNKNOWN,
@@ -58,6 +59,7 @@ import {
   routeFiltersPayload,
 } from "./routing.mjs?v=20260626-routing-web1";
 import {
+  CHARGE_PLAN_DEFAULTS,
   classifyChargePlanFit,
   normalizeChargePlanSettings,
 } from "./charge-plan.mjs?v=20260701-charge-plan1";
@@ -95,7 +97,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260701-charge-plan1";
+} from "./i18n.mjs?v=20260701-rate-modal1";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -116,7 +118,7 @@ const CATALOG_LIST_MAX_STATIONS = 1000;
 const FAVORITE_SORT_DISTANCE = "distance";
 const FAVORITE_SORT_RATING = "rating";
 const LIVE_SUMMARY_REFRESH_MS = 15000;
-const LIVE_API_TIMEOUT_MS = 3500;
+const LIVE_API_TIMEOUT_MS = 8000;
 const LIVE_DETAIL_TIMEOUT_MS = 4000;
 const GEOCODER_API_TIMEOUT_MS = 3500;
 const GEOCODER_SUGGESTION_DEBOUNCE_MS = 250;
@@ -1226,6 +1228,7 @@ const els = {
   navItems: document.querySelectorAll(".nav-item"),
   modals: {
     filter: document.getElementById("modal-filter"),
+    chargePlan: document.getElementById("modal-charge-plan"),
     detail: document.getElementById("modal-detail"),
     amenityDetail: document.getElementById("modal-amenity-detail"),
   },
@@ -1259,10 +1262,13 @@ const els = {
     activeSummary: document.getElementById("active-filter-summary"),
   },
   chargePlan: {
-    container: document.getElementById("charge-plan"),
+    trigger: document.getElementById("btn-charge-plan"),
+    triggerSummary: document.getElementById("charge-plan-action-summary"),
     minutes: document.getElementById("charge-plan-minutes"),
     targetKwh: document.getElementById("charge-plan-kwh"),
     summary: document.getElementById("charge-plan-summary"),
+    applyBtn: document.getElementById("btn-apply-charge-plan"),
+    resetBtn: document.getElementById("btn-reset-charge-plan"),
   },
   route: {
     form: document.getElementById("route-form"),
@@ -1339,6 +1345,7 @@ const els = {
   buttons: {
     locate: document.getElementById("btn-locate"),
     closeFilter: document.querySelector('[data-close="modal-filter"]'),
+    closeChargePlan: document.querySelector('[data-close="modal-charge-plan"]'),
     closeDetail: document.querySelector('[data-close="modal-detail"]'),
     closeAmenityDetail: document.querySelector('[data-close="modal-amenity-detail"]'),
   },
@@ -1394,10 +1401,14 @@ async function init() {
   els.filter.listFilterBtn.addEventListener("click", () => openModal("filter"));
   els.filter.routeFilterBtn?.addEventListener("click", () => openModal("filter"));
   els.filter.applyBtn.addEventListener("click", () => closeModal("filter"));
+  els.chargePlan.trigger?.addEventListener("click", () => openModal("chargePlan"));
+  els.chargePlan.applyBtn?.addEventListener("click", () => closeModal("chargePlan"));
+  els.chargePlan.resetBtn?.addEventListener("click", resetChargePlanControls);
   els.route.favoriteAllBtn?.addEventListener("click", addRouteResultsToFavorites);
   els.routeMap.clearBtn?.addEventListener("click", clearRoute);
 
   els.buttons.closeFilter.addEventListener("click", () => closeModal("filter"));
+  els.buttons.closeChargePlan?.addEventListener("click", () => closeModal("chargePlan"));
   els.buttons.closeDetail.addEventListener("click", () => closeModal("detail"));
   els.buttons.closeAmenityDetail.addEventListener("click", () => closeModal("amenityDetail"));
 
@@ -1482,15 +1493,55 @@ function formatChargePlanNumber(value) {
   return formatLocalizedInteger(rounded) || String(rounded);
 }
 
-function updateChargePlanSummary() {
-  if (!els.chargePlan.summary) {
-    return;
-  }
-  const settings = normalizeChargePlanSettings(state.chargePlan);
-  els.chargePlan.summary.textContent = t("chargePlan.summary", {
-    minutes: formatChargePlanNumber(settings.minutes),
-    kwh: formatChargePlanNumber(settings.targetKwh),
+function chargePlanMatchesDefaults(settings = state.chargePlan) {
+  const normalized = normalizeChargePlanSettings(settings);
+  const defaults = normalizeChargePlanSettings(CHARGE_PLAN_DEFAULTS);
+  return normalized.minutes === defaults.minutes &&
+    normalized.targetKwh === defaults.targetKwh &&
+    normalized.efficiency === defaults.efficiency;
+}
+
+function formatChargePlanCompactSummary(settings = state.chargePlan) {
+  const normalized = normalizeChargePlanSettings(settings);
+  return t("chargePlan.compactSummary", {
+    minutes: formatChargePlanNumber(normalized.minutes),
+    kwh: formatChargePlanNumber(normalized.targetKwh),
   });
+}
+
+function updateChargePlanSummary() {
+  const settings = normalizeChargePlanSettings(state.chargePlan);
+  const compactSummary = formatChargePlanCompactSummary(settings);
+  const isDefault = chargePlanMatchesDefaults(settings);
+
+  if (els.chargePlan.summary) {
+    els.chargePlan.summary.textContent = t("chargePlan.summary", {
+      minutes: formatChargePlanNumber(settings.minutes),
+      kwh: formatChargePlanNumber(settings.targetKwh),
+    });
+  }
+  if (els.chargePlan.triggerSummary) {
+    els.chargePlan.triggerSummary.hidden = isDefault;
+    els.chargePlan.triggerSummary.textContent = compactSummary;
+  }
+  if (els.chargePlan.trigger) {
+    els.chargePlan.trigger.classList.toggle("active", !isDefault);
+    els.chargePlan.trigger.setAttribute("aria-label", t("chargePlan.openWithSummary", {
+      summary: compactSummary,
+    }));
+  }
+}
+
+function resetChargePlanControls() {
+  const next = normalizeChargePlanSettings(CHARGE_PLAN_DEFAULTS);
+  const changed = next.minutes !== state.chargePlan.minutes ||
+    next.targetKwh !== state.chargePlan.targetKwh ||
+    next.efficiency !== state.chargePlan.efficiency;
+  state.chargePlan = next;
+  writeChargePlanControls();
+  if (changed) {
+    renderChargePlanAffectedViews();
+  }
 }
 
 function readChargePlanControls() {
@@ -1540,7 +1591,7 @@ function handleChargePlanInput(event) {
 }
 
 function initChargePlanControls() {
-  if (!els.chargePlan.container) {
+  if (!els.chargePlan.minutes && !els.chargePlan.targetKwh) {
     return;
   }
   state.chargePlan = normalizeChargePlanSettings(state.chargePlan);
@@ -3290,7 +3341,9 @@ async function loadCatalogStationsForCurrentCenter({ force = false, reset = fals
     if (searchSequence !== catalogSearchSequence) {
       return;
     }
-    console.error("Failed to load live catalog station search", err);
+    logLiveApiFailure("Failed to load live catalog station search", err, {
+      timeoutMs: LIVE_API_TIMEOUT_MS,
+    });
     state.catalog.lastResultCount = state.features.length || null;
     state.catalog.error = err;
   } finally {
@@ -3325,11 +3378,40 @@ function buildStationLiveApiUrl(stationId, path, params = {}) {
 }
 
 function isAbortError(error) {
-  return error?.name === "AbortError";
+  return error?.name === "AbortError" || error?.name === "TimeoutError";
 }
 
 function apiErrorDetailText(value) {
   return String(value || "").trim();
+}
+
+function createTimeoutError(timeoutMs) {
+  const message = `Request timed out after ${timeoutMs} ms`;
+  try {
+    return new DOMException(message, "TimeoutError");
+  } catch {
+    const error = new Error(message);
+    error.name = "TimeoutError";
+    return error;
+  }
+}
+
+function apiErrorLogDetails(error, details = {}) {
+  const message = String(error?.message || "").trim();
+  return {
+    ...details,
+    name: error?.name || "Error",
+    ...(message ? { message } : {}),
+    ...(Number.isFinite(Number(error?.status)) ? { status: Number(error.status) } : {}),
+  };
+}
+
+function logLiveApiFailure(message, error, details = {}) {
+  if (isAbortError(error)) {
+    console.warn(message, apiErrorLogDetails(error, details));
+    return;
+  }
+  console.error(message, error);
 }
 
 class HttpApiError extends Error {
@@ -3344,7 +3426,7 @@ class HttpApiError extends Error {
 
 async function fetchJsonWithTimeout(url, options = {}, timeoutMs = LIVE_API_TIMEOUT_MS) {
   const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  const timer = window.setTimeout(() => controller.abort(createTimeoutError(timeoutMs)), timeoutMs);
   try {
     const requestHeaders = {
       Accept: "application/json",
@@ -3369,6 +3451,11 @@ async function fetchJsonWithTimeout(url, options = {}, timeoutMs = LIVE_API_TIME
       throw new HttpApiError(response.status, detail, payload);
     }
     return await response.json();
+  } catch (err) {
+    if (controller.signal.aborted && controller.signal.reason) {
+      throw controller.signal.reason;
+    }
+    throw err;
   } finally {
     window.clearTimeout(timer);
   }
@@ -3498,12 +3585,16 @@ function requestLiveSummariesForFeatures(features) {
               missingStationIds,
             ));
           } catch (err) {
-            console.error(`Failed to load live station summaries from ${baseUrl}`, err);
+            logLiveApiFailure(`Failed to load live station summaries from ${baseUrl}`, err, {
+              timeoutMs: LIVE_API_TIMEOUT_MS,
+            });
           }
         }),
       ));
     } catch (err) {
-      console.error("Failed to load live station summaries", err);
+      logLiveApiFailure("Failed to load live station summaries", err, {
+        timeoutMs: LIVE_API_TIMEOUT_MS,
+      });
     } finally {
       pendingIds.forEach((stationId) => {
         state.live.pendingSummaryStationIds.delete(stationId);
@@ -7497,6 +7588,24 @@ async function syncLocationPermissionState() {
   }
 }
 
+function locationErrorLogDetails(error) {
+  const code = String(error?.code || LOCATION_ERROR_UNKNOWN).trim() || LOCATION_ERROR_UNKNOWN;
+  const message = String(error?.message || "").trim();
+  return {
+    code,
+    ...(message ? { message } : {}),
+  };
+}
+
+function logLocationRequestError(error) {
+  const details = locationErrorLogDetails(error);
+  if (details.code === LOCATION_ERROR_PERMISSION_DENIED) {
+    console.info("Location permission denied", details);
+    return;
+  }
+  console.warn("Location error", details);
+}
+
 async function refreshCatalogFromGPSPosition({
   recenter = false,
   reset = false,
@@ -7550,7 +7659,7 @@ async function refreshCatalogFromGPSPosition({
     }
     await loadCatalogStationsForCurrentCenter({ force: true, reset });
   } catch (err) {
-    console.warn("Location error", err);
+    logLocationRequestError(err);
     if (showError) {
       updateLocationState({
         permissionState: err.code === LOCATION_ERROR_PERMISSION_DENIED

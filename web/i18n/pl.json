@@ -283,7 +283,8 @@
     "saveFavorite": "Zapisz ulubione",
     "removeFavorite": "Usuń ulubione",
     "detailsOpen": "Otwórz szczegóły",
-    "activeFilters": "Filtry aktywne: {labels}"
+    "activeFilters": "Filtry aktywne: {labels}",
+    "closeChargePlan": "Zamknij ocene"
   },
   "common": {
     "yes": "Tak",
@@ -399,5 +400,14 @@
     "durationMinutes": "{minutes} min",
     "durationHours": "{hours} godz.",
     "durationHoursMinutes": "{hours} godz. {minutes} min"
+  },
+  "chargePlan": {
+    "button": "Ocen",
+    "openWithSummary": "Otworz ocene, teraz: {summary}",
+    "modalTitle": "Ocen ladowarki",
+    "modalIntro": "Dostosuj, ile energii potrzebujesz podczas tego postoju.",
+    "apply": "Zastosuj",
+    "reset": "Resetuj",
+    "compactSummary": "{minutes} min · {kwh} kWh"
   }
 }

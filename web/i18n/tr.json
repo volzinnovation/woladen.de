@@ -283,7 +283,8 @@
     "saveFavorite": "Favoriyi kaydet",
     "removeFavorite": "Favoriyi kaldır",
     "detailsOpen": "Ayrıntıları aç",
-    "activeFilters": "Aktif filtreler: {labels}"
+    "activeFilters": "Aktif filtreler: {labels}",
+    "closeChargePlan": "Degerlendirmeyi kapat"
   },
   "common": {
     "yes": "Evet",
@@ -399,5 +400,14 @@
     "durationMinutes": "{minutes} dk",
     "durationHours": "{hours} sa",
     "durationHoursMinutes": "{hours} sa {minutes} dk"
+  },
+  "chargePlan": {
+    "button": "Degerlendir",
+    "openWithSummary": "Degerlendirmeyi ac, gecerli: {summary}",
+    "modalTitle": "Sarj cihazlarini degerlendir",
+    "modalIntro": "Bu molada ne kadar enerjiye ihtiyaciniz oldugunu ayarlayin.",
+    "apply": "Uygula",
+    "reset": "Sifirla",
+    "compactSummary": "{minutes} min · {kwh} kWh"
   }
 }

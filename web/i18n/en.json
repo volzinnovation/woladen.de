@@ -66,7 +66,13 @@
     "minAmenitiesLabel": "{value}+ nearby places"
   },
   "chargePlan": {
-    "kicker": "Stop planner",
+    "button": "Rate",
+    "openWithSummary": "Open rating settings, current plan: {summary}",
+    "modalTitle": "Rate chargers",
+    "modalIntro": "Adjust how much energy you need during this stop.",
+    "apply": "Apply",
+    "reset": "Reset",
+    "compactSummary": "{minutes} min · {kwh} kWh",
     "title": "Match chargers to this break",
     "summary": "{minutes} min stop, {kwh} kWh needed",
     "minutesLabel": "Stop",
