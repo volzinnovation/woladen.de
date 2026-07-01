@@ -121,6 +121,24 @@ const FALLBACK_BUNDLE = {
     empty: "No charging stations found.",
     more: "...and {count} more",
   },
+  chargePlan: {
+    kicker: "Stop planner",
+    title: "Match chargers to this break",
+    summary: "{minutes} min stop, {kwh} kWh needed",
+    minutesLabel: "Stop",
+    minutesUnit: "min",
+    targetLabel: "Need",
+    kwhUnit: "kWh",
+    cardEstimate: "~{kwh} kWh in {minutes} min",
+    tiers: {
+      great: "Great fit",
+      good: "Good fit",
+      partial: "Partial",
+      slow: "Slow",
+      busy: "Busy now",
+      unavailable: "Offline",
+    },
+  },
   favorites: {
     title: "Favorites",
     sort: "Sort",
@@ -535,7 +553,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260629-route-progress1`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260701-charge-plan1`, import.meta.url));
     if (!response.ok) {
       return {};
     }

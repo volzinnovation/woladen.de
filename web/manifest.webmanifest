@@ -1,0 +1,26 @@
+{
+  "name": "woladen - Smart EV Stops",
+  "short_name": "woladen",
+  "description": "Find useful EV charging stops near restaurants, shops, bakeries, playgrounds, and cafes.",
+  "id": "/?source=pwa",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f766e",
+  "categories": ["navigation", "travel", "utilities"],
+  "icons": [
+    {
+      "src": "/img/touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

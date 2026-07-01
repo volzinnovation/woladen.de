@@ -19,6 +19,8 @@ Our aim is cover all of EU27 (subject to AFIR regulation), CH and NO.
 - Augments stations with nearby amenities, e.h. Restaurants, etc., such that humans have something to do while charging the car.
 - The commercial backend provides AFIR live status data from the various NAP in the EU and national open data providers.
 - Displays live occupancy from `https://live.woladen.de` and `https://live-eu.woladen.de`, where available.
+- Includes a web charging-stop planner that matches visible stations to a planned stop duration and needed kWh.
+- Ships an installable PWA shell with conservative static caching; live, API, and data feeds remain network-first.
 - Provides web, iPhone and Android app source and assets. Web site works perfectly fine, e.g. on a Tesla or NIO in-car browser.
 
 ## Project Structure

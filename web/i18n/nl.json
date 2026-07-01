@@ -48,6 +48,24 @@
     "empty": "Geen laadstations gevonden.",
     "more": "...en nog {count}"
   },
+  "chargePlan": {
+    "kicker": "Stopplanner",
+    "title": "Kies laders voor deze pauze",
+    "summary": "{minutes} min stop, {kwh} kWh nodig",
+    "minutesLabel": "Stop",
+    "minutesUnit": "min",
+    "targetLabel": "Nodig",
+    "kwhUnit": "kWh",
+    "cardEstimate": "~{kwh} kWh in {minutes} min",
+    "tiers": {
+      "great": "Zeer passend",
+      "good": "Past goed",
+      "partial": "Deels",
+      "slow": "Langzaam",
+      "busy": "Nu bezet",
+      "unavailable": "Offline"
+    }
+  },
   "favorites": {
     "title": "Favorieten",
     "sort": "Sorteren",

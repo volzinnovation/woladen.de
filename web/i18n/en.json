@@ -65,6 +65,24 @@
     "minAmenities": "Min. nearby places: {value}",
     "minAmenitiesLabel": "{value}+ nearby places"
   },
+  "chargePlan": {
+    "kicker": "Stop planner",
+    "title": "Match chargers to this break",
+    "summary": "{minutes} min stop, {kwh} kWh needed",
+    "minutesLabel": "Stop",
+    "minutesUnit": "min",
+    "targetLabel": "Need",
+    "kwhUnit": "kWh",
+    "cardEstimate": "~{kwh} kWh in {minutes} min",
+    "tiers": {
+      "great": "Great fit",
+      "good": "Good fit",
+      "partial": "Partial",
+      "slow": "Slow",
+      "busy": "Busy now",
+      "unavailable": "Offline"
+    }
+  },
   "route": {
     "title": "Route planner",
     "origin": "From",

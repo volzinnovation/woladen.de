@@ -7,6 +7,11 @@
       content="width=device-width, initial-scale=1.0"
     />
     <meta name="apple-itunes-app" content="app-id=6759499459" />
+    <meta name="theme-color" content="#0f766e" />
+    <meta name="application-name" content="woladen" />
+    <meta name="apple-mobile-web-app-title" content="woladen" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta
       name="google-site-verification"
       content="5jX9YToxzUiqUj_m9lwnElzfAJg-G3jdOwdTprl83Wc"
@@ -102,13 +107,14 @@
       sizes="180x180"
       href="/img/touch-icon.png?v=20260411"
     />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260701-pwa1" />
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css?v=20260627-detail-sheet1" />
+    <link rel="stylesheet" href="./styles.css?v=20260701-charge-plan1" />
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -249,6 +255,48 @@
             hidden
             data-nosnippet
           ></div>
+          <section
+            id="charge-plan"
+            class="charge-plan-panel"
+            aria-labelledby="charge-plan-title"
+            data-nosnippet
+          >
+            <div class="charge-plan-copy">
+              <span class="charge-plan-kicker" data-i18n="chargePlan.kicker">Stop planner</span>
+              <h3 id="charge-plan-title" data-i18n="chargePlan.title">Match chargers to this break</h3>
+              <p id="charge-plan-summary" class="charge-plan-summary"></p>
+            </div>
+            <div class="charge-plan-fields">
+              <label class="charge-plan-field" for="charge-plan-minutes">
+                <span data-i18n="chargePlan.minutesLabel">Stop</span>
+                <input
+                  id="charge-plan-minutes"
+                  class="charge-plan-input"
+                  type="number"
+                  min="5"
+                  max="90"
+                  step="5"
+                  value="30"
+                  inputmode="numeric"
+                />
+                <span data-i18n="chargePlan.minutesUnit">min</span>
+              </label>
+              <label class="charge-plan-field" for="charge-plan-kwh">
+                <span data-i18n="chargePlan.targetLabel">Need</span>
+                <input
+                  id="charge-plan-kwh"
+                  class="charge-plan-input"
+                  type="number"
+                  min="5"
+                  max="120"
+                  step="5"
+                  value="35"
+                  inputmode="numeric"
+                />
+                <span data-i18n="chargePlan.kwhUnit">kWh</span>
+              </label>
+            </div>
+          </section>
           <div id="charger-list" class="list-container">
             <!-- Cards injected here -->
             <div class="loading-state" data-nosnippet data-i18n="list.loading">Loading charging stations...</div>
@@ -1167,6 +1215,7 @@
       crossorigin=""
     ></script>
     <script src="./app-install-promo.js?v=20260620-eu-i18n9"></script>
-    <script src="./app.js?v=20260629-route-progress1" type="module"></script>
+    <script src="./pwa-register.js?v=20260701-pwa1"></script>
+    <script src="./app.js?v=20260701-charge-plan1" type="module"></script>
   </body>
 </html>

@@ -48,6 +48,24 @@
     "empty": "Keine Ladestationen gefunden.",
     "more": "...und {count} weitere"
   },
+  "chargePlan": {
+    "kicker": "Stopp-Planer",
+    "title": "Lader für diese Pause bewerten",
+    "summary": "{minutes} min Pause, {kwh} kWh benötigt",
+    "minutesLabel": "Stopp",
+    "minutesUnit": "min",
+    "targetLabel": "Bedarf",
+    "kwhUnit": "kWh",
+    "cardEstimate": "~{kwh} kWh in {minutes} min",
+    "tiers": {
+      "great": "Sehr passend",
+      "good": "Passt gut",
+      "partial": "Teilweise",
+      "slow": "Langsam",
+      "busy": "Gerade belegt",
+      "unavailable": "Offline"
+    }
+  },
   "favorites": {
     "title": "Favoriten",
     "sort": "Sortieren",

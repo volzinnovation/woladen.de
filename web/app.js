@@ -58,6 +58,10 @@ import {
   routeFiltersPayload,
 } from "./routing.mjs?v=20260626-routing-web1";
 import {
+  classifyChargePlanFit,
+  normalizeChargePlanSettings,
+} from "./charge-plan.mjs?v=20260701-charge-plan1";
+import {
   formatBundleSourceTitle,
   normalizeBundleSources,
   normalizeMappedCountries,
@@ -91,7 +95,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260629-route-progress1";
+} from "./i18n.mjs?v=20260701-charge-plan1";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -1099,6 +1103,7 @@ const state = {
     availableOnly: DEFAULT_FILTER_SETTINGS.availableOnly,
     currentlyOpenOnly: DEFAULT_FILTER_SETTINGS.currentlyOpenOnly,
   },
+  chargePlan: normalizeChargePlanSettings(),
   live: {
     baseUrl: LIVE_API_BASE_URL,
     deBaseUrl: LIVE_DE_API_BASE_URL,
@@ -1253,6 +1258,12 @@ const els = {
     routeFilterBtn: document.getElementById("btn-route-filter"),
     activeSummary: document.getElementById("active-filter-summary"),
   },
+  chargePlan: {
+    container: document.getElementById("charge-plan"),
+    minutes: document.getElementById("charge-plan-minutes"),
+    targetKwh: document.getElementById("charge-plan-kwh"),
+    summary: document.getElementById("charge-plan-summary"),
+  },
   route: {
     form: document.getElementById("route-form"),
     originInput: document.getElementById("route-origin-input"),
@@ -1371,6 +1382,7 @@ async function init() {
   initNavigation();
   syncViewWithRequestedHash();
   initFilters();
+  initChargePlanControls();
   initLocationSearch();
   initRoutePlanner();
   window.addEventListener("popstate", syncDetailModalWithUrl);
@@ -1434,6 +1446,7 @@ function initLanguageControls() {
 
 function refreshLanguageSensitiveViews() {
   updatePowerFilterLabel();
+  updateChargePlanSummary();
   populateOperators();
   renderAmenityFilters();
   setActiveNavItem(getActiveViewId());
@@ -1462,6 +1475,80 @@ function refreshLanguageSensitiveViews() {
       state.data.openStaticSummaryData,
     );
   }
+}
+
+function formatChargePlanNumber(value) {
+  const rounded = Math.round(Number(value) || 0);
+  return formatLocalizedInteger(rounded) || String(rounded);
+}
+
+function updateChargePlanSummary() {
+  if (!els.chargePlan.summary) {
+    return;
+  }
+  const settings = normalizeChargePlanSettings(state.chargePlan);
+  els.chargePlan.summary.textContent = t("chargePlan.summary", {
+    minutes: formatChargePlanNumber(settings.minutes),
+    kwh: formatChargePlanNumber(settings.targetKwh),
+  });
+}
+
+function readChargePlanControls() {
+  return normalizeChargePlanSettings({
+    minutes: els.chargePlan.minutes?.value,
+    targetKwh: els.chargePlan.targetKwh?.value,
+    efficiency: state.chargePlan.efficiency,
+  });
+}
+
+function writeChargePlanControls() {
+  if (els.chargePlan.minutes) {
+    els.chargePlan.minutes.value = String(state.chargePlan.minutes);
+  }
+  if (els.chargePlan.targetKwh) {
+    els.chargePlan.targetKwh.value = String(state.chargePlan.targetKwh);
+  }
+  updateChargePlanSummary();
+}
+
+function renderChargePlanAffectedViews() {
+  if (els.views.list.classList.contains("active")) {
+    renderList();
+  }
+  if (els.views.favorites.classList.contains("active")) {
+    renderFavorites();
+  }
+  if (els.views.route.classList.contains("active")) {
+    renderRouteResults();
+  }
+}
+
+function handleChargePlanInput(event) {
+  const next = readChargePlanControls();
+  const changed = next.minutes !== state.chargePlan.minutes ||
+    next.targetKwh !== state.chargePlan.targetKwh ||
+    next.efficiency !== state.chargePlan.efficiency;
+  state.chargePlan = next;
+  if (event?.type === "change") {
+    writeChargePlanControls();
+  } else {
+    updateChargePlanSummary();
+  }
+  if (changed) {
+    renderChargePlanAffectedViews();
+  }
+}
+
+function initChargePlanControls() {
+  if (!els.chargePlan.container) {
+    return;
+  }
+  state.chargePlan = normalizeChargePlanSettings(state.chargePlan);
+  writeChargePlanControls();
+  [els.chargePlan.minutes, els.chargePlan.targetKwh].forEach((input) => {
+    input?.addEventListener("input", handleChargePlanInput);
+    input?.addEventListener("change", handleChargePlanInput);
+  });
 }
 
 /* --- DATA LOADING --- */
@@ -5586,6 +5673,38 @@ function formatRouteCardLine(props) {
   return parts.join(" · ");
 }
 
+function getChargePlanFitForProps(props) {
+  const counts = getAvailabilityCounts(props);
+  return classifyChargePlanFit({
+    ...state.chargePlan,
+    maxPowerKw: getDisplayedMaxPowerKw(props),
+    amenityCount: finiteNumber(props?.amenities_total, 0),
+    availabilityStatus: getAvailabilityStatus(props),
+    availableEvses: counts.available,
+    totalEvses: counts.total,
+  });
+}
+
+function renderChargePlanFitMarkup(props) {
+  const fit = getChargePlanFitForProps(props);
+  if (fit.tier === "unknown") {
+    return "";
+  }
+  const minutes = formatChargePlanNumber(state.chargePlan.minutes);
+  const estimatedKwh = formatChargePlanNumber(fit.estimatedKwh);
+  const label = t(`chargePlan.tiers.${fit.tier}`);
+  const estimate = t("chargePlan.cardEstimate", {
+    kwh: estimatedKwh,
+    minutes,
+  });
+  return `
+    <div class="charge-plan-card-line">
+      <span class="charge-plan-badge charge-plan-fit-${fit.tier}">${escapeHtml(label)}</span>
+      <span class="charge-plan-estimate">${escapeHtml(estimate)}</span>
+    </div>
+  `;
+}
+
 function createStationCard(feature, options = {}) {
   const p = feature.properties;
   const stationId = getStationIdFromProps(p);
@@ -5638,6 +5757,7 @@ function createStationCard(feature, options = {}) {
   const dynamicLine = dynamicBadges
     ? `<div class="card-badge-line card-badge-line-dynamic">${dynamicBadges}</div>`
     : "";
+  const chargePlanMarkup = renderChargePlanFitMarkup(p);
   const amenityLine = amenityBadges
     ? `<div class="card-badge-line card-badge-line-amenities">${amenityBadges}</div>`
     : "";
@@ -5675,7 +5795,7 @@ function createStationCard(feature, options = {}) {
     </div>
     ${routeMarkup}
     <div class="card-badges">
-      ${dynamicLine}${amenityLine}
+      ${chargePlanMarkup}${dynamicLine}${amenityLine}
     </div>
     ${noteMarkup}
   `;
