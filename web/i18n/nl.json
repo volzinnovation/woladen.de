@@ -380,6 +380,7 @@
     "empty": "Voer start en bestemming in om laadstations langs de route te vinden.",
     "resolving": "Routepunten worden opgezocht...",
     "loading": "Laadstations langs de route worden berekend...",
+    "loadingStill": "De volledige route wordt nog gecontroleerd. Lange routes kunnen langer dan een minuut duren.",
     "missingEndpoints": "Kies eerst een start en bestemming.",
     "sameEndpoint": "Start en bestemming liggen te dicht bij elkaar.",
     "notConfigured": "Routeplanning is niet geconfigureerd.",

@@ -1,6 +1,7 @@
 {
   "private": true,
   "scripts": {
+    "test:unit": "node --test web/*.test.mjs",
     "test:playwright": "playwright test"
   },
   "devDependencies": {
