@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>woladen.de | Datenstatus</title>
+    <meta
+      name="description"
+      content="Datenstatus fuer woladen.de: statischer Ladekatalog, Tagesarchiv und lokale Bundle-Aktualitaet."
+    />
+    <link rel="canonical" href="https://woladen.de/status.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="woladen.de | Datenstatus" />
+    <meta
+      property="og:description"
+      content="Aktualitaet, Abdeckung und Tagesarchiv des woladen.de Ladekatalogs."
+    />
+    <meta property="og:url" content="https://woladen.de/status.html" />
+    <meta property="og:site_name" content="woladen.de" />
+    <meta property="og:locale" content="de_DE" />
+    <meta
+      property="og:image"
+      content="https://woladen.de/img/social-card-home.png?v=20260627-human1"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="woladen.de | Datenstatus" />
+    <meta
+      name="twitter:description"
+      content="Aktualitaet, Abdeckung und Tagesarchiv des woladen.de Ladekatalogs."
+    />
+    <meta
+      name="twitter:image"
+      content="https://woladen.de/img/social-card-home.png?v=20260627-human1"
+    />
+    <link rel="icon" href="/favicon.ico?v=20260411" sizes="any" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/favicon-32x32.png?v=20260411"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="/favicon-16x16.png?v=20260411"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css?v=20260701-data-status1" />
+    <script type="module" src="./status.mjs?v=20260701-data-status1"></script>
+  </head>
+  <body class="management-page data-status-page">
+    <main class="management-shell">
+      <header class="management-hero data-status-hero">
+        <p class="management-kicker">
+          <a href="https://woladen.de">woladen.de</a> Datenstatus
+        </p>
+        <h1>Abdeckung und Aktualitaet des Ladekatalogs</h1>
+        <p class="management-subtitle">
+          Oeffentliche Uebersicht ueber den statischen Europa-Katalog, das
+          Tagesarchiv und die lokal ausgelieferten Statusdateien.
+        </p>
+      </header>
+
+      <div id="data-status-alert" class="management-status" hidden></div>
+
+      <section id="data-status-kpis" class="management-kpis" aria-label="Katalog Kennzahlen"></section>
+
+      <section class="management-grid data-status-grid">
+        <article class="management-panel">
+          <div class="management-panel-head">
+            <h2>Aktualitaet</h2>
+            <p>Wann die wichtigsten oeffentlichen Datenpakete zuletzt erzeugt wurden.</p>
+          </div>
+          <dl id="freshness-list" class="data-status-list"></dl>
+        </article>
+
+        <article class="management-panel">
+          <div class="management-panel-head">
+            <h2>Auslieferungschecks</h2>
+            <p>Welche Dateien die statische Seite im Browser laden konnte.</p>
+          </div>
+          <div id="contract-checks" class="data-contract-checks"></div>
+        </article>
+      </section>
+
+      <section class="management-grid data-status-grid">
+        <article class="management-panel">
+          <div class="management-panel-head">
+            <h2>Top-Laender nach Schnellladern</h2>
+            <p>Statischer Open-Data-Katalog mit Standardgrenze ab 50 kW.</p>
+          </div>
+          <div class="management-table-wrap">
+            <table class="management-table">
+              <thead>
+                <tr>
+                  <th>Land</th>
+                  <th>Schnelllader</th>
+                  <th>Stationen</th>
+                  <th>Ladepunkte</th>
+                </tr>
+              </thead>
+              <tbody id="country-status-body"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="management-panel">
+          <div class="management-panel-head">
+            <h2>Quellenabdeckung</h2>
+            <p>Transparenz ueber verwendete Open-Data-Quellen und Lizenzstatus.</p>
+          </div>
+          <div id="source-status" class="data-source-status"></div>
+        </article>
+      </section>
+
+      <section class="management-panel management-notes">
+        <div class="management-panel-head">
+          <h2>Einordnung</h2>
+        </div>
+        <ul>
+          <li>
+            Der Status liest nur oeffentlich ausgelieferte Dateien unter
+            <code>/data/</code>. Private Rohdaten, Credentials und Backend-Deployments
+            sind nicht Teil dieser Seite.
+          </li>
+          <li>
+            Der statische Katalog bleibt auch ohne Live-Daten nutzbar. Live-Status
+            ergaenzt Stationen, wenn fuer die jeweilige Quelle belastbare Daten
+            vorhanden sind.
+          </li>
+          <li>
+            Fuer Detailanalysen zu Stoerungen und Auslastung steht die
+            <a href="./management.html">Tagesauswertung</a> bereit.
+          </li>
+        </ul>
+      </section>
+
+      <nav
+        class="bottom-nav management-bottom-nav"
+        data-nosnippet
+        role="navigation"
+        aria-label="Hauptnavigation"
+      >
+        <a class="nav-item" href="./">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="8" y1="6" x2="21" y2="6"></line>
+            <line x1="8" y1="12" x2="21" y2="12"></line>
+            <line x1="8" y1="18" x2="21" y2="18"></line>
+            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+          </svg>
+          <span>Liste</span>
+        </a>
+        <a class="nav-item" href="./management.html">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="10" width="4" height="11"></rect>
+            <rect x="10" y="5" width="4" height="16"></rect>
+            <rect x="17" y="8" width="4" height="13"></rect>
+          </svg>
+          <span>Stats</span>
+        </a>
+        <a class="nav-item active" href="./status.html" aria-current="page">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 19V5"></path>
+            <path d="M4 19h16"></path>
+            <path d="M8 15l3-3 3 2 5-7"></path>
+          </svg>
+          <span>Status</span>
+        </a>
+        <a class="nav-item" href="./#view-info">
+          <svg
+            class="nav-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <span>Info</span>
+        </a>
+      </nav>
+    </main>
+  </body>
+</html>

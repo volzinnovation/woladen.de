@@ -76,6 +76,7 @@ REQUIRED_DATA = [
 ROOT_URLS = [
     "",
     "management.html",
+    "status.html",
     "privacy.html",
     "imprint.html",
 ]

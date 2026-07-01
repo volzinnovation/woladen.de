@@ -4437,6 +4437,122 @@ select:focus-visible {
   border-radius: 6px;
 }
 
+.data-status-page .management-shell {
+  max-width: 1180px;
+}
+
+.data-status-hero h1 {
+  max-width: 13ch;
+}
+
+.data-status-grid {
+  align-items: stretch;
+}
+
+.data-status-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.data-status-row,
+.data-contract-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid rgba(19, 32, 41, 0.08);
+}
+
+.data-status-row:first-child,
+.data-contract-row:first-child {
+  border-top: 0;
+}
+
+.data-status-row dt {
+  color: rgba(19, 32, 41, 0.64);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.data-status-row dd {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  text-align: right;
+}
+
+.data-status-row dd span,
+.data-contract-row span,
+.data-source-status p {
+  color: rgba(19, 32, 41, 0.62);
+  font-size: 0.82rem;
+}
+
+.data-contract-checks {
+  display: grid;
+}
+
+.data-contract-row {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.data-contract-row > div {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.data-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.3rem;
+  min-height: 1.8rem;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.data-contract-row.is-error .data-status-pill {
+  background: rgba(220, 38, 38, 0.12);
+  color: var(--color-danger);
+}
+
+.data-source-status {
+  display: grid;
+  gap: 1rem;
+}
+
+.data-source-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.data-source-metrics div {
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(19, 32, 41, 0.08);
+}
+
+.data-source-metrics span {
+  display: block;
+  color: rgba(19, 32, 41, 0.62);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.data-source-metrics strong {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
 .management-app-promo {
   margin-top: 1rem;
 }
