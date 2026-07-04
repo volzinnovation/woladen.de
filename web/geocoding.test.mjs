@@ -50,6 +50,47 @@ test("geocoder API base URL can be configured and overridden", () => {
   );
 });
 
+test("geocoder API query helper ignores production-host overrides", () => {
+  assert.equal(
+    queryGeocoderApiBaseUrl(
+      "https://woladen.de/?geocoderApiBaseUrl=https://attacker.test/geocode",
+    ),
+    "",
+  );
+});
+
+test("geocoder API base URL ignores query override on production hosts", () => {
+  assert.equal(
+    resolveGeocoderApiBaseUrl({
+      configuredValue: "",
+      locationHref: "https://woladen.de/?geocoderApiBaseUrl=https://attacker.test/geocode",
+      locationHostname: "woladen.de",
+    }),
+    "https://live-eu.woladen.de/v1/geocode",
+  );
+});
+
+test("geocoder API base URL keeps configured values when production query override is ignored", () => {
+  assert.equal(
+    resolveGeocoderApiBaseUrl({
+      configuredValue: "https://configured.example.test/geocode/",
+      locationHref: "https://www.woladen.de/?geocoderApiBaseUrl=https://attacker.test/geocode",
+      locationHostname: "www.woladen.de",
+    }),
+    "https://configured.example.test/geocode",
+  );
+});
+
+test("geocoder API base URL allows local query override without explicit hostname", () => {
+  assert.equal(
+    resolveGeocoderApiBaseUrl({
+      configuredValue: "",
+      locationHref: "http://localhost:4177/?geocoderApiBaseUrl=http://127.0.0.1:9000/geocode",
+    }),
+    "http://127.0.0.1:9000/geocode",
+  );
+});
+
 test("buildGeocoderApiUrl writes autocomplete query parameters", () => {
   assert.equal(
     buildGeocoderApiUrl("https://live-eu.woladen.de/v1/geocode", "autocomplete", {

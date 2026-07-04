@@ -48,6 +48,9 @@ export function queryGeocoderApiBaseUrl(locationHref) {
   }
   try {
     const url = new URL(href);
+    if (!GEOCODER_LOCAL_HOSTS.has(url.hostname)) {
+      return "";
+    }
     return normalizeGeocoderApiBaseUrl(
       url.searchParams.get(GEOCODER_API_QUERY_PARAM) || "",
       url.href,
@@ -62,9 +65,14 @@ export function resolveGeocoderApiBaseUrl({
   locationHref = "",
   locationHostname = "",
 } = {}) {
-  const queryOverride = queryGeocoderApiBaseUrl(locationHref);
-  if (queryOverride) {
-    return queryOverride;
+  const hostname = String(
+    locationHostname || locationHostnameFromHref(locationHref),
+  ).trim();
+  if (GEOCODER_LOCAL_HOSTS.has(hostname)) {
+    const queryOverride = queryGeocoderApiBaseUrl(locationHref);
+    if (queryOverride) {
+      return queryOverride;
+    }
   }
 
   const configured = normalizeGeocoderApiBaseUrl(
@@ -75,9 +83,6 @@ export function resolveGeocoderApiBaseUrl({
     return configured;
   }
 
-  const hostname = String(
-    locationHostname || locationHostnameFromHref(locationHref),
-  ).trim();
   if (GEOCODER_LOCAL_HOSTS.has(hostname)) {
     return GEOCODER_REMOTE_BASE_URL;
   }

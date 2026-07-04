@@ -4676,7 +4676,7 @@ function createStationMarker(feature) {
 }
 
 function bindStationMarker(marker, feature) {
-  marker.bindTooltip(formatStationMarkerLabel(feature), { direction: "top", offset: [0, -8] });
+  marker.bindTooltip(escapeHtml(formatStationMarkerLabel(feature)), { direction: "top", offset: [0, -8] });
   marker.on("add", () => enhanceStationMarkerElement(marker, feature));
   marker.on("click", () => openDetail(feature));
   return marker;
@@ -4690,7 +4690,7 @@ function renderDetailStationMarker(feature) {
     state.views.detailMap.removeLayer(state.views.detailMap.stationMarker);
   }
   const marker = createStationMarker(feature).addTo(state.views.detailMap);
-  marker.bindTooltip(formatStationMarkerLabel(feature), { direction: "top", offset: [0, -8] });
+  marker.bindTooltip(escapeHtml(formatStationMarkerLabel(feature)), { direction: "top", offset: [0, -8] });
   state.views.detailMap.stationMarker = marker;
 }
 

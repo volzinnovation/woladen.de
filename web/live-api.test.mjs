@@ -28,6 +28,17 @@ test("queryGermanLiveApiBaseUrl reads the explicit German backend override", () 
   );
 });
 
+test("query live API helpers ignore production-host overrides", () => {
+  assert.equal(
+    queryLiveApiBaseUrl("https://woladen.de/?liveApiBaseUrl=https://attacker.test"),
+    "",
+  );
+  assert.equal(
+    queryGermanLiveApiBaseUrl("https://www.woladen.de/?deLiveApiBaseUrl=https://attacker.test"),
+    "",
+  );
+});
+
 test("resolveLiveApiBaseUrl prefers query override over configured and host defaults", () => {
   assert.equal(
     resolveLiveApiBaseUrl({
@@ -39,6 +50,28 @@ test("resolveLiveApiBaseUrl prefers query override over configured and host defa
   );
 });
 
+test("resolveLiveApiBaseUrl ignores query override on production hosts", () => {
+  assert.equal(
+    resolveLiveApiBaseUrl({
+      configuredValue: "",
+      locationHref: "https://woladen.de/?liveApiBaseUrl=https://attacker.test",
+      locationHostname: "woladen.de",
+    }),
+    "https://live-eu.woladen.de",
+  );
+});
+
+test("resolveLiveApiBaseUrl keeps configured values when production query override is ignored", () => {
+  assert.equal(
+    resolveLiveApiBaseUrl({
+      configuredValue: "https://configured.example.test/api/",
+      locationHref: "https://woladen.de/?liveApiBaseUrl=https://attacker.test",
+      locationHostname: "woladen.de",
+    }),
+    "https://configured.example.test/api",
+  );
+});
+
 test("resolveLiveApiBaseUrl keeps the live-eu production default for localhost without override", () => {
   assert.equal(
     resolveLiveApiBaseUrl({
@@ -47,6 +80,16 @@ test("resolveLiveApiBaseUrl keeps the live-eu production default for localhost w
       locationHostname: "127.0.0.1",
     }),
     "https://live-eu.woladen.de",
+  );
+});
+
+test("resolveLiveApiBaseUrl allows local query override without explicit hostname", () => {
+  assert.equal(
+    resolveLiveApiBaseUrl({
+      configuredValue: "",
+      locationHref: "http://localhost:4173/?liveApiBaseUrl=http://127.0.0.1:8001",
+    }),
+    "http://127.0.0.1:8001",
   );
 });
 
@@ -66,6 +109,28 @@ test("resolveGermanLiveApiBaseUrl maps German live data to live-eu", () => {
     resolveGermanLiveApiBaseUrl({
       configuredValue: "",
       locationHref: "https://woladen.de/",
+      locationHostname: "woladen.de",
+    }),
+    "https://live-eu.woladen.de",
+  );
+});
+
+test("resolveGermanLiveApiBaseUrl ignores German-specific query override on production hosts", () => {
+  assert.equal(
+    resolveGermanLiveApiBaseUrl({
+      configuredValue: "",
+      locationHref: "https://www.woladen.de/?deLiveApiBaseUrl=https://attacker.test",
+      locationHostname: "www.woladen.de",
+    }),
+    "https://live-eu.woladen.de",
+  );
+});
+
+test("resolveGermanLiveApiBaseUrl ignores primary query fallback on production hosts", () => {
+  assert.equal(
+    resolveGermanLiveApiBaseUrl({
+      configuredValue: "",
+      locationHref: "https://woladen.de/?liveApiBaseUrl=https://attacker.test",
       locationHostname: "woladen.de",
     }),
     "https://live-eu.woladen.de",

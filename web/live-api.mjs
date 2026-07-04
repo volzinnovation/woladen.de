@@ -28,10 +28,29 @@ function queryApiBaseUrl(locationHref, queryParam) {
   }
   try {
     const url = new URL(href);
+    if (!LIVE_LOCAL_HOSTS.has(url.hostname)) {
+      return "";
+    }
     return normalizeLiveApiBaseUrl(url.searchParams.get(queryParam) || "");
   } catch (error) {
     return "";
   }
+}
+
+function locationHostnameFromHref(locationHref) {
+  try {
+    return new URL(String(locationHref || "")).hostname;
+  } catch (error) {
+    return "";
+  }
+}
+
+function liveApiOverrideHost(locationHref, locationHostname) {
+  return String(locationHostname || locationHostnameFromHref(locationHref)).trim();
+}
+
+function allowsQueryApiBaseUrl(locationHref, locationHostname) {
+  return LIVE_LOCAL_HOSTS.has(liveApiOverrideHost(locationHref, locationHostname));
 }
 
 export function queryLiveApiBaseUrl(locationHref) {
@@ -47,9 +66,12 @@ export function resolveLiveApiBaseUrl({
   locationHref = "",
   locationHostname = "",
 } = {}) {
-  const queryOverride = queryLiveApiBaseUrl(locationHref);
-  if (queryOverride) {
-    return queryOverride;
+  const hostname = liveApiOverrideHost(locationHref, locationHostname);
+  if (allowsQueryApiBaseUrl(locationHref, hostname)) {
+    const queryOverride = queryLiveApiBaseUrl(locationHref);
+    if (queryOverride) {
+      return queryOverride;
+    }
   }
 
   const configured = normalizeLiveApiBaseUrl(configuredValue);
@@ -57,7 +79,6 @@ export function resolveLiveApiBaseUrl({
     return configured;
   }
 
-  const hostname = String(locationHostname || "").trim();
   if (LIVE_LOCAL_HOSTS.has(hostname)) {
     return normalizeLiveApiBaseUrl(LIVE_EU_API_BASE_URL);
   }
@@ -73,9 +94,13 @@ export function resolveGermanLiveApiBaseUrl({
   locationHostname = "",
   primaryBaseUrl = "",
 } = {}) {
-  const germanQueryOverride = queryGermanLiveApiBaseUrl(locationHref);
-  if (germanQueryOverride) {
-    return germanQueryOverride;
+  const hostname = liveApiOverrideHost(locationHref, locationHostname);
+  const allowQueryOverride = allowsQueryApiBaseUrl(locationHref, hostname);
+  if (allowQueryOverride) {
+    const germanQueryOverride = queryGermanLiveApiBaseUrl(locationHref);
+    if (germanQueryOverride) {
+      return germanQueryOverride;
+    }
   }
 
   const configured = normalizeLiveApiBaseUrl(configuredValue);
@@ -83,14 +108,16 @@ export function resolveGermanLiveApiBaseUrl({
     return configured;
   }
 
-  const primaryQueryOverride = queryLiveApiBaseUrl(locationHref);
-  if (primaryQueryOverride) {
-    return primaryQueryOverride;
+  if (allowQueryOverride) {
+    const primaryQueryOverride = queryLiveApiBaseUrl(locationHref);
+    if (primaryQueryOverride) {
+      return primaryQueryOverride;
+    }
   }
 
   return normalizeLiveApiBaseUrl(primaryBaseUrl) || resolveLiveApiBaseUrl({
     configuredValue: "",
     locationHref,
-    locationHostname,
+    locationHostname: hostname,
   });
 }
