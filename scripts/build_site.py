@@ -34,7 +34,9 @@ SOCIAL_IMAGE_HEIGHT = "630"
 SOCIAL_IMAGE_ALT = (
     "woladen preview with a Europe charger map and the slogan: The human side of charging."
 )
-IOS_APP_LINK = "https://apps.apple.com/de/app/wo-laden/id6759499459"
+IOS_APP_STORE_ID = "6759499459"
+IOS_APP_BANNER_META = f'<meta name="apple-itunes-app" content="app-id={IOS_APP_STORE_ID}" />'
+IOS_APP_LINK = f"https://apps.apple.com/de/app/wo-laden/id{IOS_APP_STORE_ID}"
 ANDROID_APP_LINK = "https://play.google.com/store/apps/details?id=de.woladen.android"
 STATION_ID_NAMESPACE = "DE:"
 STATIC_BUNDLE_ENV = "WOLADEN_STATIC_BUNDLE_PATH"
@@ -1620,6 +1622,7 @@ def render_seo_shell(page: SeoPage, bundles: dict[str, dict[str, str]], structur
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {IOS_APP_BANNER_META}
     <title>{format_text(page.title)}</title>
     <meta name="description" content="{format_text(page.description)}" />
     <link rel="canonical" href="{html.escape(canonical_url)}" />
@@ -2658,6 +2661,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {IOS_APP_BANNER_META}
     <title>{format_text(operator)} in {format_text(title_city)} | {format_text(max_power)} kW {format_text(station_type)} | woladen.de</title>
     <meta name="description" content="{format_text(description)}" />
     <link rel="canonical" href="{canonical_url}" />
