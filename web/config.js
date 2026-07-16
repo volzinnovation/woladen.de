@@ -18,3 +18,11 @@ window.WOLADEN_COMMERCIAL_API_BASE_URL =
 
 window.WOLADEN_OCCUPANCY_API_BASE_URL =
   window.WOLADEN_OCCUPANCY_API_BASE_URL || "./api/commercial/v1/mobile";
+
+// Management analytics stay private. Point this at an approved same-origin
+// entitlement/session proxy ending in /v1/management; never embed a shared API
+// token in browser configuration. Empty means use the rebuildable static cache.
+window.WOLADEN_MANAGEMENT_API_BASE_URL =
+  window.WOLADEN_MANAGEMENT_API_BASE_URL || "";
+window.WOLADEN_MANAGEMENT_STATIC_FALLBACK_ENABLED =
+  window.WOLADEN_MANAGEMENT_STATIC_FALLBACK_ENABLED !== false;

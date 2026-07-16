@@ -1,4 +1,5 @@
-const MANAGEMENT_INDEX_PATH = "./data/management/index.json";
+import { createManagementDataSource } from "./management-api.mjs";
+
 const TOP_STATIONS_LIMIT = 10;
 const ANDROID_WEB_LINK = "https://play.google.com/store/apps/details?id=de.woladen.android";
 const ANDROID_STORE_LINK = "market://details?id=de.woladen.android";
@@ -31,9 +32,10 @@ export const OVERVIEW_METRICS = {
     description: "Stationen mit Wechseln zwischen frei und belegt im Tagesverlauf.",
     kind: "count",
   },
-  observations_total: {
-    label: "AFIR Statusbeobachtungen",
-    description: "Extrahierte Ladepunkt-Statusbeobachtungen im Tagesverlauf.",
+  archive_messages_total: {
+    label: "Empfangene AFIR-Meldungen",
+    description:
+      "Archivierte Push- und Abrufmeldungen des Tages. Eine Meldung kann eine einzelne Änderung oder viele Statusbeobachtungen enthalten.",
     kind: "count",
   },
 };
@@ -254,9 +256,9 @@ export function buildSummaryCards(snapshot) {
       detail: "Hier war besonders viel los.",
     },
     {
-      label: "AFIR Statusbeobachtungen",
-      value: numberFormat(summary.observations_total),
-      detail: "Extrahierte Ladepunkt-Statusmeldungen im Tagesverlauf.",
+      label: "Empfangene AFIR-Meldungen",
+      value: numberFormat(summary.archive_messages_total ?? summary.observations_total),
+      detail: "Archivierte Push- und Abrufmeldungen des Tages.",
     },
   ];
   const deltaWarningCount = optionalNumber(summary.delta_delivery_without_push_provider_count) ?? 0;
@@ -396,14 +398,6 @@ function wireAppPromoDismiss() {
   dismissButton.addEventListener("click", () => {
     promo.remove();
   });
-}
-
-async function fetchJson(path) {
-  const response = await fetch(path, { cache: "no-cache" });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} for ${path}`);
-  }
-  return await response.json();
 }
 
 async function waitForChart() {
@@ -733,8 +727,12 @@ async function initManagementPage() {
   const status = document.getElementById("management-status");
   wireAppPromoLinks();
   wireAppPromoDismiss();
-  const indexPayload = await fetchJson(MANAGEMENT_INDEX_PATH);
-  const trendsPayload = await fetchJson("./data/management/trends.json");
+  const dataSource = createManagementDataSource({
+    apiBaseUrl: window.WOLADEN_MANAGEMENT_API_BASE_URL || "",
+    staticFallbackEnabled: window.WOLADEN_MANAGEMENT_STATIC_FALLBACK_ENABLED !== false,
+  });
+  const indexPayload = await dataSource.loadIndex();
+  let trendsPayload = { summary_series: [] };
   await waitForChart();
   wireSortableTables();
   const availableDates = Array.isArray(indexPayload.available_dates) ? indexPayload.available_dates : [];
@@ -806,7 +804,10 @@ async function initManagementPage() {
   }
 
   async function loadSnapshot(targetDate) {
-    currentSnapshot = await fetchJson(snapshotPathForDate(targetDate));
+    const loaded = await dataSource.loadSnapshot(targetDate);
+    currentSnapshot = loaded.snapshot;
+    trendsPayload = loaded.trends;
+    document.documentElement.dataset.managementDataSource = loaded.source;
     currentDate = targetDate;
     syncUrl();
     updateDateControls();

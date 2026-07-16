@@ -58,7 +58,7 @@ test("overview metric options cover the management KPI cards", () => {
     "stations_with_disruptions",
     "disruptions_at_end_of_day",
     "high_utilization_stations",
-    "observations_total",
+    "archive_messages_total",
   ]);
 });
 
@@ -70,6 +70,7 @@ test("buildSummaryCards exposes the public-facing station metrics", () => {
       stations_with_disruptions: 870,
       disruptions_at_end_of_day: 441,
       high_utilization_stations: 1872,
+      archive_messages_total: 1050176,
       observations_total: 30970,
     },
   });
@@ -77,7 +78,8 @@ test("buildSummaryCards exposes the public-facing station metrics", () => {
   assert.equal(cards[0].label, "Stationen im Tagesarchiv");
   assert.equal(cards[1].value, "870");
   assert.equal(cards[3].label, "Stationen mit hoher Auslastung");
-  assert.equal(cards[4].label, "AFIR Statusbeobachtungen");
+  assert.equal(cards[4].label, "Empfangene AFIR-Meldungen");
+  assert.equal(cards[4].value, "1.050.176");
 });
 
 test("buildSummaryCards exposes delta delivery warning when daily coverage can undercount", () => {
