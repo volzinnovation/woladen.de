@@ -971,10 +971,15 @@ body {
 
 .settings-container {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
   max-width: 760px;
   margin: 0 auto;
   padding-bottom: 2rem;
+}
+
+#view-settings .settings-container {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .settings-section {

@@ -183,6 +183,14 @@ test("route planner is visible in main navigation", () => {
   assert.match(appJs, /const VIEW_IDS = new Set\(VIEW_ORDER\);/);
 });
 
+test("settings keep units before number fields and a single-column desktop layout", () => {
+  const indexHtml = readText(INDEX_HTML_URL);
+  const styles = readText(STYLES_URL);
+  assert.match(indexHtml, /class="settings-input-wrap"><span>kWh<\/span><input id="setting-battery-kwh"/);
+  assert.match(indexHtml, /class="settings-input-wrap"><span>kWh\/100 km<\/span><input id="setting-consumption"/);
+  assert.match(styles, /#view-settings \.settings-container\s*{[^}]*grid-template-columns: minmax\(0, 1fr\)/);
+});
+
 test("route actions sit above route results and can save visible stations as favorites", () => {
   const indexHtml = readText(INDEX_HTML_URL);
   const appJs = readText(new URL("./app.js", import.meta.url));

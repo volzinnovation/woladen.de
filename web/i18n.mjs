@@ -577,7 +577,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260717-settings1`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260717-settings2`, import.meta.url));
     if (!response.ok) {
       return {};
     }

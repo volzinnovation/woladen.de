@@ -65,7 +65,7 @@ import {
   normalizeChargePlanSettings,
   parseStoredChargePlan,
   serializeStoredChargePlan,
-} from "./charge-plan.mjs?v=20260717-settings1";
+} from "./charge-plan.mjs?v=20260717-settings2";
 import {
   formatBundleSourceTitle,
   normalizeBundleSources,
@@ -100,7 +100,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260717-settings1";
+} from "./i18n.mjs?v=20260717-settings2";
 
 /**
  * woladen.de - Modern Frontend Logic
