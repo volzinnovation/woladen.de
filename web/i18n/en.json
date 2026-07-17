@@ -59,22 +59,23 @@
     "stationNearbyPlaces": "nearby places"
   },
   "nav": {
-    "route": "Route"
+    "route": "Route",
+    "settings": "Settings"
   },
   "filters": {
     "minAmenities": "Min. nearby places: {value}",
     "minAmenitiesLabel": "{value}+ nearby places"
   },
   "chargePlan": {
-    "button": "Rate",
-    "openWithSummary": "Open rating settings, current plan: {summary}",
+    "button": "Need",
+    "openWithSummary": "Open settings, current need: {summary}",
     "modalTitle": "Rate chargers",
     "modalIntro": "Adjust how much energy you need during this stop.",
     "apply": "Apply",
     "reset": "Reset",
-    "compactSummary": "{minutes} min · {kwh} kWh",
+    "compactSummary": "{from}% → {to}% · {kwh} kWh",
     "title": "Match chargers to this break",
-    "summary": "{minutes} min stop, {kwh} kWh needed",
+    "summary": "{from}% → {to}%, {kwh} kWh needed",
     "minutesLabel": "Stop",
     "minutesUnit": "min",
     "targetLabel": "Need",
@@ -88,6 +89,22 @@
       "busy": "Busy now",
       "unavailable": "Offline"
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "intro": "Your vehicle details stay on this device.",
+    "vehicleTitle": "Vehicle & energy need",
+    "batterySize": "Battery size",
+    "consumption": "Energy consumption",
+    "chargingAmount": "Charging amount",
+    "chargeFrom": "From",
+    "chargeTo": "To",
+    "averageSpeed": "Average charging speed",
+    "calculatedNeed": "Calculated need",
+    "addedRange": "≈ {range} km added range",
+    "displayTitle": "Display",
+    "displayLanguage": "Display language",
+    "reset": "Reset settings"
   },
   "route": {
     "title": "Route planner",

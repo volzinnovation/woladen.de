@@ -1,12 +1,12 @@
-const CACHE_NAME = "woladen-shell-20260701-rate-modal1";
+const CACHE_NAME = "woladen-shell-20260717-settings1";
 
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=20260701-rate-modal1",
+  "/styles.css?v=20260717-settings1",
   "/app-install-promo.js?v=20260620-eu-i18n9",
   "/pwa-register.js?v=20260701-pwa1",
-  "/app.js?v=20260701-rate-modal1",
+  "/app.js?v=20260717-settings1",
   "/filtering.mjs?v=20260626-routing-web1",
   "/filter-settings.mjs?v=20260626-routing-web1",
   "/favorite-metadata.mjs?v=20260626-favorites-web1",
@@ -15,12 +15,12 @@ const APP_SHELL = [
   "/live-api.mjs?v=20260630-live-eu1",
   "/geocoding.mjs?v=20260618-commercial-merge",
   "/routing.mjs?v=20260626-routing-web1",
-  "/charge-plan.mjs?v=20260701-charge-plan1",
+  "/charge-plan.mjs?v=20260717-settings1",
   "/open-static-ui.mjs?v=20260618-commercial-merge",
   "/map-keyboard.mjs?v=20260618-keyboard-restore",
   "/rating.mjs",
   "/note.mjs",
-  "/i18n.mjs?v=20260701-rate-modal1",
+  "/i18n.mjs?v=20260717-settings1",
   "/styles.css",
   "/app.js",
   "/config.js",

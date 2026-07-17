@@ -179,7 +179,7 @@ test("route planner is visible in main navigation", () => {
   const appJs = readText(new URL("./app.js", import.meta.url));
   assert.match(indexHtml, /id="view-route"/);
   assert.match(indexHtml, /class="nav-item"[^>]*data-target="view-route"/);
-  assert.match(appJs, /const VIEW_ORDER = \["view-list", "view-map", "view-route", "view-favorites", "view-info"\];/);
+  assert.match(appJs, /const VIEW_ORDER = \["view-list", "view-map", "view-route", "view-favorites", "view-settings", "view-info"\];/);
   assert.match(appJs, /const VIEW_IDS = new Set\(VIEW_ORDER\);/);
 });
 

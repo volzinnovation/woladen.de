@@ -963,6 +963,115 @@ body {
   gap: 0.75rem;
 }
 
+.settings-header p {
+  margin: 0.3rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.settings-container {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 760px;
+  margin: 0 auto;
+  padding-bottom: 2rem;
+}
+
+.settings-section {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.settings-section h3 {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.settings-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.5rem;
+  color: var(--color-text-main);
+  font-weight: 700;
+}
+
+.settings-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.settings-field input[type="number"],
+.settings-field select {
+  width: 6rem;
+  min-height: 2.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface-strong);
+  color: var(--color-text-main);
+  font: inherit;
+  text-align: center;
+}
+
+.settings-field select { width: min(16rem, 52vw); padding: 0 0.65rem; text-align: left; }
+
+.settings-slider-group {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1.2rem;
+  font-weight: 700;
+}
+
+.settings-slider-group > label {
+  display: grid;
+  grid-template-columns: 3rem 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+}
+
+.settings-slider-group input[type="range"] { width: 100%; accent-color: var(--color-primary); }
+
+.settings-label-row,
+.settings-range-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.settings-range-labels { color: var(--color-text-muted); font-size: 0.75rem; font-weight: 500; }
+
+.settings-result {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.2rem 1rem;
+  margin-top: 1.4rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.settings-result strong { color: var(--color-primary-dark); font-size: 1.2rem; }
+.settings-result span:last-child { grid-column: 2; font-size: 0.84rem; text-align: right; }
+.settings-reset { justify-self: start; }
+
+@media (max-width: 620px) {
+  .settings-grid { grid-template-columns: 1fr; }
+}
+
 .charge-plan-card-line {
   display: flex;
   align-items: center;

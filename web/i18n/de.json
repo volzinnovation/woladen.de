@@ -16,6 +16,7 @@
     "map": "Karte",
     "route": "Route",
     "favorites": "Favoriten",
+    "settings": "Einstellungen",
     "stats": "Stats",
     "info": "Info"
   },
@@ -50,15 +51,15 @@
     "more": "...und {count} weitere"
   },
   "chargePlan": {
-    "button": "Bewerten",
-    "openWithSummary": "Bewerten öffnen, aktuell: {summary}",
+    "button": "Bedarf",
+    "openWithSummary": "Einstellungen öffnen, aktueller Bedarf: {summary}",
     "modalTitle": "Lader bewerten",
     "modalIntro": "Passe an, wie viel Energie du während deiner Pause brauchst.",
     "apply": "Anwenden",
     "reset": "Zurücksetzen",
-    "compactSummary": "{minutes} min · {kwh} kWh",
+    "compactSummary": "{from}% → {to}% · {kwh} kWh",
     "title": "Lader für diese Pause bewerten",
-    "summary": "{minutes} min Pause, {kwh} kWh benötigt",
+    "summary": "{from}% → {to}%, {kwh} kWh benötigt",
     "minutesLabel": "Stopp",
     "minutesUnit": "min",
     "targetLabel": "Bedarf",
@@ -72,6 +73,22 @@
       "busy": "Gerade belegt",
       "unavailable": "Offline"
     }
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "intro": "Deine Fahrzeugdaten bleiben auf diesem Gerät.",
+    "vehicleTitle": "Fahrzeug & Energiebedarf",
+    "batterySize": "Batteriegröße",
+    "consumption": "Energieverbrauch",
+    "chargingAmount": "Lademenge",
+    "chargeFrom": "Von",
+    "chargeTo": "Bis",
+    "averageSpeed": "Durchschnittliche Ladeleistung",
+    "calculatedNeed": "Berechneter Bedarf",
+    "addedRange": "≈ {range} km zusätzliche Reichweite",
+    "displayTitle": "Anzeige",
+    "displayLanguage": "Anzeigesprache",
+    "reset": "Einstellungen zurücksetzen"
   },
   "favorites": {
     "title": "Favoriten",

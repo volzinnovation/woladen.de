@@ -115,7 +115,7 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css?v=20260701-rate-modal1" />
+    <link rel="stylesheet" href="./styles.css?v=20260717-settings1" />
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -250,7 +250,7 @@
                 class="text-btn charge-plan-trigger"
                 type="button"
               >
-                <span data-i18n="chargePlan.button">Rate</span>
+                <span data-i18n="chargePlan.button">Need</span>
                 <span
                   id="charge-plan-action-summary"
                   class="charge-plan-trigger-summary"
@@ -454,6 +454,54 @@
             <div class="empty-state" data-nosnippet>
               No favorites saved yet.
             </div>
+          </div>
+        </div>
+
+        <!-- SETTINGS VIEW -->
+        <div id="view-settings" class="view hidden">
+          <div class="view-header settings-header" data-nosnippet>
+            <div>
+              <h2 data-i18n="settings.title">Settings</h2>
+              <p data-i18n="settings.intro">Your vehicle details stay on this device.</p>
+            </div>
+          </div>
+          <div class="content-container settings-container" data-nosnippet>
+            <section class="settings-section" aria-labelledby="settings-vehicle-title">
+              <h3 id="settings-vehicle-title" data-i18n="settings.vehicleTitle">Vehicle & energy need</h3>
+              <div class="settings-grid">
+                <label class="settings-field" for="setting-battery-kwh">
+                  <span data-i18n="settings.batterySize">Battery size</span>
+                  <span class="settings-input-wrap"><input id="setting-battery-kwh" type="number" min="10" max="200" step="1" inputmode="decimal" /><span>kWh</span></span>
+                </label>
+                <label class="settings-field" for="setting-consumption">
+                  <span data-i18n="settings.consumption">Energy consumption</span>
+                  <span class="settings-input-wrap"><input id="setting-consumption" type="number" min="5" max="50" step="0.1" inputmode="decimal" /><span>kWh/100 km</span></span>
+                </label>
+              </div>
+              <div class="settings-slider-group">
+                <div class="settings-label-row"><span data-i18n="settings.chargingAmount">Charging amount</span><strong id="setting-charge-range-value">10% → 80%</strong></div>
+                <label for="setting-charge-from"><span data-i18n="settings.chargeFrom">From</span><input id="setting-charge-from" type="range" min="10" max="90" step="5" /></label>
+                <label for="setting-charge-to"><span data-i18n="settings.chargeTo">To</span><input id="setting-charge-to" type="range" min="10" max="90" step="5" /></label>
+              </div>
+              <label class="settings-slider-group" for="setting-average-speed">
+                <div class="settings-label-row"><span data-i18n="settings.averageSpeed">Average charging speed</span><strong><span id="setting-average-speed-value">120</span> kW</strong></div>
+                <input id="setting-average-speed" type="range" min="3" max="400" step="1" />
+                <div class="settings-range-labels"><span>3 kW</span><span>400 kW</span></div>
+              </label>
+              <div class="settings-result" aria-live="polite">
+                <span data-i18n="settings.calculatedNeed">Calculated need</span>
+                <strong id="settings-need-summary">52.5 kWh</strong>
+                <span id="settings-range-summary">≈ 292 km</span>
+              </div>
+            </section>
+            <section class="settings-section" aria-labelledby="settings-display-title">
+              <h3 id="settings-display-title" data-i18n="settings.displayTitle">Display</h3>
+              <label class="settings-field" for="settings-language-select">
+                <span data-i18n="settings.displayLanguage">Display language</span>
+                <select id="settings-language-select" data-language-select></select>
+              </label>
+            </section>
+            <button id="btn-reset-settings" class="text-btn settings-reset" type="button" data-i18n="settings.reset">Reset settings</button>
           </div>
         </div>
 
@@ -736,6 +784,13 @@
             ></polygon>
           </svg>
           <span data-i18n="nav.favorites">Favorites</span>
+        </button>
+        <button class="nav-item" data-target="view-settings" type="button">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.2.37.6.8 1.1 1 .35.13.72.2 1.1.2h.1v4h-.1a1.7 1.7 0 0 0-1.1.4c-.5.2-.9.6-1.1 1Z"></path>
+          </svg>
+          <span data-i18n="nav.settings">Settings</span>
         </button>
         <a class="nav-item" href="./management.html">
           <svg
@@ -1269,6 +1324,6 @@
     ></script>
     <script src="./app-install-promo.js?v=20260620-eu-i18n9"></script>
     <script src="./pwa-register.js?v=20260701-pwa1"></script>
-    <script src="./app.js?v=20260701-rate-modal1" type="module"></script>
+    <script src="./app.js?v=20260717-settings1" type="module"></script>
   </body>
 </html>

@@ -11,6 +11,7 @@
     "label": "Taal"
   },
   "nav": {
+    "settings": "Instellingen",
     "label": "Hoofdnavigatie",
     "list": "Lijst",
     "map": "Kaart",
@@ -18,6 +19,22 @@
     "stats": "Statistieken",
     "info": "Info",
     "route": "Route"
+  },
+  "settings": {
+    "title": "Instellingen",
+    "intro": "Je voertuiggegevens blijven op dit apparaat.",
+    "vehicleTitle": "Voertuig en energiebehoefte",
+    "batterySize": "Batterijcapaciteit",
+    "consumption": "Energieverbruik",
+    "chargingAmount": "Laadhoeveelheid",
+    "chargeFrom": "Van",
+    "chargeTo": "Tot",
+    "averageSpeed": "Gemiddeld laadvermogen",
+    "calculatedNeed": "Berekende behoefte",
+    "addedRange": "≈ {range} km extra bereik",
+    "displayTitle": "Weergave",
+    "displayLanguage": "Weergavetaal",
+    "reset": "Instellingen herstellen"
   },
   "search": {
     "label": "Plaats of adres zoeken",

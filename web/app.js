@@ -60,9 +60,12 @@ import {
 } from "./routing.mjs?v=20260626-routing-web1";
 import {
   CHARGE_PLAN_DEFAULTS,
+  calculateChargeNeed,
   classifyChargePlanFit,
   normalizeChargePlanSettings,
-} from "./charge-plan.mjs?v=20260701-charge-plan1";
+  parseStoredChargePlan,
+  serializeStoredChargePlan,
+} from "./charge-plan.mjs?v=20260717-settings1";
 import {
   formatBundleSourceTitle,
   normalizeBundleSources,
@@ -97,7 +100,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260701-rate-modal1";
+} from "./i18n.mjs?v=20260717-settings1";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -110,6 +113,7 @@ const RATINGS_STORAGE_KEY = "woladen_ratings_v1";
 const RATING_CLIENT_STORAGE_KEY = "woladen_rating_client_v1";
 const NOTES_STORAGE_KEY = "woladen_notes_v1";
 const FILTERS_STORAGE_KEY = "woladen_filters_v1";
+const CHARGE_PLAN_STORAGE_KEY = "woladen_charge_settings_v1";
 const SHARED_RATINGS_ENABLED = window.WOLADEN_ENABLE_SHARED_RATINGS === true ||
   window.WOLADEN_ENABLE_SHARED_RATINGS === "true";
 const RATING_SUMMARY_REFRESH_MS = 60000;
@@ -1223,6 +1227,7 @@ const els = {
     list: document.getElementById("view-list"),
     route: document.getElementById("view-route"),
     favorites: document.getElementById("view-favorites"),
+    settings: document.getElementById("view-settings"),
     info: document.getElementById("view-info"),
   },
   navItems: document.querySelectorAll(".nav-item"),
@@ -1269,6 +1274,16 @@ const els = {
     summary: document.getElementById("charge-plan-summary"),
     applyBtn: document.getElementById("btn-apply-charge-plan"),
     resetBtn: document.getElementById("btn-reset-charge-plan"),
+    batteryKwh: document.getElementById("setting-battery-kwh"),
+    consumption: document.getElementById("setting-consumption"),
+    chargeFrom: document.getElementById("setting-charge-from"),
+    chargeTo: document.getElementById("setting-charge-to"),
+    chargeRangeValue: document.getElementById("setting-charge-range-value"),
+    averageSpeed: document.getElementById("setting-average-speed"),
+    averageSpeedValue: document.getElementById("setting-average-speed-value"),
+    needSummary: document.getElementById("settings-need-summary"),
+    rangeSummary: document.getElementById("settings-range-summary"),
+    settingsResetBtn: document.getElementById("btn-reset-settings"),
   },
   route: {
     form: document.getElementById("route-form"),
@@ -1351,6 +1366,7 @@ const els = {
   },
   meta: document.getElementById("app-meta"),
   languageSelect: document.getElementById("language-select"),
+  settingsLanguageSelect: document.getElementById("settings-language-select"),
   info: {
     stationCount: document.getElementById("bundle-station-count"),
     chargerCount: document.getElementById("bundle-charger-count"),
@@ -1359,7 +1375,7 @@ const els = {
   },
 };
 
-const VIEW_ORDER = ["view-list", "view-map", "view-route", "view-favorites", "view-info"];
+const VIEW_ORDER = ["view-list", "view-map", "view-route", "view-favorites", "view-settings", "view-info"];
 const VIEW_IDS = new Set(VIEW_ORDER);
 const VIEW_HASH_ALIASES = new Map([
   ["list", "view-list"],
@@ -1373,6 +1389,8 @@ const VIEW_HASH_ALIASES = new Map([
   ["route-planner", "view-route"],
   ["favorites", "view-favorites"],
   ["favoriten", "view-favorites"],
+  ["settings", "view-settings"],
+  ["einstellungen", "view-settings"],
   ["info", "view-info"],
 ]);
 const INITIAL_REQUESTED_VIEW_ID = normalizeRequestedViewId(window.location.hash);
@@ -1385,6 +1403,7 @@ async function init() {
   loadRatings();
   loadNotes();
   loadFilters();
+  loadChargePlanSettings();
   initMap();
   initNavigation();
   syncViewWithRequestedHash();
@@ -1401,9 +1420,10 @@ async function init() {
   els.filter.listFilterBtn.addEventListener("click", () => openModal("filter"));
   els.filter.routeFilterBtn?.addEventListener("click", () => openModal("filter"));
   els.filter.applyBtn.addEventListener("click", () => closeModal("filter"));
-  els.chargePlan.trigger?.addEventListener("click", () => openModal("chargePlan"));
+  els.chargePlan.trigger?.addEventListener("click", () => switchView("view-settings"));
   els.chargePlan.applyBtn?.addEventListener("click", () => closeModal("chargePlan"));
   els.chargePlan.resetBtn?.addEventListener("click", resetChargePlanControls);
+  els.chargePlan.settingsResetBtn?.addEventListener("click", resetChargePlanControls);
   els.route.favoriteAllBtn?.addEventListener("click", addRouteResultsToFavorites);
   els.routeMap.clearBtn?.addEventListener("click", clearRoute);
 
@@ -1447,8 +1467,14 @@ async function init() {
 function initLanguageControls() {
   applyDocumentTranslations();
   populateLanguageSelect(els.languageSelect);
+  populateLanguageSelect(els.settingsLanguageSelect);
   if (els.languageSelect) {
     els.languageSelect.addEventListener("change", (event) => {
+      void setLanguage(event.target.value);
+    });
+  }
+  if (els.settingsLanguageSelect) {
+    els.settingsLanguageSelect.addEventListener("change", (event) => {
       void setLanguage(event.target.value);
     });
   }
@@ -1496,28 +1522,35 @@ function formatChargePlanNumber(value) {
 function chargePlanMatchesDefaults(settings = state.chargePlan) {
   const normalized = normalizeChargePlanSettings(settings);
   const defaults = normalizeChargePlanSettings(CHARGE_PLAN_DEFAULTS);
-  return normalized.minutes === defaults.minutes &&
-    normalized.targetKwh === defaults.targetKwh &&
+  return normalized.batteryKwh === defaults.batteryKwh &&
+    normalized.consumptionKwhPer100Km === defaults.consumptionKwhPer100Km &&
+    normalized.chargeFromPercent === defaults.chargeFromPercent &&
+    normalized.chargeToPercent === defaults.chargeToPercent &&
+    normalized.averageChargingKw === defaults.averageChargingKw &&
     normalized.efficiency === defaults.efficiency;
 }
 
 function formatChargePlanCompactSummary(settings = state.chargePlan) {
   const normalized = normalizeChargePlanSettings(settings);
+  const { targetKwh } = calculateChargeNeed(normalized);
   return t("chargePlan.compactSummary", {
-    minutes: formatChargePlanNumber(normalized.minutes),
-    kwh: formatChargePlanNumber(normalized.targetKwh),
+    from: normalized.chargeFromPercent,
+    to: normalized.chargeToPercent,
+    kwh: formatChargePlanNumber(targetKwh),
   });
 }
 
 function updateChargePlanSummary() {
   const settings = normalizeChargePlanSettings(state.chargePlan);
+  const need = calculateChargeNeed(settings);
   const compactSummary = formatChargePlanCompactSummary(settings);
   const isDefault = chargePlanMatchesDefaults(settings);
 
   if (els.chargePlan.summary) {
     els.chargePlan.summary.textContent = t("chargePlan.summary", {
-      minutes: formatChargePlanNumber(settings.minutes),
-      kwh: formatChargePlanNumber(settings.targetKwh),
+      from: settings.chargeFromPercent,
+      to: settings.chargeToPercent,
+      kwh: formatChargePlanNumber(need.targetKwh),
     });
   }
   if (els.chargePlan.triggerSummary) {
@@ -1534,10 +1567,9 @@ function updateChargePlanSummary() {
 
 function resetChargePlanControls() {
   const next = normalizeChargePlanSettings(CHARGE_PLAN_DEFAULTS);
-  const changed = next.minutes !== state.chargePlan.minutes ||
-    next.targetKwh !== state.chargePlan.targetKwh ||
-    next.efficiency !== state.chargePlan.efficiency;
+  const changed = JSON.stringify(next) !== JSON.stringify(state.chargePlan);
   state.chargePlan = next;
+  saveChargePlanSettings();
   writeChargePlanControls();
   if (changed) {
     renderChargePlanAffectedViews();
@@ -1546,19 +1578,27 @@ function resetChargePlanControls() {
 
 function readChargePlanControls() {
   return normalizeChargePlanSettings({
-    minutes: els.chargePlan.minutes?.value,
-    targetKwh: els.chargePlan.targetKwh?.value,
+    batteryKwh: els.chargePlan.batteryKwh?.value,
+    consumptionKwhPer100Km: els.chargePlan.consumption?.value,
+    chargeFromPercent: els.chargePlan.chargeFrom?.value,
+    chargeToPercent: els.chargePlan.chargeTo?.value,
+    averageChargingKw: els.chargePlan.averageSpeed?.value,
     efficiency: state.chargePlan.efficiency,
   });
 }
 
 function writeChargePlanControls() {
-  if (els.chargePlan.minutes) {
-    els.chargePlan.minutes.value = String(state.chargePlan.minutes);
-  }
-  if (els.chargePlan.targetKwh) {
-    els.chargePlan.targetKwh.value = String(state.chargePlan.targetKwh);
-  }
+  const settings = normalizeChargePlanSettings(state.chargePlan);
+  if (els.chargePlan.batteryKwh) els.chargePlan.batteryKwh.value = String(settings.batteryKwh);
+  if (els.chargePlan.consumption) els.chargePlan.consumption.value = String(settings.consumptionKwhPer100Km);
+  if (els.chargePlan.chargeFrom) els.chargePlan.chargeFrom.value = String(settings.chargeFromPercent);
+  if (els.chargePlan.chargeTo) els.chargePlan.chargeTo.value = String(settings.chargeToPercent);
+  if (els.chargePlan.averageSpeed) els.chargePlan.averageSpeed.value = String(settings.averageChargingKw);
+  const need = calculateChargeNeed(settings);
+  if (els.chargePlan.chargeRangeValue) els.chargePlan.chargeRangeValue.textContent = `${settings.chargeFromPercent}% → ${settings.chargeToPercent}%`;
+  if (els.chargePlan.averageSpeedValue) els.chargePlan.averageSpeedValue.textContent = String(settings.averageChargingKw);
+  if (els.chargePlan.needSummary) els.chargePlan.needSummary.textContent = `${need.targetKwh} kWh`;
+  if (els.chargePlan.rangeSummary) els.chargePlan.rangeSummary.textContent = t("settings.addedRange", { range: need.addedRangeKm });
   updateChargePlanSummary();
 }
 
@@ -1576,10 +1616,9 @@ function renderChargePlanAffectedViews() {
 
 function handleChargePlanInput(event) {
   const next = readChargePlanControls();
-  const changed = next.minutes !== state.chargePlan.minutes ||
-    next.targetKwh !== state.chargePlan.targetKwh ||
-    next.efficiency !== state.chargePlan.efficiency;
+  const changed = JSON.stringify(next) !== JSON.stringify(state.chargePlan);
   state.chargePlan = next;
+  saveChargePlanSettings();
   if (event?.type === "change") {
     writeChargePlanControls();
   } else {
@@ -1591,15 +1630,32 @@ function handleChargePlanInput(event) {
 }
 
 function initChargePlanControls() {
-  if (!els.chargePlan.minutes && !els.chargePlan.targetKwh) {
+  if (!els.chargePlan.batteryKwh) {
     return;
   }
   state.chargePlan = normalizeChargePlanSettings(state.chargePlan);
   writeChargePlanControls();
-  [els.chargePlan.minutes, els.chargePlan.targetKwh].forEach((input) => {
+  [els.chargePlan.batteryKwh, els.chargePlan.consumption, els.chargePlan.chargeFrom, els.chargePlan.chargeTo, els.chargePlan.averageSpeed].forEach((input) => {
     input?.addEventListener("input", handleChargePlanInput);
     input?.addEventListener("change", handleChargePlanInput);
   });
+}
+
+function loadChargePlanSettings() {
+  try {
+    state.chargePlan = parseStoredChargePlan(localStorage.getItem(CHARGE_PLAN_STORAGE_KEY));
+  } catch (error) {
+    console.error("Error loading charge settings", error);
+    state.chargePlan = normalizeChargePlanSettings();
+  }
+}
+
+function saveChargePlanSettings() {
+  try {
+    localStorage.setItem(CHARGE_PLAN_STORAGE_KEY, serializeStoredChargePlan(state.chargePlan));
+  } catch (error) {
+    console.error("Error saving charge settings", error);
+  }
 }
 
 /* --- DATA LOADING --- */
@@ -5781,7 +5837,7 @@ function renderChargePlanFitMarkup(props) {
   if (fit.tier === "unknown") {
     return "";
   }
-  const minutes = formatChargePlanNumber(state.chargePlan.minutes);
+  const minutes = formatChargePlanNumber(fit.estimatedMinutes);
   const estimatedKwh = formatChargePlanNumber(fit.estimatedKwh);
   const label = t(`chargePlan.tiers.${fit.tier}`);
   const estimate = t("chargePlan.cardEstimate", {

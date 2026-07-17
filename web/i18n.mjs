@@ -89,6 +89,7 @@ const FALLBACK_BUNDLE = {
     map: "Map",
     route: "Route",
     favorites: "Favorites",
+    settings: "Settings",
     stats: "Stats",
     info: "Info",
   },
@@ -123,15 +124,15 @@ const FALLBACK_BUNDLE = {
     more: "...and {count} more",
   },
   chargePlan: {
-    button: "Rate",
-    openWithSummary: "Open rating settings, current plan: {summary}",
+    button: "Need",
+    openWithSummary: "Open settings, current need: {summary}",
     modalTitle: "Rate chargers",
     modalIntro: "Adjust how much energy you need during this stop.",
     apply: "Apply",
     reset: "Reset",
-    compactSummary: "{minutes} min · {kwh} kWh",
+    compactSummary: "{from}% → {to}% · {kwh} kWh",
     title: "Match chargers to this break",
-    summary: "{minutes} min stop, {kwh} kWh needed",
+    summary: "{from}% → {to}%, {kwh} kWh needed",
     minutesLabel: "Stop",
     minutesUnit: "min",
     targetLabel: "Need",
@@ -145,6 +146,22 @@ const FALLBACK_BUNDLE = {
       busy: "Busy now",
       unavailable: "Offline",
     },
+  },
+  settings: {
+    title: "Settings",
+    intro: "Your vehicle details stay on this device.",
+    vehicleTitle: "Vehicle & energy need",
+    batterySize: "Battery size",
+    consumption: "Energy consumption",
+    chargingAmount: "Charging amount",
+    chargeFrom: "From",
+    chargeTo: "To",
+    averageSpeed: "Average charging speed",
+    calculatedNeed: "Calculated need",
+    addedRange: "≈ {range} km added range",
+    displayTitle: "Display",
+    displayLanguage: "Display language",
+    reset: "Reset settings",
   },
   favorites: {
     title: "Favorites",
@@ -560,7 +577,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260701-rate-modal1`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260717-settings1`, import.meta.url));
     if (!response.ok) {
       return {};
     }
