@@ -60,25 +60,25 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260620-eu-i18n4" />
+    <link rel="stylesheet" href="./styles.css?v=20260720-management-countries1" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
       defer
     ></script>
     <script src="./config.js"></script>
-    <script type="module" src="./management.mjs?v=20260716-postgres1"></script>
+    <script type="module" src="./management.mjs?v=20260720-management-countries1"></script>
   </head>
   <body class="management-page">
     <main class="management-shell">
       <header class="management-hero">
-        <p class="management-kicker">
-          <a href="https://woladen.de">woladen.de</a> Tagesauswertung
+        <p id="management-kicker" class="management-kicker">
+          <a href="https://woladen.de">woladen.de</a> Managementanalyse
           · <a href="./status.html">Datenstatus</a>
         </p>
-        <h1>eMobilität in Europa - Zustand öffentlicher Ladestationen</h1>
+        <h1 id="management-title">Zustand öffentlicher Ladenetze in Europa</h1>
         <p id="management-subtitle" class="management-subtitle">
-          Störungen und Auslastung öffentlicher Ladestationen in angebundenen europäischen Ländern am
-          Donnerstag 17.04.2026
+          Länderübersicht für Verfügbarkeit, Auslastung und Datenqualität der
+          angebundenen öffentlichen Ladestationen.
         </p>
       </header>
 
@@ -151,6 +151,93 @@
         </div>
       </section>
 
+      <div id="management-status" class="management-status" hidden></div>
+
+      <section id="management-country-overview" hidden>
+        <section class="management-panel management-controls management-controls--overview">
+          <div class="management-control">
+            <label for="management-overview-date">Auswertungstag</label>
+            <div class="management-date-row">
+              <button
+                id="management-overview-prev-day"
+                type="button"
+                class="management-btn"
+                aria-label="Vorheriger Auswertungstag"
+              >
+                ←
+              </button>
+              <input id="management-overview-date" type="date" />
+              <button
+                id="management-overview-next-day"
+                type="button"
+                class="management-btn"
+                aria-label="Nächster Auswertungstag"
+              >
+                →
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="management-country-summary"
+          class="management-summary-strip"
+          aria-label="Europäische Kennzahlen"
+        ></section>
+
+        <section class="management-panel management-country-panel">
+          <div class="management-panel-head management-panel-head--split">
+            <div>
+              <h2>Länder mit gemessenen Live-Daten</h2>
+              <p>
+                Ein Land öffnen, um Tagesverlauf, Stationen und Anbieter im
+                Detail zu analysieren.
+              </p>
+            </div>
+            <span id="management-country-count" class="management-count-badge"></span>
+          </div>
+          <div class="management-table-wrap">
+            <table class="management-table management-sortable management-country-table">
+              <thead>
+                <tr>
+                  <th data-sort-type="text">Land</th>
+                  <th data-sort-type="number">Stationen</th>
+                  <th data-sort-type="number">Ladepunkte</th>
+                  <th data-sort-type="number">Auslastung</th>
+                  <th data-sort-type="number">Störungsanteil</th>
+                  <th data-sort-type="number">Nicht gemessen</th>
+                  <th data-sort-type="number">Beobachtete Tage</th>
+                  <th class="unsortable" data-sortable="false"><span class="visually-hidden">Öffnen</span></th>
+                </tr>
+              </thead>
+              <tbody id="management-country-body"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="management-panel management-notes">
+          <div class="management-panel-head">
+            <h2>Was die Länderübersicht zeigt</h2>
+          </div>
+          <ul>
+            <li>
+              Die Übersicht enthält nur Länder, für die am gewählten Tag
+              tatsächlich gemessene Live-Statusintervalle vorliegen.
+            </li>
+            <li>
+              Auslastung und Störungsanteil beziehen sich auf gemessene Zeit.
+              Unbekannte oder nicht gemessene Zeit wird separat ausgewiesen.
+            </li>
+            <li>
+              Die Detailseiten basieren auf der PostgreSQL-Historie und bieten
+              Zeiträume von 7, 28 oder 90 Tagen.
+            </li>
+          </ul>
+        </section>
+      </section>
+
+      <div id="management-country-detail" hidden>
+
       <section class="management-panel management-controls">
         <div class="management-control">
           <label for="management-date">Datum</label>
@@ -176,11 +263,23 @@
           <label for="management-overview-metric">Zeitreihe</label>
           <select id="management-overview-metric"></select>
         </div>
+        <div class="management-control">
+          <label for="management-window-days">Berichtszeitraum</label>
+          <select id="management-window-days">
+            <option value="7">7 Tage</option>
+            <option value="28" selected>28 Tage</option>
+            <option value="90">90 Tage</option>
+          </select>
+        </div>
       </section>
 
-      <div id="management-status" class="management-status" hidden></div>
-
       <section id="management-kpis" class="management-kpis"></section>
+
+      <section
+        id="management-data-quality"
+        class="management-summary-strip management-summary-strip--detail"
+        aria-label="Datenqualität"
+      ></section>
 
       <section class="management-grid">
         <article class="management-panel">
@@ -210,9 +309,9 @@
               <thead>
                 <tr>
                   <th data-sort-type="text">Ladestation</th>
-                  <th data-sort-type="text">Ort</th>
                   <th data-sort-type="number">Betroffene Ladepunkte</th>
                   <th data-sort-type="number">Noch gestört</th>
+                  <th data-sort-type="number">Störungsanteil</th>
                   <th data-sort-type="number">Ausfallzeit</th>
                   <th data-sort-type="text">Status</th>
                 </tr>
@@ -234,13 +333,40 @@
               <thead>
                 <tr>
                   <th data-sort-type="text">Ladestation</th>
-                  <th data-sort-type="text">Ort</th>
-                  <th data-sort-type="number">Wechsel frei/belegt</th>
-                  <th data-sort-type="number">Beteiligte Ladepunkte</th>
-                  <th data-sort-type="number">Leistung</th>
+                  <th data-sort-type="number">Ladepunkte</th>
+                  <th data-sort-type="number">Tagesauslastung</th>
+                  <th data-sort-type="number">Belegte Zeit</th>
+                  <th data-sort-type="number">Statuswechsel</th>
                 </tr>
               </thead>
               <tbody id="busy-stations-body"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article id="management-provider-window-panel" class="management-panel">
+          <div class="management-panel-head">
+            <h2 id="management-provider-window-title">Anbieterleistung über 28 Tage</h2>
+            <p>
+              Historische Abdeckung, Auslastung, Zuverlässigkeit und
+              Transportfehler je Anbieter aus PostgreSQL.
+            </p>
+          </div>
+          <div class="management-table-wrap">
+            <table class="management-table management-sortable">
+              <thead>
+                <tr>
+                  <th data-sort-type="text">Anbieter</th>
+                  <th data-sort-type="number">Stationen</th>
+                  <th data-sort-type="number">Messtage</th>
+                  <th data-sort-type="number">Auslastung</th>
+                  <th data-sort-type="number">Störungsanteil</th>
+                  <th data-sort-type="number">Tag / Nacht</th>
+                  <th data-sort-type="number">Transportfehler</th>
+                  <th data-sort-type="text">Einordnung</th>
+                </tr>
+              </thead>
+              <tbody id="provider-window-body"></tbody>
             </table>
           </div>
         </article>
@@ -259,10 +385,8 @@
                 <tr>
                   <th data-sort-type="text">Anbieter</th>
                   <th data-sort-type="number">Statusbeobachtungen</th>
-                  <th data-sort-type="number">Beobachtungen je Ladestation</th>
                   <th data-sort-type="number">Empfangene AFIR-Meldungen</th>
                   <th data-sort-type="number">Ladestationen im Tagesarchiv</th>
-                  <th data-sort-type="number">Schnelllader ohne Tagesbeobachtung</th>
                   <th data-sort-type="number">Push</th>
                   <th data-sort-type="number">Pull</th>
                   <th data-sort-type="number">Fehler</th>
@@ -288,29 +412,31 @@
             niedriger sein als die aktuelle Live-Abdeckung.
           </li>
           <li>
-            Als Störung zählt ein Ladepunkt, wenn er an einem Tag als nicht
-            verfügbar gemeldet wurde.
+            Als Störung zählt ein Ladepunkt, wenn er als außer Betrieb gemeldet
+            wurde. Nicht verfügbar und unbekannt werden separat behandelt.
           </li>
           <li>
-            Hohe Auslastung heißt hier: häufige Wechsel zwischen frei und
-            belegt. Störungen oder unbekannte Zustände zählen dafür nicht mit.
+            Auslastung ist der Anteil belegter Zeit an der gemessenen Zeit.
+            Störungen, nicht verfügbare oder unbekannte Zustände zählen nicht
+            als Belegung.
           </li>
           <li>
-            Beobachtungen je Ladestation teilt die extrahierten
-            Ladepunkt-Statusbeobachtungen durch die Anzahl eindeutig
-            referenzierter Ladestation-IDs des Tages. Empfangene AFIR-Meldungen
-            zählen nur den Transport: Ein Push kann eine einzelne Änderung oder
-            viele Statusbeobachtungen enthalten.
-            Schnelllader ohne Tagesbeobachtung zählt statisch zugeordnete
-            Schnellladestation-IDs, für die im Tagesarchiv keine Beobachtung
-            vorlag.
+            Die Anbieterleistung fasst 7, 28 oder 90 Tage zusammen. Eine hohe
+            Konfidenz bedeutet, dass für den gewählten Zeitraum ausreichend
+            Messtage vorhanden sind; sie ist keine Qualitätsbewertung des
+            Ladenetzes.
           </li>
           <li>
-            Grundlage sind tägliche AFIR- und Live-Datensätze aus den
-            angebundenen Quellen, hier für woladen.de gespiegelt.
+            Empfangene AFIR-Meldungen zählen den Transport. Eine Meldung kann
+            eine einzelne Änderung oder viele Statusbeobachtungen enthalten.
+          </li>
+          <li>
+            Grundlage sind normalisierte Statusintervalle und tägliche
+            Anbieter-Metadaten aus der PostgreSQL-Analyse von woladen.de.
           </li>
         </ul>
       </section>
+      </div>
 
       <nav
         class="bottom-nav management-bottom-nav"

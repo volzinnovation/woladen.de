@@ -35,10 +35,12 @@ export function createManagementDataSource({
   const normalizedApiBaseUrl = normalizeManagementApiBaseUrl(apiBaseUrl);
   let source = normalizedApiBaseUrl ? "postgresql" : "static-cache";
   let staticTrends = null;
+  let staticIndex = null;
 
   async function loadStaticIndex() {
     source = "static-cache";
-    return await fetchJson(fetchImpl, staticIndexPath);
+    staticIndex = staticIndex || (await fetchJson(fetchImpl, staticIndexPath));
+    return staticIndex;
   }
 
   async function loadIndex() {
@@ -54,14 +56,84 @@ export function createManagementDataSource({
     return await loadStaticIndex();
   }
 
-  async function loadSnapshot(dateText) {
+  async function loadCountries() {
+    if (source === "postgresql") {
+      try {
+        return await fetchJson(fetchImpl, `${normalizedApiBaseUrl}/countries`);
+      } catch (error) {
+        if (!staticFallbackEnabled) {
+          throw error;
+        }
+      }
+    }
+    const index = await loadStaticIndex();
+    const dates = Array.isArray(index.available_dates) ? index.available_dates : [];
+    return {
+      schema_version: "management-static-country-fallback-v1",
+      countries: dates.length
+        ? [
+            {
+              country_code: "DE",
+              first_date: dates[0],
+              last_date: dates.at(-1),
+              observed_days: dates.length,
+            },
+          ]
+        : [],
+    };
+  }
+
+  async function loadCountryOverview(dateText) {
+    if (source === "postgresql") {
+      try {
+        const query = new URLSearchParams({
+          start_date: dateText,
+          end_date: dateText,
+          group_by: "country",
+          limit: "100",
+          offset: "0",
+        });
+        return await fetchJson(fetchImpl, `${normalizedApiBaseUrl}/report?${query.toString()}`);
+      } catch (error) {
+        if (!staticFallbackEnabled) {
+          throw error;
+        }
+        source = "static-cache";
+      }
+    }
+    const snapshot = await fetchJson(fetchImpl, staticSnapshotPath(dateText));
+    return {
+      schema_version: "management-static-country-overview-v1",
+      start_date: dateText,
+      end_date: dateText,
+      rows: [
+        {
+          country_code: "DE",
+          ...(snapshot.summary || {}),
+          station_count:
+            snapshot.summary?.station_count ??
+            snapshot.summary?.daily_afir_stations_observed ??
+            snapshot.summary?.afir_stations_observed,
+          observed_evses:
+            snapshot.summary?.observed_evses ??
+            snapshot.summary?.daily_afir_stations_observed ??
+            snapshot.summary?.afir_stations_observed,
+        },
+      ],
+    };
+  }
+
+  async function loadSnapshot(dateText, { countryCode = "", trendDays = 90 } = {}) {
     if (source === "postgresql") {
       try {
         const query = new URLSearchParams({
           archive_date: dateText,
           station_limit: "10",
-          trend_days: "90",
+          trend_days: String(trendDays),
         });
+        if (countryCode) {
+          query.set("country_code", countryCode);
+        }
         const snapshot = await fetchJson(
           fetchImpl,
           `${normalizedApiBaseUrl}/dashboard?${query.toString()}`,
@@ -78,6 +150,9 @@ export function createManagementDataSource({
         source = "static-cache";
       }
     }
+    if (countryCode && countryCode !== "DE") {
+      throw new Error(`Für ${countryCode} ist keine statische Ersatzauswertung verfügbar.`);
+    }
     const [snapshot, trends] = await Promise.all([
       fetchJson(fetchImpl, staticSnapshotPath(dateText)),
       staticTrends
@@ -88,9 +163,53 @@ export function createManagementDataSource({
     return { snapshot, trends, source };
   }
 
+  async function loadReport({ startDate, endDate, countryCode, groupBy = "provider" }) {
+    if (source !== "postgresql") {
+      return {
+        schema_version: "management-static-report-unavailable-v1",
+        start_date: startDate,
+        end_date: endDate,
+        group_by: groupBy,
+        rows: [],
+      };
+    }
+    const query = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+      group_by: groupBy,
+      country_code: countryCode,
+      limit: "1000",
+      offset: "0",
+    });
+    return await fetchJson(fetchImpl, `${normalizedApiBaseUrl}/report?${query.toString()}`);
+  }
+
+  async function loadProviderHealth({ startDate, endDate, countryCode }) {
+    if (source !== "postgresql") {
+      return {
+        schema_version: "management-static-provider-health-unavailable-v1",
+        start_date: startDate,
+        end_date: endDate,
+        rows: [],
+      };
+    }
+    const query = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+      country_code: countryCode,
+      limit: "1000",
+      offset: "0",
+    });
+    return await fetchJson(fetchImpl, `${normalizedApiBaseUrl}/provider-health?${query.toString()}`);
+  }
+
   return {
+    loadCountries,
+    loadCountryOverview,
     loadIndex,
     loadSnapshot,
+    loadReport,
+    loadProviderHealth,
     currentSource: () => source,
   };
 }

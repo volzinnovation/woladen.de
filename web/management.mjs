@@ -3,6 +3,8 @@ import { createManagementDataSource } from "./management-api.mjs";
 const TOP_STATIONS_LIMIT = 10;
 const ANDROID_WEB_LINK = "https://play.google.com/store/apps/details?id=de.woladen.android";
 const ANDROID_STORE_LINK = "market://details?id=de.woladen.android";
+const DEFAULT_WINDOW_DAYS = 28;
+const COUNTRY_NAMES = new Intl.DisplayNames(["de"], { type: "region" });
 
 export const OVERVIEW_METRICS = {
   afir_stations_observed: {
@@ -38,6 +40,16 @@ export const OVERVIEW_METRICS = {
       "Archivierte Push- und Abrufmeldungen des Tages. Eine Meldung kann eine einzelne Änderung oder viele Statusbeobachtungen enthalten.",
     kind: "count",
   },
+  occupancy_share: {
+    label: "Auslastung",
+    description: "Anteil der belegten Zeit an der gemessenen Zeit.",
+    kind: "percent",
+  },
+  out_of_order_share: {
+    label: "Störungsanteil",
+    description: "Anteil der als außer Betrieb gemeldeten Zeit an der gemessenen Zeit.",
+    kind: "percent",
+  },
 };
 
 const DATE_LABEL_FORMAT = new Intl.DateTimeFormat("de-DE", {
@@ -71,6 +83,26 @@ function decimalFormat(value, digits = 1) {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(Number(value || 0));
+}
+
+function percentFormat(value, digits = 1) {
+  const number = optionalNumber(value);
+  if (number === null) {
+    return "–";
+  }
+  return new Intl.NumberFormat("de-DE", {
+    style: "percent",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(number);
+}
+
+function secondsDurationFormat(seconds) {
+  const value = Number(seconds || 0);
+  if (value >= 86400) {
+    return `${decimalFormat(value / 86400, 1)} Tage`;
+  }
+  return durationHoursFormat(value);
 }
 
 function durationHoursFormat(seconds) {
@@ -140,6 +172,30 @@ function timestampFormat(value) {
   return TIMESTAMP_LABEL_FORMAT.format(parsed);
 }
 
+function confidenceLabel(value) {
+  return (
+    {
+      high: "Hoch",
+      medium: "Mittel",
+      low: "Niedrig",
+    }[String(value || "").toLowerCase()] || "Nicht bewertet"
+  );
+}
+
+function stationClassLabel(value) {
+  return (
+    {
+      reliability_risk: "Zuverlässigkeitsrisiko",
+      constrained_hotspot: "Engpass",
+      high_demand: "Hohe Nachfrage",
+      underused: "Gering genutzt",
+      overnight_demand: "Nachtbedarf",
+      insufficient_data: "Zu wenig Daten",
+      balanced: "Ausgewogen",
+    }[String(value || "")] || "Nicht eingeordnet"
+  );
+}
+
 export function buildProviderReportMetrics(row) {
   const receivedMessagesTotal = firstNumber(row?.received_messages_total, row?.messages_total) ?? 0;
   const observationsTotal = firstNumber(row?.observations_total) ?? 0;
@@ -200,6 +256,37 @@ export function normalizeManagementDate(value) {
   return text;
 }
 
+export function normalizeCountryCode(value) {
+  const code = String(value || "").trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(code) ? code : "";
+}
+
+export function countryName(countryCode) {
+  const code = normalizeCountryCode(countryCode);
+  if (!code) {
+    return "";
+  }
+  return COUNTRY_NAMES.of(code) || code;
+}
+
+function countryFlag(countryCode) {
+  return normalizeCountryCode(countryCode)
+    .split("")
+    .map((letter) => String.fromCodePoint(127397 + letter.charCodeAt(0)))
+    .join("");
+}
+
+export function dateRangeForWindow(endDate, windowDays) {
+  const normalized = normalizeManagementDate(endDate);
+  const days = Number(windowDays);
+  if (!normalized || ![7, 28, 90].includes(days)) {
+    return { startDate: "", endDate: "" };
+  }
+  const start = new Date(`${normalized}T00:00:00Z`);
+  start.setUTCDate(start.getUTCDate() - days + 1);
+  return { startDate: start.toISOString().slice(0, 10), endDate: normalized };
+}
+
 export function snapshotPathForDate(dateText) {
   const normalized = normalizeManagementDate(dateText);
   if (!normalized) {
@@ -209,14 +296,17 @@ export function snapshotPathForDate(dateText) {
   return `./data/management/days/${year}/${month}/${day}/snapshot.json`;
 }
 
-export function buildManagementSubtitle(dateText) {
+export function buildManagementSubtitle(dateText, countryCode = "") {
   const normalized = normalizeManagementDate(dateText);
   if (!normalized) {
     return "Störungen und Auslastung öffentlicher Ladestationen in angebundenen europäischen Ländern.";
   }
   const label = WEEKDAY_DATE_LABEL_FORMAT.format(new Date(`${normalized}T00:00:00Z`));
   const capitalizedLabel = label.charAt(0).toUpperCase() + label.slice(1);
-  return `Störungen und Auslastung öffentlicher Ladestationen in angebundenen europäischen Ländern am ${capitalizedLabel}`;
+  const scope = countryCode
+    ? `öffentlicher Ladestationen in ${countryName(countryCode)}`
+    : "öffentlicher Ladestationen in angebundenen europäischen Ländern";
+  return `Störungen und Auslastung ${scope} am ${capitalizedLabel}`;
 }
 
 export function buildOverviewSeries(trends, metricKey) {
@@ -227,12 +317,49 @@ export function buildOverviewSeries(trends, metricKey) {
     description: metric.description || "",
     kind: metric.kind,
     labels: rows.map((row) => formatDateLabel(row.snapshot_date)),
-    values: rows.map((row) => Number(row?.[metricKey] || 0)),
+    values: rows.map((row) => {
+      const value = Number(row?.[metricKey] || 0);
+      return metric.kind === "percent" ? value * 100 : value;
+    }),
   };
 }
 
 export function buildSummaryCards(snapshot) {
   const summary = snapshot?.summary || {};
+  if (optionalNumber(summary.measured_station_coverage) !== null) {
+    return [
+      {
+        label: "Stationen im Tagesarchiv",
+        value: numberFormat(summary.station_count ?? summary.afir_stations_observed),
+        detail: `${numberFormat(summary.observed_evses)} beobachtete Ladepunkte.`,
+      },
+      {
+        label: "Messabdeckung",
+        value: percentFormat(summary.measured_station_coverage),
+        detail: "Anteil der Stationen mit gemessener Statuszeit.",
+      },
+      {
+        label: "Auslastung",
+        value: percentFormat(summary.occupancy_share),
+        detail: "Belegte Zeit innerhalb der gemessenen Zeit.",
+      },
+      {
+        label: "Störungsanteil",
+        value: percentFormat(summary.out_of_order_share),
+        detail: `${numberFormat(summary.stations_with_disruptions)} Stationen waren betroffen.`,
+      },
+      {
+        label: "Am Tagesende gestört",
+        value: numberFormat(summary.disruptions_at_end_of_day),
+        detail: "Stationen mit mindestens einem weiter gestörten Ladepunkt.",
+      },
+      {
+        label: "Vollständig außer Betrieb",
+        value: numberFormat(summary.fully_out_of_service_stations),
+        detail: "Alle beobachteten Ladepunkte waren am Tagesende gestört.",
+      },
+    ];
+  }
   const cards = [
     {
       label: "Stationen im Tagesarchiv",
@@ -270,6 +397,51 @@ export function buildSummaryCards(snapshot) {
     });
   }
   return cards;
+}
+
+export function buildCountryOverviewRows(countriesPayload, reportPayload) {
+  const countries = Array.isArray(countriesPayload?.countries) ? countriesPayload.countries : [];
+  const reportRows = Array.isArray(reportPayload?.rows) ? reportPayload.rows : [];
+  const reportByCountry = new Map(
+    reportRows.map((row) => [normalizeCountryCode(row?.country_code), row]),
+  );
+  return countries
+    .map((country) => {
+      const countryCode = normalizeCountryCode(country?.country_code);
+      return {
+        ...country,
+        ...(reportByCountry.get(countryCode) || {}),
+        country_code: countryCode,
+        country_name: countryName(countryCode),
+      };
+    })
+    .filter((row) => row.country_code && optionalNumber(row.station_count) !== null)
+    .sort((left, right) => TABLE_SORT_COLLATOR.compare(left.country_name, right.country_name));
+}
+
+export function buildRollingProviderRows(reportPayload, healthPayload) {
+  const reportRows = Array.isArray(reportPayload?.rows) ? reportPayload.rows : [];
+  const healthRows = Array.isArray(healthPayload?.rows) ? healthPayload.rows : [];
+  const healthByProvider = new Map(
+    healthRows.map((row) => [String(row?.provider_uid || ""), row]),
+  );
+  return reportRows
+    .map((row) => {
+      const health = healthByProvider.get(String(row?.provider_uid || "")) || {};
+      return {
+        ...row,
+        display_name: health.display_name || row.provider_uid || "",
+        publisher: health.publisher || "",
+        transport_failure_count:
+          Number(health.fetch_failure_messages_total || 0) +
+          Number(health.http_error_messages_total || 0),
+        provider_message_days: Number(health.provider_message_days || 0),
+      };
+    })
+    .sort((left, right) => {
+      const stationDelta = Number(right?.station_count || 0) - Number(left?.station_count || 0);
+      return stationDelta || TABLE_SORT_COLLATOR.compare(left.display_name, right.display_name);
+    });
 }
 
 export function buildStationRows(snapshot, key) {
@@ -351,13 +523,33 @@ function stationMeta(row) {
   const parts = [];
   const operator = String(row?.operator || "").trim();
   const city = String(row?.city || "").trim();
-  if (operator) {
+  const stationId = String(row?.station_id || "").trim();
+  if (operator && stationTitle(row) !== operator) {
     parts.push(operator);
   }
-  if (city && !operator) {
+  if (city) {
     parts.push(city);
   }
+  if (!parts.length && stationId) {
+    parts.push(`Stations-ID ${stationId}`);
+  }
   return parts.join(" · ");
+}
+
+function stationUrl(row) {
+  if (row?.station_url) {
+    return String(row.station_url);
+  }
+  const stationId = String(row?.station_id || "").trim();
+  return stationId ? `./?station=${encodeURIComponent(stationId)}` : "";
+}
+
+function managementCountryUrl(countryCode, dateText = "") {
+  const query = new URLSearchParams({ country: normalizeCountryCode(countryCode) });
+  if (normalizeManagementDate(dateText)) {
+    query.set("date", dateText);
+  }
+  return `./management.html?${query.toString()}`;
 }
 
 function setSelectOptions(select, options, selectedValue) {
@@ -605,10 +797,116 @@ function createLineChart(canvasId, series, { colorIndex = 0, color = null } = {}
         legend: { display: false },
       },
       scales: {
-        y: { beginAtZero: true },
+        y: {
+          beginAtZero: true,
+          ticks:
+            series.kind === "percent"
+              ? { callback: (value) => `${new Intl.NumberFormat("de-DE").format(value)} %` }
+              : {},
+        },
       },
     },
   });
+}
+
+function renderSummaryStrip(host, items) {
+  host.innerHTML = "";
+  for (const item of items) {
+    const element = document.createElement("div");
+    element.className = "management-summary-item";
+    element.innerHTML = `
+      <span>${escapeHtml(item.label)}</span>
+      <strong>${escapeHtml(item.value)}</strong>
+      ${item.detail ? `<small>${escapeHtml(item.detail)}</small>` : ""}
+    `;
+    host.appendChild(element);
+  }
+}
+
+function renderCountryOverview(countriesPayload, reportPayload, dateText) {
+  const rows = buildCountryOverviewRows(countriesPayload, reportPayload);
+  const tbody = document.getElementById("management-country-body");
+  const countryCount = document.getElementById("management-country-count");
+  tbody.innerHTML = "";
+  countryCount.textContent = `${numberFormat(rows.length)} Länder`;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8">Für diesen Tag liegen keine Länderberichte vor.</td></tr>';
+  }
+  for (const row of rows) {
+    const detailUrl = managementCountryUrl(row.country_code, dateText);
+    const tr = document.createElement("tr");
+    tr.className = "management-country-row";
+    tr.innerHTML = `
+      <td data-sort-value="${escapeAttribute(row.country_name)}">
+        <a class="management-country-link" href="${escapeAttribute(detailUrl)}">
+          <span class="management-country-flag" aria-hidden="true">${countryFlag(row.country_code)}</span>
+          <span>
+            <strong>${escapeHtml(row.country_name)}</strong>
+            <small>${escapeHtml(row.country_code)} · seit ${escapeHtml(formatDateLabel(row.first_date))}</small>
+          </span>
+        </a>
+      </td>
+      <td data-sort-value="${numericSortValue(row.station_count)}">${numberFormat(row.station_count)}</td>
+      <td data-sort-value="${numericSortValue(row.observed_evse_days ?? row.observed_evses)}">${numberFormat(row.observed_evse_days ?? row.observed_evses)}</td>
+      <td data-sort-value="${numericSortValue(row.occupancy_share)}">${percentFormat(row.occupancy_share)}</td>
+      <td data-sort-value="${numericSortValue(row.out_of_order_share)}">${percentFormat(row.out_of_order_share)}</td>
+      <td data-sort-value="${numericSortValue(row.unmeasured_share)}">${percentFormat(row.unmeasured_share)}</td>
+      <td data-sort-value="${numericSortValue(row.observed_days)}">${numberFormat(row.observed_days)}</td>
+      <td><a class="management-row-action" href="${escapeAttribute(detailUrl)}" aria-label="${escapeAttribute(row.country_name)} öffnen">→</a></td>
+    `;
+    tbody.appendChild(tr);
+  }
+  const summaryHost = document.getElementById("management-country-summary");
+  const totalStations = rows.reduce((sum, row) => sum + Number(row.station_count || 0), 0);
+  const totalEvses = rows.reduce(
+    (sum, row) => sum + Number(row.observed_evse_days ?? row.observed_evses ?? 0),
+    0,
+  );
+  const measuredSeconds = rows.reduce((sum, row) => sum + Number(row.measured_seconds || 0), 0);
+  const occupiedSeconds = rows.reduce((sum, row) => sum + Number(row.occupied_seconds || 0), 0);
+  const outageSeconds = rows.reduce((sum, row) => sum + Number(row.out_of_order_seconds || 0), 0);
+  renderSummaryStrip(summaryHost, [
+    { label: "Länder", value: numberFormat(rows.length), detail: "mit Live-Messwerten" },
+    { label: "Stationen", value: numberFormat(totalStations), detail: "am Auswertungstag" },
+    { label: "Ladepunkte", value: numberFormat(totalEvses), detail: "beobachtete EVSE-Tage" },
+    { label: "Auslastung", value: percentFormat(measuredSeconds ? occupiedSeconds / measuredSeconds : null), detail: "europaweit gewichtet" },
+    { label: "Störungsanteil", value: percentFormat(measuredSeconds ? outageSeconds / measuredSeconds : null), detail: "europaweit gewichtet" },
+  ]);
+}
+
+function renderDataQuality(snapshot, windowDays) {
+  const summary = snapshot?.summary || {};
+  const host = document.getElementById("management-data-quality");
+  const providerErrors =
+    Number(summary.fetch_failure_messages_total || 0) +
+    Number(summary.http_error_messages_total || 0);
+  renderSummaryStrip(host, [
+    {
+      label: "Konfidenz",
+      value: confidenceLabel(summary.confidence_label),
+      detail: `${percentFormat(summary.measured_station_coverage)} Stationsabdeckung`,
+    },
+    {
+      label: "Nicht gemessen",
+      value: percentFormat(summary.unmeasured_share),
+      detail: "Anteil unbekannter Statuszeit",
+    },
+    {
+      label: "Koordinaten",
+      value: percentFormat(summary.coordinate_coverage),
+      detail: "für geografische Auswertungen",
+    },
+    {
+      label: "Anbieterfehler",
+      value: numberFormat(providerErrors),
+      detail: "Abruf- und HTTP-Fehler am Tag",
+    },
+    {
+      label: "Historie",
+      value: `${numberFormat(windowDays)} Tage`,
+      detail: "gewählter Berichtszeitraum",
+    },
+  ]);
 }
 
 function renderKpis(snapshot) {
@@ -636,8 +934,9 @@ function renderBrokenStations(snapshot) {
     return;
   }
   for (const row of rows) {
-    const stationCell = row.station_url
-      ? `<a href="${escapeAttribute(row.station_url)}">${escapeHtml(stationTitle(row))}</a>`
+    const detailUrl = stationUrl(row);
+    const stationCell = detailUrl
+      ? `<a href="${escapeAttribute(detailUrl)}">${escapeHtml(stationTitle(row))}</a>`
       : `<span>${escapeHtml(stationTitle(row))}</span>`;
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -645,9 +944,9 @@ function renderBrokenStations(snapshot) {
         ${stationCell}
         <div class="provider-sub">${escapeHtml(stationMeta(row))}</div>
       </td>
-      <td data-sort-value="${escapeAttribute(row.city || "")}">${escapeHtml(row.city || "")}</td>
       <td data-sort-value="${numericSortValue(row.affected_charger_count)}">${numberFormat(row.affected_charger_count)}</td>
       <td data-sort-value="${numericSortValue(row.current_broken_charger_count)}">${numberFormat(row.current_broken_charger_count)}</td>
+      <td data-sort-value="${numericSortValue(row.out_of_order_share)}">${percentFormat(row.out_of_order_share)}</td>
       <td data-sort-value="${numericSortValue(row.out_of_order_duration_seconds_total)}">${durationHoursFormat(row.out_of_order_duration_seconds_total)}</td>
       <td data-sort-value="${escapeAttribute(row.status_label || "")}">${escapeHtml(row.status_label || "")}</td>
     `;
@@ -664,8 +963,9 @@ function renderBusyStations(snapshot) {
     return;
   }
   for (const row of rows) {
-    const stationCell = row.station_url
-      ? `<a href="${escapeAttribute(row.station_url)}">${escapeHtml(stationTitle(row))}</a>`
+    const detailUrl = stationUrl(row);
+    const stationCell = detailUrl
+      ? `<a href="${escapeAttribute(detailUrl)}">${escapeHtml(stationTitle(row))}</a>`
       : `<span>${escapeHtml(stationTitle(row))}</span>`;
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -673,10 +973,43 @@ function renderBusyStations(snapshot) {
         ${stationCell}
         <div class="provider-sub">${escapeHtml(stationMeta(row))}</div>
       </td>
-      <td data-sort-value="${escapeAttribute(row.city || "")}">${escapeHtml(row.city || "")}</td>
+      <td data-sort-value="${numericSortValue(row.charging_points_count)}">${numberFormat(row.charging_points_count)}</td>
+      <td data-sort-value="${numericSortValue(row.day_occupancy_share)}">${percentFormat(row.day_occupancy_share)}</td>
+      <td data-sort-value="${numericSortValue(row.occupied_seconds)}">${secondsDurationFormat(row.occupied_seconds)}</td>
       <td data-sort-value="${numericSortValue(row.busy_transition_count)}">${numberFormat(row.busy_transition_count)}</td>
-      <td data-sort-value="${numericSortValue(row.busy_evse_count)}">${numberFormat(row.busy_evse_count)}</td>
-      <td data-sort-value="${numericSortValue(row.max_power_kw)}">${numberFormat(row.max_power_kw)} kW</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function renderRollingProviderReports(reportPayload, healthPayload, windowDays) {
+  const rows = buildRollingProviderRows(reportPayload, healthPayload);
+  const tbody = document.getElementById("provider-window-body");
+  const title = document.getElementById("management-provider-window-title");
+  title.textContent = `Anbieterleistung über ${numberFormat(windowDays)} Tage`;
+  tbody.innerHTML = "";
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8">Für diesen Zeitraum ist keine historische Anbieteraggregation verfügbar.</td></tr>';
+    return;
+  }
+  for (const row of rows) {
+    const tr = document.createElement("tr");
+    const displayName = row.display_name || row.provider_uid || "";
+    const providerMeta = [row.publisher, row.provider_uid, `${confidenceLabel(row.confidence_label)}e Konfidenz`]
+      .filter(Boolean)
+      .join(" · ");
+    tr.innerHTML = `
+      <td data-sort-value="${escapeAttribute(displayName)}">
+        <span>${escapeHtml(displayName)}</span>
+        <div class="provider-sub">${escapeHtml(providerMeta)}</div>
+      </td>
+      <td data-sort-value="${numericSortValue(row.station_count)}">${numberFormat(row.station_count)}</td>
+      <td data-sort-value="${numericSortValue(row.measured_days)}">${numberFormat(row.measured_days)} / ${numberFormat(row.requested_days)}</td>
+      <td data-sort-value="${numericSortValue(row.occupancy_share)}">${percentFormat(row.occupancy_share)}</td>
+      <td data-sort-value="${numericSortValue(row.out_of_order_share)}">${percentFormat(row.out_of_order_share)}</td>
+      <td data-sort-value="${numericSortValue(row.day_occupancy_share)}">${percentFormat(row.day_occupancy_share)} / ${percentFormat(row.night_occupancy_share)}</td>
+      <td data-sort-value="${numericSortValue(row.transport_failure_count)}">${numberFormat(row.transport_failure_count)}</td>
+      <td data-sort-value="${escapeAttribute(stationClassLabel(row.station_class))}"><span class="management-class-label management-class-${escapeAttribute(row.station_class || "unknown")}">${escapeHtml(stationClassLabel(row.station_class))}</span></td>
     `;
     tbody.appendChild(tr);
   }
@@ -690,7 +1023,7 @@ function renderProviderReports(snapshot) {
   }
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="11">Für diesen Tag wurden keine Anbieterberichte veröffentlicht.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9">Für diesen Tag wurden keine Anbieterberichte veröffentlicht.</td></tr>';
     return;
   }
   for (const row of rows) {
@@ -709,10 +1042,8 @@ function renderProviderReports(snapshot) {
         ${coverageWarning}
       </td>
       <td data-sort-value="${numericSortValue(metrics.observationsTotal)}">${numberFormat(metrics.observationsTotal)}</td>
-      <td data-sort-value="${numericSortValue(metrics.observationsPerCharger)}">${optionalDecimalFormat(metrics.observationsPerCharger, 1)}</td>
       <td data-sort-value="${numericSortValue(metrics.receivedMessagesTotal)}">${numberFormat(metrics.receivedMessagesTotal)}</td>
       <td data-sort-value="${numericSortValue(metrics.uniqueChargersReferencedTotal)}">${optionalNumberFormat(metrics.uniqueChargersReferencedTotal)}</td>
-      <td data-sort-value="${numericSortValue(metrics.bundleChargersWithoutUpdatesTotal)}">${optionalNumberFormat(metrics.bundleChargersWithoutUpdatesTotal)}</td>
       <td data-sort-value="${numericSortValue(row.push_messages_total)}">${numberFormat(row.push_messages_total)}</td>
       <td data-sort-value="${numericSortValue(row.http_response_messages_total)}">${numberFormat(row.http_response_messages_total)}</td>
       <td data-sort-value="${numericSortValue(Number(row.fetch_failure_messages_total || 0) + Number(row.http_error_messages_total || 0))}">${numberFormat(Number(row.fetch_failure_messages_total || 0) + Number(row.http_error_messages_total || 0))}</td>
@@ -732,15 +1063,19 @@ async function initManagementPage() {
     staticFallbackEnabled: window.WOLADEN_MANAGEMENT_STATIC_FALLBACK_ENABLED !== false,
   });
   const indexPayload = await dataSource.loadIndex();
-  let trendsPayload = { summary_series: [] };
-  await waitForChart();
-  wireSortableTables();
+  const countriesPayload = await dataSource.loadCountries();
   const availableDates = Array.isArray(indexPayload.available_dates) ? indexPayload.available_dates : [];
   if (!availableDates.length) {
     throw new Error("Keine Tagesauswertungen verfügbar.");
   }
 
   const url = new URL(window.location.href);
+  const requestedCountry = normalizeCountryCode(url.searchParams.get("country"));
+  const countryEntry = (countriesPayload.countries || []).find(
+    (row) => normalizeCountryCode(row?.country_code) === requestedCountry,
+  );
+  const overviewHost = document.getElementById("management-country-overview");
+  const detailHost = document.getElementById("management-country-detail");
   let currentDate =
     normalizeManagementDate(url.searchParams.get("date")) ||
     indexPayload.latest_date ||
@@ -749,53 +1084,153 @@ async function initManagementPage() {
     currentDate = availableDates.at(-1);
   }
 
+  function syncUrl({ countryCode = "", windowDays = "" } = {}) {
+    url.searchParams.set("date", currentDate);
+    if (countryCode) {
+      url.searchParams.set("country", countryCode);
+    } else {
+      url.searchParams.delete("country");
+    }
+    if (windowDays) {
+      url.searchParams.set("window", String(windowDays));
+    } else {
+      url.searchParams.delete("window");
+    }
+    history.replaceState({}, "", url);
+  }
+
+  function updateDateControls(datePicker, prevDay, nextDay, dates) {
+    datePicker.value = currentDate;
+    datePicker.min = dates[0] || "";
+    datePicker.max = dates.at(-1) || "";
+    const index = dates.indexOf(currentDate);
+    prevDay.disabled = index <= 0;
+    nextDay.disabled = index < 0 || index >= dates.length - 1;
+  }
+
+  function renderError(error, prefix = "Die Managementauswertung konnte nicht geladen werden") {
+    console.error(error);
+    status.textContent = `${prefix}: ${error?.message || error}`;
+    status.classList.add("is-error");
+    status.hidden = false;
+  }
+
+  function showLoading(message) {
+    status.textContent = message;
+    status.classList.remove("is-error");
+    status.hidden = false;
+  }
+
+  function hideStatus() {
+    status.textContent = "";
+    status.classList.remove("is-error");
+    status.hidden = true;
+  }
+
+  if (!requestedCountry || !countryEntry) {
+    overviewHost.hidden = false;
+    detailHost.hidden = true;
+    document.getElementById("management-title").textContent = "Zustand öffentlicher Ladenetze in Europa";
+    document.getElementById("management-subtitle").textContent =
+      "Länderübersicht für Verfügbarkeit, Auslastung und Datenqualität der angebundenen öffentlichen Ladestationen.";
+    document.title = "woladen.de | Managementanalyse der Ladenetze in Europa";
+    wireSortableTables(overviewHost);
+
+    const datePicker = document.getElementById("management-overview-date");
+    const prevDay = document.getElementById("management-overview-prev-day");
+    const nextDay = document.getElementById("management-overview-next-day");
+
+    async function loadOverview(targetDate) {
+      showLoading("Länderberichte werden aus PostgreSQL geladen …");
+      const reportPayload = await dataSource.loadCountryOverview(targetDate);
+      currentDate = targetDate;
+      syncUrl();
+      updateDateControls(datePicker, prevDay, nextDay, availableDates);
+      renderCountryOverview(countriesPayload, reportPayload, currentDate);
+      resetSortableTables(overviewHost);
+      document.documentElement.dataset.managementDataSource = dataSource.currentSource();
+      const sourceDetail =
+        dataSource.currentSource() === "postgresql"
+          ? "Live aus PostgreSQL"
+          : "Statische Ersatzauswertung";
+      document.getElementById("management-subtitle").textContent =
+        `Länderübersicht für Verfügbarkeit, Auslastung und Datenqualität am ${formatDateLabel(currentDate)} · ${sourceDetail}.`;
+      hideStatus();
+    }
+
+    datePicker.addEventListener("change", () => {
+      const nextValue = normalizeManagementDate(datePicker.value);
+      if (nextValue && availableDates.includes(nextValue)) {
+        loadOverview(nextValue).catch(renderError);
+      }
+    });
+    prevDay.addEventListener("click", () => {
+      const index = availableDates.indexOf(currentDate);
+      if (index > 0) {
+        loadOverview(availableDates[index - 1]).catch(renderError);
+      }
+    });
+    nextDay.addEventListener("click", () => {
+      const index = availableDates.indexOf(currentDate);
+      if (index >= 0 && index < availableDates.length - 1) {
+        loadOverview(availableDates[index + 1]).catch(renderError);
+      }
+    });
+
+    updateDateControls(datePicker, prevDay, nextDay, availableDates);
+    await loadOverview(currentDate);
+    return;
+  }
+
+  overviewHost.hidden = true;
+  detailHost.hidden = false;
+  const countryCode = requestedCountry;
+  const countryDates = availableDates.filter(
+    (dateText) =>
+      (!countryEntry.first_date || dateText >= countryEntry.first_date) &&
+      (!countryEntry.last_date || dateText <= countryEntry.last_date),
+  );
+  if (!countryDates.includes(currentDate)) {
+    currentDate = countryDates.at(-1) || availableDates.at(-1);
+  }
+  let currentWindowDays = [7, 28, 90].includes(Number(url.searchParams.get("window")))
+    ? Number(url.searchParams.get("window"))
+    : DEFAULT_WINDOW_DAYS;
   let currentSnapshot = null;
+  let trendsPayload = { summary_series: [] };
   let overviewChart = null;
+
+  const title = document.getElementById("management-title");
+  const subtitle = document.getElementById("management-subtitle");
+  const kicker = document.getElementById("management-kicker");
+  title.textContent = `${countryFlag(countryCode)} Ladeinfrastruktur in ${countryName(countryCode)}`;
+  kicker.innerHTML = '<a href="./management.html">Europaübersicht</a> · <a href="./status.html">Datenstatus</a>';
+  document.title = `woladen.de | Managementanalyse ${countryName(countryCode)}`;
 
   const datePicker = document.getElementById("management-date");
   const prevDay = document.getElementById("management-prev-day");
   const nextDay = document.getElementById("management-next-day");
   const overviewMetricSelect = document.getElementById("management-overview-metric");
-  const overviewControl = document.getElementById("management-overview-control");
-  const controlsPanel = document.querySelector(".management-controls");
-
+  const windowSelect = document.getElementById("management-window-days");
   const overviewMetricOptions = Object.entries(OVERVIEW_METRICS).map(([value, meta]) => ({
     value,
     label: meta.label,
   }));
 
   setSelectOptions(overviewMetricSelect, overviewMetricOptions, "stations_with_disruptions");
-  if (overviewMetricOptions.length <= 1) {
-    overviewControl?.setAttribute("hidden", "");
-    controlsPanel?.classList.add("management-controls--single");
-  } else {
-    overviewControl?.removeAttribute("hidden");
-    controlsPanel?.classList.remove("management-controls--single");
-  }
-
-  function syncUrl() {
-    url.searchParams.set("date", currentDate);
-    history.replaceState({}, "", url);
-  }
-
-  function updateDateControls() {
-    datePicker.value = currentDate;
-    const index = availableDates.indexOf(currentDate);
-    prevDay.disabled = index <= 0;
-    nextDay.disabled = index < 0 || index >= availableDates.length - 1;
-  }
+  windowSelect.value = String(currentWindowDays);
+  await waitForChart();
+  wireSortableTables(detailHost);
 
   function renderCharts() {
-    if (overviewChart) overviewChart.destroy();
-    const selectedMetric = OVERVIEW_METRICS[overviewMetricSelect.value] || OVERVIEW_METRICS.stations_with_disruptions;
-    const title = document.getElementById("management-overview-title");
-    const description = document.getElementById("management-overview-description");
-    if (title) {
-      title.textContent = selectedMetric.label;
+    if (overviewChart) {
+      overviewChart.destroy();
     }
-    if (description) {
-      description.textContent = selectedMetric.description || "";
-    }
+    const selectedMetric =
+      OVERVIEW_METRICS[overviewMetricSelect.value] || OVERVIEW_METRICS.stations_with_disruptions;
+    document.getElementById("management-overview-title").textContent = selectedMetric.label;
+    document.getElementById("management-overview-description").textContent =
+      `${selectedMetric.description || ""} Zeitraum: ${numberFormat(currentWindowDays)} Tage.`;
     overviewChart = createLineChart(
       "management-overview-chart",
       buildOverviewSeries(trendsPayload, overviewMetricSelect.value),
@@ -803,59 +1238,83 @@ async function initManagementPage() {
     );
   }
 
-  async function loadSnapshot(targetDate) {
-    const loaded = await dataSource.loadSnapshot(targetDate);
+  async function loadSnapshot(targetDate, windowDays = currentWindowDays) {
+    showLoading(`${countryName(countryCode)} wird aus PostgreSQL geladen …`);
+    const loaded = await dataSource.loadSnapshot(targetDate, {
+      countryCode,
+      trendDays: windowDays,
+    });
     currentSnapshot = loaded.snapshot;
     trendsPayload = loaded.trends;
+    currentWindowDays = windowDays;
     document.documentElement.dataset.managementDataSource = loaded.source;
     currentDate = targetDate;
-    syncUrl();
-    updateDateControls();
+    syncUrl({ countryCode, windowDays: currentWindowDays });
+    updateDateControls(datePicker, prevDay, nextDay, countryDates);
+    windowSelect.value = String(currentWindowDays);
     renderKpis(currentSnapshot);
+    renderDataQuality(currentSnapshot, currentWindowDays);
     renderBrokenStations(currentSnapshot);
     renderBusyStations(currentSnapshot);
     renderProviderReports(currentSnapshot);
-    resetSortableTables();
+    const range = dateRangeForWindow(currentDate, currentWindowDays);
+    let providerReport = { rows: [] };
+    let providerHealth = { rows: [] };
+    if (loaded.source === "postgresql") {
+      try {
+        [providerReport, providerHealth] = await Promise.all([
+          dataSource.loadReport({
+            startDate: range.startDate,
+            endDate: range.endDate,
+            countryCode,
+            groupBy: "provider",
+          }),
+          dataSource.loadProviderHealth({
+            startDate: range.startDate,
+            endDate: range.endDate,
+            countryCode,
+          }),
+        ]);
+      } catch (error) {
+        console.warn("Historische Anbieteraggregation ist nicht verfügbar.", error);
+      }
+    }
+    renderRollingProviderReports(providerReport, providerHealth, currentWindowDays);
+    resetSortableTables(detailHost);
     renderCharts();
 
-    const summary = currentSnapshot.summary || {};
-    const subtitle = document.getElementById("management-subtitle");
-    if (subtitle) {
-      subtitle.textContent = buildManagementSubtitle(currentDate);
-    }
-    status.textContent = "";
-    status.hidden = true;
-    status.classList.remove("is-error");
+    const sourceDetail = loaded.source === "postgresql" ? "Live aus PostgreSQL" : "Statische Ersatzauswertung";
+    subtitle.textContent = `${buildManagementSubtitle(currentDate, countryCode)} · ${sourceDetail}.`;
+    hideStatus();
   }
 
   datePicker.addEventListener("change", () => {
     const nextValue = normalizeManagementDate(datePicker.value);
-    if (nextValue && availableDates.includes(nextValue)) {
+    if (nextValue && countryDates.includes(nextValue)) {
       loadSnapshot(nextValue).catch(renderError);
     }
   });
   prevDay.addEventListener("click", () => {
-    const index = availableDates.indexOf(currentDate);
+    const index = countryDates.indexOf(currentDate);
     if (index > 0) {
-      loadSnapshot(availableDates[index - 1]).catch(renderError);
+      loadSnapshot(countryDates[index - 1]).catch(renderError);
     }
   });
   nextDay.addEventListener("click", () => {
-    const index = availableDates.indexOf(currentDate);
-    if (index >= 0 && index < availableDates.length - 1) {
-      loadSnapshot(availableDates[index + 1]).catch(renderError);
+    const index = countryDates.indexOf(currentDate);
+    if (index >= 0 && index < countryDates.length - 1) {
+      loadSnapshot(countryDates[index + 1]).catch(renderError);
     }
   });
   overviewMetricSelect.addEventListener("change", renderCharts);
+  windowSelect.addEventListener("change", () => {
+    const nextWindow = Number(windowSelect.value);
+    if ([7, 28, 90].includes(nextWindow)) {
+      loadSnapshot(currentDate, nextWindow).catch(renderError);
+    }
+  });
 
-  function renderError(error) {
-    console.error(error);
-    status.textContent = `Die Tagesauswertung konnte nicht geladen werden: ${error?.message || error}`;
-    status.classList.add("is-error");
-    status.hidden = false;
-  }
-
-  updateDateControls();
+  updateDateControls(datePicker, prevDay, nextDay, countryDates);
   await loadSnapshot(currentDate);
 }
 
