@@ -182,6 +182,16 @@ function confidenceLabel(value) {
   );
 }
 
+function confidencePhrase(value) {
+  return (
+    {
+      high: "Hohe Konfidenz",
+      medium: "Mittlere Konfidenz",
+      low: "Niedrige Konfidenz",
+    }[String(value || "").toLowerCase()] || "Konfidenz nicht bewertet"
+  );
+}
+
 function stationClassLabel(value) {
   return (
     {
@@ -259,6 +269,11 @@ export function normalizeManagementDate(value) {
 export function normalizeCountryCode(value) {
   const code = String(value || "").trim().toUpperCase();
   return /^[A-Z]{2}$/.test(code) ? code : "";
+}
+
+export function normalizeProviderUid(value) {
+  const providerUid = String(value || "").trim();
+  return /^[A-Za-z0-9._:-]{1,160}$/.test(providerUid) ? providerUid : "";
 }
 
 export function countryName(countryCode) {
@@ -408,11 +423,15 @@ export function buildCountryOverviewRows(countriesPayload, reportPayload) {
   return countries
     .map((country) => {
       const countryCode = normalizeCountryCode(country?.country_code);
+      const report = reportByCountry.get(countryCode) || {};
       return {
         ...country,
-        ...(reportByCountry.get(countryCode) || {}),
+        ...report,
         country_code: countryCode,
         country_name: countryName(countryCode),
+        first_date: country.first_date,
+        last_date: country.last_date,
+        observed_days: country.observed_days,
       };
     })
     .filter((row) => row.country_code && optionalNumber(row.station_count) !== null)
@@ -423,11 +442,17 @@ export function buildRollingProviderRows(reportPayload, healthPayload) {
   const reportRows = Array.isArray(reportPayload?.rows) ? reportPayload.rows : [];
   const healthRows = Array.isArray(healthPayload?.rows) ? healthPayload.rows : [];
   const healthByProvider = new Map(
-    healthRows.map((row) => [String(row?.provider_uid || ""), row]),
+    healthRows.map((row) => [
+      `${normalizeCountryCode(row?.country_code)}\u0000${String(row?.provider_uid || "")}`,
+      row,
+    ]),
   );
   return reportRows
     .map((row) => {
-      const health = healthByProvider.get(String(row?.provider_uid || "")) || {};
+      const health =
+        healthByProvider.get(
+          `${normalizeCountryCode(row?.country_code)}\u0000${String(row?.provider_uid || "")}`,
+        ) || {};
       return {
         ...row,
         display_name: health.display_name || row.provider_uid || "",
@@ -550,6 +575,28 @@ function managementCountryUrl(countryCode, dateText = "") {
     query.set("date", dateText);
   }
   return `./management.html?${query.toString()}`;
+}
+
+function managementProviderUrl(providerUid, countryCode = "", dateText = "") {
+  const query = new URLSearchParams({ provider: normalizeProviderUid(providerUid) });
+  if (normalizeCountryCode(countryCode)) {
+    query.set("country", normalizeCountryCode(countryCode));
+  }
+  if (normalizeManagementDate(dateText)) {
+    query.set("date", dateText);
+  }
+  return `./management.html?${query.toString()}`;
+}
+
+export function buildProviderProfileSeries(profilePayload) {
+  const rows = Array.isArray(profilePayload?.rows) ? profilePayload.rows : [];
+  const byHour = new Map(rows.map((row) => [Number(row?.local_hour), row]));
+  const labels = Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`);
+  return {
+    labels,
+    occupancy: labels.map((_, hour) => Number(byHour.get(hour)?.occupancy_share || 0) * 100),
+    outages: labels.map((_, hour) => Number(byHour.get(hour)?.out_of_order_share || 0) * 100),
+  };
 }
 
 function setSelectOptions(select, options, selectedValue) {
@@ -809,6 +856,43 @@ function createLineChart(canvasId, series, { colorIndex = 0, color = null } = {}
   });
 }
 
+function createProviderProfileChart(profilePayload) {
+  const canvas = document.getElementById("management-provider-profile-chart");
+  const series = buildProviderProfileSeries(profilePayload);
+  return new Chart(canvas.getContext("2d"), {
+    type: "line",
+    data: {
+      labels: series.labels,
+      datasets: [
+        {
+          label: "Auslastung",
+          data: series.occupancy,
+          borderColor: "#12664f",
+          backgroundColor: "#12664f",
+          tension: 0.25,
+        },
+        {
+          label: "Störungsanteil",
+          data: series.outages,
+          borderColor: "#d1633c",
+          backgroundColor: "#d1633c",
+          tension: 0.25,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { callback: (value) => `${new Intl.NumberFormat("de-DE").format(value)} %` },
+        },
+      },
+    },
+  });
+}
+
 function renderSummaryStrip(host, items) {
   host.innerHTML = "";
   for (const item of items) {
@@ -856,22 +940,49 @@ function renderCountryOverview(countriesPayload, reportPayload, dateText) {
     `;
     tbody.appendChild(tr);
   }
-  const summaryHost = document.getElementById("management-country-summary");
-  const totalStations = rows.reduce((sum, row) => sum + Number(row.station_count || 0), 0);
-  const totalEvses = rows.reduce(
-    (sum, row) => sum + Number(row.observed_evse_days ?? row.observed_evses ?? 0),
-    0,
-  );
-  const measuredSeconds = rows.reduce((sum, row) => sum + Number(row.measured_seconds || 0), 0);
-  const occupiedSeconds = rows.reduce((sum, row) => sum + Number(row.occupied_seconds || 0), 0);
-  const outageSeconds = rows.reduce((sum, row) => sum + Number(row.out_of_order_seconds || 0), 0);
-  renderSummaryStrip(summaryHost, [
-    { label: "Länder", value: numberFormat(rows.length), detail: "mit Live-Messwerten" },
-    { label: "Stationen", value: numberFormat(totalStations), detail: "am Auswertungstag" },
-    { label: "Ladepunkte", value: numberFormat(totalEvses), detail: "beobachtete EVSE-Tage" },
-    { label: "Auslastung", value: percentFormat(measuredSeconds ? occupiedSeconds / measuredSeconds : null), detail: "europaweit gewichtet" },
-    { label: "Störungsanteil", value: percentFormat(measuredSeconds ? outageSeconds / measuredSeconds : null), detail: "europaweit gewichtet" },
-  ]);
+}
+
+function renderProviderOverview(reportPayload, healthPayload, dateText, windowDays) {
+  const rows = buildRollingProviderRows(reportPayload, healthPayload);
+  const tbody = document.getElementById("management-provider-index-body");
+  const providerCount = document.getElementById("management-provider-count");
+  const title = document.getElementById("management-provider-index-title");
+  tbody.innerHTML = "";
+  providerCount.textContent = `${numberFormat(rows.length)} Anbieter`;
+  title.textContent = `Anbieter im Vergleich · ${numberFormat(windowDays)} Tage`;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="10">Für diesen Zeitraum liegen keine Anbieterberichte vor.</td></tr>';
+    return;
+  }
+  for (const row of rows) {
+    const countryCode = normalizeCountryCode(row.country_code);
+    const detailUrl = managementProviderUrl(row.provider_uid, countryCode, dateText);
+    const displayName = row.display_name || row.provider_uid || "";
+    const tr = document.createElement("tr");
+    tr.className = "management-country-row";
+    tr.innerHTML = `
+      <td data-sort-value="${escapeAttribute(displayName)}">
+        <a class="management-country-link" href="${escapeAttribute(detailUrl)}">
+          <span>
+            <strong>${escapeHtml(displayName)}</strong>
+            <small>${escapeHtml(row.publisher || row.provider_uid || "")}</small>
+          </span>
+        </a>
+      </td>
+      <td data-sort-value="${escapeAttribute(countryName(countryCode))}">
+        <a href="${escapeAttribute(managementCountryUrl(countryCode, dateText))}">${countryFlag(countryCode)} ${escapeHtml(countryName(countryCode))}</a>
+      </td>
+      <td data-sort-value="${numericSortValue(row.station_count)}">${numberFormat(row.station_count)}</td>
+      <td data-sort-value="${numericSortValue(row.measured_days)}">${numberFormat(row.measured_days)} / ${numberFormat(row.requested_days)}</td>
+      <td data-sort-value="${numericSortValue(row.coverage_ratio)}">${percentFormat(row.coverage_ratio)}</td>
+      <td data-sort-value="${numericSortValue(row.occupancy_share)}">${percentFormat(row.occupancy_share)}</td>
+      <td data-sort-value="${numericSortValue(row.out_of_order_share)}">${percentFormat(row.out_of_order_share)}</td>
+      <td data-sort-value="${numericSortValue(row.unmeasured_share)}">${percentFormat(row.unmeasured_share)}</td>
+      <td data-sort-value="${escapeAttribute(stationClassLabel(row.station_class))}"><span class="management-class-label management-class-${escapeAttribute(row.station_class || "unknown")}">${escapeHtml(stationClassLabel(row.station_class))}</span></td>
+      <td><a class="management-row-action" href="${escapeAttribute(detailUrl)}" aria-label="${escapeAttribute(displayName)} öffnen">→</a></td>
+    `;
+    tbody.appendChild(tr);
+  }
 }
 
 function renderDataQuality(snapshot, windowDays) {
@@ -982,7 +1093,12 @@ function renderBusyStations(snapshot) {
   }
 }
 
-function renderRollingProviderReports(reportPayload, healthPayload, windowDays) {
+function renderRollingProviderReports(
+  reportPayload,
+  healthPayload,
+  windowDays,
+  { countryCode = "", dateText = "", linkProviders = true } = {},
+) {
   const rows = buildRollingProviderRows(reportPayload, healthPayload);
   const tbody = document.getElementById("provider-window-body");
   const title = document.getElementById("management-provider-window-title");
@@ -995,12 +1111,20 @@ function renderRollingProviderReports(reportPayload, healthPayload, windowDays) 
   for (const row of rows) {
     const tr = document.createElement("tr");
     const displayName = row.display_name || row.provider_uid || "";
-    const providerMeta = [row.publisher, row.provider_uid, `${confidenceLabel(row.confidence_label)}e Konfidenz`]
+    const providerMeta = [row.publisher, row.provider_uid, confidencePhrase(row.confidence_label)]
       .filter(Boolean)
       .join(" · ");
+    const providerUrl = managementProviderUrl(
+      row.provider_uid,
+      row.country_code || countryCode,
+      dateText,
+    );
+    const providerName = linkProviders
+      ? `<a href="${escapeAttribute(providerUrl)}">${escapeHtml(displayName)}</a>`
+      : `<span>${escapeHtml(displayName)}</span>`;
     tr.innerHTML = `
       <td data-sort-value="${escapeAttribute(displayName)}">
-        <span>${escapeHtml(displayName)}</span>
+        ${providerName}
         <div class="provider-sub">${escapeHtml(providerMeta)}</div>
       </td>
       <td data-sort-value="${numericSortValue(row.station_count)}">${numberFormat(row.station_count)}</td>
@@ -1015,7 +1139,10 @@ function renderRollingProviderReports(reportPayload, healthPayload, windowDays) 
   }
 }
 
-function renderProviderReports(snapshot) {
+function renderProviderReports(
+  snapshot,
+  { countryCode = "", dateText = "", linkProviders = true } = {},
+) {
   const rows = buildProviderRows(snapshot);
   const tbody = document.getElementById("provider-reports-body");
   if (!tbody) {
@@ -1035,9 +1162,17 @@ function renderProviderReports(snapshot) {
       Number(row.delta_delivery_without_push || 0) > 0
         ? '<div class="provider-sub provider-sub-warning">Delta ohne Push, Tageswert unterzählt</div>'
         : "";
+    const providerUrl = managementProviderUrl(
+      row.provider_uid,
+      row.country_code || countryCode,
+      dateText,
+    );
+    const providerName = linkProviders
+      ? `<a href="${escapeAttribute(providerUrl)}">${escapeHtml(displayName)}</a>`
+      : `<span>${escapeHtml(displayName)}</span>`;
     tr.innerHTML = `
       <td data-sort-value="${escapeAttribute(displayName)}">
-        <span>${escapeHtml(displayName)}</span>
+        ${providerName}
         <div class="provider-sub">${escapeHtml(publisher)}</div>
         ${coverageWarning}
       </td>
@@ -1071,11 +1206,12 @@ async function initManagementPage() {
 
   const url = new URL(window.location.href);
   const requestedCountry = normalizeCountryCode(url.searchParams.get("country"));
+  const requestedProvider = normalizeProviderUid(url.searchParams.get("provider"));
   const countryEntry = (countriesPayload.countries || []).find(
     (row) => normalizeCountryCode(row?.country_code) === requestedCountry,
   );
   const overviewHost = document.getElementById("management-country-overview");
-  const detailHost = document.getElementById("management-country-detail");
+  const detailHost = document.getElementById("management-detail");
   let currentDate =
     normalizeManagementDate(url.searchParams.get("date")) ||
     indexPayload.latest_date ||
@@ -1084,12 +1220,17 @@ async function initManagementPage() {
     currentDate = availableDates.at(-1);
   }
 
-  function syncUrl({ countryCode = "", windowDays = "" } = {}) {
+  function syncUrl({ countryCode = "", providerUid = "", windowDays = "" } = {}) {
     url.searchParams.set("date", currentDate);
     if (countryCode) {
       url.searchParams.set("country", countryCode);
     } else {
       url.searchParams.delete("country");
+    }
+    if (providerUid) {
+      url.searchParams.set("provider", providerUid);
+    } else {
+      url.searchParams.delete("provider");
     }
     if (windowDays) {
       url.searchParams.set("window", String(windowDays));
@@ -1127,34 +1268,66 @@ async function initManagementPage() {
     status.hidden = true;
   }
 
-  if (!requestedCountry || !countryEntry) {
+  if (!requestedProvider && (!requestedCountry || !countryEntry)) {
     overviewHost.hidden = false;
     detailHost.hidden = true;
-    document.getElementById("management-title").textContent = "Zustand öffentlicher Ladenetze in Europa";
+    document.getElementById("management-title").textContent = "Managementübersicht öffentlicher Ladenetze";
     document.getElementById("management-subtitle").textContent =
-      "Länderübersicht für Verfügbarkeit, Auslastung und Datenqualität der angebundenen öffentlichen Ladestationen.";
-    document.title = "woladen.de | Managementanalyse der Ladenetze in Europa";
+      "Länder und Anbieter vergleichen und die jeweilige Detailauswertung öffnen.";
+    document.title = "woladen.de | Managementübersicht öffentlicher Ladenetze";
     wireSortableTables(overviewHost);
 
     const datePicker = document.getElementById("management-overview-date");
     const prevDay = document.getElementById("management-overview-prev-day");
     const nextDay = document.getElementById("management-overview-next-day");
+    const windowSelect = document.getElementById("management-overview-window-days");
+    let overviewWindowDays = [7, 28, 90].includes(Number(url.searchParams.get("window")))
+      ? Number(url.searchParams.get("window"))
+      : DEFAULT_WINDOW_DAYS;
+    windowSelect.value = String(overviewWindowDays);
 
-    async function loadOverview(targetDate) {
-      showLoading("Länderberichte werden aus PostgreSQL geladen …");
+    async function loadOverview(targetDate, windowDays = overviewWindowDays) {
+      showLoading("Länder- und Anbieterberichte werden aus PostgreSQL geladen …");
+      const range = dateRangeForWindow(targetDate, windowDays);
+      const providerReportsPromise = Promise.all([
+        dataSource.loadReport({
+          startDate: range.startDate,
+          endDate: range.endDate,
+          groupBy: "provider",
+        }),
+        dataSource.loadProviderHealth({
+          startDate: range.startDate,
+          endDate: range.endDate,
+        }),
+      ]).then(
+        (payloads) => ({ payloads, error: null }),
+        (error) => ({ payloads: [{ rows: [] }, { rows: [] }], error }),
+      );
       const reportPayload = await dataSource.loadCountryOverview(targetDate);
       currentDate = targetDate;
-      syncUrl();
+      overviewWindowDays = windowDays;
+      syncUrl({ windowDays: overviewWindowDays });
       updateDateControls(datePicker, prevDay, nextDay, availableDates);
+      windowSelect.value = String(overviewWindowDays);
       renderCountryOverview(countriesPayload, reportPayload, currentDate);
       resetSortableTables(overviewHost);
       document.documentElement.dataset.managementDataSource = dataSource.currentSource();
+      showLoading("Anbieterberichte werden aus PostgreSQL geladen …");
+      let providerReport = { rows: [] };
+      let providerHealth = { rows: [] };
+      const providerReportsResult = await providerReportsPromise;
+      [providerReport, providerHealth] = providerReportsResult.payloads;
+      if (providerReportsResult.error) {
+        console.warn("Die Anbieterübersicht ist nicht verfügbar.", providerReportsResult.error);
+      }
+      renderProviderOverview(providerReport, providerHealth, currentDate, overviewWindowDays);
+      resetSortableTables(overviewHost);
       const sourceDetail =
         dataSource.currentSource() === "postgresql"
           ? "Live aus PostgreSQL"
           : "Statische Ersatzauswertung";
       document.getElementById("management-subtitle").textContent =
-        `Länderübersicht für Verfügbarkeit, Auslastung und Datenqualität am ${formatDateLabel(currentDate)} · ${sourceDetail}.`;
+        `Länder am ${formatDateLabel(currentDate)} und Anbieter über ${numberFormat(overviewWindowDays)} Tage · ${sourceDetail}.`;
       hideStatus();
     }
 
@@ -1176,6 +1349,12 @@ async function initManagementPage() {
         loadOverview(availableDates[index + 1]).catch(renderError);
       }
     });
+    windowSelect.addEventListener("change", () => {
+      const nextWindow = Number(windowSelect.value);
+      if ([7, 28, 90].includes(nextWindow)) {
+        loadOverview(currentDate, nextWindow).catch(renderError);
+      }
+    });
 
     updateDateControls(datePicker, prevDay, nextDay, availableDates);
     await loadOverview(currentDate);
@@ -1184,12 +1363,15 @@ async function initManagementPage() {
 
   overviewHost.hidden = true;
   detailHost.hidden = false;
-  const countryCode = requestedCountry;
-  const countryDates = availableDates.filter(
-    (dateText) =>
-      (!countryEntry.first_date || dateText >= countryEntry.first_date) &&
-      (!countryEntry.last_date || dateText <= countryEntry.last_date),
-  );
+  const countryCode = countryEntry ? requestedCountry : "";
+  const providerUid = requestedProvider;
+  const countryDates = countryEntry
+    ? availableDates.filter(
+        (dateText) =>
+          (!countryEntry.first_date || dateText >= countryEntry.first_date) &&
+          (!countryEntry.last_date || dateText <= countryEntry.last_date),
+      )
+    : availableDates;
   if (!countryDates.includes(currentDate)) {
     currentDate = countryDates.at(-1) || availableDates.at(-1);
   }
@@ -1199,19 +1381,30 @@ async function initManagementPage() {
   let currentSnapshot = null;
   let trendsPayload = { summary_series: [] };
   let overviewChart = null;
+  let providerProfileChart = null;
 
   const title = document.getElementById("management-title");
   const subtitle = document.getElementById("management-subtitle");
   const kicker = document.getElementById("management-kicker");
-  title.textContent = `${countryFlag(countryCode)} Ladeinfrastruktur in ${countryName(countryCode)}`;
-  kicker.innerHTML = '<a href="./management.html">Europaübersicht</a> · <a href="./status.html">Datenstatus</a>';
-  document.title = `woladen.de | Managementanalyse ${countryName(countryCode)}`;
+  if (providerUid) {
+    title.textContent = `Ladenetz ${providerUid}`;
+    kicker.innerHTML = countryCode
+      ? `<a href="./management.html">Managementübersicht</a> · <a href="${escapeAttribute(managementCountryUrl(countryCode, currentDate))}">${countryFlag(countryCode)} ${escapeHtml(countryName(countryCode))}</a> · <a href="./status.html">Datenstatus</a>`
+      : '<a href="./management.html">Managementübersicht</a> · <a href="./status.html">Datenstatus</a>';
+    document.title = `woladen.de | Anbieteranalyse ${providerUid}`;
+  } else {
+    title.textContent = `${countryFlag(countryCode)} Ladeinfrastruktur in ${countryName(countryCode)}`;
+    kicker.innerHTML = '<a href="./management.html">Managementübersicht</a> · <a href="./status.html">Datenstatus</a>';
+    document.title = `woladen.de | Managementanalyse ${countryName(countryCode)}`;
+  }
 
   const datePicker = document.getElementById("management-date");
   const prevDay = document.getElementById("management-prev-day");
   const nextDay = document.getElementById("management-next-day");
   const overviewMetricSelect = document.getElementById("management-overview-metric");
   const windowSelect = document.getElementById("management-window-days");
+  const providerProfilePanel = document.getElementById("management-provider-profile-panel");
+  providerProfilePanel.hidden = !providerUid;
   const overviewMetricOptions = Object.entries(OVERVIEW_METRICS).map(([value, meta]) => ({
     value,
     label: meta.label,
@@ -1239,9 +1432,10 @@ async function initManagementPage() {
   }
 
   async function loadSnapshot(targetDate, windowDays = currentWindowDays) {
-    showLoading(`${countryName(countryCode)} wird aus PostgreSQL geladen …`);
+    showLoading(`${providerUid || countryName(countryCode)} wird aus PostgreSQL geladen …`);
     const loaded = await dataSource.loadSnapshot(targetDate, {
       countryCode,
+      providerUid,
       trendDays: windowDays,
     });
     currentSnapshot = loaded.snapshot;
@@ -1249,17 +1443,38 @@ async function initManagementPage() {
     currentWindowDays = windowDays;
     document.documentElement.dataset.managementDataSource = loaded.source;
     currentDate = targetDate;
-    syncUrl({ countryCode, windowDays: currentWindowDays });
+    syncUrl({ countryCode, providerUid, windowDays: currentWindowDays });
     updateDateControls(datePicker, prevDay, nextDay, countryDates);
     windowSelect.value = String(currentWindowDays);
     renderKpis(currentSnapshot);
     renderDataQuality(currentSnapshot, currentWindowDays);
     renderBrokenStations(currentSnapshot);
     renderBusyStations(currentSnapshot);
-    renderProviderReports(currentSnapshot);
+    renderProviderReports(currentSnapshot, {
+      countryCode,
+      dateText: currentDate,
+      linkProviders: !providerUid,
+    });
     const range = dateRangeForWindow(currentDate, currentWindowDays);
     let providerReport = { rows: [] };
     let providerHealth = { rows: [] };
+    if (providerUid && providerProfileChart) {
+      providerProfileChart.destroy();
+      providerProfileChart = null;
+    }
+    const providerProfilePromise =
+      loaded.source === "postgresql" && providerUid
+        ? dataSource.loadProfile({
+            startDate: range.startDate,
+            endDate: range.endDate,
+            countryCode,
+            providerUid,
+            groupBy: "hour",
+          }).then(
+            (payload) => ({ payload, error: null }),
+            (error) => ({ payload: { rows: [] }, error }),
+          )
+        : null;
     if (loaded.source === "postgresql") {
       try {
         [providerReport, providerHealth] = await Promise.all([
@@ -1267,25 +1482,56 @@ async function initManagementPage() {
             startDate: range.startDate,
             endDate: range.endDate,
             countryCode,
+            providerUid,
             groupBy: "provider",
           }),
           dataSource.loadProviderHealth({
             startDate: range.startDate,
             endDate: range.endDate,
             countryCode,
+            providerUid,
           }),
         ]);
       } catch (error) {
         console.warn("Historische Anbieteraggregation ist nicht verfügbar.", error);
       }
     }
-    renderRollingProviderReports(providerReport, providerHealth, currentWindowDays);
+    renderRollingProviderReports(providerReport, providerHealth, currentWindowDays, {
+      countryCode,
+      dateText: currentDate,
+      linkProviders: !providerUid,
+    });
     resetSortableTables(detailHost);
     renderCharts();
+    if (providerUid) {
+      const providerRow = currentSnapshot.provider_reports?.[0] || providerReport.rows?.[0] || {};
+      const providerName = providerRow.display_name || providerRow.provider_uid || providerUid;
+      const scope = countryCode ? ` in ${countryName(countryCode)}` : "";
+      title.textContent = `Ladenetz ${providerName}${scope}`;
+      document.title = `woladen.de | Anbieteranalyse ${providerName}`;
+    }
 
     const sourceDetail = loaded.source === "postgresql" ? "Live aus PostgreSQL" : "Statische Ersatzauswertung";
-    subtitle.textContent = `${buildManagementSubtitle(currentDate, countryCode)} · ${sourceDetail}.`;
+    subtitle.textContent = providerUid
+      ? `Anbieterbericht für ${countryCode ? countryName(countryCode) : "alle angebundenen Länder"} am ${formatDateLabel(currentDate)} · ${sourceDetail}.`
+      : `${buildManagementSubtitle(currentDate, countryCode)} · ${sourceDetail}.`;
     hideStatus();
+    if (providerProfilePromise) {
+      const profileDescription = document.getElementById("management-provider-profile-description");
+      profileDescription.textContent = "Das stündliche Anbieterprofil wird geladen …";
+      const profileResult = await providerProfilePromise;
+      if (!profileResult.error) {
+        if (providerProfileChart) {
+          providerProfileChart.destroy();
+        }
+        providerProfileChart = createProviderProfileChart(profileResult.payload);
+        profileDescription.textContent =
+          `Auslastung und Störungsanteil je Ortszeitstunde über ${numberFormat(currentWindowDays)} Tage.`;
+      } else {
+        console.warn("Das stündliche Anbieterprofil ist nicht verfügbar.", profileResult.error);
+        profileDescription.textContent = "Für diesen Zeitraum ist kein stündliches Anbieterprofil verfügbar.";
+      }
+    }
   }
 
   datePicker.addEventListener("change", () => {

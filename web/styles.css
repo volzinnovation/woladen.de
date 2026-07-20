@@ -4472,8 +4472,7 @@ select:focus-visible {
 }
 
 .management-controls--overview {
-  grid-template-columns: minmax(17rem, 28rem);
-  justify-content: space-between;
+  grid-template-columns: repeat(2, minmax(14rem, 22rem));
 }
 
 .management-controls.management-controls--single {
@@ -4599,8 +4598,21 @@ select:focus-visible {
   letter-spacing: -0.04em;
 }
 
-.management-country-panel {
+.management-country-panel,
+.management-provider-index-panel {
   animation: management-enter 500ms 120ms ease-out both;
+}
+
+.management-provider-index-panel {
+  animation-delay: 180ms;
+}
+
+.management-country-table {
+  min-width: 880px;
+}
+
+.management-provider-index-table {
+  min-width: 1180px;
 }
 
 .management-count-badge {
@@ -5072,7 +5084,8 @@ select:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .management-hero,
   .management-summary-strip,
-  .management-country-panel {
+  .management-country-panel,
+  .management-provider-index-panel {
     animation: none;
   }
 

@@ -3,14 +3,21 @@ import assert from "node:assert/strict";
 
 import {
   OVERVIEW_METRICS,
+  buildCountryOverviewRows,
   buildManagementSubtitle,
   buildOverviewSeries,
+  buildProviderProfileSeries,
   buildProviderReportMetrics,
   buildProviderRows,
+  buildRollingProviderRows,
   buildStationRows,
   buildSummaryCards,
   compareTableSortValues,
+  countryName,
+  dateRangeForWindow,
+  normalizeCountryCode,
   normalizeManagementDate,
+  normalizeProviderUid,
   snapshotPathForDate,
 } from "./management.mjs";
 
@@ -33,6 +40,22 @@ test("buildManagementSubtitle renders weekday and date for the selected day", ()
     buildManagementSubtitle("2026-04-17"),
     "Störungen und Auslastung öffentlicher Ladestationen in angebundenen europäischen Ländern am Freitag, 17.04.2026",
   );
+  assert.equal(
+    buildManagementSubtitle("2026-04-17", "NL"),
+    "Störungen und Auslastung öffentlicher Ladestationen in Niederlande am Freitag, 17.04.2026",
+  );
+});
+
+test("country and rolling-window helpers normalize management routes", () => {
+  assert.equal(normalizeCountryCode(" de "), "DE");
+  assert.equal(normalizeCountryCode("Germany"), "");
+  assert.equal(normalizeProviderUid(" chargecloud "), "chargecloud");
+  assert.equal(normalizeProviderUid("provider with spaces"), "");
+  assert.equal(countryName("AT"), "Österreich");
+  assert.deepEqual(dateRangeForWindow("2026-07-19", 28), {
+    startDate: "2026-06-22",
+    endDate: "2026-07-19",
+  });
 });
 
 test("buildOverviewSeries returns ordered labels and values for the selected metric", () => {
@@ -59,7 +82,18 @@ test("overview metric options cover the management KPI cards", () => {
     "disruptions_at_end_of_day",
     "high_utilization_stations",
     "archive_messages_total",
+    "occupancy_share",
+    "out_of_order_share",
   ]);
+});
+
+test("percentage overview metrics are charted as percentages", () => {
+  const series = buildOverviewSeries(
+    { summary_series: [{ snapshot_date: "2026-07-19", occupancy_share: 0.125 }] },
+    "occupancy_share",
+  );
+  assert.deepEqual(series.values, [12.5]);
+  assert.equal(series.kind, "percent");
 });
 
 test("buildSummaryCards exposes the public-facing station metrics", () => {
@@ -96,6 +130,86 @@ test("buildSummaryCards exposes delta delivery warning when daily coverage can u
 
   assert.equal(cards[1].label, "Delta-Anbieter ohne Push");
   assert.equal(cards[1].value, "1");
+});
+
+test("buildSummaryCards exposes PostgreSQL coverage and reliability metrics", () => {
+  const cards = buildSummaryCards({
+    summary: {
+      station_count: 35082,
+      observed_evses: 111137,
+      measured_station_coverage: 0.99142,
+      occupancy_share: 0.0963,
+      out_of_order_share: 0.0741,
+      stations_with_disruptions: 9262,
+      disruptions_at_end_of_day: 3679,
+      fully_out_of_service_stations: 1828,
+    },
+  });
+  assert.equal(cards.length, 6);
+  assert.equal(cards[1].value, "99,1 %");
+  assert.equal(cards[2].label, "Auslastung");
+  assert.equal(cards[5].value, "1.828");
+});
+
+test("country overview rows merge dynamic coverage with the selected day report", () => {
+  const rows = buildCountryOverviewRows(
+    {
+      countries: [
+        { country_code: "DE", first_date: "2026-04-15", observed_days: 96 },
+        { country_code: "AT", first_date: "2026-05-04", observed_days: 73 },
+      ],
+    },
+    {
+      rows: [
+        { country_code: "AT", station_count: 14611, occupancy_share: 0.08 },
+        { country_code: "DE", station_count: 35082, occupancy_share: 0.1 },
+      ],
+    },
+  );
+  assert.deepEqual(rows.map((row) => row.country_code), ["DE", "AT"]);
+  assert.equal(rows[0].country_name, "Deutschland");
+  assert.equal(rows[0].observed_days, 96);
+  assert.equal(rows[1].station_count, 14611);
+});
+
+test("provider profile series fills all local hours and converts shares to percentages", () => {
+  const series = buildProviderProfileSeries({
+    rows: [
+      { local_hour: 0, occupancy_share: 0.125, out_of_order_share: 0.02 },
+      { local_hour: 23, occupancy_share: 0.25, out_of_order_share: 0.04 },
+    ],
+  });
+  assert.equal(series.labels.length, 24);
+  assert.equal(series.labels[0], "00:00");
+  assert.equal(series.labels.at(-1), "23:00");
+  assert.equal(series.occupancy[0], 12.5);
+  assert.equal(series.outages.at(-1), 4);
+  assert.equal(series.occupancy[12], 0);
+});
+
+test("rolling provider rows join transport health and sort by station coverage", () => {
+  const rows = buildRollingProviderRows(
+    {
+      rows: [
+        { country_code: "DE", provider_uid: "small", station_count: 10 },
+        { country_code: "DE", provider_uid: "large", station_count: 100 },
+      ],
+    },
+    {
+      rows: [
+        {
+          provider_uid: "large",
+          country_code: "DE",
+          display_name: "Large Network",
+          fetch_failure_messages_total: 2,
+          http_error_messages_total: 3,
+        },
+      ],
+    },
+  );
+  assert.equal(rows[0].provider_uid, "large");
+  assert.equal(rows[0].display_name, "Large Network");
+  assert.equal(rows[0].transport_failure_count, 5);
 });
 
 test("buildStationRows sorts broken and busy station tables for the public page", () => {

@@ -123,7 +123,10 @@ export function createManagementDataSource({
     };
   }
 
-  async function loadSnapshot(dateText, { countryCode = "", trendDays = 90 } = {}) {
+  async function loadSnapshot(
+    dateText,
+    { countryCode = "", providerUid = "", trendDays = 90 } = {},
+  ) {
     if (source === "postgresql") {
       try {
         const query = new URLSearchParams({
@@ -133,6 +136,9 @@ export function createManagementDataSource({
         });
         if (countryCode) {
           query.set("country_code", countryCode);
+        }
+        if (providerUid) {
+          query.set("provider_uid", providerUid);
         }
         const snapshot = await fetchJson(
           fetchImpl,
@@ -150,6 +156,9 @@ export function createManagementDataSource({
         source = "static-cache";
       }
     }
+    if (providerUid) {
+      throw new Error("Für Anbieteransichten ist keine statische Ersatzauswertung verfügbar.");
+    }
     if (countryCode && countryCode !== "DE") {
       throw new Error(`Für ${countryCode} ist keine statische Ersatzauswertung verfügbar.`);
     }
@@ -163,7 +172,13 @@ export function createManagementDataSource({
     return { snapshot, trends, source };
   }
 
-  async function loadReport({ startDate, endDate, countryCode, groupBy = "provider" }) {
+  async function loadReport({
+    startDate,
+    endDate,
+    countryCode = "",
+    providerUid = "",
+    groupBy = "provider",
+  }) {
     if (source !== "postgresql") {
       return {
         schema_version: "management-static-report-unavailable-v1",
@@ -177,14 +192,24 @@ export function createManagementDataSource({
       start_date: startDate,
       end_date: endDate,
       group_by: groupBy,
-      country_code: countryCode,
       limit: "1000",
       offset: "0",
     });
+    if (countryCode) {
+      query.set("country_code", countryCode);
+    }
+    if (providerUid) {
+      query.set("provider_uid", providerUid);
+    }
     return await fetchJson(fetchImpl, `${normalizedApiBaseUrl}/report?${query.toString()}`);
   }
 
-  async function loadProviderHealth({ startDate, endDate, countryCode }) {
+  async function loadProviderHealth({
+    startDate,
+    endDate,
+    countryCode = "",
+    providerUid = "",
+  }) {
     if (source !== "postgresql") {
       return {
         schema_version: "management-static-provider-health-unavailable-v1",
@@ -196,11 +221,46 @@ export function createManagementDataSource({
     const query = new URLSearchParams({
       start_date: startDate,
       end_date: endDate,
-      country_code: countryCode,
       limit: "1000",
       offset: "0",
     });
+    if (countryCode) {
+      query.set("country_code", countryCode);
+    }
+    if (providerUid) {
+      query.set("provider_uid", providerUid);
+    }
     return await fetchJson(fetchImpl, `${normalizedApiBaseUrl}/provider-health?${query.toString()}`);
+  }
+
+  async function loadProfile({
+    startDate,
+    endDate,
+    countryCode = "",
+    providerUid = "",
+    groupBy = "hour",
+  }) {
+    if (source !== "postgresql") {
+      return {
+        schema_version: "management-static-profile-unavailable-v1",
+        start_date: startDate,
+        end_date: endDate,
+        group_by: groupBy,
+        rows: [],
+      };
+    }
+    const query = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+      group_by: groupBy,
+    });
+    if (countryCode) {
+      query.set("country_code", countryCode);
+    }
+    if (providerUid) {
+      query.set("provider_uid", providerUid);
+    }
+    return await fetchJson(fetchImpl, `${normalizedApiBaseUrl}/profile?${query.toString()}`);
   }
 
   return {
@@ -210,6 +270,7 @@ export function createManagementDataSource({
     loadSnapshot,
     loadReport,
     loadProviderHealth,
+    loadProfile,
     currentSource: () => source,
   };
 }
