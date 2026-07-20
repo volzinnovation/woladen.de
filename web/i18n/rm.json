@@ -12,7 +12,7 @@
     "map": "Charta",
     "favorites": "Favorits",
     "stats": "Statistica",
-    "info": "Info",
+    "info": "Info & Pref.",
     "label": "Navigaziun principala",
     "route": "Ruta"
   },
@@ -74,6 +74,7 @@
   },
   "info": {
     "title": "Info ed agid",
+    "settingsButton": "Avrir preferenzas",
     "aboutTitle": "Davart woladen.de",
     "countriesTitle": "Cuvernanza actuala dals pajais",
     "country": "Pajais",

@@ -12,7 +12,7 @@
     "map": "Mappa",
     "favorites": "Favoriti",
     "stats": "Stats",
-    "info": "Info",
+    "info": "Info u Issett.",
     "label": "Navigazzjoni prinċipali",
     "route": "Rotta"
   },
@@ -74,6 +74,7 @@
   },
   "info": {
     "title": "Info u għajnuna",
+    "settingsButton": "Iftaħ is-settings",
     "aboutTitle": "Dwar woladen.de",
     "countriesTitle": "Kopertura attwali tal-pajjiżi",
     "country": "Pajjiż",

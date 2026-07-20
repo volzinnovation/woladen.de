@@ -51,7 +51,10 @@ test("live management source queries PostgreSQL dashboard contracts", async () =
 
   const index = await source.loadIndex();
   const countries = await source.loadCountries();
-  const overview = await source.loadCountryOverview("2026-07-15");
+  const overview = await source.loadCountryOverview("2026-07-15", {
+    startDate: "2026-07-02",
+    endDate: "2026-07-15",
+  });
   const loaded = await source.loadSnapshot("2026-07-15", {
     countryCode: "DE",
     providerUid: "chargecloud",
@@ -78,6 +81,8 @@ test("live management source queries PostgreSQL dashboard contracts", async () =
   assert.equal(index.source, "postgresql");
   assert.equal(countries.countries[0].country_code, "DE");
   assert.equal(overview.rows[0].country_code, "DE");
+  assert.match(requests[2].url, /start_date=2026-07-02/);
+  assert.match(requests[2].url, /end_date=2026-07-15/);
   assert.equal(loaded.source, "postgresql");
   assert.equal(loaded.trends.summary_series.length, 1);
   assert.equal(report.rows[0].country_code, "DE");
@@ -107,16 +112,22 @@ test("unavailable live endpoint falls back to the explicit static cache", async 
         return response({ available_dates: ["2026-07-14"] });
       }
       if (url.endsWith("trends.json")) {
-        return response({ summary_series: [] });
+        return response({
+          summary_series: Array.from({ length: 8 }, (_, index) => ({
+            snapshot_date: `2026-07-${String(index + 7).padStart(2, "0")}`,
+          })),
+        });
       }
       return response({ snapshot_date: "2026-07-14" });
     },
   });
 
   const index = await source.loadIndex();
-  const loaded = await source.loadSnapshot("2026-07-14");
+  const loaded = await source.loadSnapshot("2026-07-14", { trendDays: 7 });
   assert.deepEqual(index.available_dates, ["2026-07-14"]);
   assert.equal(loaded.source, "static-cache");
+  assert.equal(loaded.trends.summary_series.length, 7);
+  assert.equal(loaded.trends.summary_series[0].snapshot_date, "2026-07-08");
   assert.equal(requests.includes("./data/management/index.json"), true);
 });
 

@@ -19,6 +19,8 @@ import {
   normalizeManagementDate,
   normalizeProviderUid,
   snapshotPathForDate,
+  SUPPORTED_WINDOW_DAYS,
+  windowLabel,
 } from "./management.mjs";
 
 test("normalizeManagementDate accepts ISO dates and rejects junk", () => {
@@ -55,6 +57,19 @@ test("country and rolling-window helpers normalize management routes", () => {
   assert.deepEqual(dateRangeForWindow("2026-07-19", 28), {
     startDate: "2026-06-22",
     endDate: "2026-07-19",
+  });
+  assert.deepEqual(dateRangeForWindow("2026-07-19", 14), {
+    startDate: "2026-07-06",
+    endDate: "2026-07-19",
+  });
+  assert.deepEqual(SUPPORTED_WINDOW_DAYS, [7, 14, 28]);
+  assert.equal(windowLabel(7), "1 Woche");
+  assert.equal(windowLabel(14), "2 Wochen");
+  assert.equal(windowLabel(28), "4 Wochen");
+  assert.equal(windowLabel(90), "");
+  assert.deepEqual(dateRangeForWindow("2026-07-19", 90), {
+    startDate: "",
+    endDate: "",
   });
 });
 

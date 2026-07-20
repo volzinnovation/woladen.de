@@ -100,7 +100,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260717-settings2";
+} from "./i18n.mjs?v=20260720-info-settings2";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -1372,11 +1372,12 @@ const els = {
     chargerCount: document.getElementById("bundle-charger-count"),
     mappedCountries: document.getElementById("mapped-country-list"),
     dataSources: document.getElementById("data-source-list"),
+    settingsButton: document.getElementById("info-settings-button"),
   },
 };
 
-const VIEW_ORDER = ["view-list", "view-map", "view-route", "view-favorites", "view-settings", "view-info"];
-const VIEW_IDS = new Set(VIEW_ORDER);
+const VIEW_ORDER = ["view-list", "view-map", "view-route", "view-favorites", "view-info"];
+const VIEW_IDS = new Set([...VIEW_ORDER, "view-settings"]);
 const VIEW_HASH_ALIASES = new Map([
   ["list", "view-list"],
   ["liste", "view-list"],
@@ -1421,6 +1422,7 @@ async function init() {
   els.filter.routeFilterBtn?.addEventListener("click", () => openModal("filter"));
   els.filter.applyBtn.addEventListener("click", () => closeModal("filter"));
   els.chargePlan.trigger?.addEventListener("click", () => switchView("view-settings"));
+  els.info.settingsButton?.addEventListener("click", () => switchView("view-settings"));
   els.chargePlan.applyBtn?.addEventListener("click", () => closeModal("chargePlan"));
   els.chargePlan.resetBtn?.addEventListener("click", resetChargePlanControls);
   els.chargePlan.settingsResetBtn?.addEventListener("click", resetChargePlanControls);
@@ -4914,8 +4916,9 @@ function focusNavItem(viewId) {
 }
 
 function setActiveNavItem(viewId) {
+  const activeNavViewId = viewId === "view-settings" ? "view-info" : viewId;
   els.navItems.forEach((btn) => {
-    const isActive = btn.dataset.target === viewId;
+    const isActive = btn.dataset.target === activeNavViewId;
     btn.classList.toggle("active", isActive);
     if (isActive) {
       btn.setAttribute("aria-current", "page");

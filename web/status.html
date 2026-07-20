@@ -52,7 +52,7 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260701-data-status1" />
+    <link rel="stylesheet" href="./styles.css?v=20260720-info-settings2" />
     <script type="module" src="./status.mjs?v=20260701-data-status1"></script>
   </head>
   <body class="management-page data-status-page">
@@ -135,10 +135,6 @@
             ergaenzt Stationen, wenn fuer die jeweilige Quelle belastbare Daten
             vorhanden sind.
           </li>
-          <li>
-            Fuer Detailanalysen zu Stoerungen und Auslastung steht die
-            <a href="./management.html">Tagesauswertung</a> bereit.
-          </li>
         </ul>
       </section>
 
@@ -167,22 +163,6 @@
           </svg>
           <span>Liste</span>
         </a>
-        <a class="nav-item" href="./management.html">
-          <svg
-            class="nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <rect x="3" y="10" width="4" height="11"></rect>
-            <rect x="10" y="5" width="4" height="16"></rect>
-            <rect x="17" y="8" width="4" height="13"></rect>
-          </svg>
-          <span>Stats</span>
-        </a>
         <a class="nav-item active" href="./status.html" aria-current="page">
           <svg
             class="nav-icon"
@@ -200,20 +180,11 @@
           <span>Status</span>
         </a>
         <a class="nav-item" href="./#view-info">
-          <svg
-            class="nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.2.37.6.8 1.1 1 .35.13.72.2 1.1.2h.1v4h-.1a1.7 1.7 0 0 0-1.1.4c-.5.2-.9.6-1.1 1Z"></path>
           </svg>
-          <span>Info</span>
+          <span class="nav-label-combined">Info &amp; Einst.</span>
         </a>
       </nav>
     </main>

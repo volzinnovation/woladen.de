@@ -4,6 +4,7 @@ const TOP_STATIONS_LIMIT = 10;
 const ANDROID_WEB_LINK = "https://play.google.com/store/apps/details?id=de.woladen.android";
 const ANDROID_STORE_LINK = "market://details?id=de.woladen.android";
 const DEFAULT_WINDOW_DAYS = 28;
+export const SUPPORTED_WINDOW_DAYS = [7, 14, 28];
 const COUNTRY_NAMES = new Intl.DisplayNames(["de"], { type: "region" });
 
 export const OVERVIEW_METRICS = {
@@ -95,6 +96,14 @@ function percentFormat(value, digits = 1) {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(number);
+}
+
+export function windowLabel(windowDays) {
+  const weeks = Number(windowDays) / 7;
+  if (!Number.isInteger(weeks) || weeks < 1) {
+    return "";
+  }
+  return `${numberFormat(weeks)} ${weeks === 1 ? "Woche" : "Wochen"}`;
 }
 
 function secondsDurationFormat(seconds) {
@@ -294,7 +303,7 @@ function countryFlag(countryCode) {
 export function dateRangeForWindow(endDate, windowDays) {
   const normalized = normalizeManagementDate(endDate);
   const days = Number(windowDays);
-  if (!normalized || ![7, 28, 90].includes(days)) {
+  if (!normalized || !SUPPORTED_WINDOW_DAYS.includes(days)) {
     return { startDate: "", endDate: "" };
   }
   const start = new Date(`${normalized}T00:00:00Z`);
@@ -569,10 +578,13 @@ function stationUrl(row) {
   return stationId ? `./?station=${encodeURIComponent(stationId)}` : "";
 }
 
-function managementCountryUrl(countryCode, dateText = "") {
+function managementCountryUrl(countryCode, dateText = "", windowDays = "") {
   const query = new URLSearchParams({ country: normalizeCountryCode(countryCode) });
   if (normalizeManagementDate(dateText)) {
     query.set("date", dateText);
+  }
+  if (SUPPORTED_WINDOW_DAYS.includes(Number(windowDays))) {
+    query.set("window", String(windowDays));
   }
   return `./management.html?${query.toString()}`;
 }
@@ -907,17 +919,17 @@ function renderSummaryStrip(host, items) {
   }
 }
 
-function renderCountryOverview(countriesPayload, reportPayload, dateText) {
+function renderCountryOverview(countriesPayload, reportPayload, dateText, windowDays) {
   const rows = buildCountryOverviewRows(countriesPayload, reportPayload);
   const tbody = document.getElementById("management-country-body");
   const countryCount = document.getElementById("management-country-count");
   tbody.innerHTML = "";
   countryCount.textContent = `${numberFormat(rows.length)} Länder`;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="8">Für diesen Tag liegen keine Länderberichte vor.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7">Für diesen Tag liegen keine Länderberichte vor.</td></tr>';
   }
   for (const row of rows) {
-    const detailUrl = managementCountryUrl(row.country_code, dateText);
+    const detailUrl = managementCountryUrl(row.country_code, dateText, windowDays);
     const tr = document.createElement("tr");
     tr.className = "management-country-row";
     tr.innerHTML = `
@@ -935,51 +947,7 @@ function renderCountryOverview(countriesPayload, reportPayload, dateText) {
       <td data-sort-value="${numericSortValue(row.occupancy_share)}">${percentFormat(row.occupancy_share)}</td>
       <td data-sort-value="${numericSortValue(row.out_of_order_share)}">${percentFormat(row.out_of_order_share)}</td>
       <td data-sort-value="${numericSortValue(row.unmeasured_share)}">${percentFormat(row.unmeasured_share)}</td>
-      <td data-sort-value="${numericSortValue(row.observed_days)}">${numberFormat(row.observed_days)}</td>
       <td><a class="management-row-action" href="${escapeAttribute(detailUrl)}" aria-label="${escapeAttribute(row.country_name)} öffnen">→</a></td>
-    `;
-    tbody.appendChild(tr);
-  }
-}
-
-function renderProviderOverview(reportPayload, healthPayload, dateText, windowDays) {
-  const rows = buildRollingProviderRows(reportPayload, healthPayload);
-  const tbody = document.getElementById("management-provider-index-body");
-  const providerCount = document.getElementById("management-provider-count");
-  const title = document.getElementById("management-provider-index-title");
-  tbody.innerHTML = "";
-  providerCount.textContent = `${numberFormat(rows.length)} Anbieter`;
-  title.textContent = `Anbieter im Vergleich · ${numberFormat(windowDays)} Tage`;
-  if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="10">Für diesen Zeitraum liegen keine Anbieterberichte vor.</td></tr>';
-    return;
-  }
-  for (const row of rows) {
-    const countryCode = normalizeCountryCode(row.country_code);
-    const detailUrl = managementProviderUrl(row.provider_uid, countryCode, dateText);
-    const displayName = row.display_name || row.provider_uid || "";
-    const tr = document.createElement("tr");
-    tr.className = "management-country-row";
-    tr.innerHTML = `
-      <td data-sort-value="${escapeAttribute(displayName)}">
-        <a class="management-country-link" href="${escapeAttribute(detailUrl)}">
-          <span>
-            <strong>${escapeHtml(displayName)}</strong>
-            <small>${escapeHtml(row.publisher || row.provider_uid || "")}</small>
-          </span>
-        </a>
-      </td>
-      <td data-sort-value="${escapeAttribute(countryName(countryCode))}">
-        <a href="${escapeAttribute(managementCountryUrl(countryCode, dateText))}">${countryFlag(countryCode)} ${escapeHtml(countryName(countryCode))}</a>
-      </td>
-      <td data-sort-value="${numericSortValue(row.station_count)}">${numberFormat(row.station_count)}</td>
-      <td data-sort-value="${numericSortValue(row.measured_days)}">${numberFormat(row.measured_days)} / ${numberFormat(row.requested_days)}</td>
-      <td data-sort-value="${numericSortValue(row.coverage_ratio)}">${percentFormat(row.coverage_ratio)}</td>
-      <td data-sort-value="${numericSortValue(row.occupancy_share)}">${percentFormat(row.occupancy_share)}</td>
-      <td data-sort-value="${numericSortValue(row.out_of_order_share)}">${percentFormat(row.out_of_order_share)}</td>
-      <td data-sort-value="${numericSortValue(row.unmeasured_share)}">${percentFormat(row.unmeasured_share)}</td>
-      <td data-sort-value="${escapeAttribute(stationClassLabel(row.station_class))}"><span class="management-class-label management-class-${escapeAttribute(row.station_class || "unknown")}">${escapeHtml(stationClassLabel(row.station_class))}</span></td>
-      <td><a class="management-row-action" href="${escapeAttribute(detailUrl)}" aria-label="${escapeAttribute(displayName)} öffnen">→</a></td>
     `;
     tbody.appendChild(tr);
   }
@@ -998,9 +966,9 @@ function renderDataQuality(snapshot, windowDays) {
       detail: `${percentFormat(summary.measured_station_coverage)} Stationsabdeckung`,
     },
     {
-      label: "Nicht gemessen",
+      label: "Unbekannte Statuszeit",
       value: percentFormat(summary.unmeasured_share),
-      detail: "Anteil unbekannter Statuszeit",
+      detail: "mögliche Ladepunkt-Zeit ohne nutzbaren Live-Status",
     },
     {
       label: "Koordinaten",
@@ -1014,7 +982,7 @@ function renderDataQuality(snapshot, windowDays) {
     },
     {
       label: "Historie",
-      value: `${numberFormat(windowDays)} Tage`,
+      value: windowLabel(windowDays),
       detail: "gewählter Berichtszeitraum",
     },
   ]);
@@ -1102,7 +1070,7 @@ function renderRollingProviderReports(
   const rows = buildRollingProviderRows(reportPayload, healthPayload);
   const tbody = document.getElementById("provider-window-body");
   const title = document.getElementById("management-provider-window-title");
-  title.textContent = `Anbieterleistung über ${numberFormat(windowDays)} Tage`;
+  title.textContent = `Anbieterleistung über ${windowLabel(windowDays)}`;
   tbody.innerHTML = "";
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="8">Für diesen Zeitraum ist keine historische Anbieteraggregation verfügbar.</td></tr>';
@@ -1273,7 +1241,7 @@ async function initManagementPage() {
     detailHost.hidden = true;
     document.getElementById("management-title").textContent = "Managementübersicht öffentlicher Ladenetze";
     document.getElementById("management-subtitle").textContent =
-      "Länder und Anbieter vergleichen und die jeweilige Detailauswertung öffnen.";
+      "Länder vergleichen und die jeweilige Detailauswertung öffnen.";
     document.title = "woladen.de | Managementübersicht öffentlicher Ladenetze";
     wireSortableTables(overviewHost);
 
@@ -1281,53 +1249,34 @@ async function initManagementPage() {
     const prevDay = document.getElementById("management-overview-prev-day");
     const nextDay = document.getElementById("management-overview-next-day");
     const windowSelect = document.getElementById("management-overview-window-days");
-    let overviewWindowDays = [7, 28, 90].includes(Number(url.searchParams.get("window")))
+    let overviewWindowDays = SUPPORTED_WINDOW_DAYS.includes(Number(url.searchParams.get("window")))
       ? Number(url.searchParams.get("window"))
       : DEFAULT_WINDOW_DAYS;
     windowSelect.value = String(overviewWindowDays);
 
     async function loadOverview(targetDate, windowDays = overviewWindowDays) {
-      showLoading("Länder- und Anbieterberichte werden aus PostgreSQL geladen …");
+      showLoading("Länderberichte werden aus PostgreSQL geladen …");
       const range = dateRangeForWindow(targetDate, windowDays);
-      const providerReportsPromise = Promise.all([
-        dataSource.loadReport({
-          startDate: range.startDate,
-          endDate: range.endDate,
-          groupBy: "provider",
-        }),
-        dataSource.loadProviderHealth({
-          startDate: range.startDate,
-          endDate: range.endDate,
-        }),
-      ]).then(
-        (payloads) => ({ payloads, error: null }),
-        (error) => ({ payloads: [{ rows: [] }, { rows: [] }], error }),
-      );
-      const reportPayload = await dataSource.loadCountryOverview(targetDate);
+      const reportPayload = await dataSource.loadCountryOverview(targetDate, {
+        startDate: range.startDate,
+        endDate: range.endDate,
+      });
       currentDate = targetDate;
       overviewWindowDays = windowDays;
       syncUrl({ windowDays: overviewWindowDays });
       updateDateControls(datePicker, prevDay, nextDay, availableDates);
       windowSelect.value = String(overviewWindowDays);
-      renderCountryOverview(countriesPayload, reportPayload, currentDate);
+      renderCountryOverview(countriesPayload, reportPayload, currentDate, overviewWindowDays);
       resetSortableTables(overviewHost);
       document.documentElement.dataset.managementDataSource = dataSource.currentSource();
-      showLoading("Anbieterberichte werden aus PostgreSQL geladen …");
-      let providerReport = { rows: [] };
-      let providerHealth = { rows: [] };
-      const providerReportsResult = await providerReportsPromise;
-      [providerReport, providerHealth] = providerReportsResult.payloads;
-      if (providerReportsResult.error) {
-        console.warn("Die Anbieterübersicht ist nicht verfügbar.", providerReportsResult.error);
-      }
-      renderProviderOverview(providerReport, providerHealth, currentDate, overviewWindowDays);
-      resetSortableTables(overviewHost);
       const sourceDetail =
         dataSource.currentSource() === "postgresql"
           ? "Live aus PostgreSQL"
           : "Statische Ersatzauswertung";
       document.getElementById("management-subtitle").textContent =
-        `Länder am ${formatDateLabel(currentDate)} und Anbieter über ${numberFormat(overviewWindowDays)} Tage · ${sourceDetail}.`;
+        dataSource.currentSource() === "postgresql"
+          ? `Länderdaten für ${windowLabel(overviewWindowDays)} bis ${formatDateLabel(currentDate)} · ${sourceDetail}.`
+          : `Länderdaten am ${formatDateLabel(currentDate)} · ${sourceDetail}.`;
       hideStatus();
     }
 
@@ -1351,11 +1300,10 @@ async function initManagementPage() {
     });
     windowSelect.addEventListener("change", () => {
       const nextWindow = Number(windowSelect.value);
-      if ([7, 28, 90].includes(nextWindow)) {
+      if (SUPPORTED_WINDOW_DAYS.includes(nextWindow)) {
         loadOverview(currentDate, nextWindow).catch(renderError);
       }
     });
-
     updateDateControls(datePicker, prevDay, nextDay, availableDates);
     await loadOverview(currentDate);
     return;
@@ -1375,7 +1323,7 @@ async function initManagementPage() {
   if (!countryDates.includes(currentDate)) {
     currentDate = countryDates.at(-1) || availableDates.at(-1);
   }
-  let currentWindowDays = [7, 28, 90].includes(Number(url.searchParams.get("window")))
+  let currentWindowDays = SUPPORTED_WINDOW_DAYS.includes(Number(url.searchParams.get("window")))
     ? Number(url.searchParams.get("window"))
     : DEFAULT_WINDOW_DAYS;
   let currentSnapshot = null;
@@ -1423,7 +1371,7 @@ async function initManagementPage() {
       OVERVIEW_METRICS[overviewMetricSelect.value] || OVERVIEW_METRICS.stations_with_disruptions;
     document.getElementById("management-overview-title").textContent = selectedMetric.label;
     document.getElementById("management-overview-description").textContent =
-      `${selectedMetric.description || ""} Zeitraum: ${numberFormat(currentWindowDays)} Tage.`;
+      `${selectedMetric.description || ""} Zeitraum: ${windowLabel(currentWindowDays)}.`;
     overviewChart = createLineChart(
       "management-overview-chart",
       buildOverviewSeries(trendsPayload, overviewMetricSelect.value),
@@ -1457,7 +1405,7 @@ async function initManagementPage() {
     });
     const range = dateRangeForWindow(currentDate, currentWindowDays);
     // The raw interval profile is intentionally bounded. Rolling report and
-    // reliability tables use the selected 7/28/90-day window, while the
+    // reliability tables use the selected 1/2/4-week window, while the
     // expensive hourly chart stays responsive on the live database path.
     const profileWindowDays = Math.min(currentWindowDays, 7);
     const profileRange = dateRangeForWindow(currentDate, profileWindowDays);
@@ -1531,7 +1479,7 @@ async function initManagementPage() {
         }
         providerProfileChart = createProviderProfileChart(profileResult.payload);
         profileDescription.textContent =
-          `Auslastung und Störungsanteil je Ortszeitstunde über ${numberFormat(profileWindowDays)} Tage.`;
+          `Auslastung und Störungsanteil je Ortszeitstunde über ${windowLabel(profileWindowDays)}.`;
       } else {
         console.warn("Das stündliche Anbieterprofil ist nicht verfügbar.", profileResult.error);
         profileDescription.textContent = "Für diesen Zeitraum ist kein stündliches Anbieterprofil verfügbar.";
@@ -1560,7 +1508,7 @@ async function initManagementPage() {
   overviewMetricSelect.addEventListener("change", renderCharts);
   windowSelect.addEventListener("change", () => {
     const nextWindow = Number(windowSelect.value);
-    if ([7, 28, 90].includes(nextWindow)) {
+    if (SUPPORTED_WINDOW_DAYS.includes(nextWindow)) {
       loadSnapshot(currentDate, nextWindow).catch(renderError);
     }
   });

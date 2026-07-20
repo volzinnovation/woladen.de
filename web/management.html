@@ -60,13 +60,13 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260720-management-views1" />
+    <link rel="stylesheet" href="./styles.css?v=20260720-info-settings2" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
       defer
     ></script>
     <script src="./config.js"></script>
-    <script type="module" src="./management.mjs?v=20260720-management-views1"></script>
+    <script type="module" src="./management.mjs?v=20260720-management-cleanup3"></script>
   </head>
   <body class="management-page">
     <main class="management-shell">
@@ -77,8 +77,7 @@
         </p>
         <h1 id="management-title">Managementübersicht öffentlicher Ladenetze</h1>
         <p id="management-subtitle" class="management-subtitle">
-          Länder und Anbieter vergleichen und die jeweilige Detailauswertung
-          öffnen.
+          Länder vergleichen und die jeweilige Detailauswertung öffnen.
         </p>
       </header>
 
@@ -156,7 +155,7 @@
       <section id="management-country-overview" hidden>
         <section class="management-panel management-controls management-controls--overview">
           <div class="management-control">
-            <label for="management-overview-date">Auswertungstag</label>
+            <label for="management-overview-date">Berichtsende</label>
             <div class="management-date-row">
               <button
                 id="management-overview-prev-day"
@@ -178,11 +177,11 @@
             </div>
           </div>
           <div class="management-control">
-            <label for="management-overview-window-days">Anbieterzeitraum</label>
+            <label for="management-overview-window-days">Berichtszeitraum</label>
             <select id="management-overview-window-days">
-              <option value="7">7 Tage</option>
-              <option value="28" selected>28 Tage</option>
-              <option value="90">90 Tage</option>
+              <option value="7">1 Woche</option>
+              <option value="14">2 Wochen</option>
+              <option value="28" selected>4 Wochen</option>
             </select>
           </div>
         </section>
@@ -192,8 +191,8 @@
             <div>
               <h2>Länder mit gemessenen Live-Daten</h2>
               <p>
-                Ein Land öffnen, um Tagesverlauf, Stationen und Anbieter im
-                Detail zu analysieren.
+                Die Kennzahlen gelten für den gewählten Berichtszeitraum. Ein
+                Land öffnen, um Stationen und Anbieter im Detail zu analysieren.
               </p>
             </div>
             <span id="management-country-count" class="management-count-badge"></span>
@@ -207,44 +206,11 @@
                   <th data-sort-type="number">Ladepunkte</th>
                   <th data-sort-type="number">Auslastung</th>
                   <th data-sort-type="number">Störungsanteil</th>
-                  <th data-sort-type="number">Nicht gemessen</th>
-                  <th data-sort-type="number">Beobachtete Tage</th>
+                  <th data-sort-type="number">Unbekannte Statuszeit</th>
                   <th class="unsortable" data-sortable="false"><span class="visually-hidden">Öffnen</span></th>
                 </tr>
               </thead>
               <tbody id="management-country-body"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="management-panel management-provider-index-panel">
-          <div class="management-panel-head management-panel-head--split">
-            <div>
-              <h2 id="management-provider-index-title">Anbieter im Vergleich</h2>
-              <p>
-                Aggregierte Messabdeckung, Auslastung und Zuverlässigkeit. Ein
-                Anbieter öffnet seine eigene Detailauswertung.
-              </p>
-            </div>
-            <span id="management-provider-count" class="management-count-badge"></span>
-          </div>
-          <div class="management-table-wrap">
-            <table class="management-table management-sortable management-provider-index-table">
-              <thead>
-                <tr>
-                  <th data-sort-type="text">Anbieter</th>
-                  <th data-sort-type="text">Land</th>
-                  <th data-sort-type="number">Stationen</th>
-                  <th data-sort-type="number">Messtage</th>
-                  <th data-sort-type="number">Abdeckung</th>
-                  <th data-sort-type="number">Auslastung</th>
-                  <th data-sort-type="number">Störungsanteil</th>
-                  <th data-sort-type="number">Nicht gemessen</th>
-                  <th data-sort-type="text">Einordnung</th>
-                  <th class="unsortable" data-sortable="false"><span class="visually-hidden">Öffnen</span></th>
-                </tr>
-              </thead>
-              <tbody id="management-provider-index-body"></tbody>
             </table>
           </div>
         </section>
@@ -255,16 +221,18 @@
           </div>
           <ul>
             <li>
-              Die Übersicht enthält nur Länder, für die am gewählten Tag
+              Die Übersicht enthält nur Länder, für die im gewählten Zeitraum
               tatsächlich gemessene Live-Statusintervalle vorliegen.
             </li>
             <li>
               Auslastung und Störungsanteil beziehen sich auf gemessene Zeit.
-              Unbekannte oder nicht gemessene Zeit wird separat ausgewiesen.
+              „Unbekannte Statuszeit“ ist der Anteil der möglichen
+              Ladepunkt-Zeit ohne nutzbares Live-Statusintervall. Das können
+              vollständige Ausfälle oder einzelne Datenlücken sein.
             </li>
             <li>
               Die Detailseiten basieren auf der PostgreSQL-Historie und bieten
-              Zeiträume von 7, 28 oder 90 Tagen für Länder und Anbieter.
+              Berichtszeiträume von einer, zwei oder vier Wochen.
             </li>
           </ul>
         </section>
@@ -300,9 +268,9 @@
         <div class="management-control">
           <label for="management-window-days">Berichtszeitraum</label>
           <select id="management-window-days">
-            <option value="7">7 Tage</option>
-            <option value="28" selected>28 Tage</option>
-            <option value="90">90 Tage</option>
+            <option value="7">1 Woche</option>
+            <option value="14">2 Wochen</option>
+            <option value="28" selected>4 Wochen</option>
           </select>
         </div>
       </section>
@@ -392,7 +360,7 @@
 
         <article id="management-provider-window-panel" class="management-panel">
           <div class="management-panel-head">
-            <h2 id="management-provider-window-title">Anbieterleistung über 28 Tage</h2>
+            <h2 id="management-provider-window-title">Anbieterleistung über 4 Wochen</h2>
             <p>
               Historische Abdeckung, Auslastung, Zuverlässigkeit und
               Transportfehler je Anbieter aus PostgreSQL.
@@ -467,10 +435,10 @@
             als Belegung.
           </li>
           <li>
-            Die Anbieterleistung fasst 7, 28 oder 90 Tage zusammen. Eine hohe
-            Konfidenz bedeutet, dass für den gewählten Zeitraum ausreichend
-            Messtage vorhanden sind; sie ist keine Qualitätsbewertung des
-            Ladenetzes.
+            Die Anbieterleistung fasst eine, zwei oder vier Wochen zusammen.
+            Eine hohe Konfidenz bedeutet, dass für den gewählten Zeitraum
+            ausreichend Messtage vorhanden sind; sie ist keine
+            Qualitätsbewertung des Ladenetzes.
           </li>
           <li>
             Empfangene AFIR-Meldungen zählen den Transport. Eine Meldung kann
@@ -543,37 +511,12 @@
           </svg>
           <span>Favoriten</span>
         </a>
-        <a class="nav-item active" href="./management.html" aria-current="page">
-          <svg
-            class="nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <rect x="3" y="10" width="4" height="11"></rect>
-            <rect x="10" y="5" width="4" height="16"></rect>
-            <rect x="17" y="8" width="4" height="13"></rect>
-          </svg>
-          <span>Stats</span>
-        </a>
         <a class="nav-item" href="./#view-info">
-          <svg
-            class="nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.2.37.6.8 1.1 1 .35.13.72.2 1.1.2h.1v4h-.1a1.7 1.7 0 0 0-1.1.4c-.5.2-.9.6-1.1 1Z"></path>
           </svg>
-          <span>Info</span>
+          <span class="nav-label-combined">Info &amp; Einst.</span>
         </a>
       </nav>
     </main>

@@ -12,7 +12,7 @@
     "map": "Zemljevid",
     "favorites": "Priljubljene",
     "stats": "Statistika",
-    "info": "Info",
+    "info": "Info in Nast.",
     "label": "Glavna navigacija",
     "route": "Pot"
   },
@@ -74,6 +74,7 @@
   },
   "info": {
     "title": "Info in pomoč",
+    "settingsButton": "Odpri nastavitve",
     "aboutTitle": "O woladen.de",
     "countriesTitle": "Trenutna pokritost držav",
     "country": "Država",

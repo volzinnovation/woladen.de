@@ -13,6 +13,23 @@ function staticSnapshotPath(dateText) {
   return `./data/management/days/${match[1]}/${match[2]}/${match[3]}/snapshot.json`;
 }
 
+function staticTrendsForWindow(trends, endDate, trendDays) {
+  const end = new Date(`${endDate}T00:00:00Z`);
+  const days = Number(trendDays);
+  if (Number.isNaN(end.getTime()) || !Number.isInteger(days) || days < 1) {
+    return trends;
+  }
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - days + 1);
+  const startDate = start.toISOString().slice(0, 10);
+  return {
+    ...trends,
+    summary_series: (trends?.summary_series || []).filter(
+      (row) => row?.snapshot_date >= startDate && row?.snapshot_date <= endDate,
+    ),
+  };
+}
+
 async function fetchJson(fetchImpl, url) {
   const response = await fetchImpl(url, {
     cache: "no-store",
@@ -83,12 +100,15 @@ export function createManagementDataSource({
     };
   }
 
-  async function loadCountryOverview(dateText) {
+  async function loadCountryOverview(
+    dateText,
+    { startDate = dateText, endDate = dateText } = {},
+  ) {
     if (source === "postgresql") {
       try {
         const query = new URLSearchParams({
-          start_date: dateText,
-          end_date: dateText,
+          start_date: startDate,
+          end_date: endDate,
           group_by: "country",
           limit: "100",
           offset: "0",
@@ -169,7 +189,11 @@ export function createManagementDataSource({
         : fetchJson(fetchImpl, staticTrendsPath),
     ]);
     staticTrends = trends;
-    return { snapshot, trends, source };
+    return {
+      snapshot,
+      trends: staticTrendsForWindow(trends, dateText, trendDays),
+      source,
+    };
   }
 
   async function loadReport({

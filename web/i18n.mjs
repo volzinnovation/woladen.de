@@ -91,7 +91,7 @@ const FALLBACK_BUNDLE = {
     favorites: "Favorites",
     settings: "Settings",
     stats: "Stats",
-    info: "Info",
+    info: "Info & Set.",
   },
   search: {
     label: "Search place or address",
@@ -254,6 +254,7 @@ const FALLBACK_BUNDLE = {
   },
   info: {
     title: "Info & Help",
+    settingsButton: "Open settings",
     aboutTitle: "About woladen.de",
     countriesTitle: "Current country coverage",
     country: "Country",
@@ -577,7 +578,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260717-settings2`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260720-info-settings2`, import.meta.url));
     if (!response.ok) {
       return {};
     }

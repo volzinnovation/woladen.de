@@ -12,7 +12,7 @@
     "map": "Harita",
     "favorites": "Favoriler",
     "stats": "İstatistik",
-    "info": "Bilgi",
+    "info": "Bilgi & Ayar.",
     "label": "Ana gezinme",
     "route": "Rota"
   },
@@ -74,6 +74,7 @@
   },
   "info": {
     "title": "Bilgi ve yardım",
+    "settingsButton": "Ayarları aç",
     "aboutTitle": "woladen.de hakkında",
     "countriesTitle": "Güncel ülke kapsamı",
     "country": "Ülke",

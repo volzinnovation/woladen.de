@@ -115,7 +115,7 @@
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
-    <link rel="stylesheet" href="./styles.css?v=20260717-settings2" />
+    <link rel="stylesheet" href="./styles.css?v=20260720-info-settings2" />
   </head>
   <body>
     <div id="app" class="app-shell">
@@ -609,6 +609,13 @@
                 <span id="bundle-charger-count">...</span>
                 <span data-i18n="info.aboutOutro">charging points in many countries and shows them within 20 km of your location or selected map position. Because charging time should be time well spent. By default, woladen searches fast chargers from 50 kW; the power filter can include normal chargers below 50 kW.</span>
               </p>
+              <button id="info-settings-button" class="primary-btn info-settings-button" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.2.37.6.8 1.1 1 .35.13.72.2 1.1.2h.1v4h-.1a1.7 1.7 0 0 0-1.1.4c-.5.2-.9.6-1.1 1Z"></path>
+                </svg>
+                <span data-i18n="info.settingsButton">Open settings</span>
+              </button>
               <h4 data-i18n="info.countriesTitle">Current country coverage</h4>
               <table class="country-table" data-nosnippet>
                 <colgroup>
@@ -785,44 +792,12 @@
           </svg>
           <span data-i18n="nav.favorites">Favorites</span>
         </button>
-        <button class="nav-item" data-target="view-settings" type="button">
+        <button class="nav-item" data-target="view-info" type="button">
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.1A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.1A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.1A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.2.37.6.8 1.1 1 .35.13.72.2 1.1.2h.1v4h-.1a1.7 1.7 0 0 0-1.1.4c-.5.2-.9.6-1.1 1Z"></path>
           </svg>
-          <span data-i18n="nav.settings">Settings</span>
-        </button>
-        <a class="nav-item" href="./management.html">
-          <svg
-            class="nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <rect x="3" y="10" width="4" height="11"></rect>
-            <rect x="10" y="5" width="4" height="16"></rect>
-            <rect x="17" y="8" width="4" height="13"></rect>
-          </svg>
-          <span data-i18n="nav.stats">Stats</span>
-        </a>
-        <button class="nav-item" data-target="view-info" type="button">
-          <svg
-            class="nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="16" x2="12" y2="12"></line>
-            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-          </svg>
-          <span data-i18n="nav.info">Info</span>
+          <span class="nav-label-combined" data-i18n="nav.info">Info &amp; Set.</span>
         </button>
       </div>
 
@@ -1324,6 +1299,6 @@
     ></script>
     <script src="./app-install-promo.js?v=20260620-eu-i18n9"></script>
     <script src="./pwa-register.js?v=20260701-pwa1"></script>
-    <script src="./app.js?v=20260717-settings2" type="module"></script>
+    <script src="./app.js?v=20260720-info-settings2" type="module"></script>
   </body>
 </html>

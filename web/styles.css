@@ -436,6 +436,15 @@ body {
   white-space: nowrap;
 }
 
+.nav-item .nav-label-combined {
+  max-width: 3.25rem;
+  overflow: visible;
+  text-align: center;
+  text-overflow: clip;
+  white-space: normal;
+  line-height: 1.05;
+}
+
 .nav-item.active {
   color: var(--color-primary);
 }
@@ -3132,6 +3141,23 @@ input[type="text"]::placeholder {
 
 .info-card p {
   line-height: 1.58;
+}
+
+.info-settings-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: min(100%, 26rem);
+  margin: 0.25rem 0 1.5rem;
+  padding-block: 0.9rem;
+  box-shadow: 0 10px 24px rgba(15, 118, 110, 0.18);
+}
+
+.info-settings-button svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
 }
 
 .info-subsections {

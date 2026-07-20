@@ -12,7 +12,7 @@
     "map": "Mapa",
     "favorites": "Oblíbené",
     "stats": "Statistiky",
-    "info": "Info",
+    "info": "Info & Nast.",
     "label": "Hlavní navigace",
     "route": "Trasa"
   },
@@ -74,6 +74,7 @@
   },
   "info": {
     "title": "Info a pomoc",
+    "settingsButton": "Otevřít nastavení",
     "aboutTitle": "O woladen.de",
     "countriesTitle": "Aktuální pokrytí zemí",
     "country": "Země",

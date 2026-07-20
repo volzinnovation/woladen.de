@@ -18,7 +18,7 @@
     "favorites": "Favoriten",
     "settings": "Einstellungen",
     "stats": "Stats",
-    "info": "Info"
+    "info": "Info & Einst."
   },
   "search": {
     "label": "Ort oder Adresse suchen",
@@ -181,6 +181,7 @@
   },
   "info": {
     "title": "Info & Hilfe",
+    "settingsButton": "Einstellungen öffnen",
     "aboutTitle": "Über woladen.de",
     "countriesTitle": "Aktuelle Länderabdeckung",
     "country": "Land",

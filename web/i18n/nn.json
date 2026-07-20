@@ -12,7 +12,7 @@
     "map": "Kart",
     "favorites": "Favorittar",
     "stats": "Statistikk",
-    "info": "Info",
+    "info": "Info & Innst.",
     "label": "Hovudnavigasjon",
     "route": "Rute"
   },
@@ -74,6 +74,7 @@
   },
   "info": {
     "title": "Info og hjelp",
+    "settingsButton": "Opne innstillingar",
     "aboutTitle": "Om woladen.de",
     "countriesTitle": "Noverande landdekning",
     "country": "Land",

@@ -179,8 +179,48 @@ test("route planner is visible in main navigation", () => {
   const appJs = readText(new URL("./app.js", import.meta.url));
   assert.match(indexHtml, /id="view-route"/);
   assert.match(indexHtml, /class="nav-item"[^>]*data-target="view-route"/);
-  assert.match(appJs, /const VIEW_ORDER = \["view-list", "view-map", "view-route", "view-favorites", "view-settings", "view-info"\];/);
-  assert.match(appJs, /const VIEW_IDS = new Set\(VIEW_ORDER\);/);
+  assert.match(appJs, /const VIEW_ORDER = \["view-list", "view-map", "view-route", "view-favorites", "view-info"\];/);
+  assert.match(appJs, /const VIEW_IDS = new Set\(\[\.\.\.VIEW_ORDER, "view-settings"\]\);/);
+});
+
+test("main navigation merges settings into info and hides management stats", () => {
+  const indexHtml = readText(INDEX_HTML_URL);
+  const appJs = readText(new URL("./app.js", import.meta.url));
+  const navHtml = indexHtml.slice(indexHtml.indexOf("<!-- NAVIGATION BAR -->"), indexHtml.indexOf("<!-- FILTER MODAL"));
+  assert.doesNotMatch(navHtml, /management\.html/);
+  assert.doesNotMatch(navHtml, /data-target="view-settings"/);
+  assert.match(navHtml, /data-target="view-info"[\s\S]*nav-label-combined[\s\S]*data-i18n="nav\.info"/);
+  assert.match(navHtml, /data-target="view-info"[\s\S]*<circle cx="12" cy="12" r="3">/);
+  assert.match(appJs, /viewId === "view-settings" \? "view-info" : viewId/);
+});
+
+test("info view offers the settings screen after its introductory text", () => {
+  const indexHtml = readText(INDEX_HTML_URL);
+  const appJs = readText(new URL("./app.js", import.meta.url));
+  const aboutTextIndex = indexHtml.indexOf('data-i18n="info.aboutOutro"');
+  const settingsButtonIndex = indexHtml.indexOf('id="info-settings-button"');
+  const countriesTitleIndex = indexHtml.indexOf('data-i18n="info.countriesTitle"');
+  assert.ok(aboutTextIndex < settingsButtonIndex);
+  assert.ok(settingsButtonIndex < countriesTitleIndex);
+  assert.match(indexHtml, /id="info-settings-button"[\s\S]*data-i18n="info\.settingsButton"/);
+  assert.match(appJs, /els\.info\.settingsButton\?\.addEventListener\("click", \(\) => switchView\("view-settings"\)\)/);
+});
+
+test("combined info and settings labels are localized", () => {
+  const fallback = fallbackBundle();
+  assert.equal(fallback.nav.info, "Info & Set.");
+  assert.equal(fallback.info.settingsButton, "Open settings");
+  const bundleFiles = fs
+    .readdirSync(new URL("./i18n", import.meta.url))
+    .filter((filename) => filename.endsWith(".json"));
+  for (const filename of bundleFiles) {
+    const bundle = readBundle(filename.replace(/\.json$/, ""));
+    const navLabel = bundle.nav?.info || fallback.nav.info;
+    const buttonLabel = bundle.info?.settingsButton || fallback.info.settingsButton;
+    assert.ok(navLabel.length >= 7, `${filename} combined nav label is missing`);
+    assert.ok(buttonLabel.length >= 5, `${filename} settings button label is missing`);
+  }
+  assert.equal(readBundle("de").nav.info, "Info & Einst.");
 });
 
 test("settings keep units before number fields and a single-column desktop layout", () => {

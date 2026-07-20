@@ -17,7 +17,7 @@
     "map": "Kaart",
     "favorites": "Favorieten",
     "stats": "Statistieken",
-    "info": "Info",
+    "info": "Info & Inst.",
     "route": "Route"
   },
   "settings": {
@@ -134,6 +134,7 @@
   },
   "info": {
     "title": "Info en hulp",
+    "settingsButton": "Instellingen openen",
     "aboutTitle": "Over woladen.de",
     "countriesTitle": "Huidige landendekking",
     "country": "Land",

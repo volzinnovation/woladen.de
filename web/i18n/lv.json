@@ -12,7 +12,7 @@
     "map": "Karte",
     "favorites": "Izlase",
     "stats": "Statistika",
-    "info": "Info",
+    "info": "Info & Iestat.",
     "label": "Galvenā navigācija",
     "route": "Maršruts"
   },
@@ -74,6 +74,7 @@
   },
   "info": {
     "title": "Info un palīdzība",
+    "settingsButton": "Atvērt iestatījumus",
     "aboutTitle": "Par woladen.de",
     "countriesTitle": "Pašreizējais valstu pārklājums",
     "country": "Valsts",

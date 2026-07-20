@@ -12,7 +12,7 @@
     "map": "Carte",
     "favorites": "Favoris",
     "stats": "Stats",
-    "info": "Info",
+    "info": "Info & Régl.",
     "label": "Navigation principale",
     "route": "Itinéraire"
   },
@@ -74,6 +74,7 @@
   },
   "info": {
     "title": "Infos et aide",
+    "settingsButton": "Ouvrir les réglages",
     "aboutTitle": "À propos de woladen.de",
     "countriesTitle": "Couverture actuelle des pays",
     "country": "Pays",

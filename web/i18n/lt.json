@@ -12,7 +12,7 @@
     "map": "Žemėlapis",
     "favorites": "Mėgstamiausi",
     "stats": "Statistika",
-    "info": "Info",
+    "info": "Info ir Nust.",
     "label": "Pagrindinė navigacija",
     "route": "Maršrutas"
   },
@@ -74,6 +74,7 @@
   },
   "info": {
     "title": "Info ir pagalba",
+    "settingsButton": "Atidaryti nustatymus",
     "aboutTitle": "Apie woladen.de",
     "countriesTitle": "Dabartinė šalių aprėptis",
     "country": "Šalis",
