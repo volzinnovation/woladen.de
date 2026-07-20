@@ -1456,6 +1456,11 @@ async function initManagementPage() {
       linkProviders: !providerUid,
     });
     const range = dateRangeForWindow(currentDate, currentWindowDays);
+    // The raw interval profile is intentionally bounded. Rolling report and
+    // reliability tables use the selected 7/28/90-day window, while the
+    // expensive hourly chart stays responsive on the live database path.
+    const profileWindowDays = Math.min(currentWindowDays, 7);
+    const profileRange = dateRangeForWindow(currentDate, profileWindowDays);
     let providerReport = { rows: [] };
     let providerHealth = { rows: [] };
     if (providerUid && providerProfileChart) {
@@ -1465,8 +1470,8 @@ async function initManagementPage() {
     const providerProfilePromise =
       loaded.source === "postgresql" && providerUid
         ? dataSource.loadProfile({
-            startDate: range.startDate,
-            endDate: range.endDate,
+            startDate: profileRange.startDate,
+            endDate: profileRange.endDate,
             countryCode,
             providerUid,
             groupBy: "hour",
@@ -1526,7 +1531,7 @@ async function initManagementPage() {
         }
         providerProfileChart = createProviderProfileChart(profileResult.payload);
         profileDescription.textContent =
-          `Auslastung und Störungsanteil je Ortszeitstunde über ${numberFormat(currentWindowDays)} Tage.`;
+          `Auslastung und Störungsanteil je Ortszeitstunde über ${numberFormat(profileWindowDays)} Tage.`;
       } else {
         console.warn("Das stündliche Anbieterprofil ist nicht verfügbar.", profileResult.error);
         profileDescription.textContent = "Für diesen Zeitraum ist kein stündliches Anbieterprofil verfügbar.";
