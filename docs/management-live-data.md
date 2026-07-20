@@ -58,6 +58,8 @@ fallback, URL normalization, and browser rendering for both sources.
 The overview uses grouped country and provider reports rather than one
 dashboard request per row. Country and provider details each load one scoped
 dashboard plus a grouped provider report and provider-health query. Provider
-details additionally request the bounded hourly profile. Large station-stat
-materializations and raw/bulk report artifacts are deliberately not requested
-by the public page.
+details additionally request a bounded hourly profile. The provider profile
+chart deliberately uses the latest seven days even when the surrounding report
+window is 28 or 90 days; this keeps the interval query responsive while the
+tables retain the selected rolling window. Large station-stat materializations
+and raw/bulk report artifacts are deliberately not requested by the public page.
