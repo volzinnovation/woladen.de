@@ -984,7 +984,7 @@ function renderCountryOverview(countriesPayload, reportPayload, dateText, window
   tbody.innerHTML = "";
   countryCount.textContent = `${numberFormat(rows.length)} Länder`;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="8">Für diesen Tag liegen keine Länderberichte vor.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7">Für diesen Tag liegen keine Länderberichte vor.</td></tr>';
   }
   for (const row of rows) {
     const detailUrl = managementCountryUrl(row.country_code, dateText, windowDays);
@@ -1005,7 +1005,6 @@ function renderCountryOverview(countriesPayload, reportPayload, dateText, window
       <td data-sort-value="${numericSortValue(row.observed_evse_days ?? row.observed_evses)}">${numberFormat(row.observed_evse_days ?? row.observed_evses)}</td>
       <td data-sort-value="${numericSortValue(row.occupancy_share)}">${percentFormat(row.occupancy_share)}</td>
       <td data-sort-value="${numericSortValue(row.out_of_order_share)}">${percentFormat(row.out_of_order_share)}</td>
-      <td data-sort-value="${numericSortValue(row.unmeasured_share)}">${percentFormat(row.unmeasured_share)}</td>
       <td><a class="management-row-action" href="${escapeAttribute(detailUrl)}" aria-label="${escapeAttribute(row.country_name)} öffnen">→</a></td>
     `;
     tbody.appendChild(tr);
@@ -1023,11 +1022,6 @@ function renderDataQuality(snapshot, windowDays) {
       label: "Konfidenz",
       value: confidenceLabel(summary.confidence_label),
       detail: `${percentFormat(summary.measured_station_coverage)} Stationsabdeckung`,
-    },
-    {
-      label: "Anteil nicht auswertbarer Statuszeit",
-      value: percentFormat(summary.unmeasured_share),
-      detail: "erfasste Ladepunkt-Zeit ohne auswertbaren Status",
     },
     {
       label: "Koordinaten",

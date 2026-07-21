@@ -66,7 +66,7 @@
       defer
     ></script>
     <script src="./config.js"></script>
-    <script type="module" src="./management.mjs?v=20260721-management-ranking1"></script>
+    <script type="module" src="./management.mjs?v=20260721-management-ranking2"></script>
   </head>
   <body class="management-page">
     <main class="management-shell">
@@ -214,7 +214,6 @@
                   <th data-sort-type="number">Ladepunkte</th>
                   <th data-sort-type="number">Auslastung</th>
                   <th data-sort-type="number">Störungsanteil</th>
-                  <th data-sort-type="number">Anteil nicht auswertbarer Statuszeit</th>
                   <th class="unsortable" data-sortable="false"><span class="visually-hidden">Öffnen</span></th>
                 </tr>
               </thead>
@@ -233,12 +232,8 @@
               tatsächlich gemessene Live-Statusintervalle vorliegen.
             </li>
             <li>
-              Auslastung und Störungsanteil beziehen sich auf gemessene Zeit.
-              Der „Anteil nicht auswertbarer Statuszeit“ ist kein
-              Stationsanteil. Er zeigt den Anteil der erfassten
-              Ladepunkt-Zeit, deren Status nicht als frei, belegt, außer
-              Betrieb oder nicht verfügbar ausgewertet werden konnte.
-              Stationen ganz ohne Live-Beobachtung sind darin nicht enthalten.
+              Auslastung und Störungsanteil beziehen sich ausschließlich auf
+              Zeiträume mit auswertbarem Live-Status.
             </li>
             <li>
               Die Detailseiten basieren auf der PostgreSQL-Historie und bieten
