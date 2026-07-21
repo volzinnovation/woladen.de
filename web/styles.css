@@ -4794,6 +4794,13 @@ select:focus-visible {
   color: #5a6772;
 }
 
+.management-rank-column {
+  width: 2.4rem;
+  color: #74808a;
+  font-variant-numeric: tabular-nums;
+  text-align: right !important;
+}
+
 .management-sort-button {
   appearance: none;
   display: inline-flex;

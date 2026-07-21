@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  DEFAULT_WINDOW_DAYS,
   OVERVIEW_METRICS,
   buildCountryOverviewRows,
   buildManagementSubtitle,
@@ -18,6 +19,7 @@ import {
   normalizeCountryCode,
   normalizeManagementDate,
   normalizeProviderUid,
+  rankedTableTitle,
   snapshotPathForDate,
   SUPPORTED_WINDOW_DAYS,
   windowLabel,
@@ -63,6 +65,7 @@ test("country and rolling-window helpers normalize management routes", () => {
     endDate: "2026-07-19",
   });
   assert.deepEqual(SUPPORTED_WINDOW_DAYS, [7, 14, 28]);
+  assert.equal(DEFAULT_WINDOW_DAYS, 7);
   assert.equal(windowLabel(7), "1 Woche");
   assert.equal(windowLabel(14), "2 Wochen");
   assert.equal(windowLabel(28), "4 Wochen");
@@ -71,6 +74,12 @@ test("country and rolling-window helpers normalize management routes", () => {
     startDate: "",
     endDate: "",
   });
+});
+
+test("ranked table title follows the active sort column", () => {
+  assert.equal(rankedTableTitle("Top-Länder nach", "Auslastung"), "Top-Länder nach Auslastung");
+  assert.equal(rankedTableTitle("Top-Länder nach", "Stationen"), "Top-Länder nach Stationen");
+  assert.equal(rankedTableTitle("Top-Länder nach", ""), "Top-Länder nach Auslastung");
 });
 
 test("buildOverviewSeries returns ordered labels and values for the selected metric", () => {

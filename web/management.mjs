@@ -3,7 +3,7 @@ import { createManagementDataSource } from "./management-api.mjs";
 const TOP_STATIONS_LIMIT = 10;
 const ANDROID_WEB_LINK = "https://play.google.com/store/apps/details?id=de.woladen.android";
 const ANDROID_STORE_LINK = "market://details?id=de.woladen.android";
-const DEFAULT_WINDOW_DAYS = 28;
+export const DEFAULT_WINDOW_DAYS = 7;
 export const SUPPORTED_WINDOW_DAYS = [7, 14, 28];
 const COUNTRY_NAMES = new Intl.DisplayNames(["de"], { type: "region" });
 
@@ -104,6 +104,12 @@ export function windowLabel(windowDays) {
     return "";
   }
   return `${numberFormat(weeks)} ${weeks === 1 ? "Woche" : "Wochen"}`;
+}
+
+export function rankedTableTitle(prefix, columnLabel, fallbackLabel = "Auslastung") {
+  const normalizedPrefix = String(prefix || "").trim();
+  const normalizedLabel = String(columnLabel || fallbackLabel).trim() || fallbackLabel;
+  return `${normalizedPrefix} ${normalizedLabel}`.trim();
 }
 
 function secondsDurationFormat(seconds) {
@@ -712,6 +718,33 @@ function markTableOriginalOrder(table) {
   });
 }
 
+function updateTableRowNumbers(table) {
+  tableBodyRows(table).forEach((row, index) => {
+    const rank = String(index + 1);
+    row.querySelectorAll("[data-row-number]").forEach((cell) => {
+      cell.textContent = rank;
+    });
+  });
+}
+
+function updateSortableTableTitle(table) {
+  const titleId = String(table.dataset.sortTitleId || "").trim();
+  const title = titleId ? document.getElementById(titleId) : null;
+  if (!title) {
+    return;
+  }
+  const headerRow = sortableHeaderRow(table);
+  const columnIndex = Number(table.dataset.sortColumn);
+  const columnLabel = Number.isInteger(columnIndex)
+    ? headerRow?.cells[columnIndex]?.querySelector(".management-sort-label")?.textContent
+    : "";
+  title.textContent = rankedTableTitle(
+    table.dataset.sortTitlePrefix,
+    columnLabel,
+    "Auslastung",
+  );
+}
+
 function setSortableHeaderState(table, activeColumnIndex, direction) {
   const headerRow = sortableHeaderRow(table);
   if (!headerRow) {
@@ -755,22 +788,33 @@ function sortTableRows(table, columnIndex, type, direction) {
     return valueDelta === 0 ? leftOriginal - rightOriginal : valueDelta * sign;
   });
   rows.forEach((row) => tbody.appendChild(row));
+  updateTableRowNumbers(table);
 }
 
 function toggleTableSort(table, columnIndex, type) {
   const currentColumn = Number(table.dataset.sortColumn || -1);
   const currentDirection = table.dataset.sortDirection || "none";
-  let nextDirection = "ascending";
-  if (currentColumn === columnIndex && currentDirection === "ascending") {
-    nextDirection = "descending";
-  } else if (currentColumn === columnIndex && currentDirection === "descending") {
-    nextDirection = "none";
+  let nextDirection;
+  if (table.dataset.rankRows === "true") {
+    if (currentColumn === columnIndex) {
+      nextDirection = currentDirection === "descending" ? "ascending" : "descending";
+    } else {
+      nextDirection = type === "text" ? "ascending" : "descending";
+    }
+  } else {
+    nextDirection = "ascending";
+    if (currentColumn === columnIndex && currentDirection === "ascending") {
+      nextDirection = "descending";
+    } else if (currentColumn === columnIndex && currentDirection === "descending") {
+      nextDirection = "none";
+    }
   }
 
   table.dataset.sortColumn = nextDirection === "none" ? "" : String(columnIndex);
   table.dataset.sortDirection = nextDirection;
   sortTableRows(table, columnIndex, type, nextDirection);
   setSortableHeaderState(table, columnIndex, nextDirection);
+  updateSortableTableTitle(table);
 }
 
 function wireSortableTable(table) {
@@ -815,9 +859,23 @@ function wireSortableTables(root = document) {
 
 function resetSortableTable(table) {
   markTableOriginalOrder(table);
-  table.dataset.sortColumn = "";
-  table.dataset.sortDirection = "none";
-  setSortableHeaderState(table, -1, "none");
+  const defaultColumnText = String(table.dataset.defaultSortColumn || "").trim();
+  const defaultColumn = defaultColumnText ? Number(defaultColumnText) : -1;
+  const defaultDirection = table.dataset.defaultSortDirection || "none";
+  if (Number.isInteger(defaultColumn) && defaultColumn >= 0 && defaultDirection !== "none") {
+    const headerRow = sortableHeaderRow(table);
+    const sortType = headerRow?.cells[defaultColumn]?.dataset.sortType || "text";
+    table.dataset.sortColumn = String(defaultColumn);
+    table.dataset.sortDirection = defaultDirection;
+    sortTableRows(table, defaultColumn, sortType, defaultDirection);
+    setSortableHeaderState(table, defaultColumn, defaultDirection);
+  } else {
+    table.dataset.sortColumn = "";
+    table.dataset.sortDirection = "none";
+    setSortableHeaderState(table, -1, "none");
+    updateTableRowNumbers(table);
+  }
+  updateSortableTableTitle(table);
 }
 
 function resetSortableTables(root = document) {
@@ -926,13 +984,14 @@ function renderCountryOverview(countriesPayload, reportPayload, dateText, window
   tbody.innerHTML = "";
   countryCount.textContent = `${numberFormat(rows.length)} Länder`;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7">Für diesen Tag liegen keine Länderberichte vor.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8">Für diesen Tag liegen keine Länderberichte vor.</td></tr>';
   }
   for (const row of rows) {
     const detailUrl = managementCountryUrl(row.country_code, dateText, windowDays);
     const tr = document.createElement("tr");
     tr.className = "management-country-row";
     tr.innerHTML = `
+      <td class="management-rank-column" data-row-number></td>
       <td data-sort-value="${escapeAttribute(row.country_name)}">
         <a class="management-country-link" href="${escapeAttribute(detailUrl)}">
           <span class="management-country-flag" aria-hidden="true">${countryFlag(row.country_code)}</span>
@@ -966,9 +1025,9 @@ function renderDataQuality(snapshot, windowDays) {
       detail: `${percentFormat(summary.measured_station_coverage)} Stationsabdeckung`,
     },
     {
-      label: "Unbekannte Statuszeit",
+      label: "Anteil nicht auswertbarer Statuszeit",
       value: percentFormat(summary.unmeasured_share),
-      detail: "mögliche Ladepunkt-Zeit ohne nutzbaren Live-Status",
+      detail: "erfasste Ladepunkt-Zeit ohne auswertbaren Status",
     },
     {
       label: "Koordinaten",
