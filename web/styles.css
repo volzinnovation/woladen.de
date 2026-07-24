@@ -4585,6 +4585,23 @@ select:focus-visible {
   color: #5a6772;
 }
 
+.management-reference {
+  margin-left: 0.22rem;
+  font-size: 0.68em;
+  font-weight: 800;
+  vertical-align: super;
+}
+
+.management-reference a {
+  color: #12664f;
+  text-decoration: none;
+}
+
+.management-reference a:hover,
+.management-reference a:focus-visible {
+  text-decoration: underline;
+}
+
 .management-kpi-value {
   margin-top: 0.4rem;
   font-size: clamp(1.25rem, 2.2vw, 2rem);
@@ -4721,33 +4738,6 @@ select:focus-visible {
 .management-country-row:hover .management-row-action {
   transform: translateX(3px);
   background: rgba(18, 102, 79, 0.15);
-}
-
-.management-class-label {
-  display: inline-flex;
-  padding: 0.25rem 0.55rem;
-  border-radius: 999px;
-  background: rgba(19, 32, 41, 0.07);
-  color: #42505c;
-  font-size: 0.75rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.management-class-reliability_risk {
-  background: rgba(143, 45, 42, 0.11);
-  color: #8f2d2a;
-}
-
-.management-class-constrained_hotspot,
-.management-class-high_demand {
-  background: rgba(196, 143, 16, 0.14);
-  color: #7b5200;
-}
-
-.management-class-balanced {
-  background: rgba(18, 102, 79, 0.12);
-  color: #12664f;
 }
 
 @keyframes management-enter {
@@ -4918,6 +4908,40 @@ select:focus-visible {
   font-weight: 700;
 }
 
+.management-metric-lines {
+  display: grid;
+  min-width: 9.5rem;
+  gap: 0.18rem;
+}
+
+.management-metric-lines > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 0.8rem;
+}
+
+.management-metric-lines span {
+  color: #74808a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.management-metric-lines strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#management-provider-window-panel .management-table {
+  min-width: 900px;
+}
+
+#management-provider-window-panel .management-table th:first-child,
+#management-provider-window-panel .management-table td:first-child {
+  min-width: 260px;
+}
+
 .tier-pill {
   display: inline-flex;
   align-items: center;
@@ -4942,13 +4966,28 @@ select:focus-visible {
   color: #8f2d2a;
 }
 
-.management-notes ul {
+.management-notes ul,
+.management-notes ol {
   margin: 0.9rem 0 0;
   padding-left: 1.1rem;
 }
 
+.management-notes h3 {
+  margin: 1.35rem 0 0;
+  font-size: 1rem;
+}
+
 .management-notes li + li {
   margin-top: 0.55rem;
+}
+
+.management-footnotes li {
+  scroll-margin-top: 1rem;
+}
+
+.management-footnotes li::marker {
+  color: #12664f;
+  font-weight: 800;
 }
 
 .management-notes a {

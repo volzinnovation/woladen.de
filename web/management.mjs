@@ -1,6 +1,7 @@
 import { createManagementDataSource } from "./management-api.mjs";
 
 const TOP_STATIONS_LIMIT = 10;
+const DISPLAYED_FULL_UTILIZATION_THRESHOLD = 0.9995;
 const ANDROID_WEB_LINK = "https://play.google.com/store/apps/details?id=de.woladen.android";
 const ANDROID_STORE_LINK = "market://details?id=de.woladen.android";
 export const DEFAULT_WINDOW_DAYS = 7;
@@ -207,20 +208,6 @@ function confidencePhrase(value) {
   );
 }
 
-function stationClassLabel(value) {
-  return (
-    {
-      reliability_risk: "Zuverlässigkeitsrisiko",
-      constrained_hotspot: "Engpass",
-      high_demand: "Hohe Nachfrage",
-      underused: "Gering genutzt",
-      overnight_demand: "Nachtbedarf",
-      insufficient_data: "Zu wenig Daten",
-      balanced: "Ausgewogen",
-    }[String(value || "")] || "Nicht eingeordnet"
-  );
-}
-
 export function buildProviderReportMetrics(row) {
   const receivedMessagesTotal = firstNumber(row?.received_messages_total, row?.messages_total) ?? 0;
   const observationsTotal = firstNumber(row?.observations_total) ?? 0;
@@ -355,71 +342,103 @@ export function buildOverviewSeries(trends, metricKey) {
   };
 }
 
-export function staticStationCountForCountry(openStaticSummary, countryCode) {
+export function staticCatalogCountsForCountry(openStaticSummary, countryCode) {
   const normalizedCountry = normalizeCountryCode(countryCode);
   if (!normalizedCountry) {
-    return null;
+    return { publicStationCount: null, publicChargerCount: null };
   }
   const countries = Array.isArray(openStaticSummary?.countries) ? openStaticSummary.countries : [];
   const country = countries.find(
     (row) => normalizeCountryCode(row?.code ?? row?.country_code) === normalizedCountry,
   );
-  return optionalNumber(country?.station_count);
+  return {
+    publicStationCount: optionalNumber(country?.station_count),
+    publicChargerCount: optionalNumber(country?.charger_count),
+  };
 }
 
-export function buildSummaryCards(snapshot, { staticStationCount = null } = {}) {
+export function buildSummaryCards(
+  snapshot,
+  { publicStationCount = null, publicChargerCount = null } = {},
+) {
   const summary = snapshot?.summary || {};
   if (optionalNumber(summary.measured_station_coverage) !== null) {
-    const dynamicStationCount =
-      firstNumber(summary.measured_station_count, summary.station_count) ?? 0;
-    const stationsWithDisruptions = firstNumber(summary.stations_with_disruptions) ?? 0;
-    const stationsWithoutDisruptions = Math.max(
-      0,
-      dynamicStationCount - stationsWithDisruptions,
+    const catalogStationCount = firstNumber(
+      summary.static_station_count,
+      publicStationCount,
     );
-    const cards = [
+    const catalogChargerCount = firstNumber(
+      summary.static_charger_count,
+      publicChargerCount,
+    );
+    const liveStationCount = optionalNumber(summary.measured_static_station_count);
+    const stationsWithoutDisruptions = optionalNumber(
+      summary.static_stations_without_disruptions,
+    );
+    const liveCoverage =
+      catalogStationCount > 0 && liveStationCount !== null
+        ? liveStationCount / catalogStationCount
+        : null;
+    const disruptionFreeShare =
+      liveStationCount > 0 && stationsWithoutDisruptions !== null
+        ? stationsWithoutDisruptions / liveStationCount
+        : null;
+    return [
       {
-        label: "Dynamische Stationen im Tagesarchiv",
-        value: numberFormat(summary.station_count ?? summary.afir_stations_observed),
-        detail: `${numberFormat(summary.observed_evses)} beobachtete Ladepunkte mit Live-Daten.`,
+        label: "Öffentliche Ladepunkte",
+        value: optionalNumberFormat(catalogChargerCount) || "–",
+        detail: "Ladepunkte im öffentlichen Ladestellenverzeichnis.",
+        reference: 1,
+      },
+      {
+        label: "Öffentliche Ladestationen",
+        value: optionalNumberFormat(catalogStationCount) || "–",
+        detail: "Standorte im öffentlichen Ladestellenverzeichnis.",
+        reference: 2,
+      },
+      {
+        label: "Stationen mit Live-Daten",
+        value: optionalNumberFormat(liveStationCount) || "–",
+        detail:
+          liveCoverage === null
+            ? "Für diesen Tag ist keine verknüpfte Live-Abdeckung verfügbar."
+            : `${percentFormat(liveCoverage)} der öffentlichen Stationen lieferten auswertbare Live-Daten.`,
+        reference: 3,
       },
       {
         label: "Stationen ohne Störung",
-        value: percentFormat(
-          dynamicStationCount > 0 ? stationsWithoutDisruptions / dynamicStationCount : null,
-        ),
-        detail: `${numberFormat(stationsWithoutDisruptions)} von ${numberFormat(dynamicStationCount)} dynamischen Stationen ohne gemeldete Störung im Tagesverlauf.`,
+        value: optionalNumberFormat(stationsWithoutDisruptions) || "–",
+        detail:
+          disruptionFreeShare === null
+            ? "Für diesen Tag ist kein vergleichbarer Stationswert verfügbar."
+            : `${percentFormat(disruptionFreeShare)} der Stationen mit Live-Daten meldeten keine Störung.`,
+        reference: 4,
       },
       {
         label: "Auslastung",
         value: percentFormat(summary.occupancy_share),
-        detail: "Belegte Zeit innerhalb der gemessenen Zeit.",
+        detail: `Gesamt ${percentFormat(summary.occupancy_share)} · Tag ${percentFormat(summary.day_occupancy_share)} · Nacht ${percentFormat(summary.night_occupancy_share)}`,
+        reference: 5,
       },
       {
         label: "Störungsanteil",
         value: percentFormat(summary.out_of_order_share),
-        detail: `${numberFormat(summary.stations_with_disruptions)} Stationen waren betroffen.`,
+        detail: `Gesamt ${percentFormat(summary.out_of_order_share)} · Tag ${percentFormat(summary.day_out_of_order_share)} · Nacht ${percentFormat(summary.night_out_of_order_share)}`,
+        reference: 6,
       },
       {
         label: "Am Tagesende gestört",
-        value: numberFormat(summary.disruptions_at_end_of_day),
-        detail: "Stationen mit mindestens einem weiter gestörten Ladepunkt.",
+        value: optionalNumberFormat(summary.static_disruptions_at_end_of_day) || "–",
+        detail: "Stationen, an denen zuletzt noch mindestens ein Ladepunkt gestört war.",
+        reference: 7,
       },
       {
-        label: "Vollständig außer Betrieb",
-        value: numberFormat(summary.fully_out_of_service_stations),
-        detail: "Alle beobachteten Ladepunkte waren am Tagesende gestört.",
+        label: "Außer Betrieb",
+        value: optionalNumberFormat(summary.static_fully_out_of_service_stations) || "–",
+        detail: "Stationen, deren beobachtete Ladepunkte zuletzt alle gestört waren.",
+        reference: 8,
       },
     ];
-    const staticCount = optionalNumber(staticStationCount);
-    if (staticCount !== null && staticCount > 0) {
-      cards.splice(1, 0, {
-        label: "Live-Daten-Abdeckung",
-        value: percentFormat(dynamicStationCount / staticCount),
-        detail: `${numberFormat(dynamicStationCount)} von ${numberFormat(staticCount)} statischen Stationen mit messbarem Live-Status.`,
-      });
-    }
-    return cards;
   }
   const cards = [
     {
@@ -543,7 +562,7 @@ export function buildStationRows(snapshot, key) {
   }
   const eligibleRows = rows.filter((row) => {
     const utilization = optionalNumber(row?.day_occupancy_share);
-    return utilization === null || utilization < 1;
+    return utilization === null || utilization < DISPLAYED_FULL_UTILIZATION_THRESHOLD;
   });
   eligibleRows.sort((left, right) => {
     const busyDelta =
@@ -1120,11 +1139,6 @@ function renderDataQuality(snapshot, windowDays) {
       detail: "Bewertung der Datenabdeckung",
     },
     {
-      label: "Messbarer Live-Status",
-      value: percentFormat(summary.measured_station_coverage),
-      detail: "Anteil der dynamischen Stationen mit verwertbarer Statuszeit",
-    },
-    {
       label: "Koordinaten",
       value: percentFormat(summary.coordinate_coverage),
       detail: "für geografische Auswertungen",
@@ -1149,8 +1163,12 @@ function renderKpis(snapshot, options = {}) {
   for (const cardInfo of cards) {
     const card = document.createElement("article");
     card.className = "management-kpi";
+    const reference = Number(cardInfo.reference);
+    const referenceMarkup = Number.isInteger(reference)
+      ? `<sup class="management-reference"><a href="#management-footnote-${reference}" aria-label="Fußnote ${reference}">[${reference}]</a></sup>`
+      : "";
     card.innerHTML = `
-      <div class="management-kpi-label">${escapeHtml(cardInfo.label)}</div>
+      <div class="management-kpi-label">${escapeHtml(cardInfo.label)}${referenceMarkup}</div>
       <div class="management-kpi-value">${escapeHtml(cardInfo.value)}</div>
       <div class="management-kpi-detail">${escapeHtml(cardInfo.detail)}</div>
     `;
@@ -1158,12 +1176,14 @@ function renderKpis(snapshot, options = {}) {
   }
 }
 
-function renderBrokenStations(snapshot) {
+function renderBrokenStations(snapshot, windowDays) {
   const rows = buildStationRows(snapshot, "broken_stations");
   const tbody = document.getElementById("broken-stations-body");
+  document.getElementById("management-broken-stations-description").textContent =
+    `Top 10 der Ladestationen mit den meisten Störungen über ${windowLabel(windowDays)}.`;
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="6">Für diesen Tag wurden keine gestörten Stationen erkannt.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5">Für diesen Berichtszeitraum wurden keine gestörten Stationen erkannt.</td></tr>';
     return;
   }
   for (const row of rows) {
@@ -1181,18 +1201,19 @@ function renderBrokenStations(snapshot) {
       <td data-sort-value="${numericSortValue(row.current_broken_charger_count)}">${numberFormat(row.current_broken_charger_count)}</td>
       <td data-sort-value="${numericSortValue(row.out_of_order_share)}">${percentFormat(row.out_of_order_share)}</td>
       <td data-sort-value="${numericSortValue(row.out_of_order_duration_seconds_total)}">${durationHoursFormat(row.out_of_order_duration_seconds_total)}</td>
-      <td data-sort-value="${escapeAttribute(row.status_label || "")}">${escapeHtml(row.status_label || "")}</td>
     `;
     tbody.appendChild(tr);
   }
 }
 
-function renderBusyStations(snapshot) {
+function renderBusyStations(snapshot, windowDays) {
   const rows = buildStationRows(snapshot, "busiest_stations");
   const tbody = document.getElementById("busy-stations-body");
+  document.getElementById("management-busy-stations-description").textContent =
+    `Top 10 nach Auslastung am Tag und Statuswechseln über ${windowLabel(windowDays)}.`;
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="5">Für diesen Tag wurden keine Stationen mit hoher Auslastung erkannt.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5">Für diesen Berichtszeitraum wurden keine Stationen mit hoher Auslastung erkannt.</td></tr>';
     return;
   }
   for (const row of rows) {
@@ -1227,7 +1248,7 @@ function renderRollingProviderReports(
   title.textContent = `Anbieterleistung über ${windowLabel(windowDays)}`;
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7">Für diesen Zeitraum ist keine historische Anbieteraggregation verfügbar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6">Für diesen Zeitraum ist keine historische Anbieteraggregation verfügbar.</td></tr>';
     return;
   }
   for (const row of rows) {
@@ -1252,15 +1273,20 @@ function renderRollingProviderReports(
       <td data-sort-value="${numericSortValue(row.station_count)}">${numberFormat(row.station_count)}</td>
       <td data-sort-value="${numericSortValue(row.measured_days)}">${numberFormat(row.measured_days)} / ${numberFormat(row.requested_days)}</td>
       <td data-sort-value="${numericSortValue(row.occupancy_share)}">
-        ${percentFormat(row.occupancy_share)}
-        <div class="provider-sub">Tag ${percentFormat(row.day_occupancy_share)} · Nacht ${percentFormat(row.night_occupancy_share)}</div>
+        <div class="management-metric-lines">
+          <div><span>Gesamt</span><strong>${percentFormat(row.occupancy_share)}</strong></div>
+          <div><span>Tag</span><strong>${percentFormat(row.day_occupancy_share)}</strong></div>
+          <div><span>Nacht</span><strong>${percentFormat(row.night_occupancy_share)}</strong></div>
+        </div>
       </td>
       <td data-sort-value="${numericSortValue(row.out_of_order_share)}">
-        ${percentFormat(row.out_of_order_share)}
-        <div class="provider-sub">Tag ${percentFormat(row.day_out_of_order_share)} · Nacht ${percentFormat(row.night_out_of_order_share)}</div>
+        <div class="management-metric-lines">
+          <div><span>Gesamt</span><strong>${percentFormat(row.out_of_order_share)}</strong></div>
+          <div><span>Tag</span><strong>${percentFormat(row.day_out_of_order_share)}</strong></div>
+          <div><span>Nacht</span><strong>${percentFormat(row.night_out_of_order_share)}</strong></div>
+        </div>
       </td>
       <td data-sort-value="${numericSortValue(row.transport_failure_count)}">${numberFormat(row.transport_failure_count)}</td>
-      <td data-sort-value="${escapeAttribute(stationClassLabel(row.station_class))}"><span class="management-class-label management-class-${escapeAttribute(row.station_class || "unknown")}">${escapeHtml(stationClassLabel(row.station_class))}</span></td>
     `;
     tbody.appendChild(tr);
   }
@@ -1563,13 +1589,13 @@ async function initManagementPage() {
     updateDateControls(datePicker, prevDay, nextDay, countryDates);
     windowSelect.value = String(currentWindowDays);
     renderKpis(currentSnapshot, {
-      staticStationCount: providerUid
-        ? null
-        : staticStationCountForCountry(openStaticSummary, countryCode),
+      ...(providerUid
+        ? { publicStationCount: null, publicChargerCount: null }
+        : staticCatalogCountsForCountry(openStaticSummary, countryCode)),
     });
     renderDataQuality(currentSnapshot, currentWindowDays);
-    renderBrokenStations(currentSnapshot);
-    renderBusyStations(currentSnapshot);
+    renderBrokenStations(currentSnapshot, currentWindowDays);
+    renderBusyStations(currentSnapshot, currentWindowDays);
     renderProviderReports(currentSnapshot, {
       countryCode,
       dateText: currentDate,

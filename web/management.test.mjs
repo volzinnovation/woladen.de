@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
   DEFAULT_WINDOW_DAYS,
@@ -21,7 +22,7 @@ import {
   normalizeProviderUid,
   rankedTableTitle,
   snapshotPathForDate,
-  staticStationCountForCountry,
+  staticCatalogCountsForCountry,
   SUPPORTED_WINDOW_DAYS,
   windowLabel,
 } from "./management.mjs";
@@ -165,39 +166,83 @@ test("buildSummaryCards exposes PostgreSQL coverage and reliability metrics", ()
         measured_station_count: 34781,
         observed_evses: 111137,
         measured_station_coverage: 0.99142,
+        static_station_count: 72155,
+        static_charger_count: 188200,
+        measured_static_station_count: 34700,
+        static_stations_without_disruptions: 25500,
         occupancy_share: 0.0963,
+        day_occupancy_share: 0.11,
+        night_occupancy_share: 0.08,
         out_of_order_share: 0.0741,
+        day_out_of_order_share: 0.065,
+        night_out_of_order_share: 0.083,
         stations_with_disruptions: 9262,
         disruptions_at_end_of_day: 3679,
         fully_out_of_service_stations: 1828,
+        static_disruptions_at_end_of_day: 3600,
+        static_fully_out_of_service_stations: 1800,
       },
     },
-    { staticStationCount: 72155 },
   );
-  assert.equal(cards.length, 7);
-  assert.equal(cards[0].label, "Dynamische Stationen im Tagesarchiv");
-  assert.equal(cards[1].label, "Live-Daten-Abdeckung");
-  assert.equal(cards[1].value, "48,2 %");
-  assert.equal(cards[2].label, "Stationen ohne Störung");
-  assert.equal(cards[2].value, "73,4 %");
-  assert.equal(cards[3].label, "Auslastung");
-  assert.equal(cards[6].value, "1.828");
+  assert.equal(cards.length, 8);
+  assert.deepEqual(
+    cards.map((card) => card.label),
+    [
+      "Öffentliche Ladepunkte",
+      "Öffentliche Ladestationen",
+      "Stationen mit Live-Daten",
+      "Stationen ohne Störung",
+      "Auslastung",
+      "Störungsanteil",
+      "Am Tagesende gestört",
+      "Außer Betrieb",
+    ],
+  );
+  assert.equal(cards[0].value, "188.200");
+  assert.equal(cards[1].value, "72.155");
+  assert.equal(cards[2].value, "34.700");
+  assert.match(cards[2].detail, /48,1 %/);
+  assert.equal(cards[3].value, "25.500");
+  assert.match(cards[4].detail, /Tag 11,0 % · Nacht 8,0 %/);
+  assert.match(cards[5].detail, /Tag 6,5 % · Nacht 8,3 %/);
+  assert.equal(cards[6].value, "3.600");
+  assert.equal(cards[7].value, "1.800");
+  assert.deepEqual(cards.map((card) => card.reference), [1, 2, 3, 4, 5, 6, 7, 8]);
 });
 
-test("staticStationCountForCountry reads the country catalog baseline", () => {
-  assert.equal(
-    staticStationCountForCountry(
+test("staticCatalogCountsForCountry reads the country catalog baseline", () => {
+  assert.deepEqual(
+    staticCatalogCountsForCountry(
       {
         countries: [
-          { code: "DE", station_count: 72155 },
-          { code: "SE", station_count: 8922 },
+          { code: "DE", station_count: 72155, charger_count: 188200 },
+          { code: "SE", station_count: 8922, charger_count: 26315 },
         ],
       },
       "se",
     ),
-    8922,
+    { publicStationCount: 8922, publicChargerCount: 26315 },
   );
-  assert.equal(staticStationCountForCountry({ countries: [] }, "SE"), null);
+  assert.deepEqual(
+    staticCatalogCountsForCountry({ countries: [] }, "SE"),
+    { publicStationCount: null, publicChargerCount: null },
+  );
+});
+
+test("management tables use window wording and omit removed classification columns", () => {
+  const html = readFileSync(new URL("./management.html", import.meta.url), "utf8");
+  const providerWindowTable = html.match(
+    /<article id="management-provider-window-panel"[\s\S]*?<\/article>/,
+  )?.[0];
+  const brokenStationsTable = html.match(
+    /<h2>Ladestationen mit den meisten Störungen<\/h2>[\s\S]*?<\/article>/,
+  )?.[0];
+
+  assert.ok(providerWindowTable);
+  assert.doesNotMatch(providerWindowTable, />Einordnung</);
+  assert.ok(brokenStationsTable);
+  assert.doesNotMatch(brokenStationsTable, />Status</);
+  assert.match(brokenStationsTable, /Berichtszeitraum/);
 });
 
 test("country overview rows merge dynamic coverage with the selected day report", () => {
@@ -289,6 +334,11 @@ test("buildStationRows sorts broken and busy station tables for the public page"
           busy_transition_count: 99,
           day_occupancy_share: 1,
         },
+        {
+          station_id: "still-plugged-in-rounded",
+          busy_transition_count: 98,
+          day_occupancy_share: 0.9999,
+        },
         ...Array.from({ length: 12 }, (_, index) => ({
           station_id: `station-${String.fromCharCode(97 + index)}`,
           busy_transition_count: index,
@@ -304,6 +354,10 @@ test("buildStationRows sorts broken and busy station tables for the public page"
   assert.equal(brokenRows.some((row) => row.station_id === "more-currently-broken"), false);
   assert.equal(busyRows.length, 10);
   assert.equal(busyRows.some((row) => row.station_id === "still-plugged-in"), false);
+  assert.equal(
+    busyRows.some((row) => row.station_id === "still-plugged-in-rounded"),
+    false,
+  );
   assert.deepEqual(busyRows[0].station_id, "station-l");
   assert.deepEqual(busyRows.at(-1).station_id, "station-c");
 });

@@ -342,8 +342,9 @@
         <article class="management-panel">
           <div class="management-panel-head">
             <h2>Ladestationen mit den meisten Störungen</h2>
-            <p>
-              Top 10 der Ladestationen mit den meisten Störungen im Tagesverlauf.
+            <p id="management-broken-stations-description">
+              Top 10 der Ladestationen mit den meisten Störungen im gewählten
+              Berichtszeitraum.
             </p>
           </div>
           <div class="management-table-wrap">
@@ -355,7 +356,6 @@
                   <th data-sort-type="number">Noch gestört</th>
                   <th data-sort-type="number">Störungsanteil</th>
                   <th data-sort-type="number">Ausfallzeit</th>
-                  <th data-sort-type="text">Status</th>
                 </tr>
               </thead>
               <tbody id="broken-stations-body"></tbody>
@@ -366,8 +366,9 @@
         <article class="management-panel">
           <div class="management-panel-head">
             <h2>Ladestationen mit hoher Auslastung</h2>
-            <p>
-              Top 10 nach belegter Zeit und Statuswechseln am Auswertungstag.
+            <p id="management-busy-stations-description">
+              Top 10 nach belegter Zeit und Statuswechseln im gewählten
+              Berichtszeitraum.
             </p>
           </div>
           <div class="management-table-wrap">
@@ -376,7 +377,7 @@
                 <tr>
                   <th data-sort-type="text">Ladestation</th>
                   <th data-sort-type="number">Ladepunkte</th>
-                  <th data-sort-type="number">Tagesauslastung</th>
+                  <th data-sort-type="number">Auslastung (Tag)</th>
                   <th data-sort-type="number">Belegte Zeit</th>
                   <th data-sort-type="number">Statuswechsel</th>
                 </tr>
@@ -404,19 +405,16 @@
                   <th
                     data-sort-type="number"
                     data-sort-label="Auslastung"
-                    data-sort-detail="Gesamt · Tag · Nacht"
                   >
-                    Auslastung<br />Gesamt · Tag · Nacht
+                    Auslastung
                   </th>
                   <th
                     data-sort-type="number"
                     data-sort-label="Störungsanteil"
-                    data-sort-detail="Gesamt · Tag · Nacht"
                   >
-                    Störungsanteil<br />Gesamt · Tag · Nacht
+                    Störungsanteil
                   </th>
                   <th data-sort-type="number">Transportfehler</th>
-                  <th data-sort-type="text">Einordnung</th>
                 </tr>
               </thead>
               <tbody id="provider-window-body"></tbody>
@@ -455,40 +453,64 @@
 
       <section class="management-panel management-notes">
         <div class="management-panel-head">
-          <h2>So liest woladen.de die Zahlen</h2>
+          <h2>Fußnoten zu den Kennzahlen</h2>
         </div>
+        <ol class="management-footnotes">
+          <li id="management-footnote-1">
+            <strong>Öffentliche Ladepunkte:</strong> alle einzeln nutzbaren
+            Ladepunkte im öffentlichen Ladestellenverzeichnis. Ein Standort
+            kann mehrere Ladepunkte haben.
+          </li>
+          <li id="management-footnote-2">
+            <strong>Öffentliche Ladestationen:</strong> die Standorte, zu denen
+            die öffentlichen Ladepunkte zusammengefasst sind.
+          </li>
+          <li id="management-footnote-3">
+            <strong>Stationen mit Live-Daten:</strong> öffentliche Stationen,
+            bei denen mindestens ein Ladepunkt über seine dauerhafte Kennung
+            eindeutig verbunden wurde und für den Tag ein verständlicher
+            Live-Status vorlag. Der Prozentwert bezieht sich auf alle
+            öffentlichen Stationen.
+          </li>
+          <li id="management-footnote-4">
+            <strong>Stationen ohne Störung:</strong> Stationen mit Live-Daten,
+            bei denen im Tagesverlauf kein verbundener Ladepunkt als gestört
+            gemeldet wurde. Der Prozentwert bezieht sich nur auf Stationen mit
+            Live-Daten.
+          </li>
+          <li id="management-footnote-5">
+            <strong>Auslastung:</strong> belegte Zeit geteilt durch die gesamte
+            Zeit mit verständlichem Live-Status. Jede Stunde an jedem
+            Ladepunkt zählt einzeln. Gesamt umfasst den ganzen Tag, Tag gilt
+            von 07:00 bis 19:00 Uhr Ortszeit und Nacht von 19:00 bis 07:00 Uhr.
+          </li>
+          <li id="management-footnote-6">
+            <strong>Störungsanteil:</strong> als gestört gemeldete Zeit geteilt
+            durch die gesamte Zeit mit verständlichem Live-Status. Das ist ein
+            Zeitanteil und nicht der Anteil gestörter Stationen. Für Gesamt,
+            Tag und Nacht gelten dieselben Zeiträume wie bei der Auslastung.
+            „Nicht verfügbar“ und unbekannte Zustände werden nicht als Störung
+            gezählt.
+          </li>
+          <li id="management-footnote-7">
+            <strong>Am Tagesende gestört:</strong> Stationen mit Live-Daten, an
+            denen der letzte Tagesstatus mindestens eines verbundenen
+            Ladepunkts weiterhin gestört war.
+          </li>
+          <li id="management-footnote-8">
+            <strong>Außer Betrieb:</strong> Stationen, bei denen am Tagesende
+            alle beobachteten und verbundenen Ladepunkte als gestört gemeldet
+            waren.
+          </li>
+        </ol>
+        <h3>Weitere Hinweise</h3>
         <ul>
           <li>
-            Die Kennzahl „Dynamische Stationen im Tagesarchiv“ zählt Stationen,
-            für die an diesem Tag mindestens eine AFIR-Live-Beobachtung im
-            Archiv vorlag. Bei Delta-Anbietern ohne Push-Verkehr kann dieser
-            Tageswert niedriger sein als die aktuelle Live-Abdeckung.
-          </li>
-          <li>
-            „Live-Daten-Abdeckung“ ist der Anteil der statischen
-            Katalogstationen mit messbarem Live-Status. „Stationen ohne
-            Störung“ ist der Anteil dieser dynamischen Stationen, für die im
-            Tagesverlauf keine Störung gemeldet wurde.
-          </li>
-          <li>
-            Als Störung zählt ein Ladepunkt, wenn er als außer Betrieb gemeldet
-            wurde. Nicht verfügbar und unbekannt werden separat behandelt.
-          </li>
-          <li>
-            Auslastung ist der Anteil belegter Zeit an der gemessenen Zeit.
-            Störungen, nicht verfügbare oder unbekannte Zustände zählen nicht
-            als Belegung.
-          </li>
-          <li>
-            Tag bezeichnet 07:00 bis 19:00 Uhr Ortszeit, Nacht 19:00 bis
-            07:00 Uhr Ortszeit. Die Aufteilung wird sowohl für Auslastung als
-            auch für den Störungsanteil gezeigt.
-          </li>
-          <li>
-            Stationen mit exakt 100&nbsp;% Tagesauslastung werden in der Liste
-            „Ladestationen mit hoher Auslastung“ nicht berücksichtigt. Das
-            deutet typischerweise darauf hin, dass ein Fahrzeug nicht
-            abgesteckt wurde, und nicht auf wiederkehrend hohe Nachfrage.
+            Stationen, deren Auslastung am Tag als 100,0&nbsp;% angezeigt
+            würde, werden im gewählten Berichtszeitraum nicht in der Liste
+            „Ladestationen mit hoher Auslastung“ berücksichtigt. Das deutet
+            typischerweise darauf hin, dass ein Fahrzeug nicht abgesteckt
+            wurde, und nicht auf wiederkehrend hohe Nachfrage.
           </li>
           <li>
             Die Anbieterleistung fasst eine, zwei oder vier Wochen zusammen.
@@ -501,8 +523,8 @@
             eine einzelne Änderung oder viele Statusbeobachtungen enthalten.
           </li>
           <li>
-            Grundlage sind normalisierte Statusintervalle und tägliche
-            Anbieter-Metadaten aus der PostgreSQL-Analyse von woladen.de.
+            Grundlage sind verbundene Statusmeldungen und tägliche
+            Anbieterangaben aus der PostgreSQL-Auswertung von woladen.de.
           </li>
         </ul>
       </section>
