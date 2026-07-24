@@ -131,7 +131,7 @@ test("unavailable live endpoint falls back to the explicit static cache", async 
   assert.equal(requests.includes("./data/management/index.json"), true);
 });
 
-test("static country fallback exposes countries and static providers from the snapshot", async () => {
+test("static country fallback exposes countries and static operators from the snapshot", async () => {
   const source = createManagementDataSource({
     apiBaseUrl: "",
     fetchImpl: async (url) => {
@@ -160,6 +160,17 @@ test("static country fallback exposes countries and static providers from the sn
             },
           ],
         },
+        operator_reports_by_country: {
+          BE: [
+            {
+              operator_brand: "STROOHM",
+              display_name: "STROOHM",
+              source_provider_uids: ["be_monta"],
+              static_station_count: 1398,
+              static_charger_count: 3520,
+            },
+          ],
+        },
         summary: { afir_stations_observed: 14032 },
       });
     },
@@ -171,7 +182,8 @@ test("static country fallback exposes countries and static providers from the sn
   assert.deepEqual(countries.countries.map((row) => row.country_code), ["DE", "BE"]);
   assert.equal(overview.rows[0].station_count, 14032);
   assert.equal(overview.rows[1].station_count, 0);
-  assert.equal(loaded.snapshot.provider_reports[0].provider_uid, "be_monta");
-  assert.equal(loaded.snapshot.provider_reports[0].static_station_count, 1654);
+  assert.equal(loaded.snapshot.provider_reports[0].operator_brand, "STROOHM");
+  assert.deepEqual(loaded.snapshot.provider_reports[0].source_provider_uids, ["be_monta"]);
+  assert.equal(loaded.snapshot.provider_reports[0].static_station_count, 1398);
   await assert.rejects(source.loadSnapshot("2026-07-14", { providerUid: "be_monta" }), /Anbieteransichten/);
 });

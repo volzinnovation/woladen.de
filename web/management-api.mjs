@@ -247,7 +247,10 @@ export function createManagementDataSource({
       ? {
           ...snapshot,
           summary: snapshot?.country_summaries?.[countryCode] || {},
-          provider_reports: snapshot?.provider_reports_by_country?.[countryCode] || [],
+          provider_reports:
+            snapshot?.operator_reports_by_country?.[countryCode] ||
+            snapshot?.provider_reports_by_country?.[countryCode] ||
+            [],
           broken_stations: snapshot?.broken_stations_by_country?.[countryCode] || [],
           busiest_stations: snapshot?.busiest_stations_by_country?.[countryCode] || [],
         }

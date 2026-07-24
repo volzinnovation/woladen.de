@@ -216,6 +216,8 @@ export function buildProviderReportMetrics(row) {
   const receivedMessagesTotal = firstNumber(row?.received_messages_total, row?.messages_total) ?? 0;
   const observationsTotal = firstNumber(row?.observations_total) ?? 0;
   const uniqueChargersReferencedTotal = firstNumber(
+    row?.static_station_count,
+    row?.station_count,
     row?.daily_mapped_stations_observed,
     row?.unique_chargers_referenced_total,
     row?.mapped_stations_observed,
@@ -601,14 +603,27 @@ export function buildRollingProviderRows(reportPayload, healthPayload) {
   );
   return reportRows
     .map((row) => {
+      const operatorBrand = String(row?.operator_brand || "").trim();
+      const sourceProviderUids = Array.isArray(row?.source_provider_uids)
+        ? row.source_provider_uids.map((value) => String(value || "").trim()).filter(Boolean)
+        : [];
       const health =
         healthByProvider.get(
           `${normalizeCountryCode(row?.country_code)}\u0000${String(row?.provider_uid || "")}`,
         ) || {};
       return {
         ...row,
-        display_name: health.display_name || row.provider_uid || "",
-        publisher: health.publisher || "",
+        display_name:
+          operatorBrand ||
+          String(row?.display_name || "").trim() ||
+          health.display_name ||
+          row.provider_uid ||
+          "",
+        publisher:
+          health.publisher ||
+          String(row?.publisher || "").trim() ||
+          (sourceProviderUids.length ? `Datenquellen: ${sourceProviderUids.join(", ")}` : ""),
+        source_provider_uids: sourceProviderUids,
         transport_failure_count:
           Number(health.fetch_failure_messages_total || 0) +
           Number(health.http_error_messages_total || 0),
@@ -664,7 +679,16 @@ export function buildStationRows(snapshot, key) {
 
 export function buildProviderRows(snapshot) {
   const rows = Array.isArray(snapshot?.provider_reports) ? [...snapshot.provider_reports] : [];
+  const operatorMode = rows.some((row) => String(row?.operator_brand || "").trim());
   rows.sort((left, right) => {
+    if (operatorMode) {
+      const leftStations = Number(left?.static_station_count || left?.station_count || left?.mapped_stations_observed || 0);
+      const rightStations = Number(right?.static_station_count || right?.station_count || right?.mapped_stations_observed || 0);
+      const stationDelta = rightStations - leftStations;
+      if (stationDelta !== 0) {
+        return stationDelta;
+      }
+    }
     const observationDelta = Number(right?.observations_total || 0) - Number(left?.observations_total || 0);
     if (observationDelta !== 0) {
       return observationDelta;
@@ -673,8 +697,8 @@ export function buildProviderRows(snapshot) {
     if (messageDelta !== 0) {
       return messageDelta;
     }
-    return String(left?.display_name || left?.provider_uid || "").localeCompare(
-      String(right?.display_name || right?.provider_uid || ""),
+    return String(left?.operator_brand || left?.display_name || left?.provider_uid || "").localeCompare(
+      String(right?.operator_brand || right?.display_name || right?.provider_uid || ""),
     );
   });
   return rows;
@@ -1392,24 +1416,33 @@ function renderRollingProviderReports(
   const rows = buildRollingProviderRows(reportPayload, healthPayload);
   const tbody = document.getElementById("provider-window-body");
   const title = document.getElementById("management-provider-window-title");
-  title.textContent = `Anbieterleistung über ${windowLabel(windowDays)}`;
+  const operatorMode =
+    reportPayload?.group_by === "operator" ||
+    rows.some((row) => String(row?.operator_brand || "").trim());
+  title.textContent = `${operatorMode ? "Betreiberleistung" : "Anbieterleistung"} über ${windowLabel(windowDays)}`;
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="6">Für diesen Zeitraum ist keine historische Anbieteraggregation verfügbar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6">Für diesen Zeitraum ist keine historische Betreiberaggregation verfügbar.</td></tr>';
     return;
   }
   for (const row of rows) {
     const tr = document.createElement("tr");
-    const displayName = row.display_name || row.provider_uid || "";
-    const providerMeta = [row.publisher, row.provider_uid, confidencePhrase(row.confidence_label)]
+    const displayName = row.operator_brand || row.display_name || row.provider_uid || "";
+    const publisherText = String(row.publisher || "").trim();
+    const sourceProviderText =
+      Array.isArray(row.source_provider_uids) &&
+      row.source_provider_uids.length &&
+      !row.source_provider_uids.every((providerUid) => publisherText.includes(providerUid))
+        ? `Quellen: ${row.source_provider_uids.join(", ")}`
+        : row.provider_uid || "";
+    const providerMeta = [publisherText, sourceProviderText, confidencePhrase(row.confidence_label)]
       .filter(Boolean)
       .join(" · ");
-    const providerUrl = managementProviderUrl(
-      row.provider_uid,
-      row.country_code || countryCode,
-      dateText,
-    );
-    const providerName = linkProviders
+    const canLinkProvider = linkProviders && row.provider_uid && !row.operator_brand;
+    const providerUrl = canLinkProvider
+      ? managementProviderUrl(row.provider_uid, row.country_code || countryCode, dateText)
+      : "";
+    const providerName = canLinkProvider
       ? `<a href="${escapeAttribute(providerUrl)}">${escapeHtml(displayName)}</a>`
       : `<span>${escapeHtml(displayName)}</span>`;
     tr.innerHTML = `
@@ -1450,24 +1483,28 @@ function renderProviderReports(
   }
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="9">Für diesen Tag wurden keine Anbieterberichte veröffentlicht.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9">Für diesen Tag wurden keine Betreiberberichte veröffentlicht.</td></tr>';
     return;
   }
   for (const row of rows) {
     const tr = document.createElement("tr");
-    const displayName = row.display_name || row.provider_uid || "";
-    const publisher = row.publisher || row.provider_uid || "";
+    const displayName = row.operator_brand || row.display_name || row.provider_uid || "";
+    const sourceProviderUids = Array.isArray(row.source_provider_uids)
+      ? row.source_provider_uids.map((value) => String(value || "").trim()).filter(Boolean)
+      : [];
+    const publisher =
+      row.publisher ||
+      (sourceProviderUids.length ? `Datenquellen: ${sourceProviderUids.join(", ")}` : row.provider_uid || "");
     const metrics = buildProviderReportMetrics(row);
     const coverageWarning =
       Number(row.delta_delivery_without_push || 0) > 0
         ? '<div class="provider-sub provider-sub-warning">Delta ohne Push, Tageswert unterzählt</div>'
         : "";
-    const providerUrl = managementProviderUrl(
-      row.provider_uid,
-      row.country_code || countryCode,
-      dateText,
-    );
-    const providerName = linkProviders
+    const canLinkProvider = linkProviders && row.provider_uid && !row.operator_brand;
+    const providerUrl = canLinkProvider
+      ? managementProviderUrl(row.provider_uid, row.country_code || countryCode, dateText)
+      : "";
+    const providerName = canLinkProvider
       ? `<a href="${escapeAttribute(providerUrl)}">${escapeHtml(displayName)}</a>`
       : `<span>${escapeHtml(displayName)}</span>`;
     tr.innerHTML = `
@@ -1734,6 +1771,7 @@ async function initManagementPage() {
     let providerReport = { rows: [] };
     let providerHealth = { rows: [] };
     if (loaded.source === "postgresql") {
+      const detailReportGroupBy = providerUid ? "provider" : "operator";
       const [countryResult, providerResult, healthResult] = await Promise.allSettled([
         !providerUid && countryCode
           ? dataSource.loadReport({
@@ -1748,14 +1786,16 @@ async function initManagementPage() {
           endDate: range.endDate,
           countryCode,
           providerUid,
-          groupBy: "provider",
+          groupBy: detailReportGroupBy,
         }),
-        dataSource.loadProviderHealth({
-          startDate: range.startDate,
-          endDate: range.endDate,
-          countryCode,
-          providerUid,
-        }),
+        providerUid
+          ? dataSource.loadProviderHealth({
+              startDate: range.startDate,
+              endDate: range.endDate,
+              countryCode,
+              providerUid,
+            })
+          : Promise.resolve({ rows: [] }),
       ]);
       if (countryResult.status === "fulfilled") {
         countryReport = countryResult.value;
@@ -1775,7 +1815,14 @@ async function initManagementPage() {
     }
     currentSnapshot =
       loaded.source === "postgresql" && !providerUid
-        ? mergeRollingCountrySummary(loaded.snapshot, countryReport, countryCode)
+        ? mergeRollingCountrySummary(
+            {
+              ...loaded.snapshot,
+              provider_reports: Array.isArray(providerReport?.rows) ? providerReport.rows : [],
+            },
+            countryReport,
+            countryCode,
+          )
         : loaded.snapshot;
     trendsPayload = loaded.trends;
     currentWindowDays = windowDays;
@@ -1802,7 +1849,7 @@ async function initManagementPage() {
     renderProviderReports(currentSnapshot, {
       countryCode,
       dateText: currentDate,
-      linkProviders: !providerUid && loaded.source === "postgresql",
+      linkProviders: !providerUid && loaded.source === "postgresql" && providerReport?.group_by === "provider",
     });
     // The raw interval profile is intentionally bounded. Rolling report and
     // reliability tables use the selected day/week window, while the
@@ -1829,7 +1876,7 @@ async function initManagementPage() {
     renderRollingProviderReports(providerReport, providerHealth, currentWindowDays, {
       countryCode,
       dateText: currentDate,
-      linkProviders: !providerUid,
+      linkProviders: !providerUid && providerReport?.group_by === "provider",
     });
     resetSortableTables(detailHost);
     renderCharts();

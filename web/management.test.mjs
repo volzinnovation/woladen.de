@@ -411,6 +411,12 @@ test("rolling provider rows join transport health and sort by station coverage",
     {
       rows: [
         { country_code: "DE", provider_uid: "small", station_count: 10 },
+        {
+          country_code: "BE",
+          operator_brand: "STROOHM",
+          source_provider_uids: ["be_monta"],
+          station_count: 50,
+        },
         { country_code: "DE", provider_uid: "large", station_count: 100 },
       ],
     },
@@ -429,6 +435,9 @@ test("rolling provider rows join transport health and sort by station coverage",
   assert.equal(rows[0].provider_uid, "large");
   assert.equal(rows[0].display_name, "Large Network");
   assert.equal(rows[0].transport_failure_count, 5);
+  assert.equal(rows[1].operator_brand, "STROOHM");
+  assert.equal(rows[1].display_name, "STROOHM");
+  assert.equal(rows[1].publisher, "Datenquellen: be_monta");
 });
 
 test("buildStationRows sorts broken and busy station tables for the public page", () => {
@@ -499,6 +508,21 @@ test("buildProviderRows sorts provider reporting by daily status observation vol
   assert.deepEqual(
     rows.map((row) => row.provider_uid),
     ["medium", "small", "large"],
+  );
+});
+
+test("buildProviderRows sorts operator reporting by public station count", () => {
+  const rows = buildProviderRows({
+    provider_reports: [
+      { operator_brand: "Small Operator", static_station_count: 5, observations_total: 500 },
+      { operator_brand: "IONITY", static_station_count: 120, observations_total: 100 },
+      { operator_brand: "ALDI", static_station_count: 80, observations_total: 2000 },
+    ],
+  });
+
+  assert.deepEqual(
+    rows.map((row) => row.operator_brand),
+    ["IONITY", "ALDI", "Small Operator"],
   );
 });
 
