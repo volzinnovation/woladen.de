@@ -131,23 +131,47 @@ test("unavailable live endpoint falls back to the explicit static cache", async 
   assert.equal(requests.includes("./data/management/index.json"), true);
 });
 
-test("static country fallback exposes the Germany archive without fabricating other countries", async () => {
+test("static country fallback exposes countries and static providers from the snapshot", async () => {
   const source = createManagementDataSource({
     apiBaseUrl: "",
     fetchImpl: async (url) => {
       if (url.endsWith("index.json")) {
-        return response({ available_dates: ["2026-07-14"] });
+        return response({ available_dates: ["2026-07-14"], latest_date: "2026-07-14" });
       }
-      return response({ summary: { afir_stations_observed: 14032 } });
+      if (url.endsWith("trends.json")) {
+        return response({ summary_series: [{ snapshot_date: "2026-07-14" }] });
+      }
+      return response({
+        available_countries: [
+          { country_code: "DE", station_count: 14032 },
+          { country_code: "BE", station_count: 5873 },
+        ],
+        country_summaries: {
+          DE: { afir_stations_observed: 14032 },
+          BE: { afir_stations_observed: 0 },
+        },
+        provider_reports_by_country: {
+          BE: [
+            {
+              provider_uid: "be_monta",
+              display_name: "Monta",
+              static_station_count: 1654,
+              static_charger_count: 4545,
+            },
+          ],
+        },
+        summary: { afir_stations_observed: 14032 },
+      });
     },
   });
 
   const countries = await source.loadCountries();
   const overview = await source.loadCountryOverview("2026-07-14");
-  assert.deepEqual(countries.countries.map((row) => row.country_code), ["DE"]);
+  const loaded = await source.loadSnapshot("2026-07-14", { countryCode: "BE" });
+  assert.deepEqual(countries.countries.map((row) => row.country_code), ["DE", "BE"]);
   assert.equal(overview.rows[0].station_count, 14032);
-  await assert.rejects(
-    source.loadSnapshot("2026-07-14", { countryCode: "NL" }),
-    /keine statische Ersatzauswertung/,
-  );
+  assert.equal(overview.rows[1].station_count, 0);
+  assert.equal(loaded.snapshot.provider_reports[0].provider_uid, "be_monta");
+  assert.equal(loaded.snapshot.provider_reports[0].static_station_count, 1654);
+  await assert.rejects(source.loadSnapshot("2026-07-14", { providerUid: "be_monta" }), /Anbieteransichten/);
 });

@@ -30,6 +30,15 @@ function staticTrendsForWindow(trends, endDate, trendDays) {
   };
 }
 
+function datesFromIndex(index) {
+  return Array.isArray(index?.available_dates) ? index.available_dates : [];
+}
+
+function latestStaticDate(index) {
+  const dates = datesFromIndex(index);
+  return index?.latest_date || dates.at(-1) || "";
+}
+
 async function fetchJson(fetchImpl, url) {
   const response = await fetchImpl(url, {
     cache: "no-store",
@@ -60,6 +69,12 @@ export function createManagementDataSource({
     return staticIndex;
   }
 
+  async function loadStaticSnapshot(dateText = "") {
+    const index = await loadStaticIndex();
+    const snapshotDate = dateText || latestStaticDate(index);
+    return await fetchJson(fetchImpl, staticSnapshotPath(snapshotDate));
+  }
+
   async function loadIndex() {
     if (source === "postgresql") {
       try {
@@ -84,10 +99,19 @@ export function createManagementDataSource({
       }
     }
     const index = await loadStaticIndex();
-    const dates = Array.isArray(index.available_dates) ? index.available_dates : [];
-    return {
-      schema_version: "management-static-country-fallback-v1",
-      countries: dates.length
+    const dates = datesFromIndex(index);
+    const snapshot = dates.length ? await loadStaticSnapshot(latestStaticDate(index)) : null;
+    const snapshotCountries = Array.isArray(snapshot?.available_countries)
+      ? snapshot.available_countries
+      : [];
+    const countries = snapshotCountries.length
+      ? snapshotCountries.map((row) => ({
+          country_code: row?.country_code || "",
+          first_date: dates[0] || "",
+          last_date: dates.at(-1) || "",
+          observed_days: dates.length,
+        }))
+      : dates.length
         ? [
             {
               country_code: "DE",
@@ -96,7 +120,10 @@ export function createManagementDataSource({
               observed_days: dates.length,
             },
           ]
-        : [],
+        : [];
+    return {
+      schema_version: "management-static-country-fallback-v1",
+      countries,
     };
   }
 
@@ -121,25 +148,55 @@ export function createManagementDataSource({
         source = "static-cache";
       }
     }
-    const snapshot = await fetchJson(fetchImpl, staticSnapshotPath(dateText));
+    const index = await loadStaticIndex();
+    const dates = datesFromIndex(index);
+    const snapshot = await loadStaticSnapshot(dateText);
+    const snapshotCountries = Array.isArray(snapshot?.available_countries)
+      ? snapshot.available_countries
+      : [];
+    const countryRows = snapshotCountries.length
+      ? snapshotCountries.map((country) => {
+          const countryCode = country?.country_code || "";
+          const summary = snapshot?.country_summaries?.[countryCode] || {};
+          return {
+            country_code: countryCode,
+            first_date: dates[0] || dateText,
+            last_date: dates.at(-1) || dateText,
+            observed_days: dates.length || 1,
+            ...(summary || {}),
+            station_count:
+              summary.station_count ??
+              summary.daily_afir_stations_observed ??
+              summary.afir_stations_observed ??
+              country.station_count ??
+              0,
+            observed_evses:
+              summary.observed_evses ??
+              summary.daily_afir_stations_observed ??
+              summary.afir_stations_observed ??
+              country.station_count ??
+              0,
+          };
+        })
+      : [
+          {
+            country_code: "DE",
+            ...(snapshot.summary || {}),
+            station_count:
+              snapshot.summary?.station_count ??
+              snapshot.summary?.daily_afir_stations_observed ??
+              snapshot.summary?.afir_stations_observed,
+            observed_evses:
+              snapshot.summary?.observed_evses ??
+              snapshot.summary?.daily_afir_stations_observed ??
+              snapshot.summary?.afir_stations_observed,
+          },
+        ];
     return {
       schema_version: "management-static-country-overview-v1",
       start_date: dateText,
       end_date: dateText,
-      rows: [
-        {
-          country_code: "DE",
-          ...(snapshot.summary || {}),
-          station_count:
-            snapshot.summary?.station_count ??
-            snapshot.summary?.daily_afir_stations_observed ??
-            snapshot.summary?.afir_stations_observed,
-          observed_evses:
-            snapshot.summary?.observed_evses ??
-            snapshot.summary?.daily_afir_stations_observed ??
-            snapshot.summary?.afir_stations_observed,
-        },
-      ],
+      rows: countryRows,
     };
   }
 
@@ -179,18 +236,24 @@ export function createManagementDataSource({
     if (providerUid) {
       throw new Error("Für Anbieteransichten ist keine statische Ersatzauswertung verfügbar.");
     }
-    if (countryCode && countryCode !== "DE") {
-      throw new Error(`Für ${countryCode} ist keine statische Ersatzauswertung verfügbar.`);
-    }
     const [snapshot, trends] = await Promise.all([
-      fetchJson(fetchImpl, staticSnapshotPath(dateText)),
+      loadStaticSnapshot(dateText),
       staticTrends
         ? Promise.resolve(staticTrends)
         : fetchJson(fetchImpl, staticTrendsPath),
     ]);
     staticTrends = trends;
+    const selectedSnapshot = countryCode
+      ? {
+          ...snapshot,
+          summary: snapshot?.country_summaries?.[countryCode] || {},
+          provider_reports: snapshot?.provider_reports_by_country?.[countryCode] || [],
+          broken_stations: snapshot?.broken_stations_by_country?.[countryCode] || [],
+          busiest_stations: snapshot?.busiest_stations_by_country?.[countryCode] || [],
+        }
+      : snapshot;
     return {
-      snapshot,
+      snapshot: selectedSnapshot,
       trends: staticTrendsForWindow(trends, dateText, trendDays),
       source,
     };

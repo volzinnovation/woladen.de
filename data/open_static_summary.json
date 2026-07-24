@@ -1,10 +1,10 @@
 {
   "bundle": {
-    "charger_count": 889861,
+    "charger_count": 894406,
     "country_count": 23,
     "kind": "aggregate",
     "schema_version": 4,
-    "station_count": 314677
+    "station_count": 316331
   },
   "countries": [
     {
@@ -15,11 +15,11 @@
       "station_count": 14661
     },
     {
-      "charger_count": 12907,
+      "charger_count": 17452,
       "code": "BE",
-      "fast_station_count": 112,
+      "fast_station_count": 148,
       "name": "Belgien",
-      "station_count": 4219
+      "station_count": 5873
     },
     {
       "charger_count": 18725,
@@ -199,6 +199,13 @@
       "license": "source_terms_pending_human_publication_review_2026-05-03",
       "source_uid": "be_group_indigo_datex_static",
       "source_url": "https://transportdata.be/dataset/27f1357d-71ee-48cb-84a1-96f3f4f034b8/resource/d4bc8ddd-c80f-4330-98e5-d86e5b2147c3/download/indigo-data-evcharging-static-datexii.xml"
+    },
+    {
+      "country_code": "BE",
+      "display_name": "BE Monta AFIR charge-point table",
+      "license": "human_terms_review_approved_for_open_static_bundle_2026-07-24",
+      "source_uid": "be_monta_afir_charge_points",
+      "source_url": "https://public-api.monta.com/api/v1/afir/charge-points"
     },
     {
       "country_code": "BE",

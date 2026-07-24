@@ -1709,7 +1709,7 @@ async function initManagementPage() {
     renderProviderReports(currentSnapshot, {
       countryCode,
       dateText: currentDate,
-      linkProviders: !providerUid,
+      linkProviders: !providerUid && loaded.source === "postgresql",
     });
     const range = dateRangeForWindow(currentDate, currentWindowDays);
     // The raw interval profile is intentionally bounded. Rolling report and
