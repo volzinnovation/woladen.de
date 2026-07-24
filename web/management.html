@@ -60,13 +60,13 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260721-management-ranking1" />
+    <link rel="stylesheet" href="./styles.css?v=20260724-management-coverage2" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
       defer
     ></script>
     <script src="./config.js"></script>
-    <script type="module" src="./management.mjs?v=20260721-management-ranking2"></script>
+    <script type="module" src="./management.mjs?v=20260724-management-coverage2"></script>
   </head>
   <body class="management-page">
     <main class="management-shell">
@@ -212,8 +212,20 @@
                   <th data-sort-type="text">Land</th>
                   <th data-sort-type="number">Stationen</th>
                   <th data-sort-type="number">Ladepunkte</th>
-                  <th data-sort-type="number">Auslastung</th>
-                  <th data-sort-type="number">Störungsanteil</th>
+                  <th
+                    data-sort-type="number"
+                    data-sort-label="Auslastung"
+                    data-sort-detail="Gesamt · Tag · Nacht"
+                  >
+                    Auslastung<br />Gesamt · Tag · Nacht
+                  </th>
+                  <th
+                    data-sort-type="number"
+                    data-sort-label="Störungsanteil"
+                    data-sort-detail="Gesamt · Tag · Nacht"
+                  >
+                    Störungsanteil<br />Gesamt · Tag · Nacht
+                  </th>
                   <th class="unsortable" data-sortable="false"><span class="visually-hidden">Öffnen</span></th>
                 </tr>
               </thead>
@@ -236,6 +248,11 @@
               Zeiträume mit auswertbarem Live-Status.
             </li>
             <li>
+              Tag bezeichnet 07:00 bis 19:00 Uhr Ortszeit, Nacht 19:00 bis
+              07:00 Uhr Ortszeit. Beide Zeiträume werden für Auslastung und
+              Störungsanteil ausgewiesen.
+            </li>
+            <li>
               Die Detailseiten basieren auf der PostgreSQL-Historie und bieten
               Berichtszeiträume von einer, zwei oder vier Wochen.
             </li>
@@ -244,6 +261,12 @@
       </section>
 
       <div id="management-detail" hidden>
+
+      <nav class="management-detail-navigation" aria-label="Zurück">
+        <a id="management-detail-back" class="management-back-link" href="./management.html">
+          ← Zur Länderübersicht
+        </a>
+      </nav>
 
       <section class="management-panel management-controls">
         <div class="management-control">
@@ -378,9 +401,20 @@
                   <th data-sort-type="text">Anbieter</th>
                   <th data-sort-type="number">Stationen</th>
                   <th data-sort-type="number">Messtage</th>
-                  <th data-sort-type="number">Auslastung</th>
-                  <th data-sort-type="number">Störungsanteil</th>
-                  <th data-sort-type="number">Tag / Nacht</th>
+                  <th
+                    data-sort-type="number"
+                    data-sort-label="Auslastung"
+                    data-sort-detail="Gesamt · Tag · Nacht"
+                  >
+                    Auslastung<br />Gesamt · Tag · Nacht
+                  </th>
+                  <th
+                    data-sort-type="number"
+                    data-sort-label="Störungsanteil"
+                    data-sort-detail="Gesamt · Tag · Nacht"
+                  >
+                    Störungsanteil<br />Gesamt · Tag · Nacht
+                  </th>
                   <th data-sort-type="number">Transportfehler</th>
                   <th data-sort-type="text">Einordnung</th>
                 </tr>
@@ -425,10 +459,16 @@
         </div>
         <ul>
           <li>
-            Die Kennzahl „Stationen im Tagesarchiv“ zählt Stationen, für die
-            an diesem Tag mindestens eine AFIR-Live-Beobachtung im Archiv
-            vorlag. Bei Delta-Anbietern ohne Push-Verkehr kann dieser Tageswert
-            niedriger sein als die aktuelle Live-Abdeckung.
+            Die Kennzahl „Dynamische Stationen im Tagesarchiv“ zählt Stationen,
+            für die an diesem Tag mindestens eine AFIR-Live-Beobachtung im
+            Archiv vorlag. Bei Delta-Anbietern ohne Push-Verkehr kann dieser
+            Tageswert niedriger sein als die aktuelle Live-Abdeckung.
+          </li>
+          <li>
+            „Live-Daten-Abdeckung“ ist der Anteil der statischen
+            Katalogstationen mit messbarem Live-Status. „Stationen ohne
+            Störung“ ist der Anteil dieser dynamischen Stationen, für die im
+            Tagesverlauf keine Störung gemeldet wurde.
           </li>
           <li>
             Als Störung zählt ein Ladepunkt, wenn er als außer Betrieb gemeldet
@@ -438,6 +478,17 @@
             Auslastung ist der Anteil belegter Zeit an der gemessenen Zeit.
             Störungen, nicht verfügbare oder unbekannte Zustände zählen nicht
             als Belegung.
+          </li>
+          <li>
+            Tag bezeichnet 07:00 bis 19:00 Uhr Ortszeit, Nacht 19:00 bis
+            07:00 Uhr Ortszeit. Die Aufteilung wird sowohl für Auslastung als
+            auch für den Störungsanteil gezeigt.
+          </li>
+          <li>
+            Stationen mit exakt 100&nbsp;% Tagesauslastung werden in der Liste
+            „Ladestationen mit hoher Auslastung“ nicht berücksichtigt. Das
+            deutet typischerweise darauf hin, dass ein Fahrzeug nicht
+            abgesteckt wurde, und nicht auf wiederkehrend hohe Nachfrage.
           </li>
           <li>
             Die Anbieterleistung fasst eine, zwei oder vier Wochen zusammen.

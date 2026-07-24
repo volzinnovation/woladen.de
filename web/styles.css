@@ -4505,6 +4505,27 @@ select:focus-visible {
   grid-template-columns: 1fr;
 }
 
+.management-detail-navigation {
+  margin-bottom: 0.75rem;
+}
+
+.management-back-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  border: 1px solid rgba(19, 32, 41, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #12664f;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.management-back-link:hover {
+  background: #ffffff;
+}
+
 .management-control label {
   display: block;
   margin-bottom: 0.35rem;
@@ -4794,6 +4815,15 @@ select:focus-visible {
   color: #5a6772;
 }
 
+.management-table .management-table-numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.management-table th.management-table-numeric .management-sort-button {
+  justify-content: flex-end;
+}
+
 .management-rank-column {
   width: 2.4rem;
   color: #74808a;
@@ -4827,6 +4857,15 @@ select:focus-visible {
 
 .management-sort-label {
   min-width: 0;
+}
+
+.management-sort-detail {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: none;
 }
 
 .management-sort-indicator {

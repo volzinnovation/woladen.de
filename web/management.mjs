@@ -327,16 +327,17 @@ export function snapshotPathForDate(dateText) {
 }
 
 export function buildManagementSubtitle(dateText, countryCode = "") {
+  const normalizedCountry = normalizeCountryCode(countryCode);
+  if (normalizedCountry) {
+    return `Störungen und Auslastung öffentlicher Ladestationen in ${countryName(normalizedCountry)}`;
+  }
   const normalized = normalizeManagementDate(dateText);
   if (!normalized) {
     return "Störungen und Auslastung öffentlicher Ladestationen in angebundenen europäischen Ländern.";
   }
   const label = WEEKDAY_DATE_LABEL_FORMAT.format(new Date(`${normalized}T00:00:00Z`));
   const capitalizedLabel = label.charAt(0).toUpperCase() + label.slice(1);
-  const scope = countryCode
-    ? `öffentlicher Ladestationen in ${countryName(countryCode)}`
-    : "öffentlicher Ladestationen in angebundenen europäischen Ländern";
-  return `Störungen und Auslastung ${scope} am ${capitalizedLabel}`;
+  return `Störungen und Auslastung öffentlicher Ladestationen in angebundenen europäischen Ländern am ${capitalizedLabel}`;
 }
 
 export function buildOverviewSeries(trends, metricKey) {
@@ -354,19 +355,40 @@ export function buildOverviewSeries(trends, metricKey) {
   };
 }
 
-export function buildSummaryCards(snapshot) {
+export function staticStationCountForCountry(openStaticSummary, countryCode) {
+  const normalizedCountry = normalizeCountryCode(countryCode);
+  if (!normalizedCountry) {
+    return null;
+  }
+  const countries = Array.isArray(openStaticSummary?.countries) ? openStaticSummary.countries : [];
+  const country = countries.find(
+    (row) => normalizeCountryCode(row?.code ?? row?.country_code) === normalizedCountry,
+  );
+  return optionalNumber(country?.station_count);
+}
+
+export function buildSummaryCards(snapshot, { staticStationCount = null } = {}) {
   const summary = snapshot?.summary || {};
   if (optionalNumber(summary.measured_station_coverage) !== null) {
-    return [
+    const dynamicStationCount =
+      firstNumber(summary.measured_station_count, summary.station_count) ?? 0;
+    const stationsWithDisruptions = firstNumber(summary.stations_with_disruptions) ?? 0;
+    const stationsWithoutDisruptions = Math.max(
+      0,
+      dynamicStationCount - stationsWithDisruptions,
+    );
+    const cards = [
       {
-        label: "Stationen im Tagesarchiv",
+        label: "Dynamische Stationen im Tagesarchiv",
         value: numberFormat(summary.station_count ?? summary.afir_stations_observed),
-        detail: `${numberFormat(summary.observed_evses)} beobachtete Ladepunkte.`,
+        detail: `${numberFormat(summary.observed_evses)} beobachtete Ladepunkte mit Live-Daten.`,
       },
       {
-        label: "Messabdeckung",
-        value: percentFormat(summary.measured_station_coverage),
-        detail: "Anteil der Stationen mit gemessener Statuszeit.",
+        label: "Stationen ohne Störung",
+        value: percentFormat(
+          dynamicStationCount > 0 ? stationsWithoutDisruptions / dynamicStationCount : null,
+        ),
+        detail: `${numberFormat(stationsWithoutDisruptions)} von ${numberFormat(dynamicStationCount)} dynamischen Stationen ohne gemeldete Störung im Tagesverlauf.`,
       },
       {
         label: "Auslastung",
@@ -389,6 +411,15 @@ export function buildSummaryCards(snapshot) {
         detail: "Alle beobachteten Ladepunkte waren am Tagesende gestört.",
       },
     ];
+    const staticCount = optionalNumber(staticStationCount);
+    if (staticCount !== null && staticCount > 0) {
+      cards.splice(1, 0, {
+        label: "Live-Daten-Abdeckung",
+        value: percentFormat(dynamicStationCount / staticCount),
+        detail: `${numberFormat(dynamicStationCount)} von ${numberFormat(staticCount)} statischen Stationen mit messbarem Live-Status.`,
+      });
+    }
+    return cards;
   }
   const cards = [
     {
@@ -510,7 +541,11 @@ export function buildStationRows(snapshot, key) {
     });
     return rows.slice(0, TOP_STATIONS_LIMIT);
   }
-  rows.sort((left, right) => {
+  const eligibleRows = rows.filter((row) => {
+    const utilization = optionalNumber(row?.day_occupancy_share);
+    return utilization === null || utilization < 1;
+  });
+  eligibleRows.sort((left, right) => {
     const busyDelta =
       Number(right?.busy_transition_count || 0) - Number(left?.busy_transition_count || 0);
     if (busyDelta !== 0) {
@@ -518,7 +553,7 @@ export function buildStationRows(snapshot, key) {
     }
     return String(left?.station_id || "").localeCompare(String(right?.station_id || ""));
   });
-  return rows.slice(0, TOP_STATIONS_LIMIT);
+  return eligibleRows.slice(0, TOP_STATIONS_LIMIT);
 }
 
 export function buildProviderRows(snapshot) {
@@ -595,6 +630,18 @@ function managementCountryUrl(countryCode, dateText = "", windowDays = "") {
   return `./management.html?${query.toString()}`;
 }
 
+function managementOverviewUrl(dateText = "", windowDays = "") {
+  const query = new URLSearchParams();
+  if (normalizeManagementDate(dateText)) {
+    query.set("date", dateText);
+  }
+  if (SUPPORTED_WINDOW_DAYS.includes(Number(windowDays))) {
+    query.set("window", String(windowDays));
+  }
+  const queryText = query.toString();
+  return `./management.html${queryText ? `?${queryText}` : ""}`;
+}
+
 function managementProviderUrl(providerUid, countryCode = "", dateText = "") {
   const query = new URLSearchParams({ provider: normalizeProviderUid(providerUid) });
   if (normalizeCountryCode(countryCode)) {
@@ -655,6 +702,22 @@ function wireAppPromoDismiss() {
   dismissButton.addEventListener("click", () => {
     promo.remove();
   });
+}
+
+async function loadOpenStaticSummary() {
+  try {
+    const response = await fetch("./data/open_static_summary.json", {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.warn("Der statische Katalogvergleich ist nicht verfügbar.", error);
+    return { countries: [] };
+  }
 }
 
 async function waitForChart() {
@@ -735,9 +798,11 @@ function updateSortableTableTitle(table) {
   }
   const headerRow = sortableHeaderRow(table);
   const columnIndex = Number(table.dataset.sortColumn);
-  const columnLabel = Number.isInteger(columnIndex)
-    ? headerRow?.cells[columnIndex]?.querySelector(".management-sort-label")?.textContent
-    : "";
+  const columnHeader = Number.isInteger(columnIndex) ? headerRow?.cells[columnIndex] : null;
+  const columnLabel =
+    columnHeader?.dataset.sortLabel ||
+    columnHeader?.querySelector(".management-sort-label")?.textContent ||
+    "";
   title.textContent = rankedTableTitle(
     table.dataset.sortTitlePrefix,
     columnLabel,
@@ -817,7 +882,24 @@ function toggleTableSort(table, columnIndex, type) {
   updateSortableTableTitle(table);
 }
 
+function alignNumericTableColumns(table) {
+  const headerRow = sortableHeaderRow(table);
+  if (!headerRow) {
+    return;
+  }
+  for (const th of Array.from(headerRow.cells)) {
+    if (!["number", "date"].includes(th.dataset.sortType)) {
+      continue;
+    }
+    th.classList.add("management-table-numeric");
+    for (const row of tableBodyRows(table)) {
+      row.cells[th.cellIndex]?.classList.add("management-table-numeric");
+    }
+  }
+}
+
 function wireSortableTable(table) {
+  alignNumericTableColumns(table);
   if (table.dataset.sortableInitialized === "true") {
     return;
   }
@@ -831,7 +913,8 @@ function wireSortableTable(table) {
     }
     const columnIndex = th.cellIndex;
     const sortType = th.dataset.sortType || "text";
-    const label = th.textContent.trim();
+    const label = th.dataset.sortLabel || th.textContent.trim();
+    const detail = String(th.dataset.sortDetail || "").trim();
     const button = document.createElement("button");
     const labelSpan = document.createElement("span");
     const indicator = document.createElement("span");
@@ -841,6 +924,12 @@ function wireSortableTable(table) {
     button.setAttribute("aria-label", `${label} sortieren`);
     labelSpan.className = "management-sort-label";
     labelSpan.textContent = label;
+    if (detail) {
+      const detailSpan = document.createElement("span");
+      detailSpan.className = "management-sort-detail";
+      detailSpan.textContent = detail;
+      labelSpan.appendChild(detailSpan);
+    }
     indicator.className = "management-sort-indicator";
     indicator.setAttribute("aria-hidden", "true");
     button.append(labelSpan, indicator);
@@ -858,6 +947,7 @@ function wireSortableTables(root = document) {
 }
 
 function resetSortableTable(table) {
+  alignNumericTableColumns(table);
   markTableOriginalOrder(table);
   const defaultColumnText = String(table.dataset.defaultSortColumn || "").trim();
   const defaultColumn = defaultColumnText ? Number(defaultColumnText) : -1;
@@ -1003,8 +1093,14 @@ function renderCountryOverview(countriesPayload, reportPayload, dateText, window
       </td>
       <td data-sort-value="${numericSortValue(row.station_count)}">${numberFormat(row.station_count)}</td>
       <td data-sort-value="${numericSortValue(row.observed_evse_days ?? row.observed_evses)}">${numberFormat(row.observed_evse_days ?? row.observed_evses)}</td>
-      <td data-sort-value="${numericSortValue(row.occupancy_share)}">${percentFormat(row.occupancy_share)}</td>
-      <td data-sort-value="${numericSortValue(row.out_of_order_share)}">${percentFormat(row.out_of_order_share)}</td>
+      <td data-sort-value="${numericSortValue(row.occupancy_share)}">
+        ${percentFormat(row.occupancy_share)}
+        <div class="provider-sub">Tag ${percentFormat(row.day_occupancy_share)} · Nacht ${percentFormat(row.night_occupancy_share)}</div>
+      </td>
+      <td data-sort-value="${numericSortValue(row.out_of_order_share)}">
+        ${percentFormat(row.out_of_order_share)}
+        <div class="provider-sub">Tag ${percentFormat(row.day_out_of_order_share)} · Nacht ${percentFormat(row.night_out_of_order_share)}</div>
+      </td>
       <td><a class="management-row-action" href="${escapeAttribute(detailUrl)}" aria-label="${escapeAttribute(row.country_name)} öffnen">→</a></td>
     `;
     tbody.appendChild(tr);
@@ -1021,7 +1117,12 @@ function renderDataQuality(snapshot, windowDays) {
     {
       label: "Konfidenz",
       value: confidenceLabel(summary.confidence_label),
-      detail: `${percentFormat(summary.measured_station_coverage)} Stationsabdeckung`,
+      detail: "Bewertung der Datenabdeckung",
+    },
+    {
+      label: "Messbarer Live-Status",
+      value: percentFormat(summary.measured_station_coverage),
+      detail: "Anteil der dynamischen Stationen mit verwertbarer Statuszeit",
     },
     {
       label: "Koordinaten",
@@ -1041,8 +1142,8 @@ function renderDataQuality(snapshot, windowDays) {
   ]);
 }
 
-function renderKpis(snapshot) {
-  const cards = buildSummaryCards(snapshot);
+function renderKpis(snapshot, options = {}) {
+  const cards = buildSummaryCards(snapshot, options);
   const host = document.getElementById("management-kpis");
   host.innerHTML = "";
   for (const cardInfo of cards) {
@@ -1126,7 +1227,7 @@ function renderRollingProviderReports(
   title.textContent = `Anbieterleistung über ${windowLabel(windowDays)}`;
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="8">Für diesen Zeitraum ist keine historische Anbieteraggregation verfügbar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7">Für diesen Zeitraum ist keine historische Anbieteraggregation verfügbar.</td></tr>';
     return;
   }
   for (const row of rows) {
@@ -1150,9 +1251,14 @@ function renderRollingProviderReports(
       </td>
       <td data-sort-value="${numericSortValue(row.station_count)}">${numberFormat(row.station_count)}</td>
       <td data-sort-value="${numericSortValue(row.measured_days)}">${numberFormat(row.measured_days)} / ${numberFormat(row.requested_days)}</td>
-      <td data-sort-value="${numericSortValue(row.occupancy_share)}">${percentFormat(row.occupancy_share)}</td>
-      <td data-sort-value="${numericSortValue(row.out_of_order_share)}">${percentFormat(row.out_of_order_share)}</td>
-      <td data-sort-value="${numericSortValue(row.day_occupancy_share)}">${percentFormat(row.day_occupancy_share)} / ${percentFormat(row.night_occupancy_share)}</td>
+      <td data-sort-value="${numericSortValue(row.occupancy_share)}">
+        ${percentFormat(row.occupancy_share)}
+        <div class="provider-sub">Tag ${percentFormat(row.day_occupancy_share)} · Nacht ${percentFormat(row.night_occupancy_share)}</div>
+      </td>
+      <td data-sort-value="${numericSortValue(row.out_of_order_share)}">
+        ${percentFormat(row.out_of_order_share)}
+        <div class="provider-sub">Tag ${percentFormat(row.day_out_of_order_share)} · Nacht ${percentFormat(row.night_out_of_order_share)}</div>
+      </td>
       <td data-sort-value="${numericSortValue(row.transport_failure_count)}">${numberFormat(row.transport_failure_count)}</td>
       <td data-sort-value="${escapeAttribute(stationClassLabel(row.station_class))}"><span class="management-class-label management-class-${escapeAttribute(row.station_class || "unknown")}">${escapeHtml(stationClassLabel(row.station_class))}</span></td>
     `;
@@ -1220,6 +1326,7 @@ async function initManagementPage() {
   });
   const indexPayload = await dataSource.loadIndex();
   const countriesPayload = await dataSource.loadCountries();
+  const openStaticSummary = await loadOpenStaticSummary();
   const availableDates = Array.isArray(indexPayload.available_dates) ? indexPayload.available_dates : [];
   if (!availableDates.length) {
     throw new Error("Keine Tagesauswertungen verfügbar.");
@@ -1324,7 +1431,7 @@ async function initManagementPage() {
       document.documentElement.dataset.managementDataSource = dataSource.currentSource();
       const sourceDetail =
         dataSource.currentSource() === "postgresql"
-          ? "Live aus PostgreSQL"
+          ? "Europäische AFIR Datenmeldungen"
           : "Statische Ersatzauswertung";
       document.getElementById("management-subtitle").textContent =
         dataSource.currentSource() === "postgresql"
@@ -1405,6 +1512,7 @@ async function initManagementPage() {
   const overviewMetricSelect = document.getElementById("management-overview-metric");
   const windowSelect = document.getElementById("management-window-days");
   const providerProfilePanel = document.getElementById("management-provider-profile-panel");
+  const detailBackLink = document.getElementById("management-detail-back");
   providerProfilePanel.hidden = !providerUid;
   const overviewMetricOptions = Object.entries(OVERVIEW_METRICS).map(([value, meta]) => ({
     value,
@@ -1445,9 +1553,20 @@ async function initManagementPage() {
     document.documentElement.dataset.managementDataSource = loaded.source;
     currentDate = targetDate;
     syncUrl({ countryCode, providerUid, windowDays: currentWindowDays });
+    if (providerUid && countryCode) {
+      detailBackLink.href = managementCountryUrl(countryCode, currentDate, currentWindowDays);
+      detailBackLink.textContent = `← Zu ${countryName(countryCode)}`;
+    } else {
+      detailBackLink.href = managementOverviewUrl(currentDate, currentWindowDays);
+      detailBackLink.textContent = "← Zur Länderübersicht";
+    }
     updateDateControls(datePicker, prevDay, nextDay, countryDates);
     windowSelect.value = String(currentWindowDays);
-    renderKpis(currentSnapshot);
+    renderKpis(currentSnapshot, {
+      staticStationCount: providerUid
+        ? null
+        : staticStationCountForCountry(openStaticSummary, countryCode),
+    });
     renderDataQuality(currentSnapshot, currentWindowDays);
     renderBrokenStations(currentSnapshot);
     renderBusyStations(currentSnapshot);
@@ -1517,7 +1636,10 @@ async function initManagementPage() {
       document.title = `woladen.de | Anbieteranalyse ${providerName}`;
     }
 
-    const sourceDetail = loaded.source === "postgresql" ? "Live aus PostgreSQL" : "Statische Ersatzauswertung";
+    const sourceDetail =
+      loaded.source === "postgresql"
+        ? "Europäische AFIR Datenmeldungen"
+        : "Statische Ersatzauswertung";
     subtitle.textContent = providerUid
       ? `Anbieterbericht für ${countryCode ? countryName(countryCode) : "alle angebundenen Länder"} am ${formatDateLabel(currentDate)} · ${sourceDetail}.`
       : `${buildManagementSubtitle(currentDate, countryCode)} · ${sourceDetail}.`;

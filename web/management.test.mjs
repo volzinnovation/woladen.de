@@ -21,6 +21,7 @@ import {
   normalizeProviderUid,
   rankedTableTitle,
   snapshotPathForDate,
+  staticStationCountForCountry,
   SUPPORTED_WINDOW_DAYS,
   windowLabel,
 } from "./management.mjs";
@@ -39,14 +40,14 @@ test("snapshotPathForDate builds the dated management JSON path", () => {
   assert.equal(snapshotPathForDate("not-a-date"), "");
 });
 
-test("buildManagementSubtitle renders weekday and date for the selected day", () => {
+test("buildManagementSubtitle omits the redundant date on country reports", () => {
   assert.equal(
     buildManagementSubtitle("2026-04-17"),
     "Störungen und Auslastung öffentlicher Ladestationen in angebundenen europäischen Ländern am Freitag, 17.04.2026",
   );
   assert.equal(
     buildManagementSubtitle("2026-04-17", "NL"),
-    "Störungen und Auslastung öffentlicher Ladestationen in Niederlande am Freitag, 17.04.2026",
+    "Störungen und Auslastung öffentlicher Ladestationen in Niederlande",
   );
 });
 
@@ -157,22 +158,46 @@ test("buildSummaryCards exposes delta delivery warning when daily coverage can u
 });
 
 test("buildSummaryCards exposes PostgreSQL coverage and reliability metrics", () => {
-  const cards = buildSummaryCards({
-    summary: {
-      station_count: 35082,
-      observed_evses: 111137,
-      measured_station_coverage: 0.99142,
-      occupancy_share: 0.0963,
-      out_of_order_share: 0.0741,
-      stations_with_disruptions: 9262,
-      disruptions_at_end_of_day: 3679,
-      fully_out_of_service_stations: 1828,
+  const cards = buildSummaryCards(
+    {
+      summary: {
+        station_count: 35082,
+        measured_station_count: 34781,
+        observed_evses: 111137,
+        measured_station_coverage: 0.99142,
+        occupancy_share: 0.0963,
+        out_of_order_share: 0.0741,
+        stations_with_disruptions: 9262,
+        disruptions_at_end_of_day: 3679,
+        fully_out_of_service_stations: 1828,
+      },
     },
-  });
-  assert.equal(cards.length, 6);
-  assert.equal(cards[1].value, "99,1 %");
-  assert.equal(cards[2].label, "Auslastung");
-  assert.equal(cards[5].value, "1.828");
+    { staticStationCount: 72155 },
+  );
+  assert.equal(cards.length, 7);
+  assert.equal(cards[0].label, "Dynamische Stationen im Tagesarchiv");
+  assert.equal(cards[1].label, "Live-Daten-Abdeckung");
+  assert.equal(cards[1].value, "48,2 %");
+  assert.equal(cards[2].label, "Stationen ohne Störung");
+  assert.equal(cards[2].value, "73,4 %");
+  assert.equal(cards[3].label, "Auslastung");
+  assert.equal(cards[6].value, "1.828");
+});
+
+test("staticStationCountForCountry reads the country catalog baseline", () => {
+  assert.equal(
+    staticStationCountForCountry(
+      {
+        countries: [
+          { code: "DE", station_count: 72155 },
+          { code: "SE", station_count: 8922 },
+        ],
+      },
+      "se",
+    ),
+    8922,
+  );
+  assert.equal(staticStationCountForCountry({ countries: [] }, "SE"), null);
 });
 
 test("country overview rows merge dynamic coverage with the selected day report", () => {
@@ -258,10 +283,18 @@ test("buildStationRows sorts broken and busy station tables for the public page"
   );
   const busyRows = buildStationRows(
     {
-      busiest_stations: Array.from({ length: 12 }, (_, index) => ({
-        station_id: `station-${String.fromCharCode(97 + index)}`,
-        busy_transition_count: index,
-      })),
+      busiest_stations: [
+        {
+          station_id: "still-plugged-in",
+          busy_transition_count: 99,
+          day_occupancy_share: 1,
+        },
+        ...Array.from({ length: 12 }, (_, index) => ({
+          station_id: `station-${String.fromCharCode(97 + index)}`,
+          busy_transition_count: index,
+          day_occupancy_share: 0.8 + index / 100,
+        })),
+      ],
     },
     "busiest_stations",
   );
@@ -270,6 +303,7 @@ test("buildStationRows sorts broken and busy station tables for the public page"
   assert.deepEqual(brokenRows[0].station_id, "station-k");
   assert.equal(brokenRows.some((row) => row.station_id === "more-currently-broken"), false);
   assert.equal(busyRows.length, 10);
+  assert.equal(busyRows.some((row) => row.station_id === "still-plugged-in"), false);
   assert.deepEqual(busyRows[0].station_id, "station-l");
   assert.deepEqual(busyRows.at(-1).station_id, "station-c");
 });
