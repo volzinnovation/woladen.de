@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="apple-itunes-app" content="app-id=6759499459" />
     <title>
-      woladen.de | Managementübersicht öffentlicher Ladenetze
+      woladen.de | Öffentliche Ladeinfrastruktur in Europa
     </title>
     <meta
       name="description"
@@ -15,7 +15,7 @@
     <meta property="og:type" content="website" />
     <meta
       property="og:title"
-      content="woladen.de | Managementübersicht öffentlicher Ladenetze"
+      content="woladen.de | Öffentliche Ladeinfrastruktur in Europa"
     />
     <meta
       property="og:description"
@@ -31,7 +31,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta
       name="twitter:title"
-      content="woladen.de | Managementübersicht öffentlicher Ladenetze"
+      content="woladen.de | Öffentliche Ladeinfrastruktur in Europa"
     />
     <meta
       name="twitter:description"
@@ -60,13 +60,13 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260724-management-coverage2" />
+    <link rel="stylesheet" href="./styles.css?v=20260724-management-layout2" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
       defer
     ></script>
     <script src="./config.js"></script>
-    <script type="module" src="./management.mjs?v=20260724-management-coverage2"></script>
+    <script type="module" src="./management.mjs?v=20260724-management-layout2"></script>
   </head>
   <body class="management-page">
     <main class="management-shell">
@@ -75,7 +75,7 @@
           <a href="https://woladen.de">woladen.de</a> Managementanalyse
           · <a href="./status.html">Datenstatus</a>
         </p>
-        <h1 id="management-title">Managementübersicht öffentlicher Ladenetze</h1>
+        <h1 id="management-title">Öffentliche Ladeinfrastruktur in Europa</h1>
         <p id="management-subtitle" class="management-subtitle">
           Länder vergleichen und die jeweilige Detailauswertung öffnen.
         </p>
@@ -234,6 +234,63 @@
           </div>
         </section>
 
+        <section class="management-panel management-country-panel management-country-coverage-panel">
+          <div class="management-panel-head">
+            <h2>AFIR-Datenabdeckung nach Land</h2>
+            <p>
+              Öffentliche Bestandszahlen sowie Stationen mit auswertbaren
+              Live-Daten im gewählten Berichtszeitraum. Der Live-Anteil bezieht
+              sich auf öffentliche Stationen; der störungsfreie Anteil auf
+              Stationen mit Live-Daten.
+            </p>
+          </div>
+          <div class="management-table-wrap">
+            <table
+              class="management-table management-sortable management-country-table management-country-coverage-table"
+              data-default-sort-column="0"
+              data-default-sort-direction="ascending"
+            >
+              <thead>
+                <tr>
+                  <th data-sort-type="text">Land</th>
+                  <th
+                    data-sort-type="number"
+                    data-sort-label="Öffentliche Ladepunkte"
+                    data-sort-detail="Anzahl"
+                  >
+                    Öffentliche Ladepunkte<br />Anzahl
+                  </th>
+                  <th
+                    data-sort-type="number"
+                    data-sort-label="Öffentliche Ladestationen"
+                    data-sort-detail="Anzahl"
+                  >
+                    Öffentliche Ladestationen<br />Anzahl
+                  </th>
+                  <th
+                    data-sort-type="number"
+                    data-sort-label="Stationen mit Live-Daten"
+                    data-sort-detail="Anzahl · Anteil"
+                  >
+                    Stationen mit Live-Daten<br />Anzahl · Anteil
+                  </th>
+                  <th
+                    data-sort-type="number"
+                    data-sort-label="Stationen ohne Störung"
+                    data-sort-detail="Anzahl · Anteil"
+                  >
+                    Stationen ohne Störung<br />Anzahl · Anteil
+                  </th>
+                  <th class="unsortable" data-sortable="false">
+                    <span class="visually-hidden">Öffnen</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="management-country-coverage-body"></tbody>
+            </table>
+          </div>
+        </section>
+
         <section class="management-panel management-notes">
           <div class="management-panel-head">
             <h2>Was die Übersicht zeigt</h2>
@@ -253,7 +310,7 @@
               Störungsanteil ausgewiesen.
             </li>
             <li>
-              Die Detailseiten basieren auf der PostgreSQL-Historie und bieten
+              Die Detailseiten basieren auf gespeicherten Messwerten und bieten
               Berichtszeiträume von einer, zwei oder vier Wochen.
             </li>
           </ul>
@@ -262,13 +319,12 @@
 
       <div id="management-detail" hidden>
 
-      <nav class="management-detail-navigation" aria-label="Zurück">
-        <a id="management-detail-back" class="management-back-link" href="./management.html">
-          ← Zur Länderübersicht
-        </a>
-      </nav>
-
       <section class="management-panel management-controls">
+        <nav class="management-detail-navigation" aria-label="Zurück">
+          <a id="management-detail-back" class="management-back-link" href="./management.html">
+            ← Zur Länderübersicht
+          </a>
+        </nav>
         <div class="management-control">
           <label for="management-date">Datum</label>
           <div class="management-date-row">
@@ -289,10 +345,6 @@
             </button>
           </div>
         </div>
-        <div id="management-overview-control" class="management-control">
-          <label for="management-overview-metric">Zeitreihe</label>
-          <select id="management-overview-metric"></select>
-        </div>
         <div class="management-control">
           <label for="management-window-days">Berichtszeitraum</label>
           <select id="management-window-days">
@@ -305,20 +357,20 @@
 
       <section id="management-kpis" class="management-kpis"></section>
 
-      <section
-        id="management-data-quality"
-        class="management-summary-strip management-summary-strip--detail"
-        aria-label="Datenqualität"
-      ></section>
-
       <section class="management-grid">
         <article class="management-panel">
-          <div class="management-panel-head">
-            <h2 id="management-overview-title">Ladestationen mit Störungen</h2>
-            <p id="management-overview-description">
-              So haben sich Störungen an Ladestationen von Tag zu Tag
-              entwickelt.
-            </p>
+          <div class="management-panel-head management-panel-head--chart">
+            <div>
+              <h2 id="management-overview-title">Ladestationen mit Störungen</h2>
+              <p id="management-overview-description">
+                So haben sich Störungen an Ladestationen von Tag zu Tag
+                entwickelt.
+              </p>
+            </div>
+            <div id="management-overview-control" class="management-control management-chart-control">
+              <label for="management-overview-metric">Zeitreihe</label>
+              <select id="management-overview-metric"></select>
+            </div>
           </div>
           <div class="management-chart-wrap">
             <canvas id="management-overview-chart"></canvas>
@@ -392,7 +444,7 @@
             <h2 id="management-provider-window-title">Anbieterleistung über 4 Wochen</h2>
             <p>
               Historische Abdeckung, Auslastung, Zuverlässigkeit und
-              Transportfehler je Anbieter aus PostgreSQL.
+              Transportfehler je Anbieter aus der Datenbank.
             </p>
           </div>
           <div class="management-table-wrap">
@@ -450,6 +502,12 @@
           </div>
         </article>
       </section>
+
+      <section
+        id="management-data-quality"
+        class="management-summary-strip management-summary-strip--detail management-summary-strip--footer"
+        aria-label="Datenqualität"
+      ></section>
 
       <section class="management-panel management-notes">
         <div class="management-panel-head">
@@ -524,7 +582,7 @@
           </li>
           <li>
             Grundlage sind verbundene Statusmeldungen und tägliche
-            Anbieterangaben aus der PostgreSQL-Auswertung von woladen.de.
+            Anbieterangaben aus der Datenbankauswertung von woladen.de.
           </li>
         </ul>
       </section>

@@ -4490,6 +4490,17 @@ select:focus-visible {
   gap: 1rem;
 }
 
+.management-panel-head--chart {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
+  align-items: end;
+  gap: 1.25rem;
+}
+
+.management-chart-control {
+  min-width: 0;
+}
+
 .management-controls {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -4506,12 +4517,14 @@ select:focus-visible {
 }
 
 .management-detail-navigation {
-  margin-bottom: 0.75rem;
+  align-self: end;
+  min-width: 0;
 }
 
 .management-back-link {
   display: inline-flex;
   align-items: center;
+  width: 100%;
   min-height: 2.75rem;
   padding: 0 0.9rem;
   border: 1px solid rgba(19, 32, 41, 0.12);
@@ -4573,10 +4586,16 @@ select:focus-visible {
 }
 
 .management-kpi {
+  position: relative;
   padding: 1rem 1.05rem;
   border-radius: 20px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(250, 245, 238, 0.96));
   border: 1px solid rgba(19, 32, 41, 0.08);
+}
+
+.management-kpi:hover,
+.management-kpi:focus-within {
+  z-index: 3;
 }
 
 .management-kpi-label {
@@ -4593,8 +4612,43 @@ select:focus-visible {
 }
 
 .management-reference a {
+  position: relative;
   color: #12664f;
   text-decoration: none;
+}
+
+.management-reference a[data-footnote]::after {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.55rem);
+  left: 50%;
+  width: min(22rem, calc(100vw - 2.5rem));
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(19, 32, 41, 0.12);
+  border-radius: 12px;
+  background: #132029;
+  box-shadow: 0 14px 34px rgba(19, 32, 41, 0.2);
+  color: #ffffff;
+  content: attr(data-footnote);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: 0;
+  opacity: 0;
+  pointer-events: none;
+  text-align: left;
+  text-transform: none;
+  transform: translate(-50%, -0.2rem);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+  white-space: normal;
+}
+
+.management-reference a[data-footnote]:hover::after,
+.management-reference a[data-footnote]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .management-reference a:hover,
@@ -4616,6 +4670,35 @@ select:focus-visible {
   line-height: 1.45;
 }
 
+.management-kpi-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(3.8rem, 1fr));
+  gap: 0.45rem;
+  margin: 0.7rem 0 0;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(19, 32, 41, 0.08);
+}
+
+.management-kpi-metrics div {
+  min-width: 0;
+}
+
+.management-kpi-metrics dt {
+  color: #73808a;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.management-kpi-metrics dd {
+  margin: 0.15rem 0 0;
+  color: #26343d;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .management-summary-strip {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -4628,6 +4711,11 @@ select:focus-visible {
 }
 
 .management-summary-strip--detail {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 0;
+}
+
+.management-summary-strip--footer {
   margin-top: 0;
 }
 
@@ -5177,6 +5265,14 @@ select:focus-visible {
 
   .management-panel-head--split {
     display: block;
+  }
+
+  .management-panel-head--chart {
+    grid-template-columns: 1fr;
+  }
+
+  .management-chart-control {
+    margin-top: 0.25rem;
   }
 
   .management-count-badge {

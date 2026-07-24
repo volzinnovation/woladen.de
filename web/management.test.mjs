@@ -201,12 +201,23 @@ test("buildSummaryCards exposes PostgreSQL coverage and reliability metrics", ()
   assert.equal(cards[0].value, "188.200");
   assert.equal(cards[1].value, "72.155");
   assert.equal(cards[2].value, "34.700");
-  assert.match(cards[2].detail, /48,1 %/);
+  assert.match(cards[2].metrics[0].value, /48,1 %/);
   assert.equal(cards[3].value, "25.500");
-  assert.match(cards[4].detail, /Tag 11,0 % · Nacht 8,0 %/);
-  assert.match(cards[5].detail, /Tag 6,5 % · Nacht 8,3 %/);
+  assert.deepEqual(
+    cards[4].metrics.map((metric) => metric.label),
+    ["Gesamt", "Tag", "Nacht"],
+  );
+  assert.deepEqual(
+    cards[4].metrics.map((metric) => metric.value),
+    ["9,6 %", "11,0 %", "8,0 %"],
+  );
+  assert.deepEqual(
+    cards[5].metrics.map((metric) => metric.value),
+    ["7,4 %", "6,5 %", "8,3 %"],
+  );
   assert.equal(cards[6].value, "3.600");
   assert.equal(cards[7].value, "1.800");
+  assert.equal(cards[0].detail, undefined);
   assert.deepEqual(cards.map((card) => card.reference), [1, 2, 3, 4, 5, 6, 7, 8]);
 });
 
@@ -245,6 +256,36 @@ test("management tables use window wording and omit removed classification colum
   assert.match(brokenStationsTable, /Berichtszeitraum/);
 });
 
+test("management detail layout keeps navigation with date controls and methodology at the end", () => {
+  const html = readFileSync(new URL("./management.html", import.meta.url), "utf8");
+  const script = readFileSync(new URL("./management.mjs", import.meta.url), "utf8");
+  const detailControls = html.match(
+    /<section class="management-panel management-controls">[\s\S]*?<\/section>/,
+  )?.[0];
+  const chartPanel = html.match(
+    /<h2 id="management-overview-title">[\s\S]*?<\/article>/,
+  )?.[0];
+
+  assert.match(html, /Öffentliche Ladeinfrastruktur in Europa/);
+  assert.ok(detailControls);
+  assert.ok(
+    detailControls.indexOf("management-detail-back") <
+      detailControls.indexOf('id="management-date"'),
+  );
+  assert.doesNotMatch(detailControls, /management-overview-metric/);
+  assert.ok(chartPanel);
+  assert.match(chartPanel, /management-overview-metric/);
+  assert.match(html, /AFIR-Datenabdeckung nach Land/);
+  assert.match(html, /id="management-country-coverage-body"/);
+  assert.ok(
+    html.indexOf('id="management-data-quality"') <
+      html.indexOf("Fußnoten zu den Kennzahlen"),
+  );
+  assert.doesNotMatch(html, /PostgreSQL/);
+  assert.doesNotMatch(script, /wird aus PostgreSQL geladen/);
+  assert.match(script, /wird aus Datenbank geladen/);
+});
+
 test("country overview rows merge dynamic coverage with the selected day report", () => {
   const rows = buildCountryOverviewRows(
     {
@@ -255,8 +296,30 @@ test("country overview rows merge dynamic coverage with the selected day report"
     },
     {
       rows: [
-        { country_code: "AT", station_count: 14611, occupancy_share: 0.08 },
-        { country_code: "DE", station_count: 35082, occupancy_share: 0.1 },
+        {
+          country_code: "AT",
+          station_count: 14611,
+          occupancy_share: 0.08,
+          static_station_count: 15000,
+          static_charger_count: 39000,
+          measured_static_station_count: 12000,
+          static_stations_without_disruptions: 10800,
+        },
+        {
+          country_code: "DE",
+          station_count: 35082,
+          occupancy_share: 0.1,
+          static_station_count: 72000,
+          static_charger_count: 198000,
+          measured_static_station_count: 35000,
+          static_stations_without_disruptions: 28000,
+        },
+      ],
+    },
+    {
+      countries: [
+        { code: "AT", station_count: 14507, charger_count: 38347 },
+        { code: "DE", station_count: 72155, charger_count: 197527 },
       ],
     },
   );
@@ -264,6 +327,12 @@ test("country overview rows merge dynamic coverage with the selected day report"
   assert.equal(rows[0].country_name, "Deutschland");
   assert.equal(rows[0].observed_days, 96);
   assert.equal(rows[1].station_count, 14611);
+  assert.equal(rows[0].public_charger_count, 198000);
+  assert.equal(rows[0].public_station_count, 72000);
+  assert.equal(rows[0].live_station_count, 35000);
+  assert.equal(rows[0].live_station_share, 35000 / 72000);
+  assert.equal(rows[0].stations_without_disruptions, 28000);
+  assert.equal(rows[0].stations_without_disruptions_share, 0.8);
 });
 
 test("provider profile series fills all local hours and converts shares to percentages", () => {

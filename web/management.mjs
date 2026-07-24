@@ -387,55 +387,63 @@ export function buildSummaryCards(
       {
         label: "Öffentliche Ladepunkte",
         value: optionalNumberFormat(catalogChargerCount) || "–",
-        detail: "Ladepunkte im öffentlichen Ladestellenverzeichnis.",
         reference: 1,
       },
       {
         label: "Öffentliche Ladestationen",
         value: optionalNumberFormat(catalogStationCount) || "–",
-        detail: "Standorte im öffentlichen Ladestellenverzeichnis.",
         reference: 2,
       },
       {
         label: "Stationen mit Live-Daten",
         value: optionalNumberFormat(liveStationCount) || "–",
-        detail:
-          liveCoverage === null
-            ? "Für diesen Tag ist keine verknüpfte Live-Abdeckung verfügbar."
-            : `${percentFormat(liveCoverage)} der öffentlichen Stationen lieferten auswertbare Live-Daten.`,
+        metrics: [
+          {
+            label: "Anteil",
+            value: percentFormat(liveCoverage),
+          },
+        ],
         reference: 3,
       },
       {
         label: "Stationen ohne Störung",
         value: optionalNumberFormat(stationsWithoutDisruptions) || "–",
-        detail:
-          disruptionFreeShare === null
-            ? "Für diesen Tag ist kein vergleichbarer Stationswert verfügbar."
-            : `${percentFormat(disruptionFreeShare)} der Stationen mit Live-Daten meldeten keine Störung.`,
+        metrics: [
+          {
+            label: "Anteil",
+            value: percentFormat(disruptionFreeShare),
+          },
+        ],
         reference: 4,
       },
       {
         label: "Auslastung",
         value: percentFormat(summary.occupancy_share),
-        detail: `Gesamt ${percentFormat(summary.occupancy_share)} · Tag ${percentFormat(summary.day_occupancy_share)} · Nacht ${percentFormat(summary.night_occupancy_share)}`,
+        metrics: [
+          { label: "Gesamt", value: percentFormat(summary.occupancy_share) },
+          { label: "Tag", value: percentFormat(summary.day_occupancy_share) },
+          { label: "Nacht", value: percentFormat(summary.night_occupancy_share) },
+        ],
         reference: 5,
       },
       {
         label: "Störungsanteil",
         value: percentFormat(summary.out_of_order_share),
-        detail: `Gesamt ${percentFormat(summary.out_of_order_share)} · Tag ${percentFormat(summary.day_out_of_order_share)} · Nacht ${percentFormat(summary.night_out_of_order_share)}`,
+        metrics: [
+          { label: "Gesamt", value: percentFormat(summary.out_of_order_share) },
+          { label: "Tag", value: percentFormat(summary.day_out_of_order_share) },
+          { label: "Nacht", value: percentFormat(summary.night_out_of_order_share) },
+        ],
         reference: 6,
       },
       {
         label: "Am Tagesende gestört",
         value: optionalNumberFormat(summary.static_disruptions_at_end_of_day) || "–",
-        detail: "Stationen, an denen zuletzt noch mindestens ein Ladepunkt gestört war.",
         reference: 7,
       },
       {
         label: "Außer Betrieb",
         value: optionalNumberFormat(summary.static_fully_out_of_service_stations) || "–",
-        detail: "Stationen, deren beobachtete Ladepunkte zuletzt alle gestört waren.",
         reference: 8,
       },
     ];
@@ -479,7 +487,11 @@ export function buildSummaryCards(
   return cards;
 }
 
-export function buildCountryOverviewRows(countriesPayload, reportPayload) {
+export function buildCountryOverviewRows(
+  countriesPayload,
+  reportPayload,
+  openStaticSummary = {},
+) {
   const countries = Array.isArray(countriesPayload?.countries) ? countriesPayload.countries : [];
   const reportRows = Array.isArray(reportPayload?.rows) ? reportPayload.rows : [];
   const reportByCountry = new Map(
@@ -489,6 +501,31 @@ export function buildCountryOverviewRows(countriesPayload, reportPayload) {
     .map((country) => {
       const countryCode = normalizeCountryCode(country?.country_code);
       const report = reportByCountry.get(countryCode) || {};
+      const catalogCounts = staticCatalogCountsForCountry(openStaticSummary, countryCode);
+      const reportedPublicStationCount = optionalNumber(report.static_station_count);
+      const reportedPublicChargerCount = optionalNumber(report.static_charger_count);
+      const publicStationCount =
+        reportedPublicStationCount !== null && reportedPublicStationCount > 0
+          ? reportedPublicStationCount
+          : catalogCounts.publicStationCount;
+      const publicChargerCount =
+        reportedPublicChargerCount !== null && reportedPublicChargerCount > 0
+          ? reportedPublicChargerCount
+          : catalogCounts.publicChargerCount;
+      const liveStationCount = optionalNumber(report.measured_static_station_count);
+      const stationsWithoutDisruptions = optionalNumber(
+        report.static_stations_without_disruptions,
+      );
+      const liveStationShare =
+        optionalNumber(report.static_station_coverage) ??
+        (publicStationCount > 0 && liveStationCount !== null
+          ? liveStationCount / publicStationCount
+          : null);
+      const stationsWithoutDisruptionsShare =
+        optionalNumber(report.static_stations_without_disruptions_share) ??
+        (liveStationCount > 0 && stationsWithoutDisruptions !== null
+          ? stationsWithoutDisruptions / liveStationCount
+          : null);
       return {
         ...country,
         ...report,
@@ -497,6 +534,12 @@ export function buildCountryOverviewRows(countriesPayload, reportPayload) {
         first_date: country.first_date,
         last_date: country.last_date,
         observed_days: country.observed_days,
+        public_station_count: publicStationCount,
+        public_charger_count: publicChargerCount,
+        live_station_count: liveStationCount,
+        live_station_share: liveStationShare,
+        stations_without_disruptions: stationsWithoutDisruptions,
+        stations_without_disruptions_share: stationsWithoutDisruptionsShare,
       };
     })
     .filter((row) => row.country_code && optionalNumber(row.station_count) !== null)
@@ -1086,14 +1129,28 @@ function renderSummaryStrip(host, items) {
   }
 }
 
-function renderCountryOverview(countriesPayload, reportPayload, dateText, windowDays) {
-  const rows = buildCountryOverviewRows(countriesPayload, reportPayload);
+function renderCountryOverview(
+  countriesPayload,
+  reportPayload,
+  openStaticSummary,
+  dateText,
+  windowDays,
+) {
+  const rows = buildCountryOverviewRows(
+    countriesPayload,
+    reportPayload,
+    openStaticSummary,
+  );
   const tbody = document.getElementById("management-country-body");
+  const coverageBody = document.getElementById("management-country-coverage-body");
   const countryCount = document.getElementById("management-country-count");
   tbody.innerHTML = "";
+  coverageBody.innerHTML = "";
   countryCount.textContent = `${numberFormat(rows.length)} Länder`;
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="7">Für diesen Tag liegen keine Länderberichte vor.</td></tr>';
+    coverageBody.innerHTML =
+      '<tr><td colspan="6">Für diesen Berichtszeitraum liegen keine AFIR-Länderkennzahlen vor.</td></tr>';
   }
   for (const row of rows) {
     const detailUrl = managementCountryUrl(row.country_code, dateText, windowDays);
@@ -1123,6 +1180,36 @@ function renderCountryOverview(countriesPayload, reportPayload, dateText, window
       <td><a class="management-row-action" href="${escapeAttribute(detailUrl)}" aria-label="${escapeAttribute(row.country_name)} öffnen">→</a></td>
     `;
     tbody.appendChild(tr);
+
+    const coverageRow = document.createElement("tr");
+    coverageRow.className = "management-country-row";
+    coverageRow.innerHTML = `
+      <td data-sort-value="${escapeAttribute(row.country_name)}">
+        <a class="management-country-link" href="${escapeAttribute(detailUrl)}">
+          <span class="management-country-flag" aria-hidden="true">${countryFlag(row.country_code)}</span>
+          <span>
+            <strong>${escapeHtml(row.country_name)}</strong>
+            <small>${escapeHtml(row.country_code)}</small>
+          </span>
+        </a>
+      </td>
+      <td data-sort-value="${numericSortValue(row.public_charger_count)}">
+        ${optionalNumberFormat(row.public_charger_count) || "–"}
+      </td>
+      <td data-sort-value="${numericSortValue(row.public_station_count)}">
+        ${optionalNumberFormat(row.public_station_count) || "–"}
+      </td>
+      <td data-sort-value="${numericSortValue(row.live_station_count)}">
+        ${optionalNumberFormat(row.live_station_count) || "–"}
+        <div class="provider-sub">Anteil ${percentFormat(row.live_station_share)}</div>
+      </td>
+      <td data-sort-value="${numericSortValue(row.stations_without_disruptions)}">
+        ${optionalNumberFormat(row.stations_without_disruptions) || "–"}
+        <div class="provider-sub">Anteil ${percentFormat(row.stations_without_disruptions_share)}</div>
+      </td>
+      <td><a class="management-row-action" href="${escapeAttribute(detailUrl)}" aria-label="${escapeAttribute(row.country_name)} öffnen">→</a></td>
+    `;
+    coverageBody.appendChild(coverageRow);
   }
 }
 
@@ -1164,13 +1251,29 @@ function renderKpis(snapshot, options = {}) {
     const card = document.createElement("article");
     card.className = "management-kpi";
     const reference = Number(cardInfo.reference);
+    const footnoteId = `management-footnote-${reference}`;
+    const footnoteText = Number.isInteger(reference)
+      ? String(document.getElementById(footnoteId)?.textContent || "")
+          .replace(/\s+/g, " ")
+          .trim()
+      : "";
     const referenceMarkup = Number.isInteger(reference)
-      ? `<sup class="management-reference"><a href="#management-footnote-${reference}" aria-label="Fußnote ${reference}">[${reference}]</a></sup>`
+      ? `<sup class="management-reference"><a href="#${footnoteId}" aria-label="Fußnote ${reference}" aria-describedby="${footnoteId}"${footnoteText ? ` data-footnote="${escapeAttribute(footnoteText)}"` : ""}>[${reference}]</a></sup>`
+      : "";
+    const metrics = Array.isArray(cardInfo.metrics) ? cardInfo.metrics : [];
+    const metricsMarkup = metrics.length
+      ? `<dl class="management-kpi-metrics">${metrics
+          .map(
+            (metric) =>
+              `<div><dt>${escapeHtml(metric.label)}</dt><dd>${escapeHtml(metric.value)}</dd></div>`,
+          )
+          .join("")}</dl>`
       : "";
     card.innerHTML = `
       <div class="management-kpi-label">${escapeHtml(cardInfo.label)}${referenceMarkup}</div>
       <div class="management-kpi-value">${escapeHtml(cardInfo.value)}</div>
-      <div class="management-kpi-detail">${escapeHtml(cardInfo.detail)}</div>
+      ${metricsMarkup}
+      ${cardInfo.detail ? `<div class="management-kpi-detail">${escapeHtml(cardInfo.detail)}</div>` : ""}
     `;
     host.appendChild(card);
   }
@@ -1425,10 +1528,11 @@ async function initManagementPage() {
   if (!requestedProvider && (!requestedCountry || !countryEntry)) {
     overviewHost.hidden = false;
     detailHost.hidden = true;
-    document.getElementById("management-title").textContent = "Managementübersicht öffentlicher Ladenetze";
+    document.getElementById("management-title").textContent =
+      "Öffentliche Ladeinfrastruktur in Europa";
     document.getElementById("management-subtitle").textContent =
       "Länder vergleichen und die jeweilige Detailauswertung öffnen.";
-    document.title = "woladen.de | Managementübersicht öffentlicher Ladenetze";
+    document.title = "woladen.de | Öffentliche Ladeinfrastruktur in Europa";
     wireSortableTables(overviewHost);
 
     const datePicker = document.getElementById("management-overview-date");
@@ -1441,7 +1545,7 @@ async function initManagementPage() {
     windowSelect.value = String(overviewWindowDays);
 
     async function loadOverview(targetDate, windowDays = overviewWindowDays) {
-      showLoading("Länderberichte werden aus PostgreSQL geladen …");
+      showLoading("Länderberichte werden aus Datenbank geladen …");
       const range = dateRangeForWindow(targetDate, windowDays);
       const reportPayload = await dataSource.loadCountryOverview(targetDate, {
         startDate: range.startDate,
@@ -1452,7 +1556,13 @@ async function initManagementPage() {
       syncUrl({ windowDays: overviewWindowDays });
       updateDateControls(datePicker, prevDay, nextDay, availableDates);
       windowSelect.value = String(overviewWindowDays);
-      renderCountryOverview(countriesPayload, reportPayload, currentDate, overviewWindowDays);
+      renderCountryOverview(
+        countriesPayload,
+        reportPayload,
+        openStaticSummary,
+        currentDate,
+        overviewWindowDays,
+      );
       resetSortableTables(overviewHost);
       document.documentElement.dataset.managementDataSource = dataSource.currentSource();
       const sourceDetail =
@@ -1567,7 +1677,7 @@ async function initManagementPage() {
   }
 
   async function loadSnapshot(targetDate, windowDays = currentWindowDays) {
-    showLoading(`${providerUid || countryName(countryCode)} wird aus PostgreSQL geladen …`);
+    showLoading(`${providerUid || countryName(countryCode)} wird aus Datenbank geladen …`);
     const loaded = await dataSource.loadSnapshot(targetDate, {
       countryCode,
       providerUid,
