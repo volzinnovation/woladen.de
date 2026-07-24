@@ -4,15 +4,23 @@ struct RootTabView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
+    @EnvironmentObject private var tripStore: TripStore
 
     @State private var showingFilter = false
 
     var body: some View {
-        Group {
-            if usesWideLayout {
-                wideLayout
-            } else {
-                compactLayout
+        VStack(spacing: 0) {
+            modeBar
+            drivingSuggestion
+
+            Group {
+                if tripStore.mode == .trip {
+                    TripView()
+                } else if usesWideLayout {
+                    wideLayout
+                } else {
+                    compactLayout
+                }
             }
         }
         .background(Color(.systemBackground))
@@ -24,6 +32,73 @@ struct RootTabView: View {
             StationDetailView(stationID: feature.properties.stationID)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var modeBar: some View {
+        HStack(spacing: 8) {
+            ForEach(WoladenMode.allCases) { mode in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        tripStore.mode = mode
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: mode == .plan ? "map" : "car.fill")
+                        Text(mode.title)
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 52)
+                    .foregroundStyle(tripStore.mode == mode ? Color.white : Color.primary)
+                    .background(
+                        tripStore.mode == mode ? woladenBrandColor : Color(.systemBackground),
+                        in: RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 13, style: .continuous)
+                            .stroke(
+                                tripStore.mode == mode ? Color.clear : StationVisualStyle.controlBorder,
+                                lineWidth: 1
+                            )
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(tripStore.mode == mode ? .isSelected : [])
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color(.secondarySystemBackground))
+        .overlay(alignment: .bottom) { Divider() }
+    }
+
+    @ViewBuilder
+    private var drivingSuggestion: some View {
+        if tripStore.isTripModeSuggested, tripStore.mode != .trip {
+            HStack(spacing: 10) {
+                Label(
+                    String(localized: "trip.mode.drivingSuggestion", defaultValue: "Movement detected. Open the driving view?"),
+                    systemImage: "car.fill"
+                )
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button(String(localized: "trip.mode.notNow", defaultValue: "Not now")) {
+                    tripStore.dismissTripModeSuggestion()
+                }
+                .buttonStyle(.bordered)
+
+                Button(String(localized: "trip.mode.openTrip", defaultValue: "Open Fahrt")) {
+                    tripStore.acceptTripModeSuggestion()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(woladenBrandColor)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color.orange.opacity(0.14))
+            .accessibilityElement(children: .contain)
         }
     }
 

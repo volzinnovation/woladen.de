@@ -67,6 +67,50 @@ enum StationVisualStyle {
     static let markerFullyOccupied = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, blue: 11.0 / 255.0)
 }
 
+extension StationClassification {
+    var railColor: Color {
+        switch self {
+        case .gold: return StationVisualStyle.amenityGold
+        case .silver: return StationVisualStyle.amenitySilver
+        case .bronze: return StationVisualStyle.amenityBronze
+        case .unclassified: return StationVisualStyle.amenityGrey
+        }
+    }
+}
+
+struct StationClassificationRail: View {
+    let classification: StationClassification
+    var width: CGFloat = 26
+
+    var body: some View {
+        Rectangle()
+            .fill(classification.railColor)
+            .frame(width: width)
+            .frame(maxHeight: .infinity)
+            .accessibilityLabel(Text(classification.title))
+    }
+}
+
+func stationLiveCardColors(
+    status: AvailabilityStatus,
+    available: Int,
+    total: Int
+) -> (background: Color, border: Color) {
+    if status == .outOfOrder {
+        return (StationVisualStyle.cardOutOfOrder, StationVisualStyle.borderOutOfOrder)
+    }
+    if status == .occupied {
+        return (StationVisualStyle.cardOccupied, StationVisualStyle.borderOccupied)
+    }
+    if total > 1, available == 1 {
+        return (StationVisualStyle.cardOneFreeLeft, StationVisualStyle.borderOneFreeLeft)
+    }
+    if status == .unknown {
+        return (StationVisualStyle.cardDefault, StationVisualStyle.borderDefault)
+    }
+    return (StationVisualStyle.cardDefault, StationVisualStyle.borderDefault)
+}
+
 extension GeoJSONFeature {
     var hasAvailabilitySummary: Bool {
         availabilityCounts.total > 0
@@ -134,6 +178,7 @@ struct ListTabView: View {
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
     @EnvironmentObject private var favoritesStore: FavoritesStore
+    @EnvironmentObject private var tripStore: TripStore
 
     @Binding var showingFilter: Bool
 
@@ -166,23 +211,62 @@ struct ListTabView: View {
                             spacing: 10
                         ) {
                             ForEach(viewModel.discoveredFeatures) { feature in
-                                Button {
-                                    viewModel.selectFeature(feature)
-                                } label: {
-                                    StationRowView(
-                                        feature: feature,
-                                        distanceText: viewModel.distanceText(from: locationService.currentLocation, to: feature.coordinate),
-                                        markerColor: color(for: viewModel.markerTint(for: feature)),
-                                        isFavorite: favoritesStore.isFavorite(feature.properties.stationID)
-                                    )
-                                    .padding(14)
-                                    .background(feature.stationCardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                            .stroke(feature.stationCardBorder, lineWidth: 1)
+                                HStack(spacing: 0) {
+                                    StationClassificationRail(classification: feature.stationClassification)
+
+                                    Button {
+                                        viewModel.selectFeature(feature)
+                                    } label: {
+                                        StationRowView(
+                                            feature: feature,
+                                            isFavorite: favoritesStore.isFavorite(feature.properties.stationID)
+                                        )
+                                        .padding(14)
                                     }
+                                    .buttonStyle(.plain)
+
+                                    VStack(spacing: 6) {
+                                        if let distanceText = viewModel.distanceText(
+                                            from: locationService.currentLocation,
+                                            to: feature.coordinate
+                                        ) {
+                                            Text(distanceText)
+                                                .font(.subheadline)
+                                                .foregroundStyle(.secondary)
+                                                .lineLimit(1)
+                                        }
+
+                                        Button {
+                                            _ = tripStore.activateStationTarget(
+                                                feature: feature,
+                                                alternatives: viewModel.allFeatures.filter {
+                                                    $0.properties.matches(viewModel.filterState)
+                                                },
+                                                from: locationService.currentLocation
+                                            )
+                                        } label: {
+                                            Image(systemName: "play.fill")
+                                                .font(.headline)
+                                                .frame(width: 44, height: 44)
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .tint(woladenBrandColor)
+                                        .accessibilityLabel(
+                                            Text(
+                                                String(localized: "trip.station.driveTarget", defaultValue: "Use {station} as driving target")
+                                                    .replacingOccurrences(of: "{station}", with: feature.properties.operatorName)
+                                            )
+                                        )
+                                    }
+                                    .padding(.vertical, 10)
+                                    .padding(.trailing, 10)
                                 }
-                                .buttonStyle(.plain)
+                                .background(feature.stationCardBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .stroke(feature.stationCardBorder, lineWidth: 1)
+                                }
                                 .contextMenu {
                                     stationContextMenu(for: feature)
                                 }
@@ -357,15 +441,6 @@ struct ListTabView: View {
                 .background(woladenBrandColor, in: Capsule())
                 .offset(x: 7, y: -7)
                 .accessibilityHidden(true)
-        }
-    }
-
-    private func color(for key: String) -> Color {
-        switch key {
-        case "gold": return StationVisualStyle.amenityGold
-        case "silver": return StationVisualStyle.amenitySilver
-        case "bronze": return StationVisualStyle.amenityBronze
-        default: return StationVisualStyle.amenityGrey
         }
     }
 
@@ -554,8 +629,6 @@ struct LocationAccessInstructionView: View {
 
 private struct StationRowView: View {
     let feature: GeoJSONFeature
-    let distanceText: String?
-    let markerColor: Color
     let isFavorite: Bool
 
     var body: some View {
@@ -564,29 +637,18 @@ private struct StationRowView: View {
         let priceDisplay = feature.displayPrice
 
         VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline) {
-                HStack(spacing: 6) {
-                    if isFavorite {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(favoriteStarColor)
-                            .frame(width: 12, height: 12)
-                            .accessibilityHidden(true)
-                    } else {
-                        Circle()
-                            .fill(markerColor)
-                            .frame(width: 12, height: 12)
-                    }
-                    Text(feature.properties.operatorName)
-                        .font(.headline.weight(.semibold))
-                        .lineLimit(1)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                if isFavorite {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(favoriteStarColor)
+                        .frame(width: 12, height: 12)
+                        .accessibilityHidden(true)
                 }
+                Text(feature.properties.operatorName)
+                    .font(.headline.weight(.semibold))
+                    .lineLimit(1)
                 Spacer()
-                if let distanceText {
-                    Text(distanceText)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
             }
 
             Text("\(feature.properties.city) • \(Int(feature.properties.displayedMaxPowerKW.rounded())) kW • \(chargingPointLabel(feature.properties.chargingPointsCount))")

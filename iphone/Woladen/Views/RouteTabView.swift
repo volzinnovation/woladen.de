@@ -16,6 +16,7 @@ struct RouteTabView: View {
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
     @EnvironmentObject private var favoritesStore: FavoritesStore
+    @EnvironmentObject private var tripStore: TripStore
 
     @Binding var showingFilter: Bool
 
@@ -29,6 +30,11 @@ struct RouteTabView: View {
     @State private var statusMessage = ""
     @State private var statusIsError = false
     @State private var routeMapCameraPosition: MapCameraPosition = .automatic
+    @State private var initialSOCPercent: Double = 80
+    @State private var currentPlanID: UUID?
+    @State private var showingTripSettings = false
+    @State private var lastSavedRouteKey = ""
+    @State private var isShowingBuilder = false
     @FocusState private var focusedEndpointField: RouteEndpointField?
 
     private var routeDisplayFeatures: [GeoJSONFeature] {
@@ -40,15 +46,42 @@ struct RouteTabView: View {
             routeHeader
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    endpointForm
-                    statusView
-                    preRouteFilterControl
-                    routeSummarySection
-                    routeActionsSection
-                    routeMapSection
-                    recalculationNotice
-                    routeResults
+                Group {
+                    if isShowingBuilder {
+                        VStack(alignment: .leading, spacing: 14) {
+                            endpointForm
+                            initialEnergySection
+                            planningSettingsControls
+                            routeCalculateButton
+                            statusView
+                            recalculationNotice
+
+                            if let currentPlanID, tripStore.plan(id: currentPlanID) != nil {
+                                RoutePlanEditorView(planID: currentPlanID) { stationID in
+                                    if let feature = viewModel.feature(forStationID: stationID) {
+                                        viewModel.selectFeature(feature)
+                                    }
+                                }
+                            } else {
+                                routeSummarySection
+                                routeActionsSection
+                                routeMapSection
+                                routeResults
+                            }
+                        }
+                    } else {
+                        SavedRoutePlansView(
+                            currentPlanID: currentPlanID,
+                            onEdit: { plan in
+                                loadPlan(plan)
+                                isShowingBuilder = true
+                            },
+                            onNew: {
+                                beginNewPlan()
+                                isShowingBuilder = true
+                            }
+                        )
+                    }
                 }
                 .padding(14)
                 .frame(maxWidth: 880, alignment: .topLeading)
@@ -63,11 +96,74 @@ struct RouteTabView: View {
         .onAppear {
             locationService.activate()
             applyScreenshotRouteDefaultsIfNeeded()
+            openRequestedPlanIfNeeded()
+            if originEndpoint != nil || destinationEndpoint != nil || viewModel.routeSummary != nil {
+                isShowingBuilder = true
+            }
         }
+        .onChange(of: tripStore.requestedPlanID) { _, _ in
+            openRequestedPlanIfNeeded()
+        }
+        .sheet(isPresented: $showingTripSettings) {
+            TripSettingsView(planID: currentPlanID, initial: tripStore.preferences)
+                .environmentObject(tripStore)
+        }
+        .onChange(of: viewModel.routeSummary) { _, _ in
+            Task { @MainActor in
+                await Task.yield()
+                persistCalculatedRouteIfReady()
+            }
+        }
+        .onChange(of: viewModel.routeFeatures.count) { _, _ in
+            persistCalculatedRouteIfReady()
+        }
+    }
+
+    private var initialEnergySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(localized: "trip.plan.initialCharge", defaultValue: "Initial battery level"))
+                        .font(.headline)
+                    Text(String(localized: "trip.plan.initialChargeHelp", defaultValue: "Used to show chargers only around the point where recharging is expected."))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 12)
+                Text("\(Int(initialSOCPercent.rounded()))%")
+                    .font(.title3.weight(.bold).monospacedDigit())
+                    .foregroundStyle(woladenBrandColor)
+            }
+            Slider(value: $initialSOCPercent, in: 5...100, step: 1) { editing in
+                if !editing, let currentPlanID {
+                    tripStore.updateInitialSOC(initialSOCPercent, planID: currentPlanID)
+                }
+            }
+                .tint(woladenBrandColor)
+                .disabled(viewModel.isLoadingRoute)
+
+            let vehicle = tripStore.preferences.activeVehicleSettings
+            Text("\(tripStore.preferences.activeVehicleProfile.name) · \(Int(vehicle.batteryCapacityKWh.rounded())) kWh · \(String(format: "%.1f", vehicle.consumptionKWhPer100KM)) kWh/100 km · \(Int(vehicle.reserveSOCPercent.rounded()))% \(String(localized: "trip.plan.reserve", defaultValue: "reserve"))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .background(StationVisualStyle.controlSurface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var routeHeader: some View {
         HStack(alignment: .center, spacing: 12) {
+            if isShowingBuilder {
+                Button {
+                    focusedEndpointField = nil
+                    isShowingBuilder = false
+                } label: {
+                    Image(systemName: "chevron.backward")
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(String(localized: "trip.routes.back", defaultValue: "Back to saved routes")))
+            }
             Label(String(localized: "route.title"), systemImage: "point.topleft.down.curvedto.point.bottomright.up")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(woladenBrandColor)
@@ -124,24 +220,66 @@ struct RouteTabView: View {
                 endpoint: $destinationEndpoint
             )
 
-            Button {
-                Task { await submitRoute() }
-            } label: {
-                if isResolvingEndpoints || viewModel.isLoadingRoute {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(maxWidth: .infinity)
-                } else {
-                    Text(String(localized: "route.submit"))
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(isResolvingEndpoints || viewModel.isLoadingRoute)
         }
         .padding(14)
         .background(StationVisualStyle.controlSurface, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var planningSettingsControls: some View {
+        HStack(spacing: 12) {
+            Button {
+                showingFilter = true
+            } label: {
+                VStack(spacing: 5) {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .font(.title3)
+                    Text(String(localized: "filters.title"))
+                        .font(.headline)
+                    if viewModel.routeFilterActiveCount() > 0 {
+                        Text("\(viewModel.routeFilterActiveCount()) \(String(localized: "trip.plan.activeFilters", defaultValue: "active"))")
+                            .font(.caption)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 76)
+            }
+            .buttonStyle(.bordered)
+
+            Button {
+                showingTripSettings = true
+            } label: {
+                VStack(spacing: 5) {
+                    Image(systemName: "car.side")
+                        .font(.title3)
+                    Text(String(localized: "trip.settings.title", defaultValue: "Trip settings"))
+                        .font(.headline)
+                    Text(tripStore.preferences.activeVehicleProfile.name)
+                        .font(.caption)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, minHeight: 76)
+            }
+            .buttonStyle(.bordered)
+        }
+        .tint(woladenBrandColor)
+    }
+
+    private var routeCalculateButton: some View {
+        Button {
+            Task { await submitRoute() }
+        } label: {
+            if isResolvingEndpoints || viewModel.isLoadingRoute {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: .infinity, minHeight: 56)
+            } else {
+                Label(String(localized: "route.submit"), systemImage: "point.topleft.down.curvedto.point.bottomright.up")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 56)
+            }
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(woladenBrandColor)
+        .disabled(isResolvingEndpoints || viewModel.isLoadingRoute)
     }
 
     private func routeEndpointRow(
@@ -202,7 +340,7 @@ struct RouteTabView: View {
 
     private func currentLocationButton(for field: RouteEndpointField) -> some View {
         Button {
-            useCurrentLocation(for: field)
+            Task { await useCurrentLocation(for: field) }
         } label: {
             Image(systemName: "location.fill")
                 .font(.headline)
@@ -595,7 +733,79 @@ struct RouteTabView: View {
         originEndpoint = origin
         destinationEndpoint = destination
         statusMessage = ""
+        lastSavedRouteKey = ""
         viewModel.searchRoute(origin: origin, destination: destination)
+    }
+
+    private func persistCalculatedRouteIfReady() {
+        guard !viewModel.isLoadingRoute,
+              let origin = originEndpoint,
+              let destination = destinationEndpoint,
+              let summary = viewModel.routeSummary else { return }
+
+        let features = routeDisplayFeatures
+        let routeKey = [
+            "\(summary.distanceM)",
+            "\(summary.durationS)",
+            "\(features.count)",
+            features.map(\.id).joined(separator: ","),
+            "\(Int(initialSOCPercent.rounded()))",
+            origin.label,
+            destination.label
+        ].joined(separator: "|")
+        guard routeKey != lastSavedRouteKey else { return }
+
+        currentPlanID = tripStore.saveCalculatedRoute(
+            existingPlanID: currentPlanID,
+            origin: origin,
+            destination: destination,
+            summary: summary,
+            features: features,
+            filter: viewModel.filterState,
+            initialSOCPercent: initialSOCPercent
+        )
+        lastSavedRouteKey = routeKey
+        statusMessage = String(localized: "trip.plan.saved", defaultValue: "Route saved. Select one charger in each charging window.")
+        statusIsError = false
+    }
+
+    private func loadPlan(_ plan: RoutePlan) {
+        currentPlanID = plan.id
+        originEndpoint = plan.route.origin
+        destinationEndpoint = plan.route.destination
+        originText = plan.route.origin.label
+        destinationText = plan.route.destination.label
+        initialSOCPercent = plan.route.initialSOCPercent
+        lastSavedRouteKey = ""
+        statusMessage = ""
+        statusIsError = false
+        focusedEndpointField = nil
+        activeCompletionField = nil
+        endpointSearchCompleter.clear()
+    }
+
+    private func openRequestedPlanIfNeeded() {
+        guard let requestedID = tripStore.requestedPlanID,
+              let requestedPlan = tripStore.plan(id: requestedID) else { return }
+        loadPlan(requestedPlan)
+        isShowingBuilder = true
+        tripStore.clearPlanEditingRequest()
+    }
+
+    private func beginNewPlan() {
+        currentPlanID = nil
+        originText = ""
+        destinationText = ""
+        originEndpoint = nil
+        destinationEndpoint = nil
+        initialSOCPercent = 80
+        lastSavedRouteKey = ""
+        statusMessage = ""
+        statusIsError = false
+        viewModel.clearRoute()
+        focusedEndpointField = nil
+        activeCompletionField = nil
+        endpointSearchCompleter.clear()
     }
 
     private func resolveTypedEndpoint(for field: RouteEndpointField) async {
@@ -662,14 +872,26 @@ struct RouteTabView: View {
         }
     }
 
-    private func useCurrentLocation(for field: RouteEndpointField) {
+    private func useCurrentLocation(for field: RouteEndpointField) async {
         locationService.requestAuthorization()
         guard let current = locationService.currentLocation else {
             statusMessage = String(localized: "route.locationUnavailable")
             statusIsError = true
             return
         }
-        let endpoint = RouteEndpoint(coordinate: current.coordinate, label: String(localized: "route.currentLocation"))
+        let placemarks = try? await CLGeocoder().reverseGeocodeLocation(current)
+        let place = placemarks?.first
+        let resolvedLabel = [
+            place?.locality,
+            place?.subAdministrativeArea,
+            place?.administrativeArea
+        ]
+        .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .first { !$0.isEmpty }
+        let endpoint = RouteEndpoint(
+            coordinate: current.coordinate,
+            label: resolvedLabel ?? String(localized: "route.currentLocation")
+        )
         setEndpoint(endpoint, for: field)
     }
 

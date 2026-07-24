@@ -120,6 +120,10 @@ struct ChargerProperties: Decodable {
     let amenitiesSource: String
     let amenityExamples: [AmenityExample]
     let amenityCounts: [String: Int]
+    let stationClassification: String?
+    let reliabilityPercent: Double?
+    let lastUnavailableAt: String?
+    let providerCanonicalID: String?
 
     enum CodingKeys: String, CodingKey {
         case stationID = "station_id"
@@ -166,6 +170,10 @@ struct ChargerProperties: Decodable {
         case amenitiesTotal = "amenities_total"
         case amenitiesSource = "amenities_source"
         case amenityExamples = "amenity_examples"
+        case stationClassification = "station_classification"
+        case reliabilityPercent = "reliability_percent"
+        case lastUnavailableAt = "last_unavailable_at"
+        case providerCanonicalID = "provider_canonical_id"
     }
 
     init(
@@ -213,7 +221,11 @@ struct ChargerProperties: Decodable {
         amenitiesTotal: Int,
         amenitiesSource: String,
         amenityExamples: [AmenityExample],
-        amenityCounts: [String: Int]
+        amenityCounts: [String: Int],
+        stationClassification: String? = nil,
+        reliabilityPercent: Double? = nil,
+        lastUnavailableAt: String? = nil,
+        providerCanonicalID: String? = nil
     ) {
         self.stationID = stationID
         self.operatorName = operatorName
@@ -260,6 +272,10 @@ struct ChargerProperties: Decodable {
         self.amenitiesSource = amenitiesSource
         self.amenityExamples = amenityExamples
         self.amenityCounts = amenityCounts
+        self.stationClassification = stationClassification
+        self.reliabilityPercent = reliabilityPercent
+        self.lastUnavailableAt = lastUnavailableAt
+        self.providerCanonicalID = providerCanonicalID
     }
 
     init(from decoder: Decoder) throws {
@@ -325,6 +341,10 @@ struct ChargerProperties: Decodable {
         amenitiesTotal = Int(container.decodeLossyDouble(forKey: .amenitiesTotal) ?? 0)
         amenitiesSource = (try? container.decode(String.self, forKey: .amenitiesSource)) ?? ""
         amenityExamples = (try? container.decode([AmenityExample].self, forKey: .amenityExamples)) ?? []
+        stationClassification = try? container.decode(String.self, forKey: .stationClassification)
+        reliabilityPercent = container.decodeLossyDouble(forKey: .reliabilityPercent)
+        lastUnavailableAt = try? container.decode(String.self, forKey: .lastUnavailableAt)
+        providerCanonicalID = try? container.decode(String.self, forKey: .providerCanonicalID)
 
         let raw = try decoder.container(keyedBy: AnyCodingKey.self)
         var collected: [String: Int] = [:]

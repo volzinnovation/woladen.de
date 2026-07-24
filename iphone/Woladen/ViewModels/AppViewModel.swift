@@ -254,6 +254,7 @@ final class AppViewModel: ObservableObject {
     func feature(forStationID stationID: String) -> GeoJSONFeature? {
         allFeatures.first(where: { $0.properties.stationID == stationID })
             ?? discoveredFeatures.first(where: { $0.properties.stationID == stationID })
+            ?? routeFeatures.first(where: { $0.properties.stationID == stationID })
             ?? favoriteDetailFeatures[stationID]
             ?? selectedFeature.flatMap { $0.properties.stationID == stationID ? $0 : nil }
     }

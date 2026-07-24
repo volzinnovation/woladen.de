@@ -6,6 +6,8 @@ private let favoriteStarColor = Color(red: 245.0 / 255.0, green: 158.0 / 255.0, 
 struct StationDetailView: View {
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var favoritesStore: FavoritesStore
+    @EnvironmentObject private var tripStore: TripStore
+    @EnvironmentObject private var locationService: LocationService
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
@@ -298,6 +300,28 @@ struct StationDetailView: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
+            Button {
+                let alternatives = viewModel.allFeatures.filter {
+                    $0.properties.matches(viewModel.filterState)
+                }
+                _ = tripStore.activateStationTarget(
+                    feature: feature,
+                    alternatives: alternatives,
+                    from: locationService.currentLocation
+                )
+                viewModel.clearSelectedFeature()
+                dismiss()
+            } label: {
+                Label(
+                    String(localized: "trip.station.startTarget", defaultValue: "Use station as Fahrt target"),
+                    systemImage: "play.fill"
+                )
+                .font(.headline)
+                .frame(maxWidth: .infinity, minHeight: 54)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(woladenBrandColor)
+
             HStack(spacing: 6) {
                 Button {
                     openNavigationLink(feature, google: true)
@@ -339,6 +363,31 @@ struct StationDetailView: View {
                         tint: statusColor(for: feature.availabilityStatus)
                     )
                 }
+                detailStatCard(
+                    text: feature.stationClassification.title,
+                    systemImage: "medal.fill"
+                )
+            }
+
+            if let reliability = feature.properties.reliabilityPercent {
+                Label(
+                    String(localized: "trip.station.reliability", defaultValue: "Reliability {value}%")
+                        .replacingOccurrences(of: "{value}", with: "\(Int(reliability.rounded()))"),
+                    systemImage: "checkmark.shield.fill"
+                )
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(woladenBrandColor)
+            }
+
+            if let lastUnavailable = feature.properties.lastUnavailableAt,
+               !lastUnavailable.isEmpty {
+                Label(
+                    String(localized: "trip.station.lastUnavailable", defaultValue: "Last unavailable: {date}")
+                        .replacingOccurrences(of: "{date}", with: lastUnavailable),
+                    systemImage: "clock.badge.exclamationmark"
+                )
+                .font(.footnote)
+                .foregroundStyle(.secondary)
             }
         }
     }

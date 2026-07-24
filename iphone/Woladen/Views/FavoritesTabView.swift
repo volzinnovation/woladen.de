@@ -4,6 +4,7 @@ struct FavoritesTabView: View {
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var favoritesStore: FavoritesStore
     @EnvironmentObject private var locationService: LocationService
+    @EnvironmentObject private var tripStore: TripStore
 
     @State private var categoryFilter = favoriteFilterAll
 
@@ -15,19 +16,21 @@ struct FavoritesTabView: View {
             categoryFilterBar
 
             Group {
-                if items.isEmpty {
-                    if favoritesStore.favorites.isEmpty {
-                        ContentUnavailableView(
-                            String(localized: "favorites.empty"),
-                            systemImage: "star",
-                            description: Text(String(localized: "favorites.emptyHelp"))
-                        )
-                    } else {
-                        ContentUnavailableView(String(localized: "favorites.loading"), systemImage: "star")
-                    }
+                if items.isEmpty, favoritesStore.favorites.isEmpty, tripStore.sortedPlans.isEmpty {
+                    ContentUnavailableView(
+                        String(localized: "favorites.empty"),
+                        systemImage: "star",
+                        description: Text(String(localized: "favorites.emptyHelp"))
+                    )
                 } else {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 14) {
+                            routeTemplatesSection
+
+                            if items.isEmpty, !favoritesStore.favorites.isEmpty {
+                                ContentUnavailableView(String(localized: "favorites.loading"), systemImage: "star")
+                            }
+
                             ForEach(favoriteGroups(items)) { group in
                                 VStack(alignment: .leading, spacing: 8) {
                                     HStack {
@@ -45,6 +48,15 @@ struct FavoritesTabView: View {
                                             feature: feature,
                                             categories: favoritesStore.categories(for: feature.properties.stationID),
                                             onOpen: { viewModel.selectFeature(feature) },
+                                            onDrive: {
+                                                _ = tripStore.activateStationTarget(
+                                                    feature: feature,
+                                                    alternatives: viewModel.allFeatures.filter {
+                                                        $0.properties.matches(viewModel.filterState)
+                                                    },
+                                                    from: locationService.currentLocation
+                                                )
+                                            },
                                             onRemove: { favoritesStore.remove(feature.properties.stationID) }
                                         )
                                         .padding(.horizontal, 14)
@@ -64,6 +76,47 @@ struct FavoritesTabView: View {
                 await viewModel.refreshFavoritesLiveSummaries(favoritesStore.favorites, force: true)
                 try? await Task.sleep(nanoseconds: 15_000_000_000)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var routeTemplatesSection: some View {
+        if !tripStore.sortedPlans.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(String(localized: "trip.routes.favoriteTitle", defaultValue: "Saved routes"))
+                    .font(.headline)
+
+                ForEach(tripStore.sortedPlans) { plan in
+                    Button {
+                        tripStore.requestPlanEditing(plan.id)
+                        viewModel.selectedTab = .route
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "point.topleft.down.curvedto.point.bottomright.up")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(woladenBrandColor)
+                                .frame(width: 36, height: 36)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(plan.name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                Text("\(plan.route.origin.label) → \(plan.route.destination.label)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .foregroundStyle(woladenBrandColor)
+                        }
+                        .padding(12)
+                        .background(StationVisualStyle.controlSurface, in: RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 14)
         }
     }
 
@@ -209,56 +262,75 @@ struct FavoritesTabView: View {
         let feature: GeoJSONFeature
         let categories: [String]
         let onOpen: () -> Void
+        let onDrive: () -> Void
         let onRemove: () -> Void
 
         var body: some View {
-            HStack(spacing: 10) {
-                Button(action: onOpen) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(feature.properties.operatorName)
-                            .font(.title3.weight(.semibold))
-                        Text(feature.properties.city)
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                        Text("\(Int(feature.properties.displayedMaxPowerKW.rounded())) kW max • \(chargingPointLabel(feature.properties.chargingPointsCount))")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        if !categories.isEmpty {
-                            Text(categories.joined(separator: " • "))
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(woladenBrandColor)
-                                .lineLimit(1)
-                        }
-                        if let occupancy = feature.occupancySummaryLabel ?? nil, !occupancy.isEmpty {
-                            Label(occupancy, systemImage: "dot.radiowaves.left.and.right")
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(favoriteOccupancyColor(for: feature).opacity(0.16))
-                                .foregroundStyle(favoriteOccupancyColor(for: feature))
-                                .clipShape(Capsule())
-                        } else if !feature.displayPrice.isEmpty {
-                            Label(feature.displayPrice, systemImage: "eurosign")
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(Color.green.opacity(0.12))
-                                .foregroundStyle(Color.green)
-                                .clipShape(Capsule())
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .buttonStyle(.plain)
+            HStack(spacing: 0) {
+                StationClassificationRail(classification: feature.stationClassification)
 
-                Button(role: .destructive, action: onRemove) {
-                    Image(systemName: "trash")
-                        .font(.headline)
+                HStack(spacing: 10) {
+                    Button(action: onOpen) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(feature.properties.operatorName)
+                                .font(.title3.weight(.semibold))
+                            Text(feature.properties.city)
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                            Text("\(Int(feature.properties.displayedMaxPowerKW.rounded())) kW max • \(chargingPointLabel(feature.properties.chargingPointsCount))")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            if !categories.isEmpty {
+                                Text(categories.joined(separator: " • "))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(woladenBrandColor)
+                                    .lineLimit(1)
+                            }
+                            if let occupancy = feature.occupancySummaryLabel ?? nil, !occupancy.isEmpty {
+                                Label(occupancy, systemImage: "dot.radiowaves.left.and.right")
+                                    .font(.caption)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(favoriteOccupancyColor(for: feature).opacity(0.16))
+                                    .foregroundStyle(favoriteOccupancyColor(for: feature))
+                                    .clipShape(Capsule())
+                            } else if !feature.displayPrice.isEmpty {
+                                Label(feature.displayPrice, systemImage: "eurosign")
+                                    .font(.caption)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color.green.opacity(0.12))
+                                    .foregroundStyle(Color.green)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+
+                    VStack(spacing: 8) {
+                        Button(action: onDrive) {
+                            Image(systemName: "play.fill")
+                                .font(.headline)
+                                .frame(width: 44, height: 44)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(woladenBrandColor)
+                        .accessibilityLabel(Text(String(localized: "trip.station.startTarget", defaultValue: "Use station as Fahrt target")))
+
+                        Button(role: .destructive, action: onRemove) {
+                            Image(systemName: "trash")
+                                .font(.headline)
+                                .frame(width: 44, height: 44)
+                        }
+                        .buttonStyle(.bordered)
+                        .accessibilityLabel(Text("aria.removeFavorite"))
+                    }
                 }
-                .accessibilityLabel(Text("aria.removeFavorite"))
+                .padding(14)
             }
-            .padding(14)
-            .background(feature.stationCardBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(feature.stationCardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(feature.stationCardBorder, lineWidth: 1)

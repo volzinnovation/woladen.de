@@ -6,6 +6,10 @@ struct RouteEndpoint: Codable, Equatable {
     let lon: Double
     let label: String
 
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
+
     init(lat: Double, lon: Double, label: String) {
         self.lat = lat
         self.lon = lon
@@ -90,6 +94,20 @@ struct RouteSummary: Decodable, Equatable {
         case distanceM = "distance_m"
         case durationS = "duration_s"
         case geometry
+    }
+
+    init(
+        source: String,
+        profile: String = "driving",
+        distanceM: Int,
+        durationS: Int,
+        geometry: RouteGeometry
+    ) {
+        self.source = source
+        self.profile = profile
+        self.distanceM = max(0, distanceM)
+        self.durationS = max(0, durationS)
+        self.geometry = geometry
     }
 
     init(from decoder: Decoder) throws {

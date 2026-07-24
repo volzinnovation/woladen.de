@@ -21,12 +21,42 @@ struct InfoTabView: View {
 
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
+    @EnvironmentObject private var tripStore: TripStore
+    @State private var showingAppSettings = false
 
     var body: some View {
         VStack(spacing: 0) {
             WoladenBrandIntroView(showProductMessage: false)
 
             List {
+                Section(String(localized: "info.appSettings", defaultValue: "App settings")) {
+                    Button {
+                        showingAppSettings = true
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "car.side")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(woladenBrandColor)
+                                .frame(width: 28)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(String(localized: "trip.settings.title", defaultValue: "Trip settings"))
+                                    .foregroundStyle(.primary)
+                                Text(
+                                    String(localized: "info.appSettingsSummary", defaultValue: "Vehicles, charging preferences, navigation and driving mode")
+                                )
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 Section(String(localized: "info.legendTitle")) {
                 Text(String(localized: "info.cardBackgroundTitle"))
                     .font(.headline)
@@ -36,7 +66,7 @@ struct InfoTabView: View {
                 statusSwatch(color: StationVisualStyle.cardOftenBroken, border: StationVisualStyle.borderOftenBroken, text: String(localized: "info.legendOftenBroken"))
                 statusSwatch(color: StationVisualStyle.cardOftenOccupied, border: StationVisualStyle.borderOftenOccupied, text: String(localized: "info.legendOftenOccupied"))
 
-                Text(String(localized: "info.mapMarkerTitle"))
+                Text(String(localized: "info.classificationTitle", defaultValue: "Station classification"))
                     .font(.headline)
                     .padding(.top, 6)
                 legendRow(color: StationVisualStyle.amenityGold, text: String(localized: "info.legendGold"))
@@ -129,13 +159,17 @@ struct InfoTabView: View {
         .refreshable {
             viewModel.reloadInfoSummary()
         }
+        .sheet(isPresented: $showingAppSettings) {
+            TripSettingsView(initial: tripStore.preferences)
+                .environmentObject(tripStore)
+        }
     }
 
     private func legendRow(color: Color, text: String) -> some View {
         HStack(spacing: 10) {
-            Circle()
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
                 .fill(color)
-                .frame(width: 12, height: 12)
+                .frame(width: 12, height: 24)
             Text(text)
         }
     }

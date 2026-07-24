@@ -2,10 +2,12 @@ import SwiftUI
 
 @main
 struct WoladenApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel = AppViewModel()
     @StateObject private var locationService = LocationService()
     @StateObject private var favoritesStore = FavoritesStore()
+    @StateObject private var tripStore = TripStore.shared
     @State private var screenshotReadyWritten = false
 
     private let screenshotConfig = AppStoreScreenshotConfig.current
@@ -26,6 +28,7 @@ struct WoladenApp: App {
             .environmentObject(viewModel)
             .environmentObject(locationService)
             .environmentObject(favoritesStore)
+            .environmentObject(tripStore)
             .task {
                 locationService.activate()
                 viewModel.loadIfNeeded(userLocation: locationService.currentLocation)
@@ -33,6 +36,10 @@ struct WoladenApp: App {
             .onChange(of: scenePhase) { _, newValue in
                 if newValue == .active {
                     locationService.activate()
+                    Task { await tripStore.refreshLive(force: true) }
+                    if let location = locationService.currentLocation {
+                        tripStore.refreshETA(from: location, force: true)
+                    }
                 }
             }
             .onChange(of: viewModel.allFeatures.count) { _, _ in
@@ -40,6 +47,9 @@ struct WoladenApp: App {
             }
             .onChange(of: locationService.currentLocation) { _, newValue in
                 viewModel.seedFromInitialUserLocation(newValue)
+                if let newValue {
+                    tripStore.updateLocation(newValue)
+                }
             }
             .task(id: screenshotPreparationKey) {
                 await prepareScreenshotIfNeeded()
