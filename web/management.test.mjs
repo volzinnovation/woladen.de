@@ -283,6 +283,7 @@ test("management detail layout keeps navigation with date controls and methodolo
   assert.match(chartPanel, /management-overview-metric/);
   assert.match(html, /AFIR-Datenabdeckung nach Land/);
   assert.match(html, /id="management-country-coverage-body"/);
+  assert.match(html, /config\.js\?v=20260724-management-window1/);
   assert.equal(
     (html.match(/<option value="1" selected>1 Tag<\/option>/g) || []).length,
     2,
