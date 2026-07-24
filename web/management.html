@@ -66,7 +66,7 @@
       defer
     ></script>
     <script src="./config.js"></script>
-    <script type="module" src="./management.mjs?v=20260724-management-layout2"></script>
+    <script type="module" src="./management.mjs?v=20260724-management-window1"></script>
   </head>
   <body class="management-page">
     <main class="management-shell">
@@ -179,7 +179,8 @@
           <div class="management-control">
             <label for="management-overview-window-days">Berichtszeitraum</label>
             <select id="management-overview-window-days">
-              <option value="7" selected>1 Woche</option>
+              <option value="1" selected>1 Tag</option>
+              <option value="7">1 Woche</option>
               <option value="14">2 Wochen</option>
               <option value="28">4 Wochen</option>
             </select>
@@ -311,7 +312,7 @@
             </li>
             <li>
               Die Detailseiten basieren auf gespeicherten Messwerten und bieten
-              Berichtszeiträume von einer, zwei oder vier Wochen.
+              Berichtszeiträume von einem Tag sowie einer, zwei oder vier Wochen.
             </li>
           </ul>
         </section>
@@ -348,7 +349,8 @@
         <div class="management-control">
           <label for="management-window-days">Berichtszeitraum</label>
           <select id="management-window-days">
-            <option value="7" selected>1 Woche</option>
+            <option value="1" selected>1 Tag</option>
+            <option value="7">1 Woche</option>
             <option value="14">2 Wochen</option>
             <option value="28">4 Wochen</option>
           </select>
@@ -526,21 +528,22 @@
           <li id="management-footnote-3">
             <strong>Stationen mit Live-Daten:</strong> öffentliche Stationen,
             bei denen mindestens ein Ladepunkt über seine dauerhafte Kennung
-            eindeutig verbunden wurde und für den Tag ein verständlicher
-            Live-Status vorlag. Der Prozentwert bezieht sich auf alle
-            öffentlichen Stationen.
+            eindeutig verbunden wurde und im gewählten Berichtszeitraum ein
+            verständlicher Live-Status vorlag. Der Prozentwert bezieht sich auf
+            alle öffentlichen Stationen.
           </li>
           <li id="management-footnote-4">
             <strong>Stationen ohne Störung:</strong> Stationen mit Live-Daten,
-            bei denen im Tagesverlauf kein verbundener Ladepunkt als gestört
-            gemeldet wurde. Der Prozentwert bezieht sich nur auf Stationen mit
-            Live-Daten.
+            bei denen im gewählten Berichtszeitraum kein verbundener Ladepunkt
+            als gestört gemeldet wurde. Der Prozentwert bezieht sich nur auf
+            Stationen mit Live-Daten.
           </li>
           <li id="management-footnote-5">
             <strong>Auslastung:</strong> belegte Zeit geteilt durch die gesamte
             Zeit mit verständlichem Live-Status. Jede Stunde an jedem
-            Ladepunkt zählt einzeln. Gesamt umfasst den ganzen Tag, Tag gilt
-            von 07:00 bis 19:00 Uhr Ortszeit und Nacht von 19:00 bis 07:00 Uhr.
+            Ladepunkt zählt einzeln. Gesamt umfasst den gesamten
+            Berichtszeitraum; Tag gilt jeweils von 07:00 bis 19:00 Uhr
+            Ortszeit und Nacht von 19:00 bis 07:00 Uhr.
           </li>
           <li id="management-footnote-6">
             <strong>Störungsanteil:</strong> als gestört gemeldete Zeit geteilt
@@ -552,13 +555,13 @@
           </li>
           <li id="management-footnote-7">
             <strong>Am Tagesende gestört:</strong> Stationen mit Live-Daten, an
-            denen der letzte Tagesstatus mindestens eines verbundenen
-            Ladepunkts weiterhin gestört war.
+            denen am Ende des letzten Berichtstags mindestens ein verbundener
+            Ladepunkt weiterhin gestört war.
           </li>
           <li id="management-footnote-8">
-            <strong>Außer Betrieb:</strong> Stationen, bei denen am Tagesende
-            alle beobachteten und verbundenen Ladepunkte als gestört gemeldet
-            waren.
+            <strong>Außer Betrieb:</strong> Stationen, bei denen am Ende des
+            letzten Berichtstags alle beobachteten und verbundenen Ladepunkte
+            als gestört gemeldet waren.
           </li>
         </ol>
         <h3>Weitere Hinweise</h3>
@@ -571,7 +574,8 @@
             wurde, und nicht auf wiederkehrend hohe Nachfrage.
           </li>
           <li>
-            Die Anbieterleistung fasst eine, zwei oder vier Wochen zusammen.
+            Die Anbieterleistung fasst einen Tag oder eine, zwei beziehungsweise
+            vier Wochen zusammen.
             Eine hohe Konfidenz bedeutet, dass für den gewählten Zeitraum
             ausreichend Messtage vorhanden sind; sie ist keine
             Qualitätsbewertung des Ladenetzes.

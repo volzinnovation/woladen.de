@@ -4,8 +4,8 @@ const TOP_STATIONS_LIMIT = 10;
 const DISPLAYED_FULL_UTILIZATION_THRESHOLD = 0.9995;
 const ANDROID_WEB_LINK = "https://play.google.com/store/apps/details?id=de.woladen.android";
 const ANDROID_STORE_LINK = "market://details?id=de.woladen.android";
-export const DEFAULT_WINDOW_DAYS = 7;
-export const SUPPORTED_WINDOW_DAYS = [7, 14, 28];
+export const DEFAULT_WINDOW_DAYS = 1;
+export const SUPPORTED_WINDOW_DAYS = [1, 7, 14, 28];
 const COUNTRY_NAMES = new Intl.DisplayNames(["de"], { type: "region" });
 
 export const OVERVIEW_METRICS = {
@@ -100,7 +100,11 @@ function percentFormat(value, digits = 1) {
 }
 
 export function windowLabel(windowDays) {
-  const weeks = Number(windowDays) / 7;
+  const days = Number(windowDays);
+  if (days === 1) {
+    return "1 Tag";
+  }
+  const weeks = days / 7;
   if (!Number.isInteger(weeks) || weeks < 1) {
     return "";
   }
@@ -544,6 +548,46 @@ export function buildCountryOverviewRows(
     })
     .filter((row) => row.country_code && optionalNumber(row.station_count) !== null)
     .sort((left, right) => TABLE_SORT_COLLATOR.compare(left.country_name, right.country_name));
+}
+
+const ROLLING_COUNTRY_SUMMARY_FIELDS = [
+  "static_charger_count",
+  "static_station_count",
+  "measured_static_station_count",
+  "static_stations_without_disruptions",
+  "static_station_coverage",
+  "static_stations_without_disruptions_share",
+  "occupancy_share",
+  "day_occupancy_share",
+  "night_occupancy_share",
+  "out_of_order_share",
+  "day_out_of_order_share",
+  "night_out_of_order_share",
+];
+
+export function mergeRollingCountrySummary(snapshot, reportPayload, countryCode) {
+  const normalizedCountry = normalizeCountryCode(countryCode);
+  const reportRow = (Array.isArray(reportPayload?.rows) ? reportPayload.rows : []).find(
+    (row) => normalizeCountryCode(row?.country_code) === normalizedCountry,
+  );
+  if (!reportRow) {
+    return snapshot;
+  }
+  const rollingSummary = {};
+  for (const field of ROLLING_COUNTRY_SUMMARY_FIELDS) {
+    if (reportRow[field] !== null && reportRow[field] !== undefined) {
+      rollingSummary[field] = reportRow[field];
+    }
+  }
+  return {
+    ...snapshot,
+    summary: {
+      ...(snapshot?.summary || {}),
+      ...rollingSummary,
+      reporting_period_start_date: reportPayload?.start_date || "",
+      reporting_period_end_date: reportPayload?.end_date || "",
+    },
+  };
 }
 
 export function buildRollingProviderRows(reportPayload, healthPayload) {
@@ -1571,7 +1615,9 @@ async function initManagementPage() {
           : "Statische Ersatzauswertung";
       document.getElementById("management-subtitle").textContent =
         dataSource.currentSource() === "postgresql"
-          ? `Länderdaten für ${windowLabel(overviewWindowDays)} bis ${formatDateLabel(currentDate)} · ${sourceDetail}.`
+          ? overviewWindowDays === 1
+            ? `Länderdaten am ${formatDateLabel(currentDate)} · ${sourceDetail}.`
+            : `Länderdaten für ${windowLabel(overviewWindowDays)} bis ${formatDateLabel(currentDate)} · ${sourceDetail}.`
           : `Länderdaten am ${formatDateLabel(currentDate)} · ${sourceDetail}.`;
       hideStatus();
     }
@@ -1683,7 +1729,54 @@ async function initManagementPage() {
       providerUid,
       trendDays: windowDays,
     });
-    currentSnapshot = loaded.snapshot;
+    const range = dateRangeForWindow(targetDate, windowDays);
+    let countryReport = { rows: [] };
+    let providerReport = { rows: [] };
+    let providerHealth = { rows: [] };
+    if (loaded.source === "postgresql") {
+      const [countryResult, providerResult, healthResult] = await Promise.allSettled([
+        !providerUid && countryCode
+          ? dataSource.loadReport({
+              startDate: range.startDate,
+              endDate: range.endDate,
+              countryCode,
+              groupBy: "country",
+            })
+          : Promise.resolve({ rows: [] }),
+        dataSource.loadReport({
+          startDate: range.startDate,
+          endDate: range.endDate,
+          countryCode,
+          providerUid,
+          groupBy: "provider",
+        }),
+        dataSource.loadProviderHealth({
+          startDate: range.startDate,
+          endDate: range.endDate,
+          countryCode,
+          providerUid,
+        }),
+      ]);
+      if (countryResult.status === "fulfilled") {
+        countryReport = countryResult.value;
+      } else {
+        console.warn("Die Länderkennzahlen für den Berichtszeitraum sind nicht verfügbar.", countryResult.reason);
+      }
+      if (providerResult.status === "fulfilled") {
+        providerReport = providerResult.value;
+      } else {
+        console.warn("Historische Anbieteraggregation ist nicht verfügbar.", providerResult.reason);
+      }
+      if (healthResult.status === "fulfilled") {
+        providerHealth = healthResult.value;
+      } else {
+        console.warn("Historische Anbieterqualität ist nicht verfügbar.", healthResult.reason);
+      }
+    }
+    currentSnapshot =
+      loaded.source === "postgresql" && !providerUid
+        ? mergeRollingCountrySummary(loaded.snapshot, countryReport, countryCode)
+        : loaded.snapshot;
     trendsPayload = loaded.trends;
     currentWindowDays = windowDays;
     document.documentElement.dataset.managementDataSource = loaded.source;
@@ -1711,14 +1804,11 @@ async function initManagementPage() {
       dateText: currentDate,
       linkProviders: !providerUid && loaded.source === "postgresql",
     });
-    const range = dateRangeForWindow(currentDate, currentWindowDays);
     // The raw interval profile is intentionally bounded. Rolling report and
-    // reliability tables use the selected 1/2/4-week window, while the
+    // reliability tables use the selected day/week window, while the
     // expensive hourly chart stays responsive on the live database path.
     const profileWindowDays = Math.min(currentWindowDays, 7);
     const profileRange = dateRangeForWindow(currentDate, profileWindowDays);
-    let providerReport = { rows: [] };
-    let providerHealth = { rows: [] };
     if (providerUid && providerProfileChart) {
       providerProfileChart.destroy();
       providerProfileChart = null;
@@ -1736,27 +1826,6 @@ async function initManagementPage() {
             (error) => ({ payload: { rows: [] }, error }),
           )
         : null;
-    if (loaded.source === "postgresql") {
-      try {
-        [providerReport, providerHealth] = await Promise.all([
-          dataSource.loadReport({
-            startDate: range.startDate,
-            endDate: range.endDate,
-            countryCode,
-            providerUid,
-            groupBy: "provider",
-          }),
-          dataSource.loadProviderHealth({
-            startDate: range.startDate,
-            endDate: range.endDate,
-            countryCode,
-            providerUid,
-          }),
-        ]);
-      } catch (error) {
-        console.warn("Historische Anbieteraggregation ist nicht verfügbar.", error);
-      }
-    }
     renderRollingProviderReports(providerReport, providerHealth, currentWindowDays, {
       countryCode,
       dateText: currentDate,

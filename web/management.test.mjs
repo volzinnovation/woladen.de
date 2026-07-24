@@ -17,6 +17,7 @@ import {
   compareTableSortValues,
   countryName,
   dateRangeForWindow,
+  mergeRollingCountrySummary,
   normalizeCountryCode,
   normalizeManagementDate,
   normalizeProviderUid,
@@ -66,8 +67,13 @@ test("country and rolling-window helpers normalize management routes", () => {
     startDate: "2026-07-06",
     endDate: "2026-07-19",
   });
-  assert.deepEqual(SUPPORTED_WINDOW_DAYS, [7, 14, 28]);
-  assert.equal(DEFAULT_WINDOW_DAYS, 7);
+  assert.deepEqual(dateRangeForWindow("2026-07-19", 1), {
+    startDate: "2026-07-19",
+    endDate: "2026-07-19",
+  });
+  assert.deepEqual(SUPPORTED_WINDOW_DAYS, [1, 7, 14, 28]);
+  assert.equal(DEFAULT_WINDOW_DAYS, 1);
+  assert.equal(windowLabel(1), "1 Tag");
   assert.equal(windowLabel(7), "1 Woche");
   assert.equal(windowLabel(14), "2 Wochen");
   assert.equal(windowLabel(28), "4 Wochen");
@@ -277,6 +283,10 @@ test("management detail layout keeps navigation with date controls and methodolo
   assert.match(chartPanel, /management-overview-metric/);
   assert.match(html, /AFIR-Datenabdeckung nach Land/);
   assert.match(html, /id="management-country-coverage-body"/);
+  assert.equal(
+    (html.match(/<option value="1" selected>1 Tag<\/option>/g) || []).length,
+    2,
+  );
   assert.ok(
     html.indexOf('id="management-data-quality"') <
       html.indexOf("Fußnoten zu den Kennzahlen"),
@@ -333,6 +343,51 @@ test("country overview rows merge dynamic coverage with the selected day report"
   assert.equal(rows[0].live_station_share, 35000 / 72000);
   assert.equal(rows[0].stations_without_disruptions, 28000);
   assert.equal(rows[0].stations_without_disruptions_share, 0.8);
+});
+
+test("country detail KPIs use the same rolling report metrics as the overview", () => {
+  const snapshot = {
+    summary: {
+      measured_station_coverage: 0.99,
+      static_charger_count: 197527,
+      static_station_count: 72155,
+      measured_static_station_count: 33104,
+      static_stations_without_disruptions: 23024,
+      occupancy_share: 0.107,
+      out_of_order_share: 0.054,
+      static_disruptions_at_end_of_day: 3245,
+    },
+  };
+  const report = {
+    start_date: "2026-07-17",
+    end_date: "2026-07-23",
+    rows: [
+      {
+        country_code: "DE",
+        static_charger_count: 197527,
+        static_station_count: 72155,
+        measured_static_station_count: 33168,
+        static_stations_without_disruptions: 15742,
+        static_station_coverage: 0.459677,
+        static_stations_without_disruptions_share: 0.474614,
+        occupancy_share: 0.10634,
+        day_occupancy_share: 0.13,
+        night_occupancy_share: 0.08,
+        out_of_order_share: 0.059356,
+        day_out_of_order_share: 0.05,
+        night_out_of_order_share: 0.07,
+      },
+    ],
+  };
+
+  const merged = mergeRollingCountrySummary(snapshot, report, "DE");
+  assert.equal(merged.summary.measured_static_station_count, 33168);
+  assert.equal(merged.summary.static_stations_without_disruptions, 15742);
+  assert.equal(merged.summary.occupancy_share, 0.10634);
+  assert.equal(merged.summary.out_of_order_share, 0.059356);
+  assert.equal(merged.summary.static_disruptions_at_end_of_day, 3245);
+  assert.equal(merged.summary.reporting_period_start_date, "2026-07-17");
+  assert.equal(snapshot.summary.measured_static_station_count, 33104);
 });
 
 test("provider profile series fills all local hours and converts shares to percentages", () => {
