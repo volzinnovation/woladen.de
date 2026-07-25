@@ -111,6 +111,11 @@ export function windowLabel(windowDays) {
   return `${numberFormat(weeks)} ${weeks === 1 ? "Woche" : "Wochen"}`;
 }
 
+export function shouldShowOverviewChart(windowDays) {
+  const days = Number(windowDays);
+  return SUPPORTED_WINDOW_DAYS.includes(days) && days > 1;
+}
+
 export function rankedTableTitle(prefix, columnLabel, fallbackLabel = "Auslastung") {
   const normalizedPrefix = String(prefix || "").trim();
   const normalizedLabel = String(columnLabel || fallbackLabel).trim() || fallbackLabel;
@@ -1722,6 +1727,7 @@ async function initManagementPage() {
   const prevDay = document.getElementById("management-prev-day");
   const nextDay = document.getElementById("management-next-day");
   const overviewMetricSelect = document.getElementById("management-overview-metric");
+  const overviewChartSection = document.getElementById("management-overview-chart-section");
   const windowSelect = document.getElementById("management-window-days");
   const providerProfilePanel = document.getElementById("management-provider-profile-panel");
   const detailBackLink = document.getElementById("management-detail-back");
@@ -1739,6 +1745,12 @@ async function initManagementPage() {
   function renderCharts() {
     if (overviewChart) {
       overviewChart.destroy();
+      overviewChart = null;
+    }
+    const showOverviewChart = shouldShowOverviewChart(currentWindowDays);
+    overviewChartSection.hidden = !showOverviewChart;
+    if (!showOverviewChart) {
+      return;
     }
     const selectedMetric =
       OVERVIEW_METRICS[overviewMetricSelect.value] || OVERVIEW_METRICS.stations_with_disruptions;

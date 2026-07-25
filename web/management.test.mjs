@@ -22,6 +22,7 @@ import {
   normalizeManagementDate,
   normalizeProviderUid,
   rankedTableTitle,
+  shouldShowOverviewChart,
   snapshotPathForDate,
   staticCatalogCountsForCountry,
   SUPPORTED_WINDOW_DAYS,
@@ -78,6 +79,11 @@ test("country and rolling-window helpers normalize management routes", () => {
   assert.equal(windowLabel(14), "2 Wochen");
   assert.equal(windowLabel(28), "4 Wochen");
   assert.equal(windowLabel(90), "");
+  assert.equal(shouldShowOverviewChart(1), false);
+  assert.equal(shouldShowOverviewChart(7), true);
+  assert.equal(shouldShowOverviewChart(14), true);
+  assert.equal(shouldShowOverviewChart(28), true);
+  assert.equal(shouldShowOverviewChart(90), false);
   assert.deepEqual(dateRangeForWindow("2026-07-19", 90), {
     startDate: "",
     endDate: "",
@@ -265,6 +271,7 @@ test("management tables use window wording and omit removed classification colum
 test("management detail layout keeps navigation with date controls and methodology at the end", () => {
   const html = readFileSync(new URL("./management.html", import.meta.url), "utf8");
   const script = readFileSync(new URL("./management.mjs", import.meta.url), "utf8");
+  const styles = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
   const detailControls = html.match(
     /<section class="management-panel management-controls">[\s\S]*?<\/section>/,
   )?.[0];
@@ -281,10 +288,19 @@ test("management detail layout keeps navigation with date controls and methodolo
   assert.doesNotMatch(detailControls, /management-overview-metric/);
   assert.ok(chartPanel);
   assert.match(chartPanel, /management-overview-metric/);
+  assert.match(
+    html,
+    /<section id="management-overview-chart-section" class="management-grid" hidden>/,
+  );
+  assert.match(script, /overviewChartSection\.hidden = !showOverviewChart/);
+  assert.match(
+    styles,
+    /\.management-control select \{[\s\S]*?appearance: none;[\s\S]*?padding-right: 2\.6rem;/,
+  );
   assert.match(html, /AFIR-Datenabdeckung nach Land/);
   assert.match(html, /id="management-country-coverage-body"/);
   assert.match(html, /config\.js\?v=20260724-management-window1/);
-  assert.match(html, /management\.mjs\?v=20260725-management-operators1/);
+  assert.match(html, /management\.mjs\?v=20260725-management-layoutfix1/);
   assert.doesNotMatch(script, /confidencePhrase|Hohe Konfidenz|Mittlere Konfidenz|Niedrige Konfidenz/);
   assert.equal(
     (html.match(/<option value="1" selected>1 Tag<\/option>/g) || []).length,

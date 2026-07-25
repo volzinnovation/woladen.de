@@ -4557,6 +4557,7 @@ select:focus-visible {
 .management-control input[type="date"] {
   width: 100%;
   min-height: 2.75rem;
+  padding: 0 0.9rem;
   border-radius: 14px;
   border: 1px solid rgba(19, 32, 41, 0.12);
   background: rgba(255, 255, 255, 0.9);
@@ -4564,8 +4565,22 @@ select:focus-visible {
   font: inherit;
 }
 
+.management-control select {
+  appearance: none;
+  padding-right: 2.6rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #42505c 50%),
+    linear-gradient(135deg, #42505c 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.05rem) 50%,
+    calc(100% - 0.75rem) 50%;
+  background-repeat: no-repeat;
+  background-size: 0.32rem 0.32rem, 0.32rem 0.32rem;
+}
+
 .management-btn {
   width: 2.75rem;
+  padding: 0;
   cursor: pointer;
 }
 
