@@ -207,6 +207,81 @@ function confidenceLabel(value) {
   );
 }
 
+const STATUS_METRIC_FIELDS = [
+  "occupancy_share",
+  "day_occupancy_share",
+  "night_occupancy_share",
+  "out_of_order_share",
+  "day_out_of_order_share",
+  "night_out_of_order_share",
+];
+
+export function statusMetricsAreUsable(summary) {
+  if (summary?.status_metrics_available === false) {
+    return false;
+  }
+  if (summary?.status_metrics_available === true) {
+    return true;
+  }
+  const stationCount = optionalNumber(summary?.station_count) ?? 0;
+  const observations =
+    firstNumber(summary?.observations_total, summary?.status_change_count) ?? 0;
+  const measuredSeconds = optionalNumber(summary?.measured_seconds) ?? 0;
+  const statusDurations = [
+    optionalNumber(summary?.occupied_seconds),
+    optionalNumber(summary?.out_of_order_seconds),
+    optionalNumber(summary?.unavailable_seconds),
+  ];
+  const nationallySuspiciousZeroMix =
+    stationCount >= 1000 &&
+    observations >= 10000 &&
+    measuredSeconds > 0 &&
+    statusDurations.every((value) => value === 0);
+  return !nationallySuspiciousZeroMix;
+}
+
+function withoutStatusMetrics(row) {
+  const sanitized = {
+    ...row,
+    status_metrics_available: false,
+    static_stations_without_disruptions: null,
+    static_stations_without_disruptions_share: null,
+    static_disruptions_at_end_of_day: null,
+    static_fully_out_of_service_stations: null,
+  };
+  for (const field of STATUS_METRIC_FIELDS) {
+    sanitized[field] = null;
+  }
+  return sanitized;
+}
+
+function aggregateStatusMetricEvidence(rows) {
+  return rows.reduce(
+    (summary, row) => ({
+      station_count: summary.station_count + Number(row?.station_count || 0),
+      observations_total:
+        summary.observations_total +
+        Number(row?.observations_total ?? row?.status_change_count ?? 0),
+      measured_seconds:
+        summary.measured_seconds + Number(row?.measured_seconds || 0),
+      occupied_seconds:
+        summary.occupied_seconds + Number(row?.occupied_seconds || 0),
+      out_of_order_seconds:
+        summary.out_of_order_seconds + Number(row?.out_of_order_seconds || 0),
+      unavailable_seconds:
+        summary.unavailable_seconds + Number(row?.unavailable_seconds || 0),
+    }),
+    {
+      station_count: 0,
+      observations_total: 0,
+      measured_seconds: 0,
+      occupied_seconds: 0,
+      out_of_order_seconds: 0,
+      unavailable_seconds: 0,
+    },
+  );
+}
+
 export function buildProviderReportMetrics(row) {
   const receivedMessagesTotal = firstNumber(row?.received_messages_total, row?.messages_total) ?? 0;
   const observationsTotal = firstNumber(row?.observations_total) ?? 0;
@@ -363,6 +438,9 @@ export function buildSummaryCards(
   { publicStationCount = null, publicChargerCount = null } = {},
 ) {
   const summary = snapshot?.summary || {};
+  const statusMetricsAvailable = statusMetricsAreUsable(summary);
+  const unavailableStatusDetail =
+    "Die Quelle liefert derzeit keine auswertbaren Belegt- oder Störungszustände.";
   if (optionalNumber(summary.measured_station_coverage) !== null) {
     const catalogStationCount = firstNumber(
       summary.static_station_count,
@@ -408,43 +486,65 @@ export function buildSummaryCards(
       },
       {
         label: "Stationen ohne Störung",
-        value: optionalNumberFormat(stationsWithoutDisruptions) || "–",
+        value:
+          statusMetricsAvailable
+            ? optionalNumberFormat(stationsWithoutDisruptions) || "–"
+            : "–",
         metrics: [
           {
             label: "Anteil",
-            value: percentFormat(disruptionFreeShare),
+            value: statusMetricsAvailable ? percentFormat(disruptionFreeShare) : "–",
           },
         ],
+        detail: statusMetricsAvailable ? "" : unavailableStatusDetail,
         reference: 4,
       },
       {
         label: "Auslastung",
-        value: percentFormat(summary.occupancy_share),
+        value: statusMetricsAvailable ? percentFormat(summary.occupancy_share) : "–",
         metrics: [
-          { label: "Gesamt", value: percentFormat(summary.occupancy_share) },
-          { label: "Tag", value: percentFormat(summary.day_occupancy_share) },
-          { label: "Nacht", value: percentFormat(summary.night_occupancy_share) },
+          {
+            label: "Tag",
+            value: statusMetricsAvailable ? percentFormat(summary.day_occupancy_share) : "–",
+          },
+          {
+            label: "Nacht",
+            value: statusMetricsAvailable ? percentFormat(summary.night_occupancy_share) : "–",
+          },
         ],
+        detail: statusMetricsAvailable ? "" : unavailableStatusDetail,
         reference: 5,
       },
       {
         label: "Störungsanteil",
-        value: percentFormat(summary.out_of_order_share),
+        value: statusMetricsAvailable ? percentFormat(summary.out_of_order_share) : "–",
         metrics: [
-          { label: "Gesamt", value: percentFormat(summary.out_of_order_share) },
-          { label: "Tag", value: percentFormat(summary.day_out_of_order_share) },
-          { label: "Nacht", value: percentFormat(summary.night_out_of_order_share) },
+          {
+            label: "Tag",
+            value: statusMetricsAvailable ? percentFormat(summary.day_out_of_order_share) : "–",
+          },
+          {
+            label: "Nacht",
+            value: statusMetricsAvailable ? percentFormat(summary.night_out_of_order_share) : "–",
+          },
         ],
+        detail: statusMetricsAvailable ? "" : unavailableStatusDetail,
         reference: 6,
       },
       {
         label: "Am Tagesende gestört",
-        value: optionalNumberFormat(summary.static_disruptions_at_end_of_day) || "–",
+        value:
+          statusMetricsAvailable
+            ? optionalNumberFormat(summary.static_disruptions_at_end_of_day) || "–"
+            : "–",
         reference: 7,
       },
       {
         label: "Außer Betrieb",
-        value: optionalNumberFormat(summary.static_fully_out_of_service_stations) || "–",
+        value:
+          statusMetricsAvailable
+            ? optionalNumberFormat(summary.static_fully_out_of_service_stations) || "–"
+            : "–",
         reference: 8,
       },
     ];
@@ -527,7 +627,7 @@ export function buildCountryOverviewRows(
         (liveStationCount > 0 && stationsWithoutDisruptions !== null
           ? stationsWithoutDisruptions / liveStationCount
           : null);
-      return {
+      const row = {
         ...country,
         ...report,
         country_code: countryCode,
@@ -542,6 +642,13 @@ export function buildCountryOverviewRows(
         stations_without_disruptions: stationsWithoutDisruptions,
         stations_without_disruptions_share: stationsWithoutDisruptionsShare,
       };
+      return statusMetricsAreUsable(report)
+        ? row
+        : {
+            ...withoutStatusMetrics(row),
+            stations_without_disruptions: null,
+            stations_without_disruptions_share: null,
+          };
     })
     .filter((row) => row.country_code && optionalNumber(row.station_count) !== null)
     .sort((left, right) => TABLE_SORT_COLLATOR.compare(left.country_name, right.country_name));
@@ -576,14 +683,22 @@ export function mergeRollingCountrySummary(snapshot, reportPayload, countryCode)
       rollingSummary[field] = reportRow[field];
     }
   }
+  const combinedSummary = {
+    ...(snapshot?.summary || {}),
+    ...reportRow,
+  };
+  const statusMetricsAvailable = statusMetricsAreUsable(combinedSummary);
+  const mergedSummary = {
+    ...(snapshot?.summary || {}),
+    ...rollingSummary,
+    reporting_period_start_date: reportPayload?.start_date || "",
+    reporting_period_end_date: reportPayload?.end_date || "",
+  };
   return {
     ...snapshot,
-    summary: {
-      ...(snapshot?.summary || {}),
-      ...rollingSummary,
-      reporting_period_start_date: reportPayload?.start_date || "",
-      reporting_period_end_date: reportPayload?.end_date || "",
-    },
+    summary: statusMetricsAvailable
+      ? { ...mergedSummary, status_metrics_available: true }
+      : withoutStatusMetrics(mergedSummary),
   };
 }
 
@@ -591,6 +706,9 @@ export function buildRollingProviderRows(reportPayload, healthPayload) {
   const reportRows = Array.isArray(reportPayload?.rows) ? reportPayload.rows : [];
   const healthRows = Array.isArray(healthPayload?.rows) ? healthPayload.rows : [];
   const operatorMode = reportPayload?.group_by === "operator";
+  const statusMetricsAvailable = statusMetricsAreUsable(
+    aggregateStatusMetricEvidence(reportRows),
+  );
   const healthByProvider = new Map(
     healthRows.map((row) => [
       `${normalizeCountryCode(row?.country_code)}\u0000${String(row?.provider_uid || "")}`,
@@ -600,7 +718,9 @@ export function buildRollingProviderRows(reportPayload, healthPayload) {
   return reportRows
     .filter((row) => !operatorMode || Number(row?.station_count || 0) >= 50)
     .map((row) => {
-      const operatorBrand = String(row?.operator_brand || row?.operator_name || "").trim();
+      const operatorBrand =
+        String(row?.operator_brand || row?.operator_name || "").trim() ||
+        (operatorMode ? "Ohne Betreiberangabe" : "");
       const sourceProviderUids = Array.isArray(row?.source_provider_uids)
         ? row.source_provider_uids.map((value) => String(value || "").trim()).filter(Boolean)
         : [];
@@ -608,7 +728,7 @@ export function buildRollingProviderRows(reportPayload, healthPayload) {
         healthByProvider.get(
           `${normalizeCountryCode(row?.country_code)}\u0000${String(row?.provider_uid || "")}`,
         ) || {};
-      return {
+      const mergedRow = {
         ...row,
         operator_brand: operatorBrand,
         display_name:
@@ -627,6 +747,7 @@ export function buildRollingProviderRows(reportPayload, healthPayload) {
           Number(health.http_error_messages_total || 0),
         provider_message_days: Number(health.provider_message_days || 0),
       };
+      return statusMetricsAvailable ? mergedRow : withoutStatusMetrics(mergedRow);
     })
     .sort((left, right) => {
       const stationDelta = Number(right?.station_count || 0) - Number(left?.station_count || 0);
@@ -700,6 +821,12 @@ export function buildProviderRows(snapshot) {
     );
   });
   return rows;
+}
+
+export function buildDailySourceRows(snapshot) {
+  return buildProviderRows(snapshot).filter((row) =>
+    Boolean(String(row?.provider_uid || "").trim()),
+  );
 }
 
 function formatDateLabel(value) {
@@ -890,12 +1017,25 @@ export function compareTableSortValues(leftValue, rightValue, type = "text") {
   return TABLE_SORT_COLLATOR.compare(String(leftValue || ""), String(rightValue || ""));
 }
 
-function sortableHeaderRow(table) {
+function sortableHeaderCells(table) {
   const rows = Array.from(table.tHead?.rows || []);
-  return (
-    rows.find((row) => row.classList.contains("sorttop") || row.classList.contains("sortTop")) ||
-    rows.at(-1) ||
-    null
+  const preferredRow = rows.find(
+    (row) => row.classList.contains("sorttop") || row.classList.contains("sortTop"),
+  );
+  const cells = preferredRow
+    ? Array.from(preferredRow.cells)
+    : rows.flatMap((row) => Array.from(row.cells));
+  return cells.filter((th) => th.colSpan === 1);
+}
+
+function sortableColumnIndex(th) {
+  const explicitColumn = String(th?.dataset?.sortColumn ?? "").trim();
+  return explicitColumn ? Number(explicitColumn) : th?.cellIndex ?? -1;
+}
+
+function sortableHeaderForColumn(table, columnIndex) {
+  return sortableHeaderCells(table).find(
+    (th) => sortableColumnIndex(th) === columnIndex,
   );
 }
 
@@ -924,9 +1064,10 @@ function updateSortableTableTitle(table) {
   if (!title) {
     return;
   }
-  const headerRow = sortableHeaderRow(table);
   const columnIndex = Number(table.dataset.sortColumn);
-  const columnHeader = Number.isInteger(columnIndex) ? headerRow?.cells[columnIndex] : null;
+  const columnHeader = Number.isInteger(columnIndex)
+    ? sortableHeaderForColumn(table, columnIndex)
+    : null;
   const columnLabel =
     columnHeader?.dataset.sortLabel ||
     columnHeader?.querySelector(".management-sort-label")?.textContent ||
@@ -939,12 +1080,12 @@ function updateSortableTableTitle(table) {
 }
 
 function setSortableHeaderState(table, activeColumnIndex, direction) {
-  const headerRow = sortableHeaderRow(table);
-  if (!headerRow) {
+  const headers = sortableHeaderCells(table);
+  if (!headers.length) {
     return;
   }
-  for (const th of Array.from(headerRow.cells)) {
-    const columnIndex = Number(th.dataset.sortColumn || th.cellIndex);
+  for (const th of headers) {
+    const columnIndex = sortableColumnIndex(th);
     const isActive = columnIndex === activeColumnIndex && direction !== "none";
     th.setAttribute("aria-sort", isActive ? direction : "none");
     const button = th.querySelector(".management-sort-button");
@@ -1011,17 +1152,18 @@ function toggleTableSort(table, columnIndex, type) {
 }
 
 function alignNumericTableColumns(table) {
-  const headerRow = sortableHeaderRow(table);
-  if (!headerRow) {
+  const headers = sortableHeaderCells(table);
+  if (!headers.length) {
     return;
   }
-  for (const th of Array.from(headerRow.cells)) {
+  for (const th of headers) {
     if (!["number", "date"].includes(th.dataset.sortType)) {
       continue;
     }
+    const columnIndex = sortableColumnIndex(th);
     th.classList.add("management-table-numeric");
     for (const row of tableBodyRows(table)) {
-      row.cells[th.cellIndex]?.classList.add("management-table-numeric");
+      row.cells[columnIndex]?.classList.add("management-table-numeric");
     }
   }
 }
@@ -1031,17 +1173,18 @@ function wireSortableTable(table) {
   if (table.dataset.sortableInitialized === "true") {
     return;
   }
-  const headerRow = sortableHeaderRow(table);
-  if (!headerRow) {
+  const headers = sortableHeaderCells(table);
+  if (!headers.length) {
     return;
   }
-  for (const th of Array.from(headerRow.cells)) {
+  for (const th of headers) {
     if (th.classList.contains("unsortable") || th.dataset.sortable === "false") {
       continue;
     }
-    const columnIndex = th.cellIndex;
+    const columnIndex = sortableColumnIndex(th);
     const sortType = th.dataset.sortType || "text";
     const label = th.dataset.sortLabel || th.textContent.trim();
+    const visibleLabel = th.textContent.trim();
     const detail = String(th.dataset.sortDetail || "").trim();
     const button = document.createElement("button");
     const labelSpan = document.createElement("span");
@@ -1051,7 +1194,7 @@ function wireSortableTable(table) {
     button.dataset.sortDirection = "none";
     button.setAttribute("aria-label", `${label} sortieren`);
     labelSpan.className = "management-sort-label";
-    labelSpan.textContent = label;
+    labelSpan.textContent = visibleLabel;
     if (detail) {
       const detailSpan = document.createElement("span");
       detailSpan.className = "management-sort-detail";
@@ -1081,8 +1224,8 @@ function resetSortableTable(table) {
   const defaultColumn = defaultColumnText ? Number(defaultColumnText) : -1;
   const defaultDirection = table.dataset.defaultSortDirection || "none";
   if (Number.isInteger(defaultColumn) && defaultColumn >= 0 && defaultDirection !== "none") {
-    const headerRow = sortableHeaderRow(table);
-    const sortType = headerRow?.cells[defaultColumn]?.dataset.sortType || "text";
+    const sortType =
+      sortableHeaderForColumn(table, defaultColumn)?.dataset.sortType || "text";
     table.dataset.sortColumn = String(defaultColumn);
     table.dataset.sortDirection = defaultDirection;
     sortTableRows(table, defaultColumn, sortType, defaultDirection);
@@ -1214,9 +1357,9 @@ function renderCountryOverview(
   coverageBody.innerHTML = "";
   countryCount.textContent = `${numberFormat(rows.length)} Länder`;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7">Für diesen Tag liegen keine Länderberichte vor.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11">Für diesen Tag liegen keine Länderberichte vor.</td></tr>';
     coverageBody.innerHTML =
-      '<tr><td colspan="6">Für diesen Berichtszeitraum liegen keine AFIR-Länderkennzahlen vor.</td></tr>';
+      '<tr><td colspan="8">Für diesen Berichtszeitraum liegen keine Länderkennzahlen vor.</td></tr>';
   }
   for (const row of rows) {
     const detailUrl = managementCountryUrl(row.country_code, dateText, windowDays);
@@ -1235,14 +1378,12 @@ function renderCountryOverview(
       </td>
       <td data-sort-value="${numericSortValue(row.station_count)}">${numberFormat(row.station_count)}</td>
       <td data-sort-value="${numericSortValue(row.observed_evse_days ?? row.observed_evses)}">${numberFormat(row.observed_evse_days ?? row.observed_evses)}</td>
-      <td data-sort-value="${numericSortValue(row.occupancy_share)}">
-        ${percentFormat(row.occupancy_share)}
-        <div class="provider-sub">Tag ${percentFormat(row.day_occupancy_share)} · Nacht ${percentFormat(row.night_occupancy_share)}</div>
-      </td>
-      <td data-sort-value="${numericSortValue(row.out_of_order_share)}">
-        ${percentFormat(row.out_of_order_share)}
-        <div class="provider-sub">Tag ${percentFormat(row.day_out_of_order_share)} · Nacht ${percentFormat(row.night_out_of_order_share)}</div>
-      </td>
+      <td data-sort-value="${numericSortValue(row.occupancy_share)}">${percentFormat(row.occupancy_share)}</td>
+      <td data-sort-value="${numericSortValue(row.day_occupancy_share)}">${percentFormat(row.day_occupancy_share)}</td>
+      <td data-sort-value="${numericSortValue(row.night_occupancy_share)}">${percentFormat(row.night_occupancy_share)}</td>
+      <td data-sort-value="${numericSortValue(row.out_of_order_share)}">${percentFormat(row.out_of_order_share)}</td>
+      <td data-sort-value="${numericSortValue(row.day_out_of_order_share)}">${percentFormat(row.day_out_of_order_share)}</td>
+      <td data-sort-value="${numericSortValue(row.night_out_of_order_share)}">${percentFormat(row.night_out_of_order_share)}</td>
       <td><a class="management-row-action" href="${escapeAttribute(detailUrl)}" aria-label="${escapeAttribute(row.country_name)} öffnen">→</a></td>
     `;
     tbody.appendChild(tr);
@@ -1265,14 +1406,10 @@ function renderCountryOverview(
       <td data-sort-value="${numericSortValue(row.public_station_count)}">
         ${optionalNumberFormat(row.public_station_count) || "–"}
       </td>
-      <td data-sort-value="${numericSortValue(row.live_station_count)}">
-        ${optionalNumberFormat(row.live_station_count) || "–"}
-        <div class="provider-sub">Anteil ${percentFormat(row.live_station_share)}</div>
-      </td>
-      <td data-sort-value="${numericSortValue(row.stations_without_disruptions)}">
-        ${optionalNumberFormat(row.stations_without_disruptions) || "–"}
-        <div class="provider-sub">Anteil ${percentFormat(row.stations_without_disruptions_share)}</div>
-      </td>
+      <td data-sort-value="${numericSortValue(row.live_station_count)}">${optionalNumberFormat(row.live_station_count) || "–"}</td>
+      <td data-sort-value="${numericSortValue(row.live_station_share)}">${percentFormat(row.live_station_share)}</td>
+      <td data-sort-value="${numericSortValue(row.stations_without_disruptions)}">${optionalNumberFormat(row.stations_without_disruptions) || "–"}</td>
+      <td data-sort-value="${numericSortValue(row.stations_without_disruptions_share)}">${percentFormat(row.stations_without_disruptions_share)}</td>
       <td><a class="management-row-action" href="${escapeAttribute(detailUrl)}" aria-label="${escapeAttribute(row.country_name)} öffnen">→</a></td>
     `;
     coverageBody.appendChild(coverageRow);
@@ -1282,14 +1419,19 @@ function renderCountryOverview(
 function renderDataQuality(snapshot, windowDays) {
   const summary = snapshot?.summary || {};
   const host = document.getElementById("management-data-quality");
+  const statusMetricsAvailable = statusMetricsAreUsable(summary);
   const providerErrors =
     Number(summary.fetch_failure_messages_total || 0) +
     Number(summary.http_error_messages_total || 0);
   renderSummaryStrip(host, [
     {
       label: "Konfidenz",
-      value: confidenceLabel(summary.confidence_label),
-      detail: "Bewertung der Datenabdeckung",
+      value: statusMetricsAvailable
+        ? confidenceLabel(summary.confidence_label)
+        : "Nicht auswertbar",
+      detail: statusMetricsAvailable
+        ? "Bewertung der Datenabdeckung"
+        : "Belegung und Störungen fehlen",
     },
     {
       label: "Koordinaten",
@@ -1347,10 +1489,15 @@ function renderKpis(snapshot, options = {}) {
 
 function renderBrokenStations(snapshot, windowDays) {
   const rows = buildStationRows(snapshot, "broken_stations");
+  const statusMetricsAvailable = statusMetricsAreUsable(snapshot?.summary || {});
   const tbody = document.getElementById("broken-stations-body");
   document.getElementById("management-broken-stations-description").textContent =
     `Top 10 der Ladestationen mit den meisten Störungen über ${windowLabel(windowDays)}.`;
   tbody.innerHTML = "";
+  if (!statusMetricsAvailable) {
+    tbody.innerHTML = '<tr><td colspan="5">Belegung und Störungen sind für diese Quelle derzeit nicht auswertbar.</td></tr>';
+    return;
+  }
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="5">Für diesen Berichtszeitraum wurden keine gestörten Stationen erkannt.</td></tr>';
     return;
@@ -1377,10 +1524,15 @@ function renderBrokenStations(snapshot, windowDays) {
 
 function renderBusyStations(snapshot, windowDays) {
   const rows = buildStationRows(snapshot, "busiest_stations");
+  const statusMetricsAvailable = statusMetricsAreUsable(snapshot?.summary || {});
   const tbody = document.getElementById("busy-stations-body");
   document.getElementById("management-busy-stations-description").textContent =
     `Top 10 nach Auslastung am Tag und Statuswechseln über ${windowLabel(windowDays)}.`;
   tbody.innerHTML = "";
+  if (!statusMetricsAvailable) {
+    tbody.innerHTML = '<tr><td colspan="5">Belegung und Störungen sind für diese Quelle derzeit nicht auswertbar.</td></tr>';
+    return;
+  }
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="5">Für diesen Berichtszeitraum wurden keine Stationen mit hoher Auslastung erkannt.</td></tr>';
     return;
@@ -1420,7 +1572,7 @@ function renderRollingProviderReports(
   title.textContent = `${operatorMode ? "Betreiberleistung" : "Anbieterleistung"} über ${windowLabel(windowDays)}`;
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="6">Für diesen Zeitraum ist keine historische Betreiberaggregation verfügbar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10">Für diesen Zeitraum liegen keine Betreiberdaten vor.</td></tr>';
     return;
   }
   for (const row of rows) {
@@ -1449,21 +1601,13 @@ function renderRollingProviderReports(
         <div class="provider-sub">${escapeHtml(providerMeta)}</div>
       </td>
       <td data-sort-value="${numericSortValue(row.station_count)}">${numberFormat(row.station_count)}</td>
-      <td data-sort-value="${numericSortValue(row.measured_days)}">${numberFormat(row.measured_days)} / ${numberFormat(row.requested_days)}</td>
-      <td data-sort-value="${numericSortValue(row.occupancy_share)}">
-        <div class="management-metric-lines">
-          <div><span>Gesamt</span><strong>${percentFormat(row.occupancy_share)}</strong></div>
-          <div><span>Tag</span><strong>${percentFormat(row.day_occupancy_share)}</strong></div>
-          <div><span>Nacht</span><strong>${percentFormat(row.night_occupancy_share)}</strong></div>
-        </div>
-      </td>
-      <td data-sort-value="${numericSortValue(row.out_of_order_share)}">
-        <div class="management-metric-lines">
-          <div><span>Gesamt</span><strong>${percentFormat(row.out_of_order_share)}</strong></div>
-          <div><span>Tag</span><strong>${percentFormat(row.day_out_of_order_share)}</strong></div>
-          <div><span>Nacht</span><strong>${percentFormat(row.night_out_of_order_share)}</strong></div>
-        </div>
-      </td>
+      <td data-sort-value="${numericSortValue(row.measured_days)}">${numberFormat(row.measured_days)}</td>
+      <td data-sort-value="${numericSortValue(row.occupancy_share)}">${percentFormat(row.occupancy_share)}</td>
+      <td data-sort-value="${numericSortValue(row.day_occupancy_share)}">${percentFormat(row.day_occupancy_share)}</td>
+      <td data-sort-value="${numericSortValue(row.night_occupancy_share)}">${percentFormat(row.night_occupancy_share)}</td>
+      <td data-sort-value="${numericSortValue(row.out_of_order_share)}">${percentFormat(row.out_of_order_share)}</td>
+      <td data-sort-value="${numericSortValue(row.day_out_of_order_share)}">${percentFormat(row.day_out_of_order_share)}</td>
+      <td data-sort-value="${numericSortValue(row.night_out_of_order_share)}">${percentFormat(row.night_out_of_order_share)}</td>
       <td data-sort-value="${numericSortValue(row.transport_failure_count)}">${numberFormat(row.transport_failure_count)}</td>
     `;
     tbody.appendChild(tr);
@@ -1474,14 +1618,14 @@ function renderProviderReports(
   snapshot,
   { countryCode = "", dateText = "", linkProviders = true } = {},
 ) {
-  const rows = buildProviderRows(snapshot);
+  const rows = buildDailySourceRows(snapshot);
   const tbody = document.getElementById("provider-reports-body");
   if (!tbody) {
     return;
   }
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="9">Für diesen Tag wurden keine Betreiberberichte veröffentlicht.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9">Für diesen Tag liegen keine Quelldaten vor.</td></tr>';
     return;
   }
   for (const row of rows) {
@@ -1610,7 +1754,7 @@ async function initManagementPage() {
     document.getElementById("management-title").textContent =
       "Öffentliche Ladeinfrastruktur in Europa";
     document.getElementById("management-subtitle").textContent =
-      "Länder vergleichen und die jeweilige Detailauswertung öffnen.";
+      "Länder vergleichen und Details öffnen.";
     document.title = "woladen.de | Öffentliche Ladeinfrastruktur in Europa";
     wireSortableTables(overviewHost);
 
@@ -1624,7 +1768,7 @@ async function initManagementPage() {
     windowSelect.value = String(overviewWindowDays);
 
     async function loadOverview(targetDate, windowDays = overviewWindowDays) {
-      showLoading("Länderberichte werden aus Datenbank geladen …");
+      showLoading("Länderdaten werden geladen …");
       const range = dateRangeForWindow(targetDate, windowDays);
       const reportPayload = await dataSource.loadCountryOverview(targetDate, {
         startDate: range.startDate,
@@ -1644,16 +1788,10 @@ async function initManagementPage() {
       );
       resetSortableTables(overviewHost);
       document.documentElement.dataset.managementDataSource = dataSource.currentSource();
-      const sourceDetail =
-        dataSource.currentSource() === "postgresql"
-          ? "Europäische AFIR Datenmeldungen"
-          : "Statische Ersatzauswertung";
       document.getElementById("management-subtitle").textContent =
-        dataSource.currentSource() === "postgresql"
-          ? overviewWindowDays === 1
-            ? `Länderdaten am ${formatDateLabel(currentDate)} · ${sourceDetail}.`
-            : `Länderdaten für ${windowLabel(overviewWindowDays)} bis ${formatDateLabel(currentDate)} · ${sourceDetail}.`
-          : `Länderdaten am ${formatDateLabel(currentDate)} · ${sourceDetail}.`;
+        overviewWindowDays === 1
+          ? `Länder am ${formatDateLabel(currentDate)}.`
+          : `${windowLabel(overviewWindowDays)} bis ${formatDateLabel(currentDate)}.`;
       hideStatus();
     }
 
@@ -1747,7 +1885,9 @@ async function initManagementPage() {
       overviewChart.destroy();
       overviewChart = null;
     }
-    const showOverviewChart = shouldShowOverviewChart(currentWindowDays);
+    const showOverviewChart =
+      shouldShowOverviewChart(currentWindowDays) &&
+      statusMetricsAreUsable(currentSnapshot?.summary || {});
     overviewChartSection.hidden = !showOverviewChart;
     if (!showOverviewChart) {
       return;
@@ -1765,7 +1905,7 @@ async function initManagementPage() {
   }
 
   async function loadSnapshot(targetDate, windowDays = currentWindowDays) {
-    showLoading(`${providerUid || countryName(countryCode)} wird aus Datenbank geladen …`);
+    showLoading(`${providerUid || countryName(countryCode)} wird geladen …`);
     const loaded = await dataSource.loadSnapshot(targetDate, {
       countryCode,
       providerUid,
@@ -1820,14 +1960,7 @@ async function initManagementPage() {
     }
     currentSnapshot =
       loaded.source === "postgresql" && !providerUid
-        ? mergeRollingCountrySummary(
-            {
-              ...loaded.snapshot,
-              provider_reports: Array.isArray(providerReport?.rows) ? providerReport.rows : [],
-            },
-            countryReport,
-            countryCode,
-          )
+        ? mergeRollingCountrySummary(loaded.snapshot, countryReport, countryCode)
         : loaded.snapshot;
     trendsPayload = loaded.trends;
     currentWindowDays = windowDays;
@@ -1854,7 +1987,7 @@ async function initManagementPage() {
     renderProviderReports(currentSnapshot, {
       countryCode,
       dateText: currentDate,
-      linkProviders: !providerUid && loaded.source === "postgresql" && providerReport?.group_by === "provider",
+      linkProviders: !providerUid && loaded.source === "postgresql",
     });
     // The raw interval profile is intentionally bounded. Rolling report and
     // reliability tables use the selected day/week window, while the
@@ -1893,13 +2026,9 @@ async function initManagementPage() {
       document.title = `woladen.de | Anbieteranalyse ${providerName}`;
     }
 
-    const sourceDetail =
-      loaded.source === "postgresql"
-        ? "Europäische AFIR Datenmeldungen"
-        : "Statische Ersatzauswertung";
     subtitle.textContent = providerUid
-      ? `Anbieterbericht für ${countryCode ? countryName(countryCode) : "alle angebundenen Länder"} am ${formatDateLabel(currentDate)} · ${sourceDetail}.`
-      : `${buildManagementSubtitle(currentDate, countryCode)} · ${sourceDetail}.`;
+      ? `Auslastung und Störungen am ${formatDateLabel(currentDate)}.`
+      : `${buildManagementSubtitle(currentDate, countryCode)}.`;
     hideStatus();
     if (providerProfilePromise) {
       const profileDescription = document.getElementById("management-provider-profile-description");

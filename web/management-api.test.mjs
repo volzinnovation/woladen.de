@@ -131,6 +131,44 @@ test("unavailable live endpoint falls back to the explicit static cache", async 
   assert.equal(requests.includes("./data/management/index.json"), true);
 });
 
+test("live reports load every API page", async () => {
+  const offsets = [];
+  const source = createManagementDataSource({
+    apiBaseUrl: "https://live-eu.woladen.de/v1/management",
+    staticFallbackEnabled: false,
+    fetchImpl: async (url) => {
+      const parsed = new URL(url);
+      const offset = Number(parsed.searchParams.get("offset"));
+      offsets.push(offset);
+      if (offset === 0) {
+        return response({
+          rows: Array.from({ length: 1000 }, (_, index) => ({
+            operator_name: `Operator ${index}`,
+            total_rows: 1002,
+          })),
+        });
+      }
+      return response({
+        rows: [
+          { operator_name: "Operator 1000", total_rows: 1002 },
+          { operator_name: "Operator 1001", total_rows: 1002 },
+        ],
+      });
+    },
+  });
+
+  const report = await source.loadReport({
+    startDate: "2026-07-24",
+    endDate: "2026-07-24",
+    countryCode: "DE",
+    groupBy: "operator",
+  });
+
+  assert.deepEqual(offsets, [0, 1000]);
+  assert.equal(report.rows.length, 1002);
+  assert.equal(report.rows.at(-1).operator_name, "Operator 1001");
+});
+
 test("static country fallback exposes countries and static operators from the snapshot", async () => {
   const source = createManagementDataSource({
     apiBaseUrl: "",

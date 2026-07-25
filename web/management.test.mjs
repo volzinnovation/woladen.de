@@ -6,6 +6,7 @@ import {
   DEFAULT_WINDOW_DAYS,
   OVERVIEW_METRICS,
   buildCountryOverviewRows,
+  buildDailySourceRows,
   buildManagementSubtitle,
   buildOverviewSeries,
   buildProviderProfileSeries,
@@ -25,6 +26,7 @@ import {
   shouldShowOverviewChart,
   snapshotPathForDate,
   staticCatalogCountsForCountry,
+  statusMetricsAreUsable,
   SUPPORTED_WINDOW_DAYS,
   windowLabel,
 } from "./management.mjs";
@@ -217,15 +219,15 @@ test("buildSummaryCards exposes PostgreSQL coverage and reliability metrics", ()
   assert.equal(cards[3].value, "25.500");
   assert.deepEqual(
     cards[4].metrics.map((metric) => metric.label),
-    ["Gesamt", "Tag", "Nacht"],
+    ["Tag", "Nacht"],
   );
   assert.deepEqual(
     cards[4].metrics.map((metric) => metric.value),
-    ["9,6 %", "11,0 %", "8,0 %"],
+    ["11,0 %", "8,0 %"],
   );
   assert.deepEqual(
     cards[5].metrics.map((metric) => metric.value),
-    ["7,4 %", "6,5 %", "8,3 %"],
+    ["6,5 %", "8,3 %"],
   );
   assert.equal(cards[6].value, "3.600");
   assert.equal(cards[7].value, "1.800");
@@ -297,10 +299,16 @@ test("management detail layout keeps navigation with date controls and methodolo
     styles,
     /\.management-control select \{[\s\S]*?appearance: none;[\s\S]*?padding-right: 2\.6rem;/,
   );
-  assert.match(html, /AFIR-Datenabdeckung nach Land/);
+  assert.match(html, /Datenabdeckung nach Land/);
   assert.match(html, /id="management-country-coverage-body"/);
+  assert.match(html, /colspan="3"[\s\S]*?scope="colgroup"[\s\S]*?>Auslastung</);
+  assert.match(html, /colspan="2"[\s\S]*?scope="colgroup"[\s\S]*?>Stationen mit Live-Daten</);
+  assert.match(html, /Leistung einzelner Betreiber\./);
+  assert.match(html, /Datenquellen am Berichtstag/);
+  assert.doesNotMatch(html, /Historische Abdeckung, Auslastung, Zuverlässigkeit/);
+  assert.doesNotMatch(script, /provider_reports:\s*Array\.isArray\(providerReport/);
   assert.match(html, /config\.js\?v=20260724-management-window1/);
-  assert.match(html, /management\.mjs\?v=20260725-management-layoutfix1/);
+  assert.match(html, /management\.mjs\?v=20260725-management-tables2/);
   assert.doesNotMatch(script, /confidencePhrase|Hohe Konfidenz|Mittlere Konfidenz|Niedrige Konfidenz/);
   assert.equal(
     (html.match(/<option value="1" selected>1 Tag<\/option>/g) || []).length,
@@ -312,7 +320,8 @@ test("management detail layout keeps navigation with date controls and methodolo
   );
   assert.doesNotMatch(html, /PostgreSQL/);
   assert.doesNotMatch(script, /wird aus PostgreSQL geladen/);
-  assert.match(script, /wird aus Datenbank geladen/);
+  assert.doesNotMatch(script, /wird aus Datenbank geladen/);
+  assert.match(script, /wird geladen/);
 });
 
 test("country overview rows merge dynamic coverage with the selected day report", () => {
@@ -409,6 +418,67 @@ test("country detail KPIs use the same rolling report metrics as the overview", 
   assert.equal(snapshot.summary.measured_static_station_count, 33104);
 });
 
+test("implausible national zero status mixes are shown as unavailable", () => {
+  const finlandSummary = {
+    station_count: 3024,
+    observations_total: 85710,
+    measured_seconds: 1176392298,
+    occupied_seconds: 0,
+    out_of_order_seconds: 0,
+    unavailable_seconds: 0,
+    occupancy_share: 0,
+    day_occupancy_share: 0,
+    night_occupancy_share: 0,
+    out_of_order_share: 0,
+    day_out_of_order_share: 0,
+    night_out_of_order_share: 0,
+    measured_station_coverage: 0.95,
+    static_station_count: 3674,
+    static_charger_count: 19430,
+    measured_static_station_count: 2809,
+    static_stations_without_disruptions: 2809,
+  };
+
+  assert.equal(statusMetricsAreUsable(finlandSummary), false);
+  const cards = buildSummaryCards({ summary: finlandSummary });
+  assert.equal(cards.find((card) => card.label === "Auslastung").value, "–");
+  assert.match(
+    cards.find((card) => card.label === "Störungsanteil").detail,
+    /keine auswertbaren/i,
+  );
+
+  const overviewRows = buildCountryOverviewRows(
+    { countries: [{ country_code: "FI" }] },
+    { rows: [{ country_code: "FI", ...finlandSummary }] },
+  );
+  assert.equal(overviewRows[0].occupancy_share, null);
+  assert.equal(overviewRows[0].out_of_order_share, null);
+  assert.equal(overviewRows[0].stations_without_disruptions, null);
+
+  const operatorRows = buildRollingProviderRows(
+    {
+      group_by: "operator",
+      rows: [
+        {
+          country_code: "FI",
+          operator_name: "Large Network",
+          station_count: 3024,
+          status_change_count: 85710,
+          measured_seconds: 1176392298,
+          occupied_seconds: 0,
+          out_of_order_seconds: 0,
+          unavailable_seconds: 0,
+          occupancy_share: 0,
+          out_of_order_share: 0,
+        },
+      ],
+    },
+    { rows: [] },
+  );
+  assert.equal(operatorRows[0].occupancy_share, null);
+  assert.equal(operatorRows[0].out_of_order_share, null);
+});
+
 test("provider profile series fills all local hours and converts shares to percentages", () => {
   const series = buildProviderProfileSeries({
     rows: [
@@ -465,6 +535,7 @@ test("rolling operator rows support legacy names and require at least 50 station
       rows: [
         { country_code: "DE", operator_name: "Legacy Network", station_count: 50 },
         { country_code: "DE", operator_brand: "Large Network", station_count: 100 },
+        { country_code: "NO", operator_name: "", station_count: 76 },
         { country_code: "DE", operator_name: "Small Network", station_count: 49 },
       ],
     },
@@ -475,6 +546,7 @@ test("rolling operator rows support legacy names and require at least 50 station
     rows.map((row) => [row.operator_brand, row.display_name, row.station_count]),
     [
       ["Large Network", "Large Network", 100],
+      ["Ohne Betreiberangabe", "Ohne Betreiberangabe", 76],
       ["Legacy Network", "Legacy Network", 50],
     ],
   );
@@ -564,6 +636,25 @@ test("buildProviderRows sorts operator reporting by public station count", () =>
     rows.map((row) => row.operator_brand),
     ["IONITY", "ALDI", "Small Operator"],
   );
+});
+
+test("buildDailySourceRows excludes cached operator aggregates", () => {
+  const rows = buildDailySourceRows({
+    provider_reports: [
+      {
+        provider_uid: "no_nobil",
+        display_name: "Nobil",
+        observations_total: 158080,
+      },
+      {
+        operator_brand: "Oslo Kommune",
+        static_station_count: 1006,
+        observations_total: 500,
+      },
+    ],
+  });
+
+  assert.deepEqual(rows.map((row) => row.provider_uid), ["no_nobil"]);
 });
 
 test("buildProviderReportMetrics derives observation density and missing bundle chargers", () => {

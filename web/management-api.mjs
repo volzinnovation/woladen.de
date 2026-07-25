@@ -51,6 +51,37 @@ async function fetchJson(fetchImpl, url) {
   return await response.json();
 }
 
+async function fetchPaginatedRows(fetchImpl, baseUrl, query, pageSize = 1000) {
+  const rows = [];
+  let firstPayload = null;
+  let offset = 0;
+  while (true) {
+    query.set("limit", String(pageSize));
+    query.set("offset", String(offset));
+    const payload = await fetchJson(fetchImpl, `${baseUrl}?${query.toString()}`);
+    firstPayload ||= payload;
+    const pageRows = Array.isArray(payload?.rows) ? payload.rows : [];
+    rows.push(...pageRows);
+    const totalRows = Number(
+      payload?.total_rows ??
+      firstPayload?.total_rows ??
+      firstPayload?.rows?.[0]?.total_rows ??
+      0,
+    );
+    if (
+      pageRows.length < pageSize ||
+      (Number.isFinite(totalRows) && totalRows > 0 && rows.length >= totalRows)
+    ) {
+      break;
+    }
+    offset += pageSize;
+  }
+  return {
+    ...(firstPayload || {}),
+    rows,
+  };
+}
+
 export function createManagementDataSource({
   apiBaseUrl = "",
   staticFallbackEnabled = true,
@@ -282,8 +313,6 @@ export function createManagementDataSource({
       start_date: startDate,
       end_date: endDate,
       group_by: groupBy,
-      limit: "1000",
-      offset: "0",
     });
     if (countryCode) {
       query.set("country_code", countryCode);
@@ -291,7 +320,11 @@ export function createManagementDataSource({
     if (providerUid) {
       query.set("provider_uid", providerUid);
     }
-    return await fetchJson(fetchImpl, `${normalizedApiBaseUrl}/report?${query.toString()}`);
+    return await fetchPaginatedRows(
+      fetchImpl,
+      `${normalizedApiBaseUrl}/report`,
+      query,
+    );
   }
 
   async function loadProviderHealth({

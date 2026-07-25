@@ -9,7 +9,7 @@
     </title>
     <meta
       name="description"
-      content="Länder- und Betreiberberichte für öffentliche Ladenetze auf Basis angebundener AFIR- und Live-Daten."
+      content="Vergleiche öffentliche Ladeinfrastruktur, Auslastung und Störungen in Europa."
     />
     <link rel="canonical" href="https://woladen.de/management.html" />
     <meta property="og:type" content="website" />
@@ -19,7 +19,7 @@
     />
     <meta
       property="og:description"
-      content="Länder- und Betreiberberichte für öffentliche Ladenetze auf Basis angebundener AFIR- und Live-Daten."
+      content="Vergleiche öffentliche Ladeinfrastruktur, Auslastung und Störungen in Europa."
     />
     <meta property="og:url" content="https://woladen.de/management.html" />
     <meta property="og:site_name" content="woladen.de" />
@@ -35,7 +35,7 @@
     />
     <meta
       name="twitter:description"
-      content="Länder- und Betreiberberichte für öffentliche Ladenetze auf Basis angebundener AFIR- und Live-Daten."
+      content="Vergleiche öffentliche Ladeinfrastruktur, Auslastung und Störungen in Europa."
     />
     <meta
       name="twitter:image"
@@ -60,13 +60,13 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260725-management-layout3" />
+    <link rel="stylesheet" href="./styles.css?v=20260725-management-tables2" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
       defer
     ></script>
     <script src="./config.js?v=20260724-management-window1"></script>
-    <script type="module" src="./management.mjs?v=20260725-management-layoutfix1"></script>
+    <script type="module" src="./management.mjs?v=20260725-management-tables2"></script>
   </head>
   <body class="management-page">
     <main class="management-shell">
@@ -77,7 +77,7 @@
         </p>
         <h1 id="management-title">Öffentliche Ladeinfrastruktur in Europa</h1>
         <p id="management-subtitle" class="management-subtitle">
-          Länder vergleichen und die jeweilige Detailauswertung öffnen.
+          Länder vergleichen und Details öffnen.
         </p>
       </header>
 
@@ -191,10 +191,7 @@
           <div class="management-panel-head management-panel-head--split">
             <div>
               <h2 id="management-country-table-title">Top-Länder nach Auslastung</h2>
-              <p>
-                Die Kennzahlen gelten für den gewählten Berichtszeitraum. Ein
-                Land öffnen, um Stationen und Betreiber im Detail zu analysieren.
-              </p>
+              <p>Länder im Vergleich.</p>
             </div>
             <span id="management-country-count" class="management-count-badge"></span>
           </div>
@@ -208,26 +205,43 @@
               data-sort-title-prefix="Top-Länder nach"
             >
               <thead>
-                <tr>
-                  <th class="management-rank-column unsortable" data-sortable="false" aria-label="Rang">#</th>
-                  <th data-sort-type="text">Land</th>
-                  <th data-sort-type="number">Stationen</th>
-                  <th data-sort-type="number">Ladepunkte</th>
+                <tr class="management-table-group-row">
                   <th
-                    data-sort-type="number"
-                    data-sort-label="Auslastung"
-                    data-sort-detail="Gesamt · Tag · Nacht"
-                  >
-                    Auslastung<br />Gesamt · Tag · Nacht
-                  </th>
+                    class="management-rank-column unsortable"
+                    rowspan="2"
+                    data-sort-column="0"
+                    data-sortable="false"
+                    aria-label="Rang"
+                  >#</th>
+                  <th rowspan="2" data-sort-column="1" data-sort-type="text">Land</th>
+                  <th rowspan="2" data-sort-column="2" data-sort-type="number">Stationen</th>
+                  <th rowspan="2" data-sort-column="3" data-sort-type="number">Ladepunkte</th>
                   <th
-                    data-sort-type="number"
-                    data-sort-label="Störungsanteil"
-                    data-sort-detail="Gesamt · Tag · Nacht"
-                  >
-                    Störungsanteil<br />Gesamt · Tag · Nacht
-                  </th>
-                  <th class="unsortable" data-sortable="false"><span class="visually-hidden">Öffnen</span></th>
+                    class="management-table-group-heading unsortable"
+                    colspan="3"
+                    data-sortable="false"
+                    scope="colgroup"
+                  >Auslastung</th>
+                  <th
+                    class="management-table-group-heading unsortable"
+                    colspan="3"
+                    data-sortable="false"
+                    scope="colgroup"
+                  >Störungsanteil</th>
+                  <th
+                    class="unsortable"
+                    rowspan="2"
+                    data-sort-column="10"
+                    data-sortable="false"
+                  ><span class="visually-hidden">Öffnen</span></th>
+                </tr>
+                <tr class="management-table-subhead-row">
+                  <th data-sort-column="4" data-sort-type="number" data-sort-label="Auslastung gesamt">Gesamt</th>
+                  <th data-sort-column="5" data-sort-type="number" data-sort-label="Auslastung am Tag">Tag</th>
+                  <th data-sort-column="6" data-sort-type="number" data-sort-label="Auslastung in der Nacht">Nacht</th>
+                  <th data-sort-column="7" data-sort-type="number" data-sort-label="Störungsanteil gesamt">Gesamt</th>
+                  <th data-sort-column="8" data-sort-type="number" data-sort-label="Störungsanteil am Tag">Tag</th>
+                  <th data-sort-column="9" data-sort-type="number" data-sort-label="Störungsanteil in der Nacht">Nacht</th>
                 </tr>
               </thead>
               <tbody id="management-country-body"></tbody>
@@ -237,12 +251,10 @@
 
         <section class="management-panel management-country-panel management-country-coverage-panel">
           <div class="management-panel-head">
-            <h2>AFIR-Datenabdeckung nach Land</h2>
+            <h2>Datenabdeckung nach Land</h2>
             <p>
-              Öffentliche Bestandszahlen sowie Stationen mit auswertbaren
-              Live-Daten im gewählten Berichtszeitraum. Der Live-Anteil bezieht
-              sich auf öffentliche Stationen; der störungsfreie Anteil auf
-              Stationen mit Live-Daten.
+              Wie viele öffentliche Stationen erfasst sind und für wie viele
+              Live-Daten vorliegen.
             </p>
           </div>
           <div class="management-table-wrap">
@@ -252,39 +264,46 @@
               data-default-sort-direction="ascending"
             >
               <thead>
-                <tr>
-                  <th data-sort-type="text">Land</th>
+                <tr class="management-table-group-row">
+                  <th rowspan="2" data-sort-column="0" data-sort-type="text">Land</th>
                   <th
+                    rowspan="2"
+                    data-sort-column="1"
                     data-sort-type="number"
                     data-sort-label="Öffentliche Ladepunkte"
-                    data-sort-detail="Anzahl"
-                  >
-                    Öffentliche Ladepunkte<br />Anzahl
-                  </th>
+                  >Öffentliche Ladepunkte</th>
                   <th
+                    rowspan="2"
+                    data-sort-column="2"
                     data-sort-type="number"
                     data-sort-label="Öffentliche Ladestationen"
-                    data-sort-detail="Anzahl"
-                  >
-                    Öffentliche Ladestationen<br />Anzahl
-                  </th>
+                  >Öffentliche Ladestationen</th>
                   <th
-                    data-sort-type="number"
-                    data-sort-label="Stationen mit Live-Daten"
-                    data-sort-detail="Anzahl · Anteil"
-                  >
-                    Stationen mit Live-Daten<br />Anzahl · Anteil
-                  </th>
+                    class="management-table-group-heading unsortable"
+                    colspan="2"
+                    data-sortable="false"
+                    scope="colgroup"
+                  >Stationen mit Live-Daten</th>
                   <th
-                    data-sort-type="number"
-                    data-sort-label="Stationen ohne Störung"
-                    data-sort-detail="Anzahl · Anteil"
+                    class="management-table-group-heading unsortable"
+                    colspan="2"
+                    data-sortable="false"
+                    scope="colgroup"
+                  >Stationen ohne Störung</th>
+                  <th
+                    class="unsortable"
+                    rowspan="2"
+                    data-sort-column="7"
+                    data-sortable="false"
                   >
-                    Stationen ohne Störung<br />Anzahl · Anteil
-                  </th>
-                  <th class="unsortable" data-sortable="false">
                     <span class="visually-hidden">Öffnen</span>
                   </th>
+                </tr>
+                <tr class="management-table-subhead-row">
+                  <th data-sort-column="3" data-sort-type="number" data-sort-label="Stationen mit Live-Daten">Anzahl</th>
+                  <th data-sort-column="4" data-sort-type="number" data-sort-label="Anteil mit Live-Daten">Anteil</th>
+                  <th data-sort-column="5" data-sort-type="number" data-sort-label="Stationen ohne Störung">Anzahl</th>
+                  <th data-sort-column="6" data-sort-type="number" data-sort-label="Anteil ohne Störung">Anteil</th>
                 </tr>
               </thead>
               <tbody id="management-country-coverage-body"></tbody>
@@ -444,31 +463,45 @@
         <article id="management-provider-window-panel" class="management-panel">
           <div class="management-panel-head">
             <h2 id="management-provider-window-title">Betreiberleistung über 4 Wochen</h2>
-            <p>
-              Historische Abdeckung, Auslastung, Zuverlässigkeit und
-              Transportfehler je Betreiber aus der Datenbank.
-            </p>
+            <p>Leistung einzelner Betreiber.</p>
           </div>
           <div class="management-table-wrap">
-            <table class="management-table management-sortable">
+            <table
+              class="management-table management-sortable"
+              data-default-sort-column="1"
+              data-default-sort-direction="descending"
+            >
               <thead>
-                <tr>
-                  <th data-sort-type="text">Betreiber</th>
-                  <th data-sort-type="number">Stationen</th>
-                  <th data-sort-type="number">Messtage</th>
+                <tr class="management-table-group-row">
+                  <th rowspan="2" data-sort-column="0" data-sort-type="text">Betreiber</th>
+                  <th rowspan="2" data-sort-column="1" data-sort-type="number">Stationen</th>
+                  <th rowspan="2" data-sort-column="2" data-sort-type="number">Messtage</th>
                   <th
-                    data-sort-type="number"
-                    data-sort-label="Auslastung"
-                  >
-                    Auslastung
-                  </th>
+                    class="management-table-group-heading unsortable"
+                    colspan="3"
+                    data-sortable="false"
+                    scope="colgroup"
+                  >Auslastung</th>
                   <th
+                    class="management-table-group-heading unsortable"
+                    colspan="3"
+                    data-sortable="false"
+                    scope="colgroup"
+                  >Störungsanteil</th>
+                  <th
+                    rowspan="2"
+                    data-sort-column="9"
                     data-sort-type="number"
-                    data-sort-label="Störungsanteil"
-                  >
-                    Störungsanteil
-                  </th>
-                  <th data-sort-type="number">Transportfehler</th>
+                    data-sort-label="Transportfehler"
+                  >Fehler</th>
+                </tr>
+                <tr class="management-table-subhead-row">
+                  <th data-sort-column="3" data-sort-type="number" data-sort-label="Auslastung gesamt">Gesamt</th>
+                  <th data-sort-column="4" data-sort-type="number" data-sort-label="Auslastung am Tag">Tag</th>
+                  <th data-sort-column="5" data-sort-type="number" data-sort-label="Auslastung in der Nacht">Nacht</th>
+                  <th data-sort-column="6" data-sort-type="number" data-sort-label="Störungsanteil gesamt">Gesamt</th>
+                  <th data-sort-column="7" data-sort-type="number" data-sort-label="Störungsanteil am Tag">Tag</th>
+                  <th data-sort-column="8" data-sort-type="number" data-sort-label="Störungsanteil in der Nacht">Nacht</th>
                 </tr>
               </thead>
               <tbody id="provider-window-body"></tbody>
@@ -476,26 +509,23 @@
           </div>
         </article>
 
-        <article class="management-panel">
+        <article id="management-provider-reports-panel" class="management-panel">
           <div class="management-panel-head">
-            <h2>Statusdaten nach Betreiber</h2>
-            <p>
-              Betreiberansicht für extrahierte Live-Statusbeobachtungen,
-              Live-Status-Abdeckung, Push-Verkehr und Polling im Tagesarchiv.
-            </p>
+            <h2>Datenquellen am Berichtstag</h2>
+            <p>Empfangene Meldungen und Abrufe.</p>
           </div>
           <div class="management-table-wrap">
             <table class="management-table management-sortable">
               <thead>
                 <tr>
-                  <th data-sort-type="text">Betreiber</th>
-                  <th data-sort-type="number">Statusbeobachtungen</th>
-                  <th data-sort-type="number">Empfangene AFIR-Meldungen</th>
+                  <th data-sort-type="text">Datenquelle</th>
+                  <th data-sort-type="number">Statuswerte</th>
+                  <th data-sort-type="number">Meldungen</th>
                   <th data-sort-type="number">Ladestationen</th>
                   <th data-sort-type="number">Push</th>
-                  <th data-sort-type="number">Pull</th>
+                  <th data-sort-type="number">Abrufe</th>
                   <th data-sort-type="number">Fehler</th>
-                  <th data-sort-type="number">Datenvolumen</th>
+                  <th data-sort-type="number">Datenmenge</th>
                   <th data-sort-type="date">Letzte Meldung</th>
                 </tr>
               </thead>
