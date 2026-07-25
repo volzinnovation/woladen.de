@@ -178,6 +178,7 @@
     "dataSourcesTitle": "Gegevensbronnen en licenties",
     "loadingSources": "Gegevensbronnen laden...",
     "sourceLoadError": "Gegevensbronnen konden niet worden geladen.",
+    "catalogUpdated": "Catalogus bijgewerkt: {date}{counts}",
     "dataUpdated": "Gegevens bijgewerkt: {date}{counts}",
     "countSuffix": " · {stations} stations · {chargers} laadpunten"
   },

@@ -118,6 +118,7 @@
     "imprintLink": "Otisk",
     "loadingSources": "Načítání zdrojů dat...",
     "sourceLoadError": "Zdroje dat nelze načíst.",
+    "catalogUpdated": "Katalog aktualizován: {date}{counts}",
     "dataUpdated": "Aktualizovaná data: {date}{counts}",
     "countSuffix": "· Stanice {stations} · Nabíjecí body {chargers}"
   },

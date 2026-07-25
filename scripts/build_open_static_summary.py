@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -76,6 +77,40 @@ def _source_display_name(row: sqlite3.Row) -> str:
     return str(row["source_uid"] or "").strip()
 
 
+def _parse_utc_timestamp(value: Any) -> datetime | None:
+    timestamp = str(value or "").strip()
+    if not timestamp:
+        return None
+    normalized = f"{timestamp[:-1]}+00:00" if timestamp.endswith("Z") else timestamp
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _catalog_updated_at(build_metadata: dict[str, Any]) -> str:
+    candidates = [
+        str(build_metadata.get("generated_at") or "").strip(),
+        str(build_metadata.get("catalog_updated_at") or "").strip(),
+    ]
+    patches = build_metadata.get("patches")
+    if isinstance(patches, list):
+        candidates.extend(
+            str(patch.get("patched_at") or "").strip()
+            for patch in patches
+            if isinstance(patch, dict)
+        )
+    dated_candidates = [
+        (parsed, timestamp)
+        for timestamp in candidates
+        if (parsed := _parse_utc_timestamp(timestamp)) is not None
+    ]
+    return max(dated_candidates, default=(None, ""), key=lambda item: item[0])[1]
+
+
 def build_summary(bundle_path: Path) -> dict[str, Any]:
     conn = sqlite3.connect(f"file:{bundle_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
@@ -137,9 +172,15 @@ def build_summary(bundle_path: Path) -> dict[str, Any]:
                 """
             )
         ]
+        bundle_generated_at = str(build_metadata.get("generated_at") or "").strip()
         return {
             "schema_version": 1,
-            "generated_at": build_metadata.get("generated_at") or "",
+            # Keep the original build time for provenance and backwards
+            # compatibility. Catalog contents may have changed through a
+            # documented patch after that immutable base build.
+            "generated_at": bundle_generated_at,
+            "bundle_generated_at": bundle_generated_at,
+            "catalog_updated_at": _catalog_updated_at(build_metadata),
             "bundle": {
                 "kind": build_metadata.get("kind") or "",
                 "schema_version": build_metadata.get("schema_version"),

@@ -118,6 +118,7 @@
     "imprintLink": "Odcisk",
     "loadingSources": "Ładowanie źródeł danych...",
     "sourceLoadError": "Nie udało się wczytać źródeł danych.",
+    "catalogUpdated": "Katalog zaktualizowano: {date}{counts}",
     "dataUpdated": "Dane zaktualizowano: {date}{counts}",
     "countSuffix": "· Stacje {stations} · Punkty ładowania {chargers}"
   },

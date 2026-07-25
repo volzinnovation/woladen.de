@@ -225,6 +225,7 @@
     "dataSourcesTitle": "Datenquellen & Lizenzen",
     "loadingSources": "Lade Datenquellen...",
     "sourceLoadError": "Datenquellen konnten nicht geladen werden.",
+    "catalogUpdated": "Katalog aktualisiert: {date}{counts}",
     "dataUpdated": "Datenstand: {date}{counts}",
     "countSuffix": " · {stations} Stationen · {chargers} Ladepunkte"
   },

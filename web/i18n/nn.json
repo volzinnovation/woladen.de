@@ -118,6 +118,7 @@
     "imprintLink": "Avtrykk",
     "loadingSources": "Laster inn datakilder...",
     "sourceLoadError": "Datakilder kunne ikke lastes.",
+    "catalogUpdated": "Katalog oppdatert: {date}{counts}",
     "dataUpdated": "Data oppdatert: {date}{counts}",
     "countSuffix": "· {stations}-stasjoner · {chargers} ladepunkter"
   },

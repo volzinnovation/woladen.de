@@ -118,6 +118,7 @@
     "imprintLink": "Impressum",
     "loadingSources": "Lueden Datenquellen...",
     "sourceLoadError": "Datequellen konnten net geluede ginn.",
+    "catalogUpdated": "Katalog aktualiséiert: {date}{counts}",
     "dataUpdated": "Donnéeën aktualiséiert: {date}{counts}",
     "countSuffix": "· {stations} Statiounen · {chargers} Opluedstatiounen"
   },

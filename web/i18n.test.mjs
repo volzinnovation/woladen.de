@@ -48,6 +48,25 @@ test("German and Dutch app bundles cover all fallback UI keys", () => {
   }
 });
 
+test("catalog freshness uses the effective catalog timestamp and explicit wording", () => {
+  const appJs = readText(new URL("./app.js", import.meta.url));
+  assert.match(appJs, /openStaticSummaryData\?\.catalog_updated_at/);
+  assert.match(appJs, /info\.catalogUpdated/);
+
+  const fallback = fallbackBundle();
+  assert.equal(fallback.info.catalogUpdated, "Catalog updated: {date}{counts}");
+  const bundleFiles = fs
+    .readdirSync(new URL("./i18n", import.meta.url))
+    .filter((filename) => filename.endsWith(".json"));
+  for (const filename of bundleFiles) {
+    if (filename === "en.json") {
+      continue;
+    }
+    const translation = readBundle(filename.replace(/\.json$/, "")).info?.catalogUpdated;
+    assert.ok(translation?.includes("{date}{counts}"), `${filename} is missing info.catalogUpdated`);
+  }
+});
+
 test("localized route bundles include route action labels", () => {
   const routeActionKeys = [
     "addAllFavorites",

@@ -118,6 +118,7 @@
     "imprintLink": "Imprint",
     "loadingSources": "Tagħbija sorsi tad-dejta...",
     "sourceLoadError": "Sorsi tad-dejta ma setgħux jitgħabbew.",
+    "catalogUpdated": "Katalgu aġġornat: {date}{counts}",
     "dataUpdated": "Dejta aġġornata: {date}{counts}",
     "countSuffix": "· Stazzjonijiet {stations} · Punti tal-iċċarġjar {chargers}"
   },

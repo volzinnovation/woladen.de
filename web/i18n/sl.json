@@ -118,6 +118,7 @@
     "imprintLink": "Odtis",
     "loadingSources": "Nalaganje virov podatkov...",
     "sourceLoadError": "Virov podatkov ni bilo mogoče naložiti.",
+    "catalogUpdated": "Katalog posodobljen: {date}{counts}",
     "dataUpdated": "Podatki posodobljeni: {date}{counts}",
     "countSuffix": "· {stations} postaje · {chargers} polnilna mesta"
   },

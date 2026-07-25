@@ -118,6 +118,7 @@
     "imprintLink": "Nospiedums",
     "loadingSources": "Notiek datu avotu ielāde...",
     "sourceLoadError": "Datu avotus nevarēja ielādēt.",
+    "catalogUpdated": "Katalogs atjaunināts: {date}{counts}",
     "dataUpdated": "Dati atjaunināti: {date}{counts}",
     "countSuffix": "· {stations} stacijas · {chargers} uzlādes punkti"
   },

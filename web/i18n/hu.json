@@ -118,6 +118,7 @@
     "imprintLink": "Impresszum",
     "loadingSources": "Adatforrások betöltése...",
     "sourceLoadError": "Az adatforrásokat nem sikerült betölteni.",
+    "catalogUpdated": "Katalógus frissítve: {date}{counts}",
     "dataUpdated": "Frissített adatok: {date}{counts}",
     "countSuffix": "· {stations} állomások · {chargers} töltőpontok"
   },

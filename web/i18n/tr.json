@@ -118,6 +118,7 @@
     "imprintLink": "Baskı",
     "loadingSources": "Veri kaynakları yükleniyor...",
     "sourceLoadError": "Veri kaynakları yüklenemedi.",
+    "catalogUpdated": "Katalog güncellendi: {date}{counts}",
     "dataUpdated": "Veri güncellendi: {date}{counts}",
     "countSuffix": "· {stations} istasyonları · {chargers} şarj noktaları"
   },

@@ -100,7 +100,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260720-info-settings2";
+} from "./i18n.mjs?v=20260725-catalog-freshness1";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -4142,8 +4142,12 @@ async function loadCatalogStationDetail(stationId) {
 }
 
 function setAppMeta(geoData, summaryData, openStaticSummaryData = null) {
-  const generatedAt =
+  const catalogUpdatedAt =
+    openStaticSummaryData?.catalog_updated_at ||
     openStaticSummaryData?.generated_at ||
+    null;
+  const generatedAt =
+    catalogUpdatedAt ||
     summaryData?.run?.finished_at ||
     geoData?.generated_at ||
     null;
@@ -4158,7 +4162,8 @@ function setAppMeta(geoData, summaryData, openStaticSummaryData = null) {
           chargers: formatInteger(chargerTotal),
         })
       : "";
-    els.meta.textContent = t("info.dataUpdated", { date, counts: countSuffix });
+    const freshnessKey = catalogUpdatedAt ? "info.catalogUpdated" : "info.dataUpdated";
+    els.meta.textContent = t(freshnessKey, { date, counts: countSuffix });
   }
   renderBundleCounts(openStaticSummaryData, summaryData);
   renderMappedCountries(openStaticSummaryData);

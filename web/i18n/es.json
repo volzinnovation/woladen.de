@@ -118,6 +118,7 @@
     "imprintLink": "Pie de imprenta",
     "loadingSources": "Cargando fuentes de datos...",
     "sourceLoadError": "No se pudieron cargar las fuentes de datos.",
+    "catalogUpdated": "Catálogo actualizado: {date}{counts}",
     "dataUpdated": "Datos actualizados: {date}{counts}",
     "countSuffix": "· Estaciones {stations} · Puntos de recarga {chargers}"
   },

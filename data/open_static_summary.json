@@ -6,6 +6,8 @@
     "schema_version": 4,
     "station_count": 316331
   },
+  "bundle_generated_at": "2026-06-26T22:14:56+00:00",
+  "catalog_updated_at": "2026-07-24T20:33:52.141603+00:00",
   "countries": [
     {
       "charger_count": 38771,

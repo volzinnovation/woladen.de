@@ -118,6 +118,7 @@
     "imprintLink": "Jälki",
     "loadingSources": "Ladataan tietolähteitä...",
     "sourceLoadError": "Tietolähteitä ei voitu ladata.",
+    "catalogUpdated": "Luettelo päivitetty: {date}{counts}",
     "dataUpdated": "Tiedot päivitetty: {date}{counts}",
     "countSuffix": "· {stations}-asemat · {chargers}-latauspisteet"
   },

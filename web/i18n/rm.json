@@ -118,6 +118,7 @@
     "imprintLink": "Impressum",
     "loadingSources": "Chargiar funtaunas da datas...",
     "sourceLoadError": "Las funtaunas da datas n’han betg pudì vegnir chargiadas.",
+    "catalogUpdated": "Catalog actualisà: {date}{counts}",
     "dataUpdated": "Datas actualisadas: {date}{counts}",
     "countSuffix": " · {stations} staziuns · {chargers} puncts da chargiar"
   },

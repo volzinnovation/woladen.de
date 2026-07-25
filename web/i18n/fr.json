@@ -118,6 +118,7 @@
     "imprintLink": "Mentions légales",
     "loadingSources": "Chargement des sources de données...",
     "sourceLoadError": "Les sources de données n'ont pas pu être chargées.",
+    "catalogUpdated": "Catalogue mis à jour : {date}{counts}",
     "dataUpdated": "Données mises à jour : {date}{counts}",
     "countSuffix": "· Bornes {stations} · Bornes de recharge {chargers}"
   },

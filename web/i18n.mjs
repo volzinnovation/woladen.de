@@ -298,6 +298,7 @@ const FALLBACK_BUNDLE = {
     dataSourcesTitle: "Data Sources & Licenses",
     loadingSources: "Loading data sources...",
     sourceLoadError: "Data sources could not be loaded.",
+    catalogUpdated: "Catalog updated: {date}{counts}",
     dataUpdated: "Data updated: {date}{counts}",
     countSuffix: " · {stations} stations · {chargers} charging points",
   },
@@ -578,7 +579,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260720-info-settings2`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260725-catalog-freshness1`, import.meta.url));
     if (!response.ok) {
       return {};
     }

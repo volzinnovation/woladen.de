@@ -118,6 +118,7 @@
     "imprintLink": "Įspaudas",
     "loadingSources": "Įkeliami duomenų šaltiniai...",
     "sourceLoadError": "Nepavyko įkelti duomenų šaltinių.",
+    "catalogUpdated": "Katalogas atnaujintas: {date}{counts}",
     "dataUpdated": "Duomenys atnaujinti: {date}{counts}",
     "countSuffix": "· {stations} stotys · {chargers} įkrovimo taškai"
   },

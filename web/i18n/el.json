@@ -118,6 +118,7 @@
     "imprintLink": "Αποτύπωμα",
     "loadingSources": "Φόρτωση πηγών δεδομένων...",
     "sourceLoadError": "Δεν ήταν δυνατή η φόρτωση των πηγών δεδομένων.",
+    "catalogUpdated": "Ενημέρωση καταλόγου: {date}{counts}",
     "dataUpdated": "Ενημερωμένα δεδομένα: {date}{counts}",
     "countSuffix": "· Σταθμοί {stations} · Σημεία φόρτισης {chargers}"
   },

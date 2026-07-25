@@ -118,6 +118,7 @@
     "imprintLink": "Impronta",
     "loadingSources": "Caricamento origini dati...",
     "sourceLoadError": "Impossibile caricare le origini dati.",
+    "catalogUpdated": "Catalogo aggiornato: {date}{counts}",
     "dataUpdated": "Dati aggiornati: {date}{counts}",
     "countSuffix": "· Stazioni {stations} · Punti di ricarica {chargers}"
   },
