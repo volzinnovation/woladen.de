@@ -4422,7 +4422,7 @@ select:focus-visible {
 
 .management-shell {
   box-sizing: border-box;
-  max-width: 1280px;
+  max-width: 1920px;
   margin: 0 auto;
   padding: 2rem 1.2rem 3rem;
 }
@@ -4598,15 +4598,56 @@ select:focus-visible {
 
 .management-kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 0.9rem;
+  align-items: start;
   margin-bottom: 1rem;
+}
+
+.management-kpi-group {
+  grid-column: span 2;
+  min-width: 0;
+}
+
+.management-kpi-group--3 {
+  grid-column: span 4;
+}
+
+.management-kpi-group-head {
+  min-height: 2.6rem;
+  margin: 0 0 0.45rem;
+  padding: 0 0.15rem;
+}
+
+.management-kpi-group-head h2 {
+  margin: 0;
+  color: #42505c;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.management-kpi-group-head p {
+  margin: 0.2rem 0 0;
+  color: #6b7781;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.management-kpi-group-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--management-kpi-columns), minmax(0, 1fr));
+  gap: 0.55rem;
 }
 
 .management-kpi {
   position: relative;
-  padding: 1rem 1.05rem;
-  border-radius: 20px;
+  min-width: 0;
+  min-height: 7.5rem;
+  padding: 0.9rem 0.95rem;
+  border-radius: 18px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(250, 245, 238, 0.96));
   border: 1px solid rgba(19, 32, 41, 0.08);
 }
@@ -4617,8 +4658,9 @@ select:focus-visible {
 }
 
 .management-kpi-label {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 800;
+  line-height: 1.35;
   color: #5a6772;
 }
 
@@ -4677,10 +4719,11 @@ select:focus-visible {
 }
 
 .management-kpi-value {
-  margin-top: 0.4rem;
-  font-size: clamp(1.25rem, 2.2vw, 2rem);
+  margin-top: 0.55rem;
+  font-size: clamp(1.2rem, 2vw, 1.8rem);
   font-weight: 800;
   letter-spacing: -0.04em;
+  white-space: nowrap;
 }
 
 .management-kpi-detail {
@@ -4688,40 +4731,6 @@ select:focus-visible {
   color: #5a6772;
   font-size: 0.82rem;
   line-height: 1.45;
-}
-
-.management-kpi-metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(3.8rem, 1fr));
-  gap: 0.45rem;
-  margin: 0.7rem 0 0;
-  padding-top: 0.65rem;
-  border-top: 1px solid rgba(19, 32, 41, 0.08);
-}
-
-.management-kpi-metrics div {
-  min-width: 0;
-}
-
-.management-kpi-metrics div + div {
-  padding-left: 0.45rem;
-  border-left: 1px solid rgba(19, 32, 41, 0.08);
-}
-
-.management-kpi-metrics dt {
-  color: #73808a;
-  font-size: 0.64rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.management-kpi-metrics dd {
-  margin: 0.15rem 0 0;
-  color: #26343d;
-  font-size: 0.8rem;
-  font-weight: 800;
-  white-space: nowrap;
 }
 
 .management-summary-strip {
@@ -4785,11 +4794,11 @@ select:focus-visible {
 }
 
 .management-country-table {
-  min-width: 1180px;
+  min-width: 1420px;
 }
 
 .management-country-coverage-table {
-  min-width: 1080px;
+  min-width: 1180px;
 }
 
 .management-provider-index-table {
@@ -5038,36 +5047,37 @@ select:focus-visible {
   font-weight: 700;
 }
 
-.provider-sub {
-  margin-top: 0.2rem;
-  color: #74808a;
-  font-size: 0.8rem;
-}
-
-.provider-sub-warning {
-  color: #9a5b18;
-  font-weight: 700;
-}
-
 #management-provider-window-panel .management-table {
-  min-width: 1180px;
+  min-width: 1280px;
   table-layout: fixed;
 }
 
 #management-provider-window-panel .management-table th:first-child,
 #management-provider-window-panel .management-table td:first-child {
-  width: 22%;
+  width: 20%;
 }
 
 #management-provider-window-panel .management-table th:nth-child(2),
-#management-provider-window-panel .management-table td:nth-child(2),
+#management-provider-window-panel .management-table td:nth-child(2) {
+  width: 16%;
+}
+
 #management-provider-window-panel .management-table th:nth-child(3),
 #management-provider-window-panel .management-table td:nth-child(3) {
-  width: 9%;
+  width: 8%;
+}
+
+#management-provider-window-panel .management-table th:nth-child(4),
+#management-provider-window-panel .management-table td:nth-child(4) {
+  width: 8%;
 }
 
 #management-provider-reports-panel .management-table {
-  min-width: 1120px;
+  min-width: 1480px;
+}
+
+.management-station-table {
+  min-width: 980px;
 }
 
 .tier-pill {
@@ -5264,6 +5274,10 @@ select:focus-visible {
 }
 
 @media (max-width: 1100px) {
+  .management-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .management-summary-strip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -5289,6 +5303,15 @@ select:focus-visible {
   .management-grid,
   .management-summary-strip {
     grid-template-columns: 1fr;
+  }
+
+  .management-kpi-group,
+  .management-kpi-group--3 {
+    grid-column: 1 / -1;
+  }
+
+  .management-kpi-group-head {
+    min-height: 0;
   }
 
   .management-summary-item,
@@ -5348,7 +5371,7 @@ select:focus-visible {
   }
 
   .management-page .management-shell {
-    max-width: min(1280px, calc(100vw - 5.5rem - 2.4rem));
+    max-width: min(1920px, calc(100vw - 5.5rem - 2.4rem));
   }
 
   .management-bottom-nav {

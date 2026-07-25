@@ -22,6 +22,7 @@ import {
   normalizeCountryCode,
   normalizeManagementDate,
   normalizeProviderUid,
+  providerDisplayName,
   rankedTableTitle,
   shouldShowOverviewChart,
   snapshotPathForDate,
@@ -150,10 +151,10 @@ test("buildSummaryCards exposes the public-facing station metrics", () => {
   });
 
   assert.equal(cards[0].label, "Stationen im Tagesarchiv");
-  assert.equal(cards[1].value, "870");
+  assert.equal(cards[1].metrics[0].value, "870");
   assert.equal(cards[3].label, "Stationen mit hoher Auslastung");
   assert.equal(cards[4].label, "Empfangene AFIR-Meldungen");
-  assert.equal(cards[4].value, "1.050.176");
+  assert.equal(cards[4].metrics[0].value, "1.050.176");
 });
 
 test("buildSummaryCards exposes delta delivery warning when daily coverage can undercount", () => {
@@ -169,7 +170,7 @@ test("buildSummaryCards exposes delta delivery warning when daily coverage can u
   });
 
   assert.equal(cards[1].label, "Delta-Anbieter ohne Push");
-  assert.equal(cards[1].value, "1");
+  assert.equal(cards[1].metrics[0].value, "1");
 });
 
 test("buildSummaryCards exposes PostgreSQL coverage and reliability metrics", () => {
@@ -198,41 +199,49 @@ test("buildSummaryCards exposes PostgreSQL coverage and reliability metrics", ()
       },
     },
   );
-  assert.equal(cards.length, 8);
+  assert.equal(cards.length, 6);
   assert.deepEqual(
     cards.map((card) => card.label),
     [
-      "Öffentliche Ladepunkte",
-      "Öffentliche Ladestationen",
+      "Öffentliche Infrastruktur",
       "Stationen mit Live-Daten",
       "Stationen ohne Störung",
+      "Am Tagesende",
       "Auslastung",
       "Störungsanteil",
-      "Am Tagesende gestört",
-      "Außer Betrieb",
     ],
   );
-  assert.equal(cards[0].value, "188.200");
-  assert.equal(cards[1].value, "72.155");
-  assert.equal(cards[2].value, "34.700");
-  assert.match(cards[2].metrics[0].value, /48,1 %/);
-  assert.equal(cards[3].value, "25.500");
+  assert.deepEqual(
+    cards[0].metrics.map((metric) => [metric.label, metric.value]),
+    [
+      ["Ladepunkte", "188.200"],
+      ["Ladestationen", "72.155"],
+    ],
+  );
+  assert.equal(cards[1].metrics[0].value, "34.700");
+  assert.match(cards[1].metrics[1].value, /48,1 %/);
+  assert.equal(cards[2].metrics[0].value, "25.500");
   assert.deepEqual(
     cards[4].metrics.map((metric) => metric.label),
-    ["Tag", "Nacht"],
+    ["Gesamt", "Tag", "Nacht"],
   );
   assert.deepEqual(
     cards[4].metrics.map((metric) => metric.value),
-    ["11,0 %", "8,0 %"],
+    ["9,6 %", "11,0 %", "8,0 %"],
   );
   assert.deepEqual(
     cards[5].metrics.map((metric) => metric.value),
-    ["6,5 %", "8,3 %"],
+    ["7,4 %", "6,5 %", "8,3 %"],
   );
-  assert.equal(cards[6].value, "3.600");
-  assert.equal(cards[7].value, "1.800");
+  assert.deepEqual(
+    cards[3].metrics.map((metric) => metric.value),
+    ["3.600", "1.800"],
+  );
   assert.equal(cards[0].detail, undefined);
-  assert.deepEqual(cards.map((card) => card.reference), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.deepEqual(cards[0].metrics.map((metric) => metric.reference), [1, 2]);
+  assert.deepEqual(cards.slice(1, 3).map((card) => card.reference), [3, 4]);
+  assert.deepEqual(cards[3].metrics.map((metric) => metric.reference), [7, 8]);
+  assert.deepEqual(cards.slice(4).map((card) => card.reference), [5, 6]);
 });
 
 test("staticCatalogCountsForCountry reads the country catalog baseline", () => {
@@ -303,12 +312,15 @@ test("management detail layout keeps navigation with date controls and methodolo
   assert.match(html, /id="management-country-coverage-body"/);
   assert.match(html, /colspan="3"[\s\S]*?scope="colgroup"[\s\S]*?>Auslastung</);
   assert.match(html, /colspan="2"[\s\S]*?scope="colgroup"[\s\S]*?>Stationen mit Live-Daten</);
-  assert.match(html, /Leistung einzelner Betreiber\./);
+  assert.match(html, /Leistung einzelner Anbieter\./);
+  assert.doesNotMatch(html, />Betreiber</);
   assert.match(html, /Datenquellen am Berichtstag/);
+  assert.match(html, />Datenumfang</);
+  assert.match(html, />Übertragung</);
   assert.doesNotMatch(html, /Historische Abdeckung, Auslastung, Zuverlässigkeit/);
   assert.doesNotMatch(script, /provider_reports:\s*Array\.isArray\(providerReport/);
   assert.match(html, /config\.js\?v=20260724-management-window1/);
-  assert.match(html, /management\.mjs\?v=20260725-management-tables2/);
+  assert.match(html, /management\.mjs\?v=20260726-management-columns/);
   assert.doesNotMatch(script, /confidencePhrase|Hohe Konfidenz|Mittlere Konfidenz|Niedrige Konfidenz/);
   assert.equal(
     (html.match(/<option value="1" selected>1 Tag<\/option>/g) || []).length,
@@ -441,7 +453,10 @@ test("implausible national zero status mixes are shown as unavailable", () => {
 
   assert.equal(statusMetricsAreUsable(finlandSummary), false);
   const cards = buildSummaryCards({ summary: finlandSummary });
-  assert.equal(cards.find((card) => card.label === "Auslastung").value, "–");
+  assert.equal(
+    cards.find((card) => card.label === "Auslastung").metrics[0].value,
+    "–",
+  );
   assert.match(
     cards.find((card) => card.label === "Störungsanteil").detail,
     /keine auswertbaren/i,
@@ -525,7 +540,7 @@ test("rolling provider rows join transport health and sort by station coverage",
   assert.equal(rows[0].transport_failure_count, 5);
   assert.equal(rows[1].operator_brand, "STROOHM");
   assert.equal(rows[1].display_name, "STROOHM");
-  assert.equal(rows[1].publisher, "Datenquellen: be_monta");
+  assert.equal(rows[1].publisher, "be_monta");
 });
 
 test("rolling operator rows support legacy names and require at least 50 stations", () => {
@@ -546,10 +561,28 @@ test("rolling operator rows support legacy names and require at least 50 station
     rows.map((row) => [row.operator_brand, row.display_name, row.station_count]),
     [
       ["Large Network", "Large Network", 100],
-      ["Ohne Betreiberangabe", "Ohne Betreiberangabe", 76],
+      ["Unbekannt", "Unbekannt", 76],
       ["Legacy Network", "Legacy Network", 50],
     ],
   );
+});
+
+test("provider names never render blank and technical source ids are readable", () => {
+  assert.equal(
+    providerDisplayName({ operator_name: "" }, { operatorMode: true }),
+    "Unbekannt",
+  );
+  assert.equal(
+    providerDisplayName(
+      {
+        provider_uid: "se_nobil",
+        display_name: "se_nobil",
+        publisher: "se_nobil_realtime",
+      },
+    ),
+    "SE NOBIL Echtzeit",
+  );
+  assert.equal(providerDisplayName({}), "Datenquelle nicht angegeben");
 });
 
 test("buildStationRows sorts broken and busy station tables for the public page", () => {
