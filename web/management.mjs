@@ -202,16 +202,6 @@ function confidenceLabel(value) {
   );
 }
 
-function confidencePhrase(value) {
-  return (
-    {
-      high: "Hohe Konfidenz",
-      medium: "Mittlere Konfidenz",
-      low: "Niedrige Konfidenz",
-    }[String(value || "").toLowerCase()] || "Konfidenz nicht bewertet"
-  );
-}
-
 export function buildProviderReportMetrics(row) {
   const receivedMessagesTotal = firstNumber(row?.received_messages_total, row?.messages_total) ?? 0;
   const observationsTotal = firstNumber(row?.observations_total) ?? 0;
@@ -595,6 +585,7 @@ export function mergeRollingCountrySummary(snapshot, reportPayload, countryCode)
 export function buildRollingProviderRows(reportPayload, healthPayload) {
   const reportRows = Array.isArray(reportPayload?.rows) ? reportPayload.rows : [];
   const healthRows = Array.isArray(healthPayload?.rows) ? healthPayload.rows : [];
+  const operatorMode = reportPayload?.group_by === "operator";
   const healthByProvider = new Map(
     healthRows.map((row) => [
       `${normalizeCountryCode(row?.country_code)}\u0000${String(row?.provider_uid || "")}`,
@@ -602,8 +593,9 @@ export function buildRollingProviderRows(reportPayload, healthPayload) {
     ]),
   );
   return reportRows
+    .filter((row) => !operatorMode || Number(row?.station_count || 0) >= 50)
     .map((row) => {
-      const operatorBrand = String(row?.operator_brand || "").trim();
+      const operatorBrand = String(row?.operator_brand || row?.operator_name || "").trim();
       const sourceProviderUids = Array.isArray(row?.source_provider_uids)
         ? row.source_provider_uids.map((value) => String(value || "").trim()).filter(Boolean)
         : [];
@@ -613,6 +605,7 @@ export function buildRollingProviderRows(reportPayload, healthPayload) {
         ) || {};
       return {
         ...row,
+        operator_brand: operatorBrand,
         display_name:
           operatorBrand ||
           String(row?.display_name || "").trim() ||
@@ -1435,7 +1428,7 @@ function renderRollingProviderReports(
       !row.source_provider_uids.every((providerUid) => publisherText.includes(providerUid))
         ? `Quellen: ${row.source_provider_uids.join(", ")}`
         : row.provider_uid || "";
-    const providerMeta = [publisherText, sourceProviderText, confidencePhrase(row.confidence_label)]
+    const providerMeta = [publisherText, sourceProviderText]
       .filter(Boolean)
       .join(" · ");
     const canLinkProvider = linkProviders && row.provider_uid && !row.operator_brand;

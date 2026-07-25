@@ -284,6 +284,8 @@ test("management detail layout keeps navigation with date controls and methodolo
   assert.match(html, /AFIR-Datenabdeckung nach Land/);
   assert.match(html, /id="management-country-coverage-body"/);
   assert.match(html, /config\.js\?v=20260724-management-window1/);
+  assert.match(html, /management\.mjs\?v=20260725-management-operators1/);
+  assert.doesNotMatch(script, /confidencePhrase|Hohe Konfidenz|Mittlere Konfidenz|Niedrige Konfidenz/);
   assert.equal(
     (html.match(/<option value="1" selected>1 Tag<\/option>/g) || []).length,
     2,
@@ -438,6 +440,28 @@ test("rolling provider rows join transport health and sort by station coverage",
   assert.equal(rows[1].operator_brand, "STROOHM");
   assert.equal(rows[1].display_name, "STROOHM");
   assert.equal(rows[1].publisher, "Datenquellen: be_monta");
+});
+
+test("rolling operator rows support legacy names and require at least 50 stations", () => {
+  const rows = buildRollingProviderRows(
+    {
+      group_by: "operator",
+      rows: [
+        { country_code: "DE", operator_name: "Legacy Network", station_count: 50 },
+        { country_code: "DE", operator_brand: "Large Network", station_count: 100 },
+        { country_code: "DE", operator_name: "Small Network", station_count: 49 },
+      ],
+    },
+    { rows: [] },
+  );
+
+  assert.deepEqual(
+    rows.map((row) => [row.operator_brand, row.display_name, row.station_count]),
+    [
+      ["Large Network", "Large Network", 100],
+      ["Legacy Network", "Legacy Network", 50],
+    ],
+  );
 });
 
 test("buildStationRows sorts broken and busy station tables for the public page", () => {
