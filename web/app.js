@@ -90,6 +90,10 @@ import {
   serializeStoredNotes,
 } from "./note.mjs";
 import {
+  parseEmbeddedStationDetailPayload,
+  staticStationPagePath,
+} from "./station-detail.mjs?v=20260726-station-deeplink1";
+import {
   applyDocumentTranslations,
   formatDate,
   formatDateTime,
@@ -3519,6 +3523,33 @@ async function fetchJsonWithTimeout(url, options = {}, timeoutMs = LIVE_API_TIME
   }
 }
 
+async function fetchTextWithTimeout(url, options = {}, timeoutMs = LIVE_API_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(createTimeoutError(timeoutMs)), timeoutMs);
+  try {
+    const requestHeaders = {
+      Accept: "text/html",
+      ...(options.headers || {}),
+    };
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: requestHeaders,
+    });
+    if (!response.ok) {
+      throw new HttpApiError(response.status);
+    }
+    return await response.text();
+  } catch (err) {
+    if (controller.signal.aborted && controller.signal.reason) {
+      throw controller.signal.reason;
+    }
+    throw err;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
 function upsertLiveStationSummaries(stations, missingStationIds = []) {
   const affectedStationIds = new Set();
 
@@ -4003,8 +4034,24 @@ function catalogDetailLookupIds(stationId) {
   return Array.from(new Set(ids.filter(Boolean)));
 }
 
-async function fetchCatalogStationDetailPayload(stationId) {
+async function fetchStaticStationDetailPayload(stationId) {
+  const html = await fetchTextWithTimeout(
+    getStationPagePath({ station_id: stationId }),
+    {},
+    CATALOG_DETAIL_TIMEOUT_MS,
+  );
+  return parseEmbeddedStationDetailPayload(html);
+}
+
+async function fetchCatalogStationDetailPayload(stationId, { preferStatic = false } = {}) {
   let lastError = null;
+  if (preferStatic) {
+    try {
+      return await fetchStaticStationDetailPayload(stationId);
+    } catch (err) {
+      lastError = err;
+    }
+  }
   for (const lookupId of catalogDetailLookupIds(stationId)) {
     try {
       return await fetchJsonWithTimeout(
@@ -4016,7 +4063,17 @@ async function fetchCatalogStationDetailPayload(stationId) {
       lastError = err;
     }
   }
-  throw lastError || new Error("catalog_station_detail_failed");
+  if (preferStatic) {
+    throw lastError || new Error("catalog_station_detail_failed");
+  }
+  try {
+    return await fetchStaticStationDetailPayload(stationId);
+  } catch (staticError) {
+    if (lastError && !staticError.cause) {
+      staticError.cause = lastError;
+    }
+    throw staticError;
+  }
 }
 
 function applyCatalogStationDetailToFeature(feature, payload) {
@@ -4101,7 +4158,9 @@ async function loadCatalogStationDetail(stationId) {
 
   state.catalog.pendingDetailStationIds.add(normalizedStationId);
   try {
-    const payload = await fetchCatalogStationDetailPayload(normalizedStationId);
+    const payload = await fetchCatalogStationDetailPayload(normalizedStationId, {
+      preferStatic: !findFeatureByStationId(normalizedStationId),
+    });
     if (!payload || typeof payload !== "object" || !payload.station) {
       throw new Error("Unexpected catalog station detail payload");
     }
@@ -7373,22 +7432,11 @@ function getStationPagePath(props) {
   if (!stationId) {
     return "./";
   }
-  return `./station/${encodeStationPageId(stationId)}.html`;
+  return staticStationPagePath(stationId);
 }
 
 function encodeStationIdValue(value) {
   return encodeURIComponent(String(value || "").trim()).replace(/%3A/gi, ":");
-}
-
-function encodeStationPageId(value) {
-  const stationId = normalizeStationId(value);
-  const separatorIndex = stationId.indexOf(":");
-  if (separatorIndex > 0) {
-    const namespace = stationId.slice(0, separatorIndex);
-    const localId = stationId.slice(separatorIndex + 1);
-    return `${encodeURIComponent(namespace)}/${encodeURIComponent(localId)}`;
-  }
-  return encodeURIComponent(stationId);
 }
 
 function normalizeStationId(value) {

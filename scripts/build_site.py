@@ -1179,6 +1179,10 @@ def station_page_path(station_id: str) -> str:
     return f"station/{quote(public_id, safe='')}.html"
 
 
+def station_page_url_path(station_id: str) -> str:
+    return quote(station_page_path(station_id), safe="/")
+
+
 def station_query_url(station_id: str) -> str:
     return f"/?station={quote(public_station_id(station_id), safe=':')}"
 
@@ -2596,6 +2600,64 @@ def build_station_description(properties: dict[str, object]) -> str:
     )
 
 
+def station_detail_payload(feature: dict[str, object]) -> dict[str, object]:
+    geometry = feature.get("geometry")
+    coordinates = geometry.get("coordinates") if isinstance(geometry, dict) else None
+    if not isinstance(coordinates, list):
+        coordinates = [0.0, 0.0]
+    properties = feature.get("properties")
+    if not isinstance(properties, dict):
+        properties = {}
+    amenity_category_counts = {
+        key.removeprefix("amenity_"): value
+        for key, value in properties.items()
+        if key.startswith("amenity_")
+        and key != "amenity_examples"
+        and isinstance(value, (int, float))
+    }
+    return {
+        "schema_version": "station-static-detail-v1",
+        "station": {
+            "station_id": public_station_id(properties.get("station_id")),
+            "country_code": str(properties.get("country_code") or "").strip().upper(),
+            "operator_name": str(properties.get("operator") or "").strip(),
+            "station_name": str(properties.get("station_name") or "").strip(),
+            "address": str(properties.get("address") or "").strip(),
+            "postal_code": str(properties.get("postcode") or "").strip(),
+            "city": str(properties.get("city") or "").strip(),
+            "latitude": coordinates[1] if len(coordinates) > 1 else 0.0,
+            "longitude": coordinates[0] if coordinates else 0.0,
+            "charger_count": to_int(properties.get("charging_points_count"), default=1),
+            "connector_count": to_int(properties.get("connector_count"), default=0),
+            "max_power_kw": properties.get("max_power_kw"),
+            "connector_types": str(properties.get("connector_types_display") or "").strip(),
+            "payment_methods": str(properties.get("payment_methods_display") or "").strip(),
+            "auth_methods": str(properties.get("auth_methods_display") or "").strip(),
+            "opening_hours": str(properties.get("opening_hours_display") or "").strip(),
+            "green_energy": properties.get("green_energy"),
+            "helpdesk_phone": str(properties.get("helpdesk_phone") or "").strip(),
+            "price_display": str(properties.get("price_display") or "").strip(),
+            "amenities_total": to_int(properties.get("amenities_total"), default=0),
+            "amenity_examples": properties.get("amenity_examples") or [],
+            "amenity_category_counts": amenity_category_counts,
+            "source_uid": str(properties.get("detail_source_name") or "").strip(),
+            "source_url": str(properties.get("detail_source_url") or "").strip(),
+            "detail_last_updated": str(properties.get("detail_last_updated") or "").strip(),
+            "source_station_id": str(properties.get("source_station_id") or "").strip(),
+        },
+    }
+
+
+def render_station_detail_payload(feature: dict[str, object]) -> str:
+    payload = sanitize_json_value(station_detail_payload(feature))
+    return (
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
+
+
 def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
     geometry = feature.get("geometry")
     if not isinstance(geometry, dict):
@@ -2627,7 +2689,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
     social_image_url = absolute_url(SOCIAL_IMAGE_PATH)
 
     page_path = station_page_path(station_id)
-    canonical_url = absolute_url(page_path)
+    canonical_url = absolute_url(station_page_url_path(station_id))
     app_url = station_query_url(station_id)
     google_maps_url = f"https://www.google.com/maps/dir/?api=1&destination={lat},{lon}"
     amenity_items = render_amenity_items(properties)
@@ -2655,6 +2717,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
     )
     price_chip = str(properties.get("price_display") or "").strip()
     opening_hours_chip = format_opening_hours_display(properties.get("opening_hours_display"))
+    embedded_station_detail = render_station_detail_payload(feature)
 
     page_html = f"""<!doctype html>
 <html lang="en">
@@ -2685,6 +2748,7 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260411" />
     <link rel="apple-touch-icon" sizes="180x180" href="/img/touch-icon.png?v=20260411" />
     <link rel="stylesheet" href="/styles.css" />
+    <script id="station-detail-data" type="application/json">{embedded_station_detail}</script>
   </head>
   <body class="station-page">
     <main class="station-shell">
@@ -2747,7 +2811,7 @@ def write_station_pages() -> list[str]:
         target = SITE_DIR / page_path
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(page_html, encoding="utf-8")
-        page_paths.append(page_path)
+        page_paths.append(station_page_url_path(station_id))
     return page_paths
 
 

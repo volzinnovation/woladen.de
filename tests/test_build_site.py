@@ -36,6 +36,44 @@ def test_station_page_path_uses_cross_platform_namespace_directory():
 def test_station_page_path_preserves_non_de_country_namespace():
     assert build_site.public_station_id("at:econtrol:at-002") == "AT:econtrol:at-002"
     assert build_site.station_page_path("at:econtrol:at-002") == "station/AT/econtrol%3Aat-002.html"
+    assert build_site.station_page_url_path("at:econtrol:at-002") == (
+        "station/AT/econtrol%253Aat-002.html"
+    )
+
+
+def test_station_page_embeds_static_detail_fallback():
+    feature = {
+        "type": "Feature",
+        "geometry": {"type": "Point", "coordinates": [4.73002, 51.192409]},
+        "properties": {
+            "station_id": "be:be_road:station-1",
+            "country_code": "BE",
+            "operator": "Road & Partner <BE>",
+            "address": "Neerveld 11",
+            "postcode": "2280",
+            "city": "Grobbendonk",
+            "max_power_kw": 11.04,
+            "charging_points_count": 1,
+            "connector_count": 1,
+            "amenities_total": 0,
+            "amenity_examples": [],
+            "detail_source_name": "BE Road",
+        },
+    }
+
+    _, page_html = build_site.build_station_page(feature)
+    embedded = page_html.split(
+        '<script id="station-detail-data" type="application/json">',
+        1,
+    )[1].split("</script>", 1)[0]
+    payload = json.loads(embedded)
+
+    assert payload["schema_version"] == "station-static-detail-v1"
+    assert payload["station"]["station_id"] == "BE:be_road:station-1"
+    assert payload["station"]["operator_name"] == "Road & Partner <BE>"
+    assert payload["station"]["latitude"] == 51.192409
+    assert payload["station"]["longitude"] == 4.73002
+    assert "</script>" not in embedded
 
 
 def test_public_bundle_value_projects_station_ids_and_urls_only():
