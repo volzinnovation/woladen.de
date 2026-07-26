@@ -60,13 +60,13 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260726-management-columns" />
+    <link rel="stylesheet" href="./styles.css?v=20260726-management-prune-empty-columns" />
     <script
       src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
       defer
     ></script>
     <script src="./config.js?v=20260724-management-window1"></script>
-    <script type="module" src="./management.mjs?v=20260726-management-columns"></script>
+    <script type="module" src="./management.mjs?v=20260726-management-provider-window"></script>
   </head>
   <body class="management-page">
     <main class="management-shell">
@@ -428,8 +428,6 @@
               <thead>
                 <tr>
                   <th data-sort-type="text">Ladestation</th>
-                  <th data-sort-type="text">Anbieter</th>
-                  <th data-sort-type="text">Ort</th>
                   <th data-sort-type="number">Betroffene Ladepunkte</th>
                   <th data-sort-type="number">Aktuell gestört</th>
                   <th data-sort-type="number">Störungsanteil</th>
@@ -454,8 +452,6 @@
               <thead>
                 <tr>
                   <th data-sort-type="text">Ladestation</th>
-                  <th data-sort-type="text">Anbieter</th>
-                  <th data-sort-type="text">Ort</th>
                   <th data-sort-type="number">Ladepunkte</th>
                   <th data-sort-type="number">Auslastung (Tag)</th>
                   <th data-sort-type="number">Belegte Zeit</th>
@@ -469,21 +465,20 @@
 
         <article id="management-provider-window-panel" class="management-panel">
           <div class="management-panel-head">
-            <h2 id="management-provider-window-title">Anbieterleistung über 4 Wochen</h2>
+            <h2 id="management-provider-window-title">Anbieterleistung</h2>
             <p>Leistung einzelner Anbieter.</p>
           </div>
           <div class="management-table-wrap">
             <table
               class="management-table management-sortable"
-              data-default-sort-column="2"
+              data-default-sort-column="1"
               data-default-sort-direction="descending"
             >
               <thead>
                 <tr class="management-table-group-row">
                   <th rowspan="2" data-sort-column="0" data-sort-type="text">Anbieter</th>
-                  <th rowspan="2" data-sort-column="1" data-sort-type="text">Datenquelle</th>
-                  <th rowspan="2" data-sort-column="2" data-sort-type="number">Stationen</th>
-                  <th rowspan="2" data-sort-column="3" data-sort-type="number">Messtage</th>
+                  <th rowspan="2" data-sort-column="1" data-sort-type="number">Stationen</th>
+                  <th rowspan="2" data-sort-column="2" data-sort-type="number">Messtage</th>
                   <th
                     class="management-table-group-heading unsortable"
                     colspan="3"
@@ -498,18 +493,18 @@
                   >Störungsanteil</th>
                   <th
                     rowspan="2"
-                    data-sort-column="10"
+                    data-sort-column="9"
                     data-sort-type="number"
                     data-sort-label="Transportfehler"
                   >Fehler</th>
                 </tr>
                 <tr class="management-table-subhead-row">
-                  <th data-sort-column="4" data-sort-type="number" data-sort-label="Auslastung gesamt">Gesamt</th>
-                  <th data-sort-column="5" data-sort-type="number" data-sort-label="Auslastung am Tag">Tag</th>
-                  <th data-sort-column="6" data-sort-type="number" data-sort-label="Auslastung in der Nacht">Nacht</th>
-                  <th data-sort-column="7" data-sort-type="number" data-sort-label="Störungsanteil gesamt">Gesamt</th>
-                  <th data-sort-column="8" data-sort-type="number" data-sort-label="Störungsanteil am Tag">Tag</th>
-                  <th data-sort-column="9" data-sort-type="number" data-sort-label="Störungsanteil in der Nacht">Nacht</th>
+                  <th data-sort-column="3" data-sort-type="number" data-sort-label="Auslastung gesamt">Gesamt</th>
+                  <th data-sort-column="4" data-sort-type="number" data-sort-label="Auslastung am Tag">Tag</th>
+                  <th data-sort-column="5" data-sort-type="number" data-sort-label="Auslastung in der Nacht">Nacht</th>
+                  <th data-sort-column="6" data-sort-type="number" data-sort-label="Störungsanteil gesamt">Gesamt</th>
+                  <th data-sort-column="7" data-sort-type="number" data-sort-label="Störungsanteil am Tag">Tag</th>
+                  <th data-sort-column="8" data-sort-type="number" data-sort-label="Störungsanteil in der Nacht">Nacht</th>
                 </tr>
               </thead>
               <tbody id="provider-window-body"></tbody>
@@ -527,7 +522,6 @@
               <thead>
                 <tr class="management-table-group-row">
                   <th rowspan="2" data-sort-column="0" data-sort-type="text">Datenquelle</th>
-                  <th rowspan="2" data-sort-column="1" data-sort-type="text">Herausgeber</th>
                   <th
                     class="management-table-group-heading unsortable"
                     colspan="3"
@@ -540,17 +534,17 @@
                     data-sortable="false"
                     scope="colgroup"
                   >Übertragung</th>
-                  <th rowspan="2" data-sort-column="9" data-sort-type="date">Letzte Meldung</th>
-                  <th rowspan="2" data-sort-column="10" data-sort-type="text">Hinweis</th>
+                  <th rowspan="2" data-sort-column="8" data-sort-type="date">Letzte Meldung</th>
+                  <th rowspan="2" data-sort-column="9" data-sort-type="text">Hinweis</th>
                 </tr>
                 <tr class="management-table-subhead-row">
-                  <th data-sort-column="2" data-sort-type="number">Statuswerte</th>
-                  <th data-sort-column="3" data-sort-type="number">Meldungen</th>
-                  <th data-sort-column="4" data-sort-type="number">Ladestationen</th>
-                  <th data-sort-column="5" data-sort-type="number">Push</th>
-                  <th data-sort-column="6" data-sort-type="number">Abrufe</th>
-                  <th data-sort-column="7" data-sort-type="number">Fehler</th>
-                  <th data-sort-column="8" data-sort-type="number">Datenmenge</th>
+                  <th data-sort-column="1" data-sort-type="number">Statuswerte</th>
+                  <th data-sort-column="2" data-sort-type="number">Meldungen</th>
+                  <th data-sort-column="3" data-sort-type="number">Ladestationen</th>
+                  <th data-sort-column="4" data-sort-type="number">Push</th>
+                  <th data-sort-column="5" data-sort-type="number">Abrufe</th>
+                  <th data-sort-column="6" data-sort-type="number">Fehler</th>
+                  <th data-sort-column="7" data-sort-type="number">Datenmenge</th>
                 </tr>
               </thead>
               <tbody id="provider-reports-body"></tbody>

@@ -273,6 +273,8 @@ test("management tables use window wording and omit removed classification colum
   )?.[0];
 
   assert.ok(providerWindowTable);
+  assert.match(providerWindowTable, /<h2 id="management-provider-window-title">Anbieterleistung<\/h2>/);
+  assert.doesNotMatch(providerWindowTable, /Anbieterleistung über/);
   assert.doesNotMatch(providerWindowTable, />Einordnung</);
   assert.ok(brokenStationsTable);
   assert.doesNotMatch(brokenStationsTable, />Status</);
@@ -320,7 +322,34 @@ test("management detail layout keeps navigation with date controls and methodolo
   assert.doesNotMatch(html, /Historische Abdeckung, Auslastung, Zuverlässigkeit/);
   assert.doesNotMatch(script, /provider_reports:\s*Array\.isArray\(providerReport/);
   assert.match(html, /config\.js\?v=20260724-management-window1/);
-  assert.match(html, /management\.mjs\?v=20260726-management-columns/);
+  assert.match(html, /management\.mjs\?v=20260726-management-provider-window/);
+  const brokenStationTable = html.match(
+    /<h2>Ladestationen mit den meisten Störungen<\/h2>[\s\S]*?<\/table>/,
+  )?.[0];
+  const busyStationTable = html.match(
+    /<h2>Ladestationen mit hoher Auslastung<\/h2>[\s\S]*?<\/table>/,
+  )?.[0];
+  const providerWindowTable = html.match(
+    /<article id="management-provider-window-panel"[\s\S]*?<\/table>/,
+  )?.[0];
+  const providerReportsTable = html.match(
+    /<article id="management-provider-reports-panel"[\s\S]*?<\/table>/,
+  )?.[0];
+  assert.ok(brokenStationTable);
+  assert.ok(busyStationTable);
+  assert.ok(providerWindowTable);
+  assert.ok(providerReportsTable);
+  assert.doesNotMatch(brokenStationTable, />Anbieter</);
+  assert.doesNotMatch(brokenStationTable, />Ort</);
+  assert.doesNotMatch(busyStationTable, />Anbieter</);
+  assert.doesNotMatch(busyStationTable, />Ort</);
+  assert.doesNotMatch(providerWindowTable, />Datenquelle</);
+  assert.match(providerReportsTable, />Datenquelle</);
+  assert.doesNotMatch(providerReportsTable, />Herausgeber</);
+  assert.match(
+    styles,
+    /\.management-kpi \{[\s\S]*?align-items: center;[\s\S]*?justify-content: center;[\s\S]*?text-align: center;/,
+  );
   assert.doesNotMatch(script, /confidencePhrase|Hohe Konfidenz|Mittlere Konfidenz|Niedrige Konfidenz/);
   assert.equal(
     (html.match(/<option value="1" selected>1 Tag<\/option>/g) || []).length,

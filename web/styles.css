@@ -4644,12 +4644,17 @@ select:focus-visible {
 
 .management-kpi {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
   min-height: 7.5rem;
   padding: 0.9rem 0.95rem;
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(250, 245, 238, 0.96));
   border: 1px solid rgba(19, 32, 41, 0.08);
+  text-align: center;
 }
 
 .management-kpi:hover,
@@ -5048,18 +5053,18 @@ select:focus-visible {
 }
 
 #management-provider-window-panel .management-table {
-  min-width: 1280px;
+  min-width: 1120px;
   table-layout: fixed;
 }
 
 #management-provider-window-panel .management-table th:first-child,
 #management-provider-window-panel .management-table td:first-child {
-  width: 20%;
+  width: 24%;
 }
 
 #management-provider-window-panel .management-table th:nth-child(2),
 #management-provider-window-panel .management-table td:nth-child(2) {
-  width: 16%;
+  width: 8%;
 }
 
 #management-provider-window-panel .management-table th:nth-child(3),
@@ -5067,17 +5072,12 @@ select:focus-visible {
   width: 8%;
 }
 
-#management-provider-window-panel .management-table th:nth-child(4),
-#management-provider-window-panel .management-table td:nth-child(4) {
-  width: 8%;
-}
-
 #management-provider-reports-panel .management-table {
-  min-width: 1480px;
+  min-width: 1320px;
 }
 
 .management-station-table {
-  min-width: 980px;
+  min-width: 820px;
 }
 
 .tier-pill {

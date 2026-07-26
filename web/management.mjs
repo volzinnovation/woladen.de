@@ -1617,11 +1617,11 @@ function renderBrokenStations(snapshot, windowDays) {
     `Top 10 der Ladestationen mit den meisten Störungen über ${windowLabel(windowDays)}.`;
   tbody.innerHTML = "";
   if (!statusMetricsAvailable) {
-    tbody.innerHTML = '<tr><td colspan="7">Belegung und Störungen sind für diese Quelle derzeit nicht auswertbar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5">Belegung und Störungen sind für diese Quelle derzeit nicht auswertbar.</td></tr>';
     return;
   }
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7">Für diesen Berichtszeitraum wurden keine gestörten Stationen erkannt.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5">Für diesen Berichtszeitraum wurden keine gestörten Stationen erkannt.</td></tr>';
     return;
   }
   for (const row of rows) {
@@ -1632,8 +1632,6 @@ function renderBrokenStations(snapshot, windowDays) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${stationCell}</td>
-      <td data-sort-value="${escapeAttribute(row.operator || "")}">${escapeHtml(String(row.operator || "").trim() || "–")}</td>
-      <td data-sort-value="${escapeAttribute(row.city || "")}">${escapeHtml(String(row.city || "").trim() || "–")}</td>
       <td data-sort-value="${numericSortValue(row.affected_charger_count)}">${numberFormat(row.affected_charger_count)}</td>
       <td data-sort-value="${numericSortValue(row.current_broken_charger_count)}">${numberFormat(row.current_broken_charger_count)}</td>
       <td data-sort-value="${numericSortValue(row.out_of_order_share)}">${percentFormat(row.out_of_order_share)}</td>
@@ -1651,11 +1649,11 @@ function renderBusyStations(snapshot, windowDays) {
     `Top 10 nach Auslastung am Tag und Statuswechseln über ${windowLabel(windowDays)}.`;
   tbody.innerHTML = "";
   if (!statusMetricsAvailable) {
-    tbody.innerHTML = '<tr><td colspan="7">Belegung und Störungen sind für diese Quelle derzeit nicht auswertbar.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5">Belegung und Störungen sind für diese Quelle derzeit nicht auswertbar.</td></tr>';
     return;
   }
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7">Für diesen Berichtszeitraum wurden keine Stationen mit hoher Auslastung erkannt.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5">Für diesen Berichtszeitraum wurden keine Stationen mit hoher Auslastung erkannt.</td></tr>';
     return;
   }
   for (const row of rows) {
@@ -1666,8 +1664,6 @@ function renderBusyStations(snapshot, windowDays) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${stationCell}</td>
-      <td data-sort-value="${escapeAttribute(row.operator || "")}">${escapeHtml(String(row.operator || "").trim() || "–")}</td>
-      <td data-sort-value="${escapeAttribute(row.city || "")}">${escapeHtml(String(row.city || "").trim() || "–")}</td>
       <td data-sort-value="${numericSortValue(row.charging_points_count)}">${numberFormat(row.charging_points_count)}</td>
       <td data-sort-value="${numericSortValue(row.day_occupancy_share)}">${percentFormat(row.day_occupancy_share)}</td>
       <td data-sort-value="${numericSortValue(row.occupied_seconds)}">${secondsDurationFormat(row.occupied_seconds)}</td>
@@ -1680,25 +1676,21 @@ function renderBusyStations(snapshot, windowDays) {
 function renderRollingProviderReports(
   reportPayload,
   healthPayload,
-  windowDays,
   { countryCode = "", dateText = "", linkProviders = true } = {},
 ) {
   const rows = buildRollingProviderRows(reportPayload, healthPayload);
   const tbody = document.getElementById("provider-window-body");
-  const title = document.getElementById("management-provider-window-title");
   const operatorMode =
     reportPayload?.group_by === "operator" ||
     rows.some((row) => String(row?.operator_brand || "").trim());
-  title.textContent = `Anbieterleistung über ${windowLabel(windowDays)}`;
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="11">Für diesen Zeitraum liegen keine Anbieterdaten vor.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10">Für diesen Zeitraum liegen keine Anbieterdaten vor.</td></tr>';
     return;
   }
   for (const row of rows) {
     const tr = document.createElement("tr");
     const displayName = providerDisplayName(row, { operatorMode });
-    const sourceLabel = providerSourceLabel(row);
     const canLinkProvider = linkProviders && row.provider_uid && !row.operator_brand;
     const providerUrl = canLinkProvider
       ? managementProviderUrl(row.provider_uid, row.country_code || countryCode, dateText)
@@ -1710,7 +1702,6 @@ function renderRollingProviderReports(
       <td data-sort-value="${escapeAttribute(displayName)}">
         ${providerName}
       </td>
-      <td data-sort-value="${escapeAttribute(sourceLabel)}">${escapeHtml(sourceLabel)}</td>
       <td data-sort-value="${numericSortValue(row.station_count)}">${numberFormat(row.station_count)}</td>
       <td data-sort-value="${numericSortValue(row.measured_days)}">${numberFormat(row.measured_days)}</td>
       <td data-sort-value="${numericSortValue(row.occupancy_share)}">${percentFormat(row.occupancy_share)}</td>
@@ -1736,13 +1727,12 @@ function renderProviderReports(
   }
   tbody.innerHTML = "";
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="11">Für diesen Tag liegen keine Quelldaten vor.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10">Für diesen Tag liegen keine Quelldaten vor.</td></tr>';
     return;
   }
   for (const row of rows) {
     const tr = document.createElement("tr");
     const displayName = providerDisplayName(row);
-    const publisher = providerSourceLabel(row);
     const metrics = buildProviderReportMetrics(row);
     const coverageWarning =
       Number(row.delta_delivery_without_push || 0) > 0
@@ -1772,7 +1762,6 @@ function renderProviderReports(
       <td data-sort-value="${escapeAttribute(displayName)}">
         ${providerName}
       </td>
-      <td data-sort-value="${escapeAttribute(publisher)}">${escapeHtml(publisher)}</td>
       <td data-sort-value="${numericSortValue(metrics.observationsTotal)}">${numberFormat(metrics.observationsTotal)}</td>
       <td data-sort-value="${numericSortValue(metrics.receivedMessagesTotal)}">${numberFormat(metrics.receivedMessagesTotal)}</td>
       <td data-sort-value="${numericSortValue(metrics.uniqueChargersReferencedTotal)}">${optionalNumberFormat(metrics.uniqueChargersReferencedTotal)}</td>
@@ -2130,7 +2119,7 @@ async function initManagementPage() {
             (error) => ({ payload: { rows: [] }, error }),
           )
         : null;
-    renderRollingProviderReports(providerReport, providerHealth, currentWindowDays, {
+    renderRollingProviderReports(providerReport, providerHealth, {
       countryCode,
       dateText: currentDate,
       linkProviders: !providerUid && providerReport?.group_by === "provider",
