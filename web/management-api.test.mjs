@@ -186,7 +186,13 @@ test("static country fallback exposes countries and static operators from the sn
         ],
         country_summaries: {
           DE: { afir_stations_observed: 14032 },
-          BE: { afir_stations_observed: 0 },
+          BE: {
+            afir_stations_observed: 4269,
+            observed_dynamic_station_count: 4269,
+            measured_dynamic_station_count: 4059,
+            measured_static_station_count: 0,
+            static_identifier_linkage_status: "no_verified_matches",
+          },
         },
         provider_reports_by_country: {
           BE: [
@@ -219,7 +225,13 @@ test("static country fallback exposes countries and static operators from the sn
   const loaded = await source.loadSnapshot("2026-07-14", { countryCode: "BE" });
   assert.deepEqual(countries.countries.map((row) => row.country_code), ["DE", "BE"]);
   assert.equal(overview.rows[0].station_count, 14032);
-  assert.equal(overview.rows[1].station_count, 0);
+  assert.equal(overview.rows[1].station_count, 4269);
+  assert.equal(overview.rows[1].observed_dynamic_station_count, 4269);
+  assert.equal(overview.rows[1].measured_dynamic_station_count, 4059);
+  assert.equal(
+    overview.rows[1].static_identifier_linkage_status,
+    "no_verified_matches",
+  );
   assert.equal(loaded.snapshot.provider_reports[0].operator_brand, "STROOHM");
   assert.deepEqual(loaded.snapshot.provider_reports[0].source_provider_uids, ["be_monta"]);
   assert.equal(loaded.snapshot.provider_reports[0].static_station_count, 1398);

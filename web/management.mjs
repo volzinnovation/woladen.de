@@ -507,6 +507,43 @@ export function staticCatalogCountsForCountry(openStaticSummary, countryCode) {
   };
 }
 
+export function liveStationCoverage(summary, catalogStationCount = null) {
+  const linkedStationCount = optionalNumber(summary?.measured_static_station_count);
+  const observedLinkedStationCount = optionalNumber(
+    summary?.observed_static_station_count,
+  );
+  const sourceStationCount = firstNumber(
+    summary?.measured_dynamic_station_count,
+    summary?.measured_station_count,
+    summary?.observed_dynamic_station_count,
+    summary?.station_count,
+  );
+  const reportedCoverage = optionalNumber(summary?.static_station_coverage);
+  const linkageStatus = String(summary?.static_identifier_linkage_status || "");
+  const hasVerifiedLinks = linkageStatus
+    ? linkageStatus === "verified_matches"
+    : (observedLinkedStationCount !== null && observedLinkedStationCount > 0) ||
+      (linkedStationCount !== null && linkedStationCount > 0) ||
+      (reportedCoverage !== null && reportedCoverage > 0);
+  const liveStationCount = hasVerifiedLinks
+    ? linkedStationCount
+    : sourceStationCount;
+  const liveStationShare =
+    hasVerifiedLinks && Number(catalogStationCount) > 0
+      ? reportedCoverage ??
+        (linkedStationCount !== null
+          ? linkedStationCount / Number(catalogStationCount)
+          : null)
+      : null;
+  return {
+    liveStationCount,
+    liveStationShare,
+    linkedStationCount,
+    hasVerifiedLinks,
+    scope: hasVerifiedLinks ? "verified_static_links" : "source_observations",
+  };
+}
+
 export function buildSummaryCards(
   snapshot,
   { publicStationCount = null, publicChargerCount = null } = {},
@@ -524,17 +561,19 @@ export function buildSummaryCards(
       summary.static_charger_count,
       publicChargerCount,
     );
-    const liveStationCount = optionalNumber(summary.measured_static_station_count);
-    const stationsWithoutDisruptions = optionalNumber(
-      summary.static_stations_without_disruptions,
+    const liveCoverageMetrics = liveStationCoverage(
+      summary,
+      catalogStationCount,
     );
-    const liveCoverage =
-      catalogStationCount > 0 && liveStationCount !== null
-        ? liveStationCount / catalogStationCount
-        : null;
+    const liveStationCount = liveCoverageMetrics.liveStationCount;
+    const liveCoverage = liveCoverageMetrics.liveStationShare;
+    const stationsWithoutDisruptions = liveCoverageMetrics.hasVerifiedLinks
+      ? optionalNumber(summary.static_stations_without_disruptions)
+      : null;
     const disruptionFreeShare =
-      liveStationCount > 0 && stationsWithoutDisruptions !== null
-        ? stationsWithoutDisruptions / liveStationCount
+      liveCoverageMetrics.linkedStationCount > 0 &&
+      stationsWithoutDisruptions !== null
+        ? stationsWithoutDisruptions / liveCoverageMetrics.linkedStationCount
         : null;
     return [
       {
@@ -559,6 +598,9 @@ export function buildSummaryCards(
         key: "live-data",
         label: "Stationen mit Live-Daten",
         reference: 3,
+        detail: liveCoverageMetrics.hasVerifiedLinks
+          ? ""
+          : "Live-Status ist vorhanden; die Zuordnung zum öffentlichen Verzeichnis ist noch nicht verifiziert.",
         metrics: [
           {
             key: "live-stations",
@@ -738,20 +780,22 @@ export function buildCountryOverviewRows(
         reportedPublicChargerCount !== null && reportedPublicChargerCount > 0
           ? reportedPublicChargerCount
           : catalogCounts.publicChargerCount;
-      const liveStationCount = optionalNumber(report.measured_static_station_count);
-      const stationsWithoutDisruptions = optionalNumber(
-        report.static_stations_without_disruptions,
+      const liveCoverageMetrics = liveStationCoverage(
+        report,
+        publicStationCount,
       );
-      const liveStationShare =
-        optionalNumber(report.static_station_coverage) ??
-        (publicStationCount > 0 && liveStationCount !== null
-          ? liveStationCount / publicStationCount
-          : null);
-      const stationsWithoutDisruptionsShare =
-        optionalNumber(report.static_stations_without_disruptions_share) ??
-        (liveStationCount > 0 && stationsWithoutDisruptions !== null
-          ? stationsWithoutDisruptions / liveStationCount
-          : null);
+      const liveStationCount = liveCoverageMetrics.liveStationCount;
+      const liveStationShare = liveCoverageMetrics.liveStationShare;
+      const stationsWithoutDisruptions = liveCoverageMetrics.hasVerifiedLinks
+        ? optionalNumber(report.static_stations_without_disruptions)
+        : null;
+      const stationsWithoutDisruptionsShare = liveCoverageMetrics.hasVerifiedLinks
+        ? optionalNumber(report.static_stations_without_disruptions_share) ??
+          (liveCoverageMetrics.linkedStationCount > 0 &&
+          stationsWithoutDisruptions !== null
+            ? stationsWithoutDisruptions / liveCoverageMetrics.linkedStationCount
+            : null)
+        : null;
       const row = {
         ...country,
         ...report,
@@ -764,6 +808,7 @@ export function buildCountryOverviewRows(
         public_charger_count: publicChargerCount,
         live_station_count: liveStationCount,
         live_station_share: liveStationShare,
+        live_station_count_scope: liveCoverageMetrics.scope,
         stations_without_disruptions: stationsWithoutDisruptions,
         stations_without_disruptions_share: stationsWithoutDisruptionsShare,
       };
@@ -782,7 +827,12 @@ export function buildCountryOverviewRows(
 const ROLLING_COUNTRY_SUMMARY_FIELDS = [
   "static_charger_count",
   "static_station_count",
+  "observed_dynamic_station_count",
+  "measured_dynamic_station_count",
+  "measured_station_count",
+  "observed_static_station_count",
   "measured_static_station_count",
+  "static_identifier_linkage_status",
   "static_stations_without_disruptions",
   "static_station_coverage",
   "static_stations_without_disruptions_share",

@@ -286,7 +286,7 @@
                     colspan="2"
                     data-sortable="false"
                     scope="colgroup"
-                  >Stationen mit Live-Daten</th>
+                  >Live-Daten im Berichtszeitraum</th>
                   <th
                     class="management-table-group-heading unsortable"
                     colspan="2"
@@ -303,8 +303,8 @@
                   </th>
                 </tr>
                 <tr class="management-table-subhead-row">
-                  <th data-sort-column="4" data-sort-type="number" data-sort-label="Stationen mit Live-Daten">Anzahl</th>
-                  <th data-sort-column="5" data-sort-type="number" data-sort-label="Anteil mit Live-Daten">Anteil</th>
+                  <th data-sort-column="4" data-sort-type="number" data-sort-label="Stationen in Live-Meldungen">Stationen in Live-Meldungen</th>
+                  <th data-sort-column="5" data-sort-type="number" data-sort-label="Bestätigte Abdeckung öffentlicher Stationen">Bestätigte Abdeckung</th>
                   <th data-sort-column="6" data-sort-type="number" data-sort-label="Stationen ohne Störung">Anzahl</th>
                   <th data-sort-column="7" data-sort-type="number" data-sort-label="Anteil ohne Störung">Anteil</th>
                 </tr>
@@ -574,11 +574,14 @@
             die öffentlichen Ladepunkte zusammengefasst sind.
           </li>
           <li id="management-footnote-3">
-            <strong>Stationen mit Live-Daten:</strong> öffentliche Stationen,
-            bei denen mindestens ein Ladepunkt über seine dauerhafte Kennung
-            eindeutig verbunden wurde und im gewählten Berichtszeitraum ein
-            verständlicher Live-Status vorlag. Der Prozentwert bezieht sich auf
-            alle öffentlichen Stationen.
+            <strong>Stationen mit Live-Daten:</strong> Die Anzahl zählt
+            unterschiedliche Stationskennungen aus den Live-Meldungen, für die
+            im gewählten Berichtszeitraum ein verständlicher Status vorlag.
+            Eine prozentuale Abdeckung wird nur gezeigt, wenn diese Kennungen
+            eindeutig mit dem öffentlichen Ladestellenverzeichnis verbunden
+            werden konnten. Ein Gedankenstrich bedeutet, dass die Abdeckung
+            noch nicht beurteilt werden kann – nicht, dass keine Live-Daten
+            vorliegen.
           </li>
           <li id="management-footnote-4">
             <strong>Stationen ohne Störung:</strong> Stationen mit Live-Daten,

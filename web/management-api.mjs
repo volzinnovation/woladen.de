@@ -201,6 +201,20 @@ export function createManagementDataSource({
               summary.afir_stations_observed ??
               country.station_count ??
               0,
+            observed_dynamic_station_count:
+              summary.observed_dynamic_station_count ??
+              summary.station_count ??
+              summary.daily_afir_stations_observed ??
+              summary.afir_stations_observed ??
+              country.station_count ??
+              0,
+            measured_dynamic_station_count:
+              summary.measured_dynamic_station_count ??
+              summary.measured_station_count ??
+              summary.daily_afir_stations_observed ??
+              summary.afir_stations_observed ??
+              country.station_count ??
+              0,
             observed_evses:
               summary.observed_evses ??
               summary.daily_afir_stations_observed ??
@@ -215,6 +229,16 @@ export function createManagementDataSource({
             ...(snapshot.summary || {}),
             station_count:
               snapshot.summary?.station_count ??
+              snapshot.summary?.daily_afir_stations_observed ??
+              snapshot.summary?.afir_stations_observed,
+            observed_dynamic_station_count:
+              snapshot.summary?.observed_dynamic_station_count ??
+              snapshot.summary?.station_count ??
+              snapshot.summary?.daily_afir_stations_observed ??
+              snapshot.summary?.afir_stations_observed,
+            measured_dynamic_station_count:
+              snapshot.summary?.measured_dynamic_station_count ??
+              snapshot.summary?.measured_station_count ??
               snapshot.summary?.daily_afir_stations_observed ??
               snapshot.summary?.afir_stations_observed,
             observed_evses:

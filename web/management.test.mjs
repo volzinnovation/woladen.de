@@ -19,6 +19,7 @@ import {
   countryName,
   dateRangeForWindow,
   mergeRollingCountrySummary,
+  liveStationCoverage,
   normalizeCountryCode,
   normalizeManagementDate,
   normalizeProviderUid,
@@ -263,6 +264,73 @@ test("staticCatalogCountsForCountry reads the country catalog baseline", () => {
   );
 });
 
+test("Belgium live OCPI stations remain visible when static identifiers are unlinked", () => {
+  const coverage = liveStationCoverage(
+    {
+      observed_dynamic_station_count: 4_269,
+      measured_dynamic_station_count: 4_059,
+      observed_static_station_count: 0,
+      measured_static_station_count: 0,
+      static_station_coverage: 0,
+      static_identifier_linkage_status: "no_verified_matches",
+    },
+    14_971,
+  );
+
+  assert.deepEqual(coverage, {
+    liveStationCount: 4_059,
+    liveStationShare: null,
+    linkedStationCount: 0,
+    hasVerifiedLinks: false,
+    scope: "source_observations",
+  });
+
+  const [belgium] = buildCountryOverviewRows(
+    {
+      countries: [
+        {
+          country_code: "BE",
+          first_date: "2026-05-08",
+          last_date: "2026-07-26",
+          observed_days: 74,
+        },
+      ],
+    },
+    {
+      rows: [
+        {
+          country_code: "BE",
+          station_count: 4_269,
+          observed_dynamic_station_count: 4_269,
+          measured_dynamic_station_count: 4_059,
+          static_station_count: 14_971,
+          static_charger_count: 56_178,
+          observed_static_station_count: 0,
+          measured_static_station_count: 0,
+          static_station_coverage: 0,
+          static_identifier_linkage_status: "no_verified_matches",
+          static_stations_without_disruptions: 0,
+          measured_station_coverage: 4_059 / 4_269,
+          measured_seconds: 880_328_328,
+          occupied_seconds: 107_960_538,
+          out_of_order_seconds: 73_730_692,
+        },
+      ],
+    },
+  );
+
+  assert.equal(belgium.live_station_count, 4_059);
+  assert.equal(belgium.live_station_share, null);
+  assert.equal(belgium.live_station_count_scope, "source_observations");
+  assert.equal(belgium.stations_without_disruptions, null);
+  assert.equal(belgium.stations_without_disruptions_share, null);
+
+  const cards = buildSummaryCards({ summary: belgium });
+  assert.equal(cards[1].metrics[0].value, "4.059");
+  assert.equal(cards[1].metrics[1].value, "–");
+  assert.match(cards[1].detail, /Zuordnung zum öffentlichen Verzeichnis/);
+});
+
 test("management tables use window wording and omit removed classification columns", () => {
   const html = readFileSync(new URL("./management.html", import.meta.url), "utf8");
   const providerWindowTable = html.match(
@@ -313,7 +381,10 @@ test("management detail layout keeps navigation with date controls and methodolo
   assert.match(html, /Datenabdeckung nach Land/);
   assert.match(html, /id="management-country-coverage-body"/);
   assert.match(html, /colspan="3"[\s\S]*?scope="colgroup"[\s\S]*?>Auslastung</);
-  assert.match(html, /colspan="2"[\s\S]*?scope="colgroup"[\s\S]*?>Stationen mit Live-Daten</);
+  assert.match(html, /colspan="2"[\s\S]*?scope="colgroup"[\s\S]*?>Live-Daten im Berichtszeitraum</);
+  assert.match(html, />Stationen in Live-Meldungen</);
+  assert.match(html, />Bestätigte Abdeckung</);
+  assert.match(html, /Ein Gedankenstrich bedeutet,[\s\S]*?nicht, dass keine Live-Daten/);
   assert.match(html, /Leistung einzelner Anbieter\./);
   assert.doesNotMatch(html, />Betreiber</);
   assert.match(html, /Datenquellen am Berichtstag/);
