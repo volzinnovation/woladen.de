@@ -48,6 +48,14 @@ test("German and Dutch app bundles cover all fallback UI keys", () => {
   }
 });
 
+test("live station details render F1, F2, and F3 as independent latest-state fields", () => {
+  const appJs = readText(new URL("./app.js", import.meta.url));
+  assert.match(appJs, /dynamicFields\.operationalStatus/);
+  assert.match(appJs, /normalizeAvailabilityStatus\(dynamicFields\.availabilityStatus\)/);
+  assert.match(appJs, /const priceDisplay = dynamicFields\.priceDisplay/);
+  assert.match(appJs, /t\("station\.operationalStatus"\)/);
+});
+
 test("catalog freshness uses the effective catalog timestamp and explicit wording", () => {
   const appJs = readText(new URL("./app.js", import.meta.url));
   assert.match(appJs, /openStaticSummaryData\?\.catalog_updated_at/);

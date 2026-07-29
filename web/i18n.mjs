@@ -371,6 +371,7 @@ const FALLBACK_BUNDLE = {
     details: "Details",
     live: "Live",
     stationStatus: "Station status",
+    operationalStatus: "Operational status",
     liveDataAvailable: "Live data available",
     evse: "Charging point {index}",
     notInLiveFeed: "Not included in the live feed",
@@ -579,7 +580,7 @@ async function fetchBundle(language) {
     return FALLBACK_BUNDLE;
   }
   try {
-    const response = await fetch(new URL(`./i18n/${language}.json?v=20260725-catalog-freshness1`, import.meta.url));
+    const response = await fetch(new URL(`./i18n/${language}.json?v=20260730-afir-dynamic-fields1`, import.meta.url));
     if (!response.ok) {
       return {};
     }

@@ -21,6 +21,19 @@ export function normalizeLiveApiBaseUrl(value) {
   }
 }
 
+function normalizeLiveDynamicField(value) {
+  return String(value ?? "").trim();
+}
+
+export function readLiveDynamicFields(record = {}) {
+  const source = record && typeof record === "object" ? record : {};
+  return {
+    operationalStatus: normalizeLiveDynamicField(source.operational_status),
+    availabilityStatus: normalizeLiveDynamicField(source.availability_status),
+    priceDisplay: normalizeLiveDynamicField(source.price_display),
+  };
+}
+
 function queryApiBaseUrl(locationHref, queryParam) {
   const href = String(locationHref || "").trim();
   if (!href) {

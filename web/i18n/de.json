@@ -298,6 +298,7 @@
     "details": "Details",
     "live": "Live",
     "stationStatus": "Stationsstatus",
+    "operationalStatus": "Betriebszustand",
     "liveDataAvailable": "Live-Daten verfügbar",
     "evse": "Ladepunkt {index}",
     "notInLiveFeed": "Nicht im Live-Feed enthalten",

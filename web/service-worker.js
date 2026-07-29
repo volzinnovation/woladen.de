@@ -1,4 +1,4 @@
-const CACHE_NAME = "woladen-shell-20260725-catalog-freshness1";
+const CACHE_NAME = "woladen-shell-20260730-afir-dynamic-fields1";
 
 const APP_SHELL = [
   "/",
@@ -6,13 +6,13 @@ const APP_SHELL = [
   "/styles.css?v=20260720-info-settings2",
   "/app-install-promo.js?v=20260620-eu-i18n9",
   "/pwa-register.js?v=20260701-pwa1",
-  "/app.js?v=20260725-catalog-freshness1",
+  "/app.js?v=20260730-afir-dynamic-fields1",
   "/filtering.mjs?v=20260626-routing-web1",
   "/filter-settings.mjs?v=20260626-routing-web1",
   "/favorite-metadata.mjs?v=20260626-favorites-web1",
   "/opening-hours.mjs?v=20260620-i18n",
   "/location.mjs?v=20260630-map-location1",
-  "/live-api.mjs?v=20260630-live-eu1",
+  "/live-api.mjs?v=20260730-afir-dynamic-fields1",
   "/geocoding.mjs?v=20260618-commercial-merge",
   "/routing.mjs?v=20260626-routing-web1",
   "/charge-plan.mjs?v=20260717-settings2",
@@ -20,7 +20,7 @@ const APP_SHELL = [
   "/map-keyboard.mjs?v=20260618-keyboard-restore",
   "/rating.mjs",
   "/note.mjs",
-  "/i18n.mjs?v=20260725-catalog-freshness1",
+  "/i18n.mjs?v=20260730-afir-dynamic-fields1",
   "/styles.css",
   "/app.js",
   "/config.js",

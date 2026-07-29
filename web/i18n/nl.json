@@ -251,6 +251,7 @@
     "details": "Details",
     "live": "Live",
     "stationStatus": "Stationstatus",
+    "operationalStatus": "Operationele status",
     "liveDataAvailable": "Livegegevens beschikbaar",
     "evse": "Laadpunt {index}",
     "notInLiveFeed": "Niet opgenomen in de livefeed",

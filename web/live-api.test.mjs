@@ -5,6 +5,7 @@ import {
   normalizeLiveApiBaseUrl,
   queryGermanLiveApiBaseUrl,
   queryLiveApiBaseUrl,
+  readLiveDynamicFields,
   resolveGermanLiveApiBaseUrl,
   resolveLiveApiBaseUrl,
 } from "./live-api.mjs";
@@ -12,6 +13,36 @@ import {
 test("normalizeLiveApiBaseUrl trims and strips trailing slashes", () => {
   assert.equal(normalizeLiveApiBaseUrl(" http://127.0.0.1:8001/ "), "http://127.0.0.1:8001");
   assert.equal(normalizeLiveApiBaseUrl("not-a-url"), "");
+});
+
+test("reads independent F1, F2, and F3 fields from latest-state station responses", () => {
+  const lookupPayload = {
+    stations: [{
+      station_id: "DE:64251de84fb0e7b3",
+      availability_status: "free",
+      price_display: "ab 0,69 €/kWh",
+    }],
+  };
+  const detailPayload = {
+    station: lookupPayload.stations[0],
+    evses: [{
+      provider_evse_id: "DE*ABC*E123",
+      operational_status: " INOPERATION ",
+      availability_status: " occupied ",
+      price_display: " ab 0,69 €/kWh ",
+    }],
+  };
+
+  assert.deepEqual(readLiveDynamicFields(lookupPayload.stations[0]), {
+    operationalStatus: "",
+    availabilityStatus: "free",
+    priceDisplay: "ab 0,69 €/kWh",
+  });
+  assert.deepEqual(readLiveDynamicFields(detailPayload.evses[0]), {
+    operationalStatus: "INOPERATION",
+    availabilityStatus: "occupied",
+    priceDisplay: "ab 0,69 €/kWh",
+  });
 });
 
 test("queryLiveApiBaseUrl reads the explicit local override", () => {

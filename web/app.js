@@ -45,9 +45,10 @@ import {
   shouldCenterMapOnLocationViewOpen,
 } from "./location.mjs?v=20260630-map-location1";
 import {
+  readLiveDynamicFields,
   resolveGermanLiveApiBaseUrl as computeGermanLiveApiBaseUrl,
   resolveLiveApiBaseUrl as computeLiveApiBaseUrl,
-} from "./live-api.mjs?v=20260630-live-eu1";
+} from "./live-api.mjs?v=20260730-afir-dynamic-fields1";
 import {
   buildGeocoderApiUrl,
   normalizeGeocodePayload,
@@ -104,7 +105,7 @@ import {
   populateLanguageSelect,
   setLanguage,
   t,
-} from "./i18n.mjs?v=20260725-catalog-freshness1";
+} from "./i18n.mjs?v=20260730-afir-dynamic-fields1";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -170,6 +171,7 @@ const DE_MOBILITHEK_SOURCE = {
   url: "https://mobilithek.info/offers/842113170303512576",
 };
 const LIVE_STATION_FIELDS = [
+  "operational_status",
   "availability_status",
   "available_evses",
   "occupied_evses",
@@ -1067,8 +1069,12 @@ function formatLiveDetailObject(value) {
     .join(", ");
 }
 
-function buildLiveDynamicNotes(evse) {
+function buildLiveDynamicNotes(evse, dynamicFields = readLiveDynamicFields(evse)) {
   const notes = [];
+  const operationalStatusText = formatLiveDetailScalar(dynamicFields.operationalStatus);
+  if (operationalStatusText) {
+    notes.push({ label: t("station.operationalStatus"), value: operationalStatusText });
+  }
   const nextSlotText = formatLiveDetailCollection(evse.next_available_charging_slots);
   if (nextSlotText) {
     notes.push({ label: t("station.nextSlot"), value: nextSlotText });
@@ -6561,7 +6567,8 @@ function renderDetailLiveState(feature, liveDetail = null) {
 
   evses.forEach((evse, index) => {
     const row = document.createElement("div");
-    const status = normalizeAvailabilityStatus(evse.availability_status);
+    const dynamicFields = readLiveDynamicFields(evse);
+    const status = normalizeAvailabilityStatus(dynamicFields.availabilityStatus);
     const metaParts = [];
     const evseCode = formatEvseCode(evse.provider_evse_id);
     if (evseCode) {
@@ -6571,7 +6578,7 @@ function renderDetailLiveState(feature, liveDetail = null) {
     if (statusNote) {
       metaParts.push(statusNote);
     }
-    const priceDisplay = String(evse.price_display || "").trim();
+    const priceDisplay = dynamicFields.priceDisplay;
     const metaMarkup = metaParts.length || priceDisplay
       ? `
       <div class="live-evse-row-meta">
@@ -6580,7 +6587,7 @@ function renderDetailLiveState(feature, liveDetail = null) {
       </div>
     `
       : "";
-    const dynamicNotes = buildLiveDynamicNotes(evse);
+    const dynamicNotes = buildLiveDynamicNotes(evse, dynamicFields);
     const notesMarkup = dynamicNotes.length
       ? `
       <div class="live-evse-row-details">
