@@ -16,9 +16,9 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./afir.css?v=20260729-afir-live1" />
-    <script src="./config.js?v=20260729-afir-live1"></script>
-    <script type="module" src="./afir.mjs?v=20260729-afir-live1"></script>
+    <link rel="stylesheet" href="./afir.css?v=20260729-afir-live2" />
+    <script src="./config.js?v=20260729-afir-live2"></script>
+    <script type="module" src="./afir.mjs?v=20260729-afir-live2"></script>
   </head>
   <body>
     <header class="afir-header">
@@ -53,6 +53,41 @@
 
     <main class="afir-main">
       <nav id="afir-breadcrumb" class="afir-breadcrumb" aria-label="Auswahlpfad"></nav>
+
+      <section
+        id="afir-eu27-section"
+        class="afir-eu27-section"
+        aria-labelledby="afir-eu27-title"
+        hidden
+      >
+        <div class="afir-eu27-heading">
+          <div>
+            <p class="afir-section-kicker">Höchste Aggregationsebene</p>
+            <h2 id="afir-eu27-title">EU-27 gesamt</h2>
+          </div>
+          <p>
+            Ausschließlich die 27 EU-Mitgliedstaaten; Norwegen und die
+            Schweiz bleiben in den Ländertabellen sichtbar, zählen hier aber
+            nicht mit.
+          </p>
+        </div>
+        <div class="afir-table-wrap">
+          <table class="afir-table">
+            <thead>
+              <tr>
+                <th scope="col">Einheit</th>
+                <th scope="col">Statisch</th>
+                <th scope="col">Dynamisch</th>
+                <th scope="col">Aktualität</th>
+                <th scope="col">Standorte</th>
+                <th scope="col">Ladepunkte</th>
+                <th scope="col"><span class="visually-hidden">Felder anzeigen</span></th>
+              </tr>
+            </thead>
+            <tbody id="afir-eu27-group"></tbody>
+          </table>
+        </div>
+      </section>
 
       <section class="afir-toolbar" aria-label="Tabellensteuerung">
         <div>
@@ -116,9 +151,9 @@
                 <th scope="col">Feld</th>
                 <th scope="col">Offizielle Bezeichnung</th>
                 <th scope="col">Art</th>
-                <th scope="col">Aktuell vorhanden</th>
-                <th scope="col">Vorher vorhanden</th>
-                <th scope="col">In beiden Nachrichten</th>
+                <th scope="col">Ladepunkte aktuell</th>
+                <th scope="col">Ladepunkte vorher</th>
+                <th scope="col">Ladepunkte in beiden Nachrichten</th>
                 <th scope="col">Medianes Alter</th>
               </tr>
             </thead>
@@ -139,9 +174,13 @@
           „Abdeckung“ bedeutet, dass das jeweilige AFIR-Feld in den
           empfangenen Quelldaten vorhanden ist. Fehlende Angaben werden der
           Quelle nur zugerechnet, wenn Woladen die Nachricht nachweislich
-          vollständig und fehlerfrei verarbeitet hat. Für dynamische Felder
-          wird zusätzlich die beobachtete Aktualität dargestellt; es gilt
-          kein pauschaler Ein-Minuten-Grenzwert.
+          vollständig und fehlerfrei verarbeitet hat. Jede Feldzeile nennt
+          die Zahl eindeutig erkannter Ladepunkte mit der Angabe, die
+          Gesamtzahl der Ladepunkte und den daraus berechneten Anteil. Für
+          dynamische Felder wird die beobachtete Aktualität davon getrennt
+          dargestellt; vorhandene Angaben sind daher nicht automatisch
+          frische Angaben, und es gilt kein pauschaler
+          Ein-Minuten-Grenzwert.
         </p>
       </footer>
     </main>

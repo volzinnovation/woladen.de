@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  afirChargingPointCount,
+  afirPointCoverage,
   afirStationDetailUrl,
   buildAfirCurrentUrl,
   createAfirDataSource,
@@ -102,5 +104,40 @@ test("point results link only through the catalog detail station identity", () =
       point_id: "raw-point",
     }),
     "",
+  );
+});
+
+test("AFIR aggregate metrics use explicit deduplicated charging-point counts", () => {
+  assert.equal(
+    afirChargingPointCount({
+      entity_counts: {
+        charging_point_count: 27,
+        point_count: 99,
+      },
+    }),
+    27,
+  );
+  assert.equal(
+    afirChargingPointCount({
+      entity_counts: { point_count: 12 },
+    }),
+    12,
+  );
+  assert.deepEqual(
+    afirPointCoverage({
+      coverage_pct: 99,
+      charging_point_coverage: {
+        required_point_field_count: 54,
+        present_point_field_count: 27,
+        coverage_pct: 50,
+        coverage_state: "partial",
+      },
+    }),
+    {
+      required_point_field_count: 54,
+      present_point_field_count: 27,
+      coverage_pct: 50,
+      coverage_state: "partial",
+    },
   );
 });

@@ -1,4 +1,6 @@
 import {
+  afirChargingPointCount,
+  afirPointCoverage,
   afirStationDetailUrl,
   createAfirDataSource,
   nextAfirLevel,
@@ -58,12 +60,43 @@ function duration(seconds) {
 }
 
 function coverageState(summary) {
-  return String(summary?.coverage_state || "unassessed");
+  return String(afirPointCoverage(summary)?.coverage_state || "unassessed");
+}
+
+function coveragePercent(summary) {
+  return afirPointCoverage(summary)?.coverage_pct;
+}
+
+function pointCoverageRatio(coverage, phase = "current") {
+  const denominator = Number(coverage?.denominator || 0);
+  const phases = {
+    current: [
+      "present_current_count",
+      "coverage_pct",
+    ],
+    previous: [
+      "present_previous_count",
+      "previous_coverage_pct",
+    ],
+    both: [
+      "present_in_both_distinct_releases_count",
+      "two_release_coverage_pct",
+    ],
+  };
+  const [countKey, percentKey] = phases[phase] || phases.current;
+  const numerator = Number(coverage?.[countKey] || 0);
+  return `${NUMBER.format(numerator)} / ${NUMBER.format(
+    denominator,
+  )} · ${percent(coverage?.[percentKey])}`;
 }
 
 function identityForGroup(level, dimensions) {
   const countryCode = String(dimensions?.country_code || "");
   const values = {
+    eu27: {
+      primary: "Europäische Union",
+      secondary: "EU-27 · 27 Mitgliedstaaten",
+    },
     country: {
       primary: COUNTRY_NAMES.of(countryCode) || countryCode || "Ohne Land",
       secondary: countryCode,
@@ -106,7 +139,7 @@ function metric(summary) {
   const span = document.createElement("span");
   span.className = "afir-metric";
   span.dataset.state = coverageState(summary);
-  span.textContent = percent(summary?.coverage_pct);
+  span.textContent = percent(coveragePercent(summary));
   return span;
 }
 
@@ -223,9 +256,10 @@ function renderFields(group) {
     appendCell(row, identity);
     appendCell(row, field.label || field.technical_key || "–");
     appendCell(row, field.data_kind === "dynamic" ? "dynamisch" : "statisch");
-    appendCell(row, percent(field.coverage?.coverage_pct));
-    appendCell(row, percent(field.coverage?.previous_coverage_pct));
-    appendCell(row, percent(field.coverage?.two_release_coverage_pct));
+    const pointCoverage = field.charging_point_coverage || {};
+    appendCell(row, pointCoverageRatio(pointCoverage, "current"));
+    appendCell(row, pointCoverageRatio(pointCoverage, "previous"));
+    appendCell(row, pointCoverageRatio(pointCoverage, "both"));
     appendCell(
       row,
       field.data_kind === "dynamic"
@@ -270,6 +304,72 @@ function drillInto(group) {
   void loadGroups();
 }
 
+function appendGroupCells(row, group, identity, actionLabel = "→") {
+  const identityBlock = document.createElement("div");
+  const primary = document.createElement("strong");
+  primary.textContent = identity.primary;
+  const secondary = document.createElement("small");
+  secondary.textContent = identity.secondary;
+  identityBlock.append(primary, secondary);
+  appendCell(row, identityBlock, "afir-identity");
+  appendCell(row, metric(group.static_compliance));
+  appendCell(row, metric(group.dynamic_compliance));
+  appendCell(
+    row,
+    group.dynamic_compliance?.freshness_state === "assessed"
+      ? duration(
+          group.source_release_cadence?.source_release_gap_seconds?.p50,
+        )
+      : "nicht bewertet",
+  );
+  appendCell(row, NUMBER.format(group.entity_counts?.station_count || 0));
+  appendCell(row, NUMBER.format(afirChargingPointCount(group)));
+  appendCell(row, actionLabel, "afir-open");
+}
+
+function selectAggregateFields(group) {
+  state.selectedGroup = group;
+  renderEu27Aggregate();
+  renderGroups();
+  renderFields(group);
+  element("afir-field-section").scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+}
+
+function renderEu27Aggregate() {
+  const section = element("afir-eu27-section");
+  const body = element("afir-eu27-group");
+  body.replaceChildren();
+  const aggregate =
+    state.level === "country" && Object.keys(state.scope).length === 0
+      ? state.payload?.eu27_aggregate
+      : null;
+  section.hidden = !aggregate;
+  if (!aggregate) return;
+
+  const row = document.createElement("tr");
+  row.tabIndex = 0;
+  row.dataset.actionable = "true";
+  row.dataset.aggregate = "eu27";
+  row.dataset.selected = String(aggregate === state.selectedGroup);
+  appendGroupCells(
+    row,
+    aggregate,
+    identityForGroup("eu27", aggregate.dimensions),
+    "Felder →",
+  );
+  row.addEventListener("click", () => selectAggregateFields(aggregate));
+  row.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      selectAggregateFields(aggregate);
+    }
+  });
+  body.append(row);
+}
+
 function renderGroups() {
   const body = element("afir-groups");
   body.replaceChildren();
@@ -283,29 +383,11 @@ function renderGroups() {
     row.dataset.actionable = "true";
     row.dataset.selected = String(group === state.selectedGroup);
     const identity = identityForGroup(state.level, group.dimensions);
-    const identityBlock = document.createElement("div");
-    const primary = document.createElement("strong");
-    primary.textContent = identity.primary;
-    const secondary = document.createElement("small");
-    secondary.textContent = identity.secondary;
-    identityBlock.append(primary, secondary);
-    appendCell(row, identityBlock, "afir-identity");
-    appendCell(row, metric(group.static_compliance));
-    appendCell(row, metric(group.dynamic_compliance));
-    appendCell(
-      row,
-      group.dynamic_compliance?.freshness_state === "assessed"
-        ? duration(
-            group.source_release_cadence?.source_release_gap_seconds?.p50,
-          )
-        : "nicht bewertet",
-    );
-    appendCell(row, NUMBER.format(group.entity_counts?.station_count || 0));
-    appendCell(row, NUMBER.format(group.entity_counts?.point_count || 0));
     const detailUrl =
       state.level === "point"
         ? afirStationDetailUrl(group.dimensions)
         : "";
+    appendGroupCells(row, group, identity, detailUrl ? "" : "→");
     if (detailUrl) {
       const detailLink = document.createElement("a");
       detailLink.className = "afir-detail-link";
@@ -318,9 +400,8 @@ function renderGroups() {
       detailLink.addEventListener("click", (event) => {
         event.stopPropagation();
       });
-      appendCell(row, detailLink);
-    } else {
-      appendCell(row, "→", "afir-open");
+      row.lastElementChild.replaceChildren(detailLink);
+      row.lastElementChild.className = "";
     }
     row.addEventListener("click", () => drillInto(group));
     row.addEventListener("keydown", (event) => {
@@ -362,6 +443,7 @@ async function loadGroups() {
   element("afir-field-section").hidden = true;
   element("afir-level-title").textContent = LEVEL_LABELS[state.level];
   renderBreadcrumb();
+  renderEu27Aggregate();
   renderGroups();
   renderPagination();
   setStatus(`${LEVEL_LABELS[state.level]} werden geladen …`);
@@ -386,6 +468,7 @@ async function loadGroups() {
     );
   } finally {
     state.loading = false;
+    renderEu27Aggregate();
     renderGroups();
     renderPagination();
   }

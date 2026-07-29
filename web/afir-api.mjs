@@ -36,6 +36,21 @@ export function afirStationDetailUrl(dimensions = {}) {
   return stationId ? `./?station=${encodeURIComponent(stationId)}` : "";
 }
 
+export function afirChargingPointCount(group = {}) {
+  const counts = group?.entity_counts || {};
+  const value = Number(
+    counts.charging_point_count ?? counts.point_count ?? 0,
+  );
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+export function afirPointCoverage(summary = {}) {
+  const pointCoverage = summary?.charging_point_coverage;
+  return pointCoverage && typeof pointCoverage === "object"
+    ? pointCoverage
+    : summary;
+}
+
 export function buildAfirCurrentUrl(
   baseUrl,
   {

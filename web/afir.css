@@ -167,6 +167,31 @@ a {
   padding: 46px 0 20px;
 }
 
+.afir-eu27-section {
+  padding-top: 46px;
+}
+
+.afir-eu27-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 36px;
+  margin-bottom: 20px;
+}
+
+.afir-eu27-heading h2 {
+  margin: 0;
+  font-size: clamp(25px, 3vw, 38px);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.afir-eu27-heading > p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--muted);
+}
+
 .afir-toolbar h2,
 .afir-field-heading h2,
 .afir-notes h2 {
@@ -255,6 +280,14 @@ a {
 .afir-table tbody tr[data-actionable="true"]:hover,
 .afir-table tbody tr[data-selected="true"] {
   background: var(--wash);
+}
+
+.afir-table tbody tr[data-aggregate="eu27"] {
+  background: #eef7f3;
+}
+
+.afir-table tbody tr[data-aggregate="eu27"] .afir-identity strong {
+  color: var(--accent-dark);
 }
 
 .afir-table tbody tr[data-actionable="true"]:active {
@@ -448,6 +481,7 @@ a {
   }
 
   .afir-toolbar,
+  .afir-eu27-heading,
   .afir-field-heading {
     display: grid;
     align-items: stretch;
