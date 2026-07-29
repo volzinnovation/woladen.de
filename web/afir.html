@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AFIR Artikel 20 Datenstatus | woladen.de</title>
+    <meta
+      name="description"
+      content="Live-Bewertung der 37 AFIR-Datenfelder nach Land, Anbieter, Betreiber, Standort und Ladepunkt."
+    />
+    <link rel="canonical" href="https://woladen.de/afir.html" />
+    <link rel="icon" href="/favicon.ico?v=20260411" sizes="any" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./afir.css?v=20260729-afir-live1" />
+    <script src="./config.js?v=20260729-afir-live1"></script>
+    <script type="module" src="./afir.mjs?v=20260729-afir-live1"></script>
+  </head>
+  <body>
+    <header class="afir-header">
+      <div class="afir-brandline">
+        <a class="afir-brand" href="./">woladen.de</a>
+        <a class="afir-context-link" href="./management.html">Managementanalyse</a>
+      </div>
+      <div class="afir-heading">
+        <p class="afir-kicker">AFIR · Artikel 20 · Live-Datenstatus</p>
+        <h1>37 Felder, bis zum einzelnen Ladepunkt.</h1>
+        <p>
+          Die Ansicht vergleicht die zwei jüngsten unterschiedlichen
+          Quellnachrichten und trennt statische Abdeckung von der Abdeckung
+          und Aktualität dynamischer Angaben.
+        </p>
+      </div>
+      <dl class="afir-meta" aria-label="Datenstatus">
+        <div>
+          <dt>Projektionsstatus</dt>
+          <dd id="afir-meta-status">Wird geladen …</dd>
+        </div>
+        <div>
+          <dt>Entitäten</dt>
+          <dd id="afir-meta-entities">–</dd>
+        </div>
+        <div>
+          <dt>Feldkatalog</dt>
+          <dd id="afir-meta-fields">37 AFIR-Felder</dd>
+        </div>
+      </dl>
+    </header>
+
+    <main class="afir-main">
+      <nav id="afir-breadcrumb" class="afir-breadcrumb" aria-label="Auswahlpfad"></nav>
+
+      <section class="afir-toolbar" aria-label="Tabellensteuerung">
+        <div>
+          <p class="afir-section-kicker">Aktuelle Ebene</p>
+          <h2 id="afir-level-title">Länder</h2>
+        </div>
+        <label class="afir-search">
+          <span>Diese Seite filtern</span>
+          <input
+            id="afir-search"
+            type="search"
+            autocomplete="off"
+            placeholder="Name oder Kennung"
+          />
+        </label>
+      </section>
+
+      <div id="afir-status" class="afir-status" role="status" aria-live="polite"></div>
+
+      <section class="afir-table-section" aria-labelledby="afir-level-title">
+        <div class="afir-table-wrap">
+          <table class="afir-table">
+            <thead>
+              <tr>
+                <th scope="col">Einheit</th>
+                <th scope="col">Statisch</th>
+                <th scope="col">Dynamisch</th>
+                <th scope="col">Aktualität</th>
+                <th scope="col">Standorte</th>
+                <th scope="col">Ladepunkte</th>
+                <th scope="col"><span class="visually-hidden">Öffnen</span></th>
+              </tr>
+            </thead>
+            <tbody id="afir-groups"></tbody>
+          </table>
+        </div>
+        <div class="afir-pagination">
+          <button id="afir-previous-page" type="button">← Zurück</button>
+          <span id="afir-page-status">–</span>
+          <button id="afir-next-page" type="button">Weiter →</button>
+        </div>
+      </section>
+
+      <section id="afir-field-section" class="afir-field-section" hidden>
+        <div class="afir-field-heading">
+          <div>
+            <p class="afir-section-kicker">AFIR-Feldbewertung</p>
+            <h2 id="afir-field-title">37 Felder</h2>
+          </div>
+          <div class="afir-field-context">
+            <p id="afir-field-context"></p>
+            <a id="afir-detail-link" href="./" hidden>
+              Aktuelle Detailansicht öffnen ↗
+            </a>
+          </div>
+        </div>
+        <div class="afir-table-wrap">
+          <table class="afir-table afir-field-table">
+            <thead>
+              <tr>
+                <th scope="col">Feld</th>
+                <th scope="col">Offizielle Bezeichnung</th>
+                <th scope="col">Art</th>
+                <th scope="col">Aktuell vorhanden</th>
+                <th scope="col">Vorher vorhanden</th>
+                <th scope="col">In beiden Nachrichten</th>
+                <th scope="col">Medianes Alter</th>
+              </tr>
+            </thead>
+            <tbody id="afir-fields"></tbody>
+          </table>
+        </div>
+        <p class="afir-f3-note">
+          <strong>F3:</strong> Eine vollständige, eindeutige
+          Basistarifangabe erfüllt F3 auch dann, wenn sie statisch übermittelt
+          wird und sich zwischen zwei Nachrichten nicht ändert. Die
+          Aktualität der Tarifübermittlung wird davon getrennt ausgewiesen.
+        </p>
+      </section>
+
+      <footer class="afir-notes">
+        <h2>Was die Zahlen bedeuten</h2>
+        <p>
+          „Abdeckung“ bedeutet, dass das jeweilige AFIR-Feld in den
+          empfangenen Quelldaten vorhanden ist. Fehlende Angaben werden der
+          Quelle nur zugerechnet, wenn Woladen die Nachricht nachweislich
+          vollständig und fehlerfrei verarbeitet hat. Für dynamische Felder
+          wird zusätzlich die beobachtete Aktualität dargestellt; es gilt
+          kein pauschaler Ein-Minuten-Grenzwert.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>
