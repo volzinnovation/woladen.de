@@ -83,6 +83,7 @@ function identityForGroup(level, dimensions) {
     point: {
       primary: dimensions?.point_id || "Ladepunkt nicht angegeben",
       secondary:
+        dimensions?.detail_station_id ||
         dimensions?.station_id ||
         dimensions?.location_id ||
         dimensions?.durable_entity_key ||

@@ -78,6 +78,7 @@ test("dimensions become filters without empty identifiers", () => {
       provider_uid: "be:road",
       operator_id: "",
       location_id: "site-1",
+      detail_station_id: "catalog-station-for-display-only",
       source_uid: "not-a-hierarchy-filter",
     }),
     {
@@ -88,10 +89,18 @@ test("dimensions become filters without empty identifiers", () => {
   );
 });
 
-test("point results link to the existing station detail contract", () => {
+test("point results link only through the catalog detail station identity", () => {
   assert.equal(
-    afirStationDetailUrl({ station_id: "BE:road/site 1" }),
+    afirStationDetailUrl({ detail_station_id: "BE:road/site 1" }),
     "./?station=BE%3Aroad%2Fsite%201",
   );
+  assert.equal(afirStationDetailUrl({ station_id: "raw-station" }), "");
   assert.equal(afirStationDetailUrl({ point_id: "point-only" }), "");
+  assert.equal(
+    afirStationDetailUrl({
+      station_id: "raw-station",
+      point_id: "raw-point",
+    }),
+    "",
+  );
 });

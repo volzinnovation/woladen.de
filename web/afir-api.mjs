@@ -32,7 +32,7 @@ export function scopeFromAfirDimensions(dimensions = {}) {
 }
 
 export function afirStationDetailUrl(dimensions = {}) {
-  const stationId = String(dimensions?.station_id || "").trim();
+  const stationId = String(dimensions?.detail_station_id || "").trim();
   return stationId ? `./?station=${encodeURIComponent(stationId)}` : "";
 }
 
