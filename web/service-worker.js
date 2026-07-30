@@ -1,4 +1,4 @@
-const CACHE_NAME = "woladen-shell-20260730-afir-station-id1";
+const CACHE_NAME = "woladen-shell-20260730-station-api-fallback1";
 
 const APP_SHELL = [
   "/",
@@ -6,7 +6,7 @@ const APP_SHELL = [
   "/styles.css?v=20260720-info-settings2",
   "/app-install-promo.js?v=20260620-eu-i18n9",
   "/pwa-register.js?v=20260701-pwa1",
-  "/app.js?v=20260730-afir-station-id1",
+  "/app.js?v=20260730-station-api-fallback1",
   "/filtering.mjs?v=20260626-routing-web1",
   "/filter-settings.mjs?v=20260626-routing-web1",
   "/favorite-metadata.mjs?v=20260626-favorites-web1",

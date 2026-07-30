@@ -94,8 +94,9 @@ import {
 } from "./note.mjs";
 import {
   parseEmbeddedStationDetailPayload,
+  shouldPreferStaticStationDetail,
   staticStationPagePath,
-} from "./station-detail.mjs?v=20260726-station-deeplink1";
+} from "./station-detail.mjs?v=20260730-station-api-fallback1";
 import {
   applyDocumentTranslations,
   formatDate,
@@ -4166,8 +4167,12 @@ async function loadCatalogStationDetail(stationId) {
 
   state.catalog.pendingDetailStationIds.add(normalizedStationId);
   try {
+    const hasBundledFeature = Boolean(findFeatureByStationId(normalizedStationId));
     const payload = await fetchCatalogStationDetailPayload(normalizedStationId, {
-      preferStatic: !findFeatureByStationId(normalizedStationId),
+      preferStatic: shouldPreferStaticStationDetail(
+        normalizedStationId,
+        { hasBundledFeature },
+      ),
     });
     if (!payload || typeof payload !== "object" || !payload.station) {
       throw new Error("Unexpected catalog station detail payload");
