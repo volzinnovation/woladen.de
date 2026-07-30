@@ -16,9 +16,9 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./afir.css?v=20260729-afir-live2" />
+    <link rel="stylesheet" href="./afir.css?v=20260730-afir-progress1" />
     <script src="./config.js?v=20260729-afir-live2"></script>
-    <script type="module" src="./afir.mjs?v=20260730-afir-eu27-fix1"></script>
+    <script type="module" src="./afir.mjs?v=20260730-afir-progress1"></script>
   </head>
   <body>
     <header class="afir-header">
@@ -51,8 +51,39 @@
       </dl>
     </header>
 
-    <main class="afir-main">
+    <main id="afir-main" class="afir-main" aria-busy="true">
       <nav id="afir-breadcrumb" class="afir-breadcrumb" aria-label="Auswahlpfad"></nav>
+
+      <section
+        id="afir-loading"
+        class="afir-loading"
+        data-state="loading"
+        data-mode="indeterminate"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <div class="afir-loading-copy">
+          <p id="afir-loading-label" class="afir-loading-label">
+            Live-Daten werden vorbereitet …
+          </p>
+          <p id="afir-loading-detail" class="afir-loading-detail">
+            Verbindung zum Live-Dienst wird hergestellt.
+          </p>
+        </div>
+        <div
+          id="afir-progress"
+          class="afir-progress"
+          role="progressbar"
+          aria-labelledby="afir-loading-label"
+          aria-describedby="afir-loading-detail"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuetext="Live-Daten werden vorbereitet."
+        >
+          <span class="afir-progress-value" aria-hidden="true"></span>
+        </div>
+      </section>
 
       <section
         id="afir-eu27-section"

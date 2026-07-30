@@ -6,6 +6,14 @@ const html = await readFile(
   new URL("./afir.html", import.meta.url),
   "utf8",
 );
+const css = await readFile(
+  new URL("./afir.css", import.meta.url),
+  "utf8",
+);
+const script = await readFile(
+  new URL("./afir.mjs", import.meta.url),
+  "utf8",
+);
 
 test("AFIR page states the complete approved F3 rule", () => {
   assert.match(
@@ -23,5 +31,33 @@ test("AFIR page states the complete approved F3 rule", () => {
   assert.match(
     html,
     /eine sachfremde Preisspanne erfüllen F3 nicht/,
+  );
+});
+
+test("AFIR page exposes an immediate accessible loading progress rail", () => {
+  assert.match(html, /id="afir-main"[^>]+aria-busy="true"/);
+  assert.match(html, /id="afir-loading"[\s\S]+role="status"/);
+  assert.match(html, /aria-live="polite"/);
+  assert.match(html, /aria-atomic="true"/);
+  assert.match(html, /role="progressbar"/);
+  assert.match(html, /aria-valuemin="0"/);
+  assert.match(html, /aria-valuemax="100"/);
+  assert.doesNotMatch(
+    html.match(/id="afir-progress"[\s\S]*?<\/div>/)?.[0] || "",
+    /aria-valuenow=/,
+  );
+  assert.match(css, /\.afir-loading\[hidden\]\s*\{\s*display: none;/);
+  assert.match(css, /data-mode="indeterminate"/);
+  assert.match(css, /data-state="error"/);
+});
+
+test("AFIR requests drive visible success and persistent error progress states", () => {
+  assert.match(script, /loadingIndicator\.start/);
+  assert.match(script, /loadingIndicator\.received/);
+  assert.match(script, /loadingIndicator\.succeed/);
+  assert.match(script, /loadingIndicator\.fail/);
+  assert.match(
+    script,
+    /Die Fehlermeldung bleibt direkt unterhalb sichtbar/,
   );
 });

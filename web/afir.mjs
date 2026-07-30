@@ -7,6 +7,9 @@ import {
   nextAfirLevel,
   scopeFromAfirDimensions,
 } from "./afir-api.mjs?v=20260730-afir-eu27-fix1";
+import {
+  createAfirLoadingIndicator,
+} from "./afir-loading.mjs?v=20260730-afir-progress1";
 
 const PAGE_SIZE = 100;
 const LEVEL_LABELS = {
@@ -168,6 +171,13 @@ const state = {
 };
 
 const source = createAfirDataSource({ baseUrl: configuredBaseUrl() });
+const loadingIndicator = createAfirLoadingIndicator({
+  root: element("afir-loading"),
+  progress: element("afir-progress"),
+  label: element("afir-loading-label"),
+  detail: element("afir-loading-detail"),
+  busyRegion: element("afir-main"),
+});
 
 function updateUrl() {
   const query = new URLSearchParams();
@@ -440,15 +450,22 @@ function renderPagination() {
 }
 
 async function loadGroups() {
+  const levelLabel = LEVEL_LABELS[state.level];
+  const progressToken = loadingIndicator.start({
+    labelText: `${levelLabel} werden geladen …`,
+    detailText: "Live-Daten werden angefragt.",
+  });
+  let loadSucceeded = false;
+  let loadedCount = 0;
   state.loading = true;
   state.payload = null;
   element("afir-field-section").hidden = true;
-  element("afir-level-title").textContent = LEVEL_LABELS[state.level];
+  element("afir-level-title").textContent = levelLabel;
   renderBreadcrumb();
   renderEu27Aggregate();
   renderGroups();
   renderPagination();
-  setStatus(`${LEVEL_LABELS[state.level]} werden geladen …`);
+  setStatus(`${levelLabel} werden geladen …`);
   try {
     const payload = await source.loadGroups({
       level: state.level,
@@ -456,8 +473,14 @@ async function loadGroups() {
       limit: PAGE_SIZE,
       offset: state.offset,
     });
+    loadingIndicator.received(progressToken, {
+      labelText: `${levelLabel} sind eingetroffen.`,
+      detailText: "Tabelle und Feldsummen werden aufgebaut.",
+    });
     state.payload = payload;
     const count = Number(payload.pagination?.total_group_count || 0);
+    loadedCount = count;
+    loadSucceeded = true;
     setStatus(
       count
         ? `${NUMBER.format(count)} Einheiten auf dieser Ebene.`
@@ -468,11 +491,23 @@ async function loadGroups() {
       `Der Live-AFIR-Status ist derzeit nicht verfügbar: ${error.message}`,
       "error",
     );
+    loadingIndicator.fail(progressToken, {
+      labelText: "Live-AFIR-Status konnte nicht geladen werden.",
+      detailText: "Die Fehlermeldung bleibt direkt unterhalb sichtbar.",
+    });
   } finally {
     state.loading = false;
     renderEu27Aggregate();
     renderGroups();
     renderPagination();
+    if (loadSucceeded) {
+      loadingIndicator.succeed(progressToken, {
+        labelText: `${levelLabel} sind bereit.`,
+        detailText: loadedCount
+          ? `${NUMBER.format(loadedCount)} Einheiten werden angezeigt.`
+          : "Für diese Ebene liegen noch keine bewertbaren Einheiten vor.",
+      });
+    }
   }
 }
 

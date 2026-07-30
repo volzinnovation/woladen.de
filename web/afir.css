@@ -159,6 +159,88 @@ a {
   color: #93a09b;
 }
 
+.afir-loading {
+  --afir-progress: 0%;
+  position: sticky;
+  z-index: 4;
+  top: 58px;
+  display: grid;
+  gap: 10px;
+  padding: 14px 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(14px);
+}
+
+.afir-loading[hidden] {
+  display: none;
+}
+
+.afir-loading-copy {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.afir-loading-copy p {
+  margin: 0;
+}
+
+.afir-loading-label {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.afir-loading-detail {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.afir-progress {
+  height: 4px;
+  overflow: hidden;
+  background: #e5ece8;
+}
+
+.afir-progress-value {
+  display: block;
+  width: var(--afir-progress);
+  height: 100%;
+  background: var(--accent);
+  transition: width 220ms ease;
+}
+
+.afir-loading[data-mode="indeterminate"] .afir-progress-value {
+  width: 34%;
+  animation: afir-progress-sweep 1.4s ease-in-out infinite;
+}
+
+.afir-loading[data-state="success"] .afir-loading-label {
+  color: var(--good);
+}
+
+.afir-loading[data-state="error"] .afir-loading-label,
+.afir-loading[data-state="error"] .afir-loading-detail {
+  color: var(--bad);
+}
+
+.afir-loading[data-state="error"] .afir-progress-value {
+  width: 100%;
+  background: var(--bad);
+}
+
+@keyframes afir-progress-sweep {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(325%);
+  }
+}
+
 .afir-toolbar {
   display: flex;
   align-items: end;
@@ -491,6 +573,15 @@ a {
     min-width: 0;
   }
 
+  .afir-loading-copy {
+    display: grid;
+    gap: 3px;
+  }
+
+  .afir-loading-detail {
+    text-align: left;
+  }
+
   .afir-pagination {
     justify-content: space-between;
   }
@@ -511,5 +602,11 @@ a {
   *::after {
     scroll-behavior: auto !important;
     transition: none !important;
+  }
+
+  .afir-loading[data-mode="indeterminate"] .afir-progress-value {
+    width: 40%;
+    animation: none;
+    transform: none;
   }
 }
