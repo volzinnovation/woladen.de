@@ -3,7 +3,7 @@ const CACHE_NAME = "woladen-shell-20260730-station-api-fallback1";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=20260720-info-settings2",
+  "/styles.css?v=20260727-spa-ratings2",
   "/app-install-promo.js?v=20260620-eu-i18n9",
   "/pwa-register.js?v=20260701-pwa1",
   "/app.js?v=20260730-station-api-fallback1",
@@ -19,6 +19,7 @@ const APP_SHELL = [
   "/open-static-ui.mjs?v=20260618-commercial-merge",
   "/map-keyboard.mjs?v=20260618-keyboard-restore",
   "/rating.mjs",
+  "/spa-rating.mjs?v=20260727-spa-ratings1",
   "/note.mjs",
   "/i18n.mjs?v=20260730-afir-dynamic-fields1",
   "/styles.css",

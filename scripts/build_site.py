@@ -71,6 +71,7 @@ REQUIRED_DATA = [
     "chargers_under_50.geojson",
     "operators.json",
     "open_static_summary.json",
+    "spa_locations.json",
     "station_ratings.json",
     "summary.json",
 ]
