@@ -18,7 +18,7 @@
     />
     <link rel="stylesheet" href="./afir.css?v=20260729-afir-live2" />
     <script src="./config.js?v=20260729-afir-live2"></script>
-    <script type="module" src="./afir.mjs?v=20260729-afir-live2"></script>
+    <script type="module" src="./afir.mjs?v=20260730-afir-eu27-fix1"></script>
   </head>
   <body>
     <header class="afir-header">
@@ -161,10 +161,15 @@
           </table>
         </div>
         <p class="afir-f3-note">
-          <strong>F3:</strong> Eine vollständige, eindeutige
-          Basistarifangabe erfüllt F3 auch dann, wenn sie statisch übermittelt
-          wird und sich zwischen zwei Nachrichten nicht ändert. Die
-          Aktualität der Tarifübermittlung wird davon getrennt ausgewiesen.
+          <strong>F3:</strong> F3 gilt als erfüllt, wenn die Quelle einen
+          vollständigen, eindeutigen Basistarif bereitstellt, der für die
+          Ladestation oder den Ladepunkt gilt. Der Tarif darf zusammen mit
+          statischen Informationen übermittelt werden und zwischen Nachrichten
+          unverändert bleiben. Eine Preisänderung ist nicht erforderlich.
+          Übermittlungsrhythmus und Verzögerung zwischen Quelle und Empfang
+          bleiben getrennte Aktualitätsnachweise. Fehlende Tarifverweise,
+          nicht auflösbare Verweise, mehrere konkurrierende Basistarife oder
+          eine sachfremde Preisspanne erfüllen F3 nicht.
         </p>
       </section>
 

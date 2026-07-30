@@ -36,6 +36,20 @@ export function afirStationDetailUrl(dimensions = {}) {
   return stationId ? `./?station=${encodeURIComponent(stationId)}` : "";
 }
 
+export function afirCountryDisplayName(
+  countryCode,
+  displayNames = null,
+) {
+  const code = String(countryCode || "").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return code;
+  if (!displayNames || typeof displayNames.of !== "function") return code;
+  try {
+    return displayNames.of(code) || code;
+  } catch {
+    return code;
+  }
+}
+
 export function afirChargingPointCount(group = {}) {
   const counts = group?.entity_counts || {};
   const value = Number(

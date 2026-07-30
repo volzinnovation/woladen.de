@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   afirChargingPointCount,
+  afirCountryDisplayName,
   afirPointCoverage,
   afirStationDetailUrl,
   buildAfirCurrentUrl,
@@ -12,6 +13,20 @@ import {
   previousAfirLevel,
   scopeFromAfirDimensions,
 } from "./afir-api.mjs";
+
+test("synthetic EU27 aggregate does not enter Intl region lookup", () => {
+  const displayNames = {
+    of() {
+      throw new RangeError("invalid_argument");
+    },
+  };
+
+  assert.equal(
+    afirCountryDisplayName("EU27", displayNames),
+    "EU27",
+  );
+  assert.equal(afirCountryDisplayName("", displayNames), "");
+});
 
 test("AFIR hierarchy follows country to individual point", () => {
   assert.equal(nextAfirLevel("country"), "provider");

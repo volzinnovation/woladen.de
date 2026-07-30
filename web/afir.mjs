@@ -1,11 +1,12 @@
 import {
   afirChargingPointCount,
+  afirCountryDisplayName,
   afirPointCoverage,
   afirStationDetailUrl,
   createAfirDataSource,
   nextAfirLevel,
   scopeFromAfirDimensions,
-} from "./afir-api.mjs";
+} from "./afir-api.mjs?v=20260730-afir-eu27-fix1";
 
 const PAGE_SIZE = 100;
 const LEVEL_LABELS = {
@@ -98,7 +99,8 @@ function identityForGroup(level, dimensions) {
       secondary: "EU-27 · 27 Mitgliedstaaten",
     },
     country: {
-      primary: COUNTRY_NAMES.of(countryCode) || countryCode || "Ohne Land",
+      primary:
+        afirCountryDisplayName(countryCode, COUNTRY_NAMES) || "Ohne Land",
       secondary: countryCode,
     },
     provider: {
