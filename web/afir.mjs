@@ -2,6 +2,7 @@ import {
   afirChargingPointCount,
   afirCountryDisplayName,
   afirPointCoverage,
+  afirAggregateFieldsUrl,
   afirStationDetailUrl,
   createAfirDataSource,
   nextAfirLevel,
@@ -163,6 +164,7 @@ function fieldContext(group) {
 const state = {
   level: "country",
   scope: {},
+  openFields: false,
   trail: [],
   offset: 0,
   payload: null,
@@ -182,6 +184,9 @@ const loadingIndicator = createAfirLoadingIndicator({
 function updateUrl() {
   const query = new URLSearchParams();
   query.set("level", state.level);
+  if (state.openFields && state.selectedGroup) {
+    query.set("view", "fields");
+  }
   for (const [key, value] of Object.entries(state.scope)) {
     if (value) query.set(key, value);
   }
@@ -194,6 +199,7 @@ function restoreUrl() {
   if (Object.hasOwn(LEVEL_LABELS, requestedLevel)) {
     state.level = requestedLevel;
   }
+  state.openFields = query.get("view") === "fields";
   state.scope = Object.fromEntries(
     [
       "country_code",
@@ -206,6 +212,22 @@ function restoreUrl() {
     ]
       .map((key) => [key, String(query.get(key) || "").trim()])
       .filter(([, value]) => value),
+  );
+}
+
+function hasScopeMatch(dimensions, scope) {
+  return Object.entries(scope).every(
+    ([key, value]) => String(dimensions?.[key] || "").trim() === value,
+  );
+}
+
+function resolveFieldGroupFromUrl(payload = null) {
+  if (!payload) return null;
+  if (state.level === "country" && Object.keys(state.scope).length === 0) {
+    return payload.eu27_aggregate || null;
+  }
+  return (payload.groups || []).find((group) =>
+    hasScopeMatch(group?.dimensions || {}, state.scope),
   );
 }
 
@@ -311,6 +333,7 @@ function drillInto(group) {
   state.scope = scopeFromAfirDimensions(group.dimensions);
   state.offset = 0;
   state.selectedGroup = null;
+  state.openFields = false;
   element("afir-search").value = "";
   updateUrl();
   void loadGroups();
@@ -370,8 +393,18 @@ function renderEu27Aggregate() {
     row,
     aggregate,
     identityForGroup("eu27", aggregate.dimensions),
-    "Felder →",
+    "",
   );
+  const fieldsLink = document.createElement("a");
+  fieldsLink.className = "afir-detail-link";
+  fieldsLink.href = afirAggregateFieldsUrl("country", aggregate.dimensions || {});
+  fieldsLink.textContent = "Felder →";
+  fieldsLink.setAttribute("aria-label", "AFIR-Felder für EU-27 anzeigen");
+  fieldsLink.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+  row.lastElementChild.replaceChildren(fieldsLink);
+  row.lastElementChild.className = "";
   row.addEventListener("click", () => selectAggregateFields(aggregate));
   row.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -395,24 +428,37 @@ function renderGroups() {
     row.dataset.actionable = "true";
     row.dataset.selected = String(group === state.selectedGroup);
     const identity = identityForGroup(state.level, group.dimensions);
-    const detailUrl =
-      state.level === "point"
-        ? afirStationDetailUrl(group.dimensions)
-        : "";
-    appendGroupCells(row, group, identity, detailUrl ? "" : "→");
-    if (detailUrl) {
-      const detailLink = document.createElement("a");
-      detailLink.className = "afir-detail-link";
-      detailLink.href = detailUrl;
-      detailLink.textContent = "Detailansicht ↗";
-      detailLink.setAttribute(
+    appendGroupCells(row, group, identity, "→");
+    if (state.level === "point") {
+      const detailUrl = afirStationDetailUrl(group.dimensions);
+      if (detailUrl) {
+        const detailLink = document.createElement("a");
+        detailLink.className = "afir-detail-link";
+        detailLink.href = detailUrl;
+        detailLink.textContent = "Detailansicht ↗";
+        detailLink.setAttribute(
+          "aria-label",
+          `Aktuelle Detailansicht für ${identity.primary} öffnen`,
+        );
+        detailLink.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+        row.lastElementChild.replaceChildren(detailLink);
+        row.lastElementChild.className = "";
+      }
+    } else {
+      const fieldsLink = document.createElement("a");
+      fieldsLink.className = "afir-detail-link";
+      fieldsLink.href = afirAggregateFieldsUrl(state.level, group.dimensions);
+      fieldsLink.textContent = "Felder →";
+      fieldsLink.setAttribute(
         "aria-label",
-        `Aktuelle Detailansicht für ${identity.primary} öffnen`,
+        `AFIR-Felder für ${identity.primary} anzeigen`,
       );
-      detailLink.addEventListener("click", (event) => {
+      fieldsLink.addEventListener("click", (event) => {
         event.stopPropagation();
       });
-      row.lastElementChild.replaceChildren(detailLink);
+      row.lastElementChild.replaceChildren(fieldsLink);
       row.lastElementChild.className = "";
     }
     row.addEventListener("click", () => drillInto(group));
@@ -481,6 +527,10 @@ async function loadGroups() {
     const count = Number(payload.pagination?.total_group_count || 0);
     loadedCount = count;
     loadSucceeded = true;
+    if (state.openFields) {
+      state.selectedGroup = resolveFieldGroupFromUrl(payload);
+      updateUrl();
+    }
     setStatus(
       count
         ? `${NUMBER.format(count)} Einheiten auf dieser Ebene.`
@@ -506,6 +556,13 @@ async function loadGroups() {
         detailText: loadedCount
           ? `${NUMBER.format(loadedCount)} Einheiten werden angezeigt.`
           : "Für diese Ebene liegen noch keine bewertbaren Einheiten vor.",
+      });
+    }
+    if (state.openFields && state.selectedGroup) {
+      renderFields(state.selectedGroup);
+      element("afir-field-section").scrollIntoView({
+        behavior: "smooth",
+        block: "start",
       });
     }
   }

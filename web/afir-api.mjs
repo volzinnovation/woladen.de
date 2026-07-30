@@ -9,6 +9,8 @@ const FILTER_KEYS = [
   "durable_entity_key",
 ];
 
+const FIELD_SCOPE_KEYS = [...FILTER_KEYS];
+
 export function normalizeAfirApiBaseUrl(value) {
   return String(value || "").trim().replace(/\/+$/, "");
 }
@@ -34,6 +36,23 @@ export function scopeFromAfirDimensions(dimensions = {}) {
 export function afirStationDetailUrl(dimensions = {}) {
   const stationId = String(dimensions?.detail_station_id || "").trim();
   return stationId ? `./?station=${encodeURIComponent(stationId)}` : "";
+}
+
+export function afirAggregateFieldsUrl(level = "country", dimensions = {}) {
+  const safeLevel = LEVELS.includes(String(level || "").toLowerCase())
+    ? String(level || "").toLowerCase()
+    : "country";
+  const query = new URLSearchParams({
+    level: safeLevel,
+    view: "fields",
+  });
+  for (const key of FIELD_SCOPE_KEYS) {
+    const value = String(dimensions?.[key] || "").trim();
+    if (value) {
+      query.set(key, value);
+    }
+  }
+  return `./afir.html?${query.toString()}`;
 }
 
 export function afirCountryDisplayName(

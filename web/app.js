@@ -87,6 +87,10 @@ import {
   serializeStoredRatings,
 } from "./rating.mjs";
 import {
+  getSpaRatingTier,
+  normalizeSpaRating,
+} from "./spa-rating.mjs?v=20260727-spa-ratings1";
+import {
   getUserNote,
   normalizeNote,
   parseStoredNotes,
@@ -153,6 +157,7 @@ const MAP_GPS_REFRESH_MAX_LOCATION_AGE_MS = 60 * 1000;
 const STATIC_FALLBACK_LIST_LIMIT = 20;
 const MAP_UNCLUSTERED_MARKER_LIMIT = 350;
 const MAP_UNCLUSTERED_FULL_RENDER_ZOOM = 9;
+const SPA_MARKER_SIZE = 28;
 const EASTER_EGG_AUDIO_SECONDS = 1.75;
 const EASTER_EGG_AUDIO_RATE = 8192;
 const EASTER_EGG_MEMORY_SIZE = 65536;
@@ -1215,6 +1220,7 @@ const state = {
   },
   data: {
     geoData: null,
+    spaData: null,
     summaryData: null,
     openStaticSummaryData: null,
     managementSnapshotData: null,
@@ -1225,6 +1231,7 @@ const state = {
     layers: {
       chargers: null,
       route: null,
+      spas: null,
       user: null,
       detailAmenities: null,
     },
@@ -1727,21 +1734,30 @@ function setAnalyticsStationStates(snapshotData) {
 
 async function loadData() {
   try {
-    const [summaryRes, openStaticSummaryData, staticGeoData, managementIndexData] = await Promise.all([
+    const [
+      summaryRes,
+      openStaticSummaryData,
+      staticGeoData,
+      spaData,
+      managementIndexData,
+    ] = await Promise.all([
       fetch("./data/summary.json"),
       fetchOptionalJson("./data/open_static_summary.json"),
       fetchOptionalJson("./data/chargers_fast.geojson"),
+      fetchOptionalJson("./data/spa_locations.json"),
       fetchOptionalJson("./data/management/index.json"),
     ]);
     if (!summaryRes.ok) throw new Error("Network response was not ok");
     const summaryData = await summaryRes.json();
     const managementSnapshotData = await loadLatestManagementSnapshot(managementIndexData);
     state.data.geoData = staticGeoData;
+    state.data.spaData = spaData;
     state.data.summaryData = summaryData;
     state.data.openStaticSummaryData = openStaticSummaryData;
     state.data.managementSnapshotData = managementSnapshotData;
     setAnalyticsStationStates(managementSnapshotData);
     state.staticFeatures = normalizeStaticFallbackFeatures(staticGeoData);
+    renderSpaOverlay(spaData);
 
     populateOperators();
     setAppMeta(staticGeoData, summaryData, openStaticSummaryData);
@@ -3990,9 +4006,6 @@ async function loadLiveStationDetail(stationId) {
     return null;
   }
   const feature = findFeatureByStationId(stationId);
-  if (feature && !shouldRequestLiveDataForProps(feature.properties)) {
-    return null;
-  }
   if (state.live.detailByStationId.has(stationId)) {
     return state.live.detailByStationId.get(stationId);
   }
@@ -4488,7 +4501,7 @@ function initMap() {
 
   state.views.layers.route = L.layerGroup().addTo(state.views.map);
   state.views.layers.chargers = L.layerGroup().addTo(state.views.map);
-
+  state.views.layers.spas = L.layerGroup().addTo(state.views.map);
   state.views.layers.user = L.layerGroup().addTo(state.views.map);
   ["dragstart", "zoomstart"].forEach((eventName) => {
     state.views.map.on(eventName, () => {
@@ -4815,6 +4828,154 @@ function bindStationMarker(marker, feature) {
   marker.on("add", () => enhanceStationMarkerElement(marker, feature));
   marker.on("click", () => openDetail(feature));
   return marker;
+}
+
+const spaMarkerIcons = new Map();
+
+function normalizeSpaLocations(payload) {
+  const locations = Array.isArray(payload?.locations) ? payload.locations : [];
+  return locations
+    .map((location) => {
+      const latitude = Number(location?.latitude);
+      const longitude = Number(location?.longitude);
+      const name = String(location?.name || "").trim();
+      if (!name || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return null;
+      }
+      return {
+        slug: String(location?.slug || "").trim(),
+        name,
+        latitude,
+        longitude,
+        city: String(location?.city || "").trim(),
+        priceHint: String(location?.price_hint || "").trim(),
+        url: normalizeSpaUrl(location?.url),
+        googleMapsRating: normalizeSpaRating(location?.google_maps_rating),
+        googleMapsName: String(location?.google_maps_name || "").trim(),
+        googleMapsUrl: normalizeSpaUrl(location?.google_maps_url),
+        googleMapsStatus: String(location?.google_maps_status || "").trim(),
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeSpaUrl(value) {
+  try {
+    const url = new URL(String(value || "").trim(), window.location.href);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function getSpaMarkerIcon(ratingTier) {
+  if (spaMarkerIcons.has(ratingTier)) {
+    return spaMarkerIcons.get(ratingTier);
+  }
+  const icon = L.divIcon({
+    className: `spa-map-marker spa-map-marker-${ratingTier}`,
+    html: '<span class="spa-map-marker-symbol" aria-hidden="true">♨</span>',
+    iconSize: [SPA_MARKER_SIZE, SPA_MARKER_SIZE],
+    iconAnchor: [SPA_MARKER_SIZE / 2, SPA_MARKER_SIZE / 2],
+    popupAnchor: [0, -(SPA_MARKER_SIZE / 2)],
+    tooltipAnchor: [0, -(SPA_MARKER_SIZE / 2)],
+  });
+  spaMarkerIcons.set(ratingTier, icon);
+  return icon;
+}
+
+function formatSpaRating(location) {
+  return formatRatingValue(location.googleMapsRating, getLocale());
+}
+
+function spaMarkerLabel(location) {
+  const rating = formatSpaRating(location);
+  return [
+    "Therme",
+    location.name,
+    rating ? `Google Maps ${rating} ★` : "Google Maps: keine Wertung",
+    location.city,
+    location.priceHint,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+function createSpaPopup(location) {
+  const content = document.createElement("article");
+  content.className = "spa-popup";
+
+  const name = document.createElement("strong");
+  name.className = "spa-popup-name";
+  name.textContent = location.name;
+  content.appendChild(name);
+
+  const details = [location.city, location.priceHint].filter(Boolean);
+  if (details.length) {
+    const meta = document.createElement("span");
+    meta.className = "spa-popup-meta";
+    meta.textContent = details.join(" · ");
+    content.appendChild(meta);
+  }
+
+  const rating = formatSpaRating(location);
+  const ratingTier = getSpaRatingTier(location.googleMapsRating);
+  const ratingElement = document.createElement("span");
+  ratingElement.className = `spa-popup-rating spa-popup-rating-${ratingTier}`;
+  ratingElement.textContent = rating ? `Google Maps ${rating} ★` : "Keine Google-Maps-Wertung";
+  content.appendChild(ratingElement);
+
+  if (location.url) {
+    const link = document.createElement("a");
+    link.className = "spa-popup-link";
+    link.href = location.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "thermen.blog ↗";
+    content.appendChild(link);
+  }
+
+  if (location.googleMapsUrl) {
+    const mapsLink = document.createElement("a");
+    mapsLink.className = "spa-popup-link";
+    mapsLink.href = location.googleMapsUrl;
+    mapsLink.target = "_blank";
+    mapsLink.rel = "noopener noreferrer";
+    mapsLink.textContent = "Google Maps ↗";
+    content.appendChild(mapsLink);
+  }
+
+  return content;
+}
+
+function renderSpaOverlay(payload) {
+  if (!state.views.layers.spas) {
+    return;
+  }
+  state.views.layers.spas.clearLayers();
+  normalizeSpaLocations(payload).forEach((location) => {
+    const label = spaMarkerLabel(location);
+    const ratingTier = getSpaRatingTier(location.googleMapsRating);
+    const marker = L.marker([location.latitude, location.longitude], {
+      icon: getSpaMarkerIcon(ratingTier),
+      keyboard: true,
+      title: label,
+      zIndexOffset: 200,
+    });
+    marker.bindTooltip(escapeHtml(label), { direction: "top" });
+    marker.bindPopup(createSpaPopup(location), { className: "spa-leaflet-popup" });
+    marker.on("add", () => {
+      const element = marker.getElement();
+      if (element && location.slug) {
+        element.dataset.spaSlug = location.slug;
+        element.dataset.spaRatingTier = ratingTier;
+        if (location.googleMapsRating !== null) {
+          element.dataset.spaRating = String(location.googleMapsRating);
+        }
+      }
+    });
+    marker.addTo(state.views.layers.spas);
+  });
 }
 
 function renderDetailStationMarker(feature) {
