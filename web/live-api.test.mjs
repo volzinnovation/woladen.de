@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildLiveStationDetailPath,
+  normalizeLiveStationId,
   normalizeLiveApiBaseUrl,
   queryGermanLiveApiBaseUrl,
   queryLiveApiBaseUrl,
@@ -9,6 +11,37 @@ import {
   resolveGermanLiveApiBaseUrl,
   resolveLiveApiBaseUrl,
 } from "./live-api.mjs";
+
+test("preserves provider-prefixed station IDs for live lookup and F1-F3 rendering", () => {
+  const stationId = "be:be_energyvision_ocpi_locations:1f00b0f8-481a-6714-b53d-06f945fc8557";
+  const evse = {
+    station_id: stationId,
+    operational_status: "AVAILABLE",
+    availability_status: "free",
+    price_display: "0,50 €/kWh",
+  };
+
+  assert.equal(normalizeLiveStationId(stationId), stationId);
+  assert.equal(
+    normalizeLiveStationId("BE:be_energyvision_ocpi_locations:1f00b0f8-481a-6714-b53d-06f945fc8557"),
+    stationId,
+  );
+  assert.equal(
+    buildLiveStationDetailPath("BE:be_energyvision_ocpi_locations:1f00b0f8-481a-6714-b53d-06f945fc8557"),
+    "/v1/stations/be%3Abe_energyvision_ocpi_locations%3A1f00b0f8-481a-6714-b53d-06f945fc8557",
+  );
+  assert.deepEqual(readLiveDynamicFields(evse), {
+    operationalStatus: "AVAILABLE",
+    availabilityStatus: "free",
+    priceDisplay: "0,50 €/kWh",
+  });
+});
+
+test("keeps German station identifiers on the DE live identity", () => {
+  assert.equal(normalizeLiveStationId("64251DE84FB0E7B3"), "DE:64251de84fb0e7b3");
+  assert.equal(normalizeLiveStationId("de:64251DE84FB0E7B3"), "DE:64251de84fb0e7b3");
+  assert.equal(normalizeLiveStationId("de:provider-specific-id"), "DE:provider-specific-id");
+});
 
 test("normalizeLiveApiBaseUrl trims and strips trailing slashes", () => {
   assert.equal(normalizeLiveApiBaseUrl(" http://127.0.0.1:8001/ "), "http://127.0.0.1:8001");

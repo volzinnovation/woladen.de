@@ -45,10 +45,12 @@ import {
   shouldCenterMapOnLocationViewOpen,
 } from "./location.mjs?v=20260630-map-location1";
 import {
+  buildLiveStationDetailPath,
+  normalizeLiveStationId,
   readLiveDynamicFields,
   resolveGermanLiveApiBaseUrl as computeGermanLiveApiBaseUrl,
   resolveLiveApiBaseUrl as computeLiveApiBaseUrl,
-} from "./live-api.mjs?v=20260730-afir-dynamic-fields1";
+} from "./live-api.mjs?v=20260730-afir-station-id1";
 import {
   buildGeocoderApiUrl,
   normalizeGeocodePayload,
@@ -3995,9 +3997,9 @@ async function loadLiveStationDetail(stationId) {
   }
 
   try {
-    const apiStationId = toLiveApiStationId(stationId);
+    const apiStationPath = buildLiveStationDetailPath(stationId);
     const payload = await fetchJsonWithTimeout(
-      buildStationLiveApiUrl(stationId, `/v1/stations/${encodeURIComponent(apiStationId)}`, {
+      buildStationLiveApiUrl(stationId, apiStationPath, {
         history_limit: 20,
       }),
       {},
@@ -7466,7 +7468,7 @@ function normalizeStationId(value) {
 }
 
 function toLiveApiStationId(value) {
-  return normalizeStationId(value);
+  return normalizeLiveStationId(value);
 }
 
 function isGermanStationId(value) {

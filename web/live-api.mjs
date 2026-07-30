@@ -7,6 +7,38 @@ const LIVE_REMOTE_HOSTS = new Map([
 ]);
 const LIVE_API_QUERY_PARAM = "liveApiBaseUrl";
 const LIVE_DE_API_QUERY_PARAM = "deLiveApiBaseUrl";
+const LEGACY_GERMAN_STATION_ID_RE = /^[0-9a-f]{16}$/i;
+const NAMESPACED_GERMAN_STATION_ID_RE = /^DE:([0-9a-f]{16})$/i;
+const COUNTRY_STATION_ID_RE = /^([A-Z]{2}):(.+)$/i;
+
+export function normalizeLiveStationId(value) {
+  const stationId = String(value || "").trim();
+  if (!stationId) {
+    return "";
+  }
+  if (LEGACY_GERMAN_STATION_ID_RE.test(stationId)) {
+    return `DE:${stationId.toLowerCase()}`;
+  }
+  const germanMatch = stationId.match(NAMESPACED_GERMAN_STATION_ID_RE);
+  if (germanMatch) {
+    return `DE:${germanMatch[1].toLowerCase()}`;
+  }
+  const countryMatch = stationId.match(COUNTRY_STATION_ID_RE);
+  if (countryMatch?.[1]?.toUpperCase() === "DE") {
+    return `DE:${countryMatch[2]}`;
+  }
+  if (countryMatch) {
+    return `${countryMatch[1].toLowerCase()}:${countryMatch[2]}`;
+  }
+  return stationId;
+}
+
+export function buildLiveStationDetailPath(stationId) {
+  const normalizedStationId = normalizeLiveStationId(stationId);
+  return normalizedStationId
+    ? `/v1/stations/${encodeURIComponent(normalizedStationId)}`
+    : "";
+}
 
 export function normalizeLiveApiBaseUrl(value) {
   const candidate = String(value || "").trim();

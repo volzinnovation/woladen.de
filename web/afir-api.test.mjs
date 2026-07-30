@@ -108,6 +108,12 @@ test("dimensions become filters without empty identifiers", () => {
 
 test("point results link only through the catalog detail station identity", () => {
   assert.equal(
+    afirStationDetailUrl({
+      detail_station_id: "be:be_energyvision_ocpi_locations:1f00b0f8-481a-6714-b53d-06f945fc8557",
+    }),
+    "./?station=be%3Abe_energyvision_ocpi_locations%3A1f00b0f8-481a-6714-b53d-06f945fc8557",
+  );
+  assert.equal(
     afirStationDetailUrl({ detail_station_id: "BE:road/site 1" }),
     "./?station=BE%3Aroad%2Fsite%201",
   );
