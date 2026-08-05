@@ -89,3 +89,18 @@ test("AFIR tables provide accessible sorting and retain aggregate field links", 
   assert.match(script, /dynamicFields = fields\.filter/);
   assert.match(script, /staticFields = fields\.filter/);
 });
+
+test("AFIR previous-release ratios use their own point denominator", () => {
+  assert.match(
+    script,
+    /previous:\s*\{[\s\S]*?denominatorKey:\s*"previous_distinct_release_point_count"/,
+  );
+  assert.match(
+    script,
+    /both:\s*\{[\s\S]*?denominatorKey:\s*"previous_distinct_release_point_count"/,
+  );
+  assert.match(
+    script,
+    /coverage\?\.\[selectedPhase\.denominatorKey\]/,
+  );
+});

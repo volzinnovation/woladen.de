@@ -78,26 +78,31 @@ function coveragePercent(summary) {
 }
 
 function pointCoverageRatio(coverage, phase = "current") {
-  const denominator = Number(coverage?.denominator || 0);
   const phases = {
-    current: [
-      "present_current_count",
-      "coverage_pct",
-    ],
-    previous: [
-      "present_previous_count",
-      "previous_coverage_pct",
-    ],
-    both: [
-      "present_in_both_distinct_releases_count",
-      "two_release_coverage_pct",
-    ],
+    current: {
+      countKey: "present_current_count",
+      percentKey: "coverage_pct",
+      denominatorKey: "denominator",
+    },
+    previous: {
+      countKey: "present_previous_count",
+      percentKey: "previous_coverage_pct",
+      denominatorKey: "previous_distinct_release_point_count",
+    },
+    both: {
+      countKey: "present_in_both_distinct_releases_count",
+      percentKey: "two_release_coverage_pct",
+      denominatorKey: "previous_distinct_release_point_count",
+    },
   };
-  const [countKey, percentKey] = phases[phase] || phases.current;
-  const numerator = Number(coverage?.[countKey] || 0);
+  const selectedPhase = phases[phase] || phases.current;
+  const numerator = Number(coverage?.[selectedPhase.countKey] || 0);
+  const denominator = Number(
+    coverage?.[selectedPhase.denominatorKey] || 0,
+  );
   return `${NUMBER.format(numerator)} / ${NUMBER.format(
     denominator,
-  )} · ${percent(coverage?.[percentKey])}`;
+  )} · ${percent(coverage?.[selectedPhase.percentKey])}`;
 }
 
 function identityForGroup(level, dimensions) {
