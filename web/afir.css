@@ -345,6 +345,53 @@ a {
   white-space: nowrap;
 }
 
+.afir-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.afir-sort-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 3px;
+}
+
+.afir-sort-indicator {
+  display: inline-grid;
+  width: 1em;
+  color: var(--accent-dark);
+  font-size: 13px;
+  line-height: 1;
+  place-items: center;
+}
+
+.afir-sort-indicator::before {
+  content: "↕";
+  opacity: 0.48;
+}
+
+.afir-sort-button[data-sort-direction="ascending"] .afir-sort-indicator::before {
+  content: "↑";
+  opacity: 1;
+}
+
+.afir-sort-button[data-sort-direction="descending"] .afir-sort-indicator::before {
+  content: "↓";
+  opacity: 1;
+}
+
 .afir-table td {
   padding: 16px 14px;
   border-top: 1px solid var(--line);
@@ -446,6 +493,30 @@ a {
 .afir-field-section {
   margin-top: 70px;
   scroll-margin-top: 76px;
+}
+
+.afir-field-group + .afir-field-group {
+  margin-top: 46px;
+}
+
+.afir-field-group-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 14px;
+}
+
+.afir-field-group-heading h3 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.afir-field-count {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .afir-field-heading {

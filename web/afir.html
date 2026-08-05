@@ -16,9 +16,9 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./afir.css?v=20260730-afir-progress1" />
+    <link rel="stylesheet" href="./afir.css?v=20260805-afir-fields1" />
     <script src="./config.js?v=20260729-afir-live2"></script>
-    <script type="module" src="./afir.mjs?v=20260730-afir-progress2"></script>
+    <script type="module" src="./afir.mjs?v=20260805-afir-fields1"></script>
   </head>
   <body>
     <header class="afir-header">
@@ -103,16 +103,20 @@
           </p>
         </div>
         <div class="afir-table-wrap">
-          <table class="afir-table">
+          <table
+            id="afir-eu27-table"
+            class="afir-table afir-sortable"
+            data-table-key="eu27"
+          >
             <thead>
               <tr>
-                <th scope="col">Einheit</th>
-                <th scope="col">Statisch</th>
-                <th scope="col">Dynamisch</th>
-                <th scope="col">Aktualität</th>
-                <th scope="col">Standorte</th>
-                <th scope="col">Ladepunkte</th>
-                <th scope="col"><span class="visually-hidden">Felder anzeigen</span></th>
+                <th scope="col" data-sort-type="text" data-sort-label="Einheit">Einheit</th>
+                <th scope="col" data-sort-type="number" data-sort-label="Statische Abdeckung">Statisch</th>
+                <th scope="col" data-sort-type="number" data-sort-label="Dynamische Abdeckung">Dynamisch</th>
+                <th scope="col" data-sort-type="number" data-sort-label="Aktualität">Aktualität</th>
+                <th scope="col" data-sort-type="number" data-sort-label="Standorte">Standorte</th>
+                <th scope="col" data-sort-type="number" data-sort-label="Ladepunkte">Ladepunkte</th>
+                <th scope="col" class="unsortable" data-sortable="false"><span class="visually-hidden">Felder anzeigen</span></th>
               </tr>
             </thead>
             <tbody id="afir-eu27-group"></tbody>
@@ -140,16 +144,20 @@
 
       <section class="afir-table-section" aria-labelledby="afir-level-title">
         <div class="afir-table-wrap">
-          <table class="afir-table">
+          <table
+            id="afir-groups-table"
+            class="afir-table afir-sortable"
+            data-table-key="groups"
+          >
             <thead>
               <tr>
-                <th scope="col">Einheit</th>
-                <th scope="col">Statisch</th>
-                <th scope="col">Dynamisch</th>
-                <th scope="col">Aktualität</th>
-                <th scope="col">Standorte</th>
-                <th scope="col">Ladepunkte</th>
-                <th scope="col"><span class="visually-hidden">Öffnen</span></th>
+                <th scope="col" data-sort-type="text" data-sort-label="Einheit">Einheit</th>
+                <th scope="col" data-sort-type="number" data-sort-label="Statische Abdeckung">Statisch</th>
+                <th scope="col" data-sort-type="number" data-sort-label="Dynamische Abdeckung">Dynamisch</th>
+                <th scope="col" data-sort-type="number" data-sort-label="Aktualität">Aktualität</th>
+                <th scope="col" data-sort-type="number" data-sort-label="Standorte">Standorte</th>
+                <th scope="col" data-sort-type="number" data-sort-label="Ladepunkte">Ladepunkte</th>
+                <th scope="col" class="unsortable" data-sortable="false"><span class="visually-hidden">Öffnen</span></th>
               </tr>
             </thead>
             <tbody id="afir-groups"></tbody>
@@ -175,22 +183,53 @@
             </a>
           </div>
         </div>
-        <div class="afir-table-wrap">
-          <table class="afir-table afir-field-table">
-            <thead>
-              <tr>
-                <th scope="col">Feld</th>
-                <th scope="col">Offizielle Bezeichnung</th>
-                <th scope="col">Art</th>
-                <th scope="col">Ladepunkte aktuell</th>
-                <th scope="col">Ladepunkte vorher</th>
-                <th scope="col">Ladepunkte in beiden Nachrichten</th>
-                <th scope="col">Medianes Alter</th>
-              </tr>
-            </thead>
-            <tbody id="afir-fields"></tbody>
-          </table>
-        </div>
+        <section class="afir-field-group" aria-labelledby="afir-dynamic-field-title">
+          <div class="afir-field-group-heading">
+            <h3 id="afir-dynamic-field-title">Dynamische Felder</h3>
+            <span id="afir-dynamic-field-count" class="afir-field-count"></span>
+          </div>
+          <div class="afir-table-wrap">
+            <table
+              id="afir-dynamic-fields-table"
+              class="afir-table afir-field-table afir-sortable"
+              data-table-key="dynamic-fields"
+            >
+              <thead>
+                <tr>
+                  <th scope="col" data-sort-type="text" data-sort-label="Feld">Feld</th>
+                  <th scope="col" data-sort-type="text" data-sort-label="Offizielle Bezeichnung">Offizielle Bezeichnung</th>
+                  <th scope="col" data-sort-type="number" data-sort-label="Ladepunkte aktuell">Ladepunkte aktuell</th>
+                  <th scope="col" data-sort-type="number" data-sort-label="Ladepunkte vorher">Ladepunkte vorher</th>
+                  <th scope="col" data-sort-type="number" data-sort-label="Ladepunkte in beiden Nachrichten">Ladepunkte in beiden Nachrichten</th>
+                  <th scope="col" data-sort-type="number" data-sort-label="Medianes Alter">Medianes Alter</th>
+                </tr>
+              </thead>
+              <tbody id="afir-dynamic-fields"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="afir-field-group" aria-labelledby="afir-static-field-title">
+          <div class="afir-field-group-heading">
+            <h3 id="afir-static-field-title">Statische Felder</h3>
+            <span id="afir-static-field-count" class="afir-field-count"></span>
+          </div>
+          <div class="afir-table-wrap">
+            <table
+              id="afir-static-fields-table"
+              class="afir-table afir-field-table afir-sortable"
+              data-table-key="static-fields"
+            >
+              <thead>
+                <tr>
+                  <th scope="col" data-sort-type="text" data-sort-label="Feld">Feld</th>
+                  <th scope="col" data-sort-type="text" data-sort-label="Offizielle Bezeichnung">Offizielle Bezeichnung</th>
+                  <th scope="col" data-sort-type="number" data-sort-label="Ladepunkte aktuell">Ladepunkte aktuell</th>
+                </tr>
+              </thead>
+              <tbody id="afir-static-fields"></tbody>
+            </table>
+          </div>
+        </section>
         <p class="afir-f3-note">
           <strong>F3:</strong> F3 gilt als erfüllt, wenn die Quelle einen
           vollständigen, eindeutigen Basistarif bereitstellt, der für die

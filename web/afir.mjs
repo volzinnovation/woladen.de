@@ -22,6 +22,11 @@ const LEVEL_LABELS = {
 };
 const COUNTRY_NAMES = new Intl.DisplayNames(["de"], { type: "region" });
 const NUMBER = new Intl.NumberFormat("de-DE");
+const TABLE_SORT_COLLATOR = new Intl.Collator("de", {
+  numeric: true,
+  sensitivity: "base",
+});
+const tableSortState = new Map();
 
 function element(id) {
   return document.getElementById(id);
@@ -141,12 +146,177 @@ function appendCell(row, content, className = "") {
   return cell;
 }
 
+function setSortValue(cell, value) {
+  if (value !== null && value !== undefined && value !== "") {
+    cell.dataset.sortValue = String(value);
+  } else {
+    cell.dataset.sortValue = "";
+  }
+  return cell;
+}
+
+function sortableHeaders(table) {
+  return Array.from(table.tHead?.rows || []).flatMap((row) =>
+    Array.from(row.cells),
+  );
+}
+
+function tableRows(table) {
+  return Array.from(table.tBodies?.[0]?.rows || []);
+}
+
+function headerColumnIndex(header) {
+  const explicit = String(header.dataset.sortColumn || "").trim();
+  return explicit ? Number(explicit) : header.cellIndex;
+}
+
+function compareSortValues(left, right, type) {
+  if (type === "number") {
+    const leftNumber = Number(left);
+    const rightNumber = Number(right);
+    if (Number.isFinite(leftNumber) && Number.isFinite(rightNumber)) {
+      return leftNumber - rightNumber;
+    }
+    if (Number.isFinite(leftNumber)) return -1;
+    if (Number.isFinite(rightNumber)) return 1;
+  }
+  return TABLE_SORT_COLLATOR.compare(String(left), String(right));
+}
+
+function updateSortHeaderState(table, activeColumn, direction) {
+  for (const header of sortableHeaders(table)) {
+    const active =
+      headerColumnIndex(header) === activeColumn && direction !== "none";
+    header.setAttribute("aria-sort", active ? direction : "none");
+    const button = header.querySelector(".afir-sort-button");
+    if (button) button.dataset.sortDirection = active ? direction : "none";
+  }
+}
+
+function sortTable(table, column, type, direction) {
+  const body = table.tBodies?.[0];
+  if (!body) return;
+  const rows = tableRows(table);
+  rows.sort((leftRow, rightRow) => {
+    if (direction === "none") {
+      return Number(leftRow.dataset.sortOriginalIndex || 0) -
+        Number(rightRow.dataset.sortOriginalIndex || 0);
+    }
+    const leftValue = String(
+      leftRow.cells[column]?.dataset.sortValue ||
+        leftRow.cells[column]?.textContent ||
+        "",
+    ).trim();
+    const rightValue = String(
+      rightRow.cells[column]?.dataset.sortValue ||
+        rightRow.cells[column]?.textContent ||
+        "",
+    ).trim();
+    if (!leftValue || !rightValue) {
+      if (!leftValue && !rightValue) {
+        return Number(leftRow.dataset.sortOriginalIndex || 0) -
+          Number(rightRow.dataset.sortOriginalIndex || 0);
+      }
+      return leftValue ? -1 : 1;
+    }
+    const result = compareSortValues(leftValue, rightValue, type);
+    if (result) return direction === "descending" ? -result : result;
+    return Number(leftRow.dataset.sortOriginalIndex || 0) -
+      Number(rightRow.dataset.sortOriginalIndex || 0);
+  }).forEach((row) => body.append(row));
+}
+
+function refreshSortableTable(table) {
+  if (!table) return;
+  tableRows(table).forEach((row, index) => {
+    if (!Object.hasOwn(row.dataset, "sortOriginalIndex")) {
+      row.dataset.sortOriginalIndex = String(index);
+    }
+  });
+  const tableKey = String(table.dataset.tableKey || "");
+  const sort = tableSortState.get(tableKey) || {
+    column: -1,
+    direction: "none",
+  };
+  if (sort.column >= 0 && sort.direction !== "none") {
+    const header = sortableHeaders(table).find(
+      (candidate) => headerColumnIndex(candidate) === sort.column,
+    );
+    sortTable(table, sort.column, header?.dataset.sortType || "text", sort.direction);
+  }
+  updateSortHeaderState(table, sort.column, sort.direction);
+}
+
+function toggleTableSort(table, header) {
+  const tableKey = String(table.dataset.tableKey || "");
+  const column = headerColumnIndex(header);
+  const current = tableSortState.get(tableKey) || {
+    column: -1,
+    direction: "none",
+  };
+  let direction = "ascending";
+  if (current.column === column) {
+    direction = current.direction === "ascending" ? "descending" : "none";
+  }
+  tableSortState.set(tableKey, { column, direction });
+  tableRows(table).forEach((row, index) => {
+    if (!row.dataset.sortOriginalIndex) {
+      row.dataset.sortOriginalIndex = String(index);
+    }
+  });
+  sortTable(table, column, header.dataset.sortType || "text", direction);
+  updateSortHeaderState(table, column, direction);
+}
+
+function wireSortableTables() {
+  document.querySelectorAll("table.afir-sortable").forEach((table) => {
+    for (const header of sortableHeaders(table)) {
+      if (
+        header.dataset.sortable === "false" ||
+        header.classList.contains("unsortable") ||
+        header.dataset.sortWired === "true"
+      ) {
+        continue;
+      }
+      const label = header.dataset.sortLabel || header.textContent.trim();
+      const button = document.createElement("button");
+      const labelSpan = document.createElement("span");
+      const indicator = document.createElement("span");
+      button.type = "button";
+      button.className = "afir-sort-button";
+      button.dataset.sortDirection = "none";
+      button.setAttribute("aria-label", `${label} sortieren`);
+      labelSpan.className = "afir-sort-label";
+      labelSpan.textContent = header.textContent.trim();
+      indicator.className = "afir-sort-indicator";
+      indicator.setAttribute("aria-hidden", "true");
+      button.append(labelSpan, indicator);
+      header.replaceChildren(button);
+      header.dataset.sortColumn = String(header.cellIndex);
+      header.dataset.sortWired = "true";
+      header.setAttribute("aria-sort", "none");
+      button.addEventListener("click", () => toggleTableSort(table, header));
+    }
+    refreshSortableTable(table);
+  });
+}
+
 function metric(summary) {
   const span = document.createElement("span");
   span.className = "afir-metric";
   span.dataset.state = coverageState(summary);
   span.textContent = percent(coveragePercent(summary));
   return span;
+}
+
+function pointCoverageSortValue(coverage, phase = "current") {
+  const countKeys = {
+    current: "present_current_count",
+    previous: "present_previous_count",
+    both: "present_in_both_distinct_releases_count",
+  };
+  const value = coverage?.[countKeys[phase] || countKeys.current];
+  return value === null || value === undefined ? "" : Number(value);
 }
 
 function groupSearchText(group) {
@@ -226,9 +396,11 @@ function resolveFieldGroupFromUrl(payload = null) {
   if (state.level === "country" && Object.keys(state.scope).length === 0) {
     return payload.eu27_aggregate || null;
   }
-  return (payload.groups || []).find((group) =>
+  const matched = (payload.groups || []).find((group) =>
     hasScopeMatch(group?.dimensions || {}, state.scope),
   );
+  if (matched) return matched;
+  return payload.groups?.length === 1 ? payload.groups[0] : null;
 }
 
 function setStatus(message, tone = "") {
@@ -274,33 +446,59 @@ function renderBreadcrumb() {
 
 function renderFields(group) {
   const section = element("afir-field-section");
-  const body = element("afir-fields");
-  body.replaceChildren();
   const fields = Array.isArray(group?.fields) ? group.fields : [];
-  for (const field of fields) {
-    const row = document.createElement("tr");
-    const code = document.createElement("span");
-    code.className = "afir-field-code";
-    code.textContent = field.field_id || "–";
-    const key = document.createElement("small");
-    key.className = "afir-field-key";
-    key.textContent = field.technical_key || "";
-    const identity = document.createElement("div");
-    identity.append(code, key);
-    appendCell(row, identity);
-    appendCell(row, field.label || field.technical_key || "–");
-    appendCell(row, field.data_kind === "dynamic" ? "dynamisch" : "statisch");
-    const pointCoverage = field.charging_point_coverage || {};
-    appendCell(row, pointCoverageRatio(pointCoverage, "current"));
-    appendCell(row, pointCoverageRatio(pointCoverage, "previous"));
-    appendCell(row, pointCoverageRatio(pointCoverage, "both"));
-    appendCell(
-      row,
-      field.data_kind === "dynamic"
-        ? duration(field.freshness?.source_observed_age_seconds?.p50)
-        : "–",
-    );
-    body.append(row);
+  const dynamicFields = fields.filter((field) => field.data_kind === "dynamic");
+  const staticFields = fields.filter((field) => field.data_kind !== "dynamic");
+
+  function renderFieldRows(body, fieldRows, dynamic) {
+    body.replaceChildren();
+    for (const field of fieldRows) {
+      const row = document.createElement("tr");
+      const code = document.createElement("span");
+      code.className = "afir-field-code";
+      code.textContent = field.field_id || "–";
+      const key = document.createElement("small");
+      key.className = "afir-field-key";
+      key.textContent = field.technical_key || "";
+      const identity = document.createElement("div");
+      identity.append(code, key);
+      setSortValue(appendCell(row, identity), field.field_id || field.technical_key);
+      setSortValue(
+        appendCell(row, field.label || field.technical_key || "–"),
+        field.label || field.technical_key,
+      );
+      const pointCoverage = field.charging_point_coverage || {};
+      setSortValue(
+        appendCell(row, pointCoverageRatio(pointCoverage, "current")),
+        pointCoverageSortValue(pointCoverage, "current"),
+      );
+      if (dynamic) {
+        setSortValue(
+          appendCell(row, pointCoverageRatio(pointCoverage, "previous")),
+          pointCoverageSortValue(pointCoverage, "previous"),
+        );
+        setSortValue(
+          appendCell(row, pointCoverageRatio(pointCoverage, "both")),
+          pointCoverageSortValue(pointCoverage, "both"),
+        );
+        const age = field.freshness?.source_observed_age_seconds?.p50;
+        setSortValue(appendCell(row, duration(age)), age);
+      }
+      body.append(row);
+    }
+  }
+
+  renderFieldRows(element("afir-dynamic-fields"), dynamicFields, true);
+  renderFieldRows(element("afir-static-fields"), staticFields, false);
+  element("afir-dynamic-field-count").textContent =
+    `${NUMBER.format(dynamicFields.length)} Felder`;
+  element("afir-static-field-count").textContent =
+    `${NUMBER.format(staticFields.length)} Felder`;
+  for (const table of [
+    element("afir-dynamic-fields-table"),
+    element("afir-static-fields-table"),
+  ]) {
+    refreshSortableTable(table);
   }
   element("afir-field-title").textContent = `${fields.length} AFIR-Felder`;
   element("afir-field-context").textContent = fieldContext(group);
@@ -315,6 +513,8 @@ function drillInto(group) {
   const nextLevel = nextAfirLevel(state.level);
   if (!nextLevel) {
     state.selectedGroup = group;
+    state.openFields = true;
+    updateUrl();
     renderGroups();
     renderFields(group);
     element("afir-field-section").scrollIntoView({
@@ -346,24 +546,37 @@ function appendGroupCells(row, group, identity, actionLabel = "→") {
   const secondary = document.createElement("small");
   secondary.textContent = identity.secondary;
   identityBlock.append(primary, secondary);
-  appendCell(row, identityBlock, "afir-identity");
-  appendCell(row, metric(group.static_compliance));
-  appendCell(row, metric(group.dynamic_compliance));
-  appendCell(
-    row,
-    group.dynamic_compliance?.freshness_state === "assessed"
-      ? duration(
-          group.source_release_cadence?.source_release_gap_seconds?.p50,
-        )
-      : "nicht bewertet",
+  setSortValue(appendCell(row, identityBlock, "afir-identity"), identity.primary);
+  setSortValue(
+    appendCell(row, metric(group.static_compliance)),
+    coveragePercent(group.static_compliance),
   );
-  appendCell(row, NUMBER.format(group.entity_counts?.station_count || 0));
-  appendCell(row, NUMBER.format(afirChargingPointCount(group)));
+  setSortValue(
+    appendCell(row, metric(group.dynamic_compliance)),
+    coveragePercent(group.dynamic_compliance),
+  );
+  const freshness =
+    group.dynamic_compliance?.freshness_state === "assessed"
+      ? group.source_release_cadence?.source_release_gap_seconds?.p50
+      : "";
+  setSortValue(
+    appendCell(
+    row,
+      freshness === "" ? "nicht bewertet" : duration(freshness),
+    ),
+    freshness,
+  );
+  const stationCount = Number(group.entity_counts?.station_count || 0);
+  const chargingPointCount = afirChargingPointCount(group);
+  setSortValue(appendCell(row, NUMBER.format(stationCount)), stationCount);
+  setSortValue(appendCell(row, NUMBER.format(chargingPointCount)), chargingPointCount);
   appendCell(row, actionLabel, "afir-open");
 }
 
 function selectAggregateFields(group) {
   state.selectedGroup = group;
+  state.openFields = true;
+  updateUrl();
   renderEu27Aggregate();
   renderGroups();
   renderFields(group);
@@ -413,6 +626,7 @@ function renderEu27Aggregate() {
     }
   });
   body.append(row);
+  refreshSortableTable(element("afir-eu27-table"));
 }
 
 function renderGroups() {
@@ -481,6 +695,7 @@ function renderGroups() {
     cell.colSpan = 7;
     body.append(row);
   }
+  refreshSortableTable(element("afir-groups-table"));
 }
 
 function renderPagination() {
@@ -596,4 +811,5 @@ element("afir-next-page").addEventListener("click", () => {
 });
 
 restoreUrl();
+wireSortableTables();
 void Promise.all([loadMeta(), loadGroups()]);

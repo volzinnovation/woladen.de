@@ -61,3 +61,31 @@ test("AFIR requests drive visible success and persistent error progress states",
     /Die Fehlermeldung bleibt direkt unterhalb sichtbar/,
   );
 });
+
+test("AFIR aggregate views expose dynamic fields before static fields", () => {
+  assert.match(html, /id="afir-eu27-table"[^>]+afir-sortable/);
+  assert.match(html, /id="afir-groups-table"[^>]+afir-sortable/);
+  const dynamicStart = html.indexOf('id="afir-dynamic-field-title"');
+  const staticStart = html.indexOf('id="afir-static-field-title"');
+  assert.ok(dynamicStart >= 0);
+  assert.ok(staticStart > dynamicStart);
+  assert.match(html, /id="afir-dynamic-fields-table"[^>]+afir-sortable/);
+  assert.match(html, /id="afir-static-fields-table"[^>]+afir-sortable/);
+  assert.match(
+    html.slice(dynamicStart, staticStart),
+    /Ladepunkte vorher[\s\S]+Ladepunkte in beiden Nachrichten[\s\S]+Medianes Alter/,
+  );
+  assert.doesNotMatch(
+    html.slice(staticStart),
+    /Ladepunkte vorher|Ladepunkte in beiden Nachrichten|Medianes Alter/,
+  );
+});
+
+test("AFIR tables provide accessible sorting and retain aggregate field links", () => {
+  assert.match(script, /wireSortableTables\(\)/);
+  assert.match(script, /afir-sort-button/);
+  assert.match(script, /toggleTableSort/);
+  assert.match(script, /afirAggregateFieldsUrl\(state\.level/);
+  assert.match(script, /dynamicFields = fields\.filter/);
+  assert.match(script, /staticFields = fields\.filter/);
+});
