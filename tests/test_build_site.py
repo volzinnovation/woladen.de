@@ -29,6 +29,15 @@ def test_station_query_url_projects_internal_station_ids_to_public_namespace():
     assert build_site.station_query_url("47d719c1b62c750") == "/?station=DE:47d719c1b62c750"
 
 
+def test_station_query_page_path_keeps_station_identity_in_the_flat_public_url():
+    assert build_site.station_query_page_path("at:econtrol:at-cam-emaltacamp*001") == (
+        "station.html?station=at%3Aecontrol%3Aat-cam-emaltacamp%2A001"
+    )
+    assert build_site.page_url("station.html?station=AT%3Aecontrol%3Astation-1") == (
+        "https://woladen.de/station.html?station=AT%3Aecontrol%3Astation-1"
+    )
+
+
 def test_station_page_path_uses_cross_platform_namespace_directory():
     assert build_site.station_page_path("DE:47d719c1b62c750") == "station/DE/47d719c1b62c750.html"
 
@@ -132,6 +141,9 @@ def test_write_sitemap_splits_large_station_url_sets(tmp_path: Path, monkeypatch
     assert "https://woladen.de/en/" in (tmp_path / "sitemap-seo-home.xml").read_text(encoding="utf-8")
     assert (tmp_path / "sitemap-stations-1.xml").read_text(encoding="utf-8").count("<url>") == 2
     assert (tmp_path / "sitemap-stations-2.xml").read_text(encoding="utf-8").count("<url>") == 1
+    pages_sitemap = (tmp_path / "sitemap-pages.xml").read_text(encoding="utf-8")
+    assert "https://woladen.de/station.html" in pages_sitemap
+    assert "https://woladen.de/station.html?station=at%3Aecontrol%3Aat-cam-emaltacamp%2A001" in pages_sitemap
 
 
 def _seo_bundle(language: str) -> dict[str, str]:

@@ -7,7 +7,7 @@ import {
   createAfirDataSource,
   nextAfirLevel,
   scopeFromAfirDimensions,
-} from "./afir-api.mjs?v=20260730-afir-eu27-fix1";
+} from "./afir-api.mjs?v=20260806-station-query1";
 import {
   createAfirLoadingIndicator,
 } from "./afir-loading.mjs?v=20260730-afir-progress1";

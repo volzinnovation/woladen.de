@@ -1,6 +1,15 @@
 const STATION_DETAIL_SCRIPT_PATTERN =
   /<script\b[^>]*\bid=["']station-detail-data["'][^>]*>([\s\S]*?)<\/script>/i;
 
+export const QUERY_STATION_PAGE_PATH = "./station.html";
+
+export function queryStationPagePath(stationId = "") {
+  const normalized = String(stationId || "").trim();
+  return normalized
+    ? `${QUERY_STATION_PAGE_PATH}?station=${encodeURIComponent(normalized)}`
+    : QUERY_STATION_PAGE_PATH;
+}
+
 export function staticStationPagePath(stationId) {
   const normalized = String(stationId || "").trim();
   const separatorIndex = normalized.indexOf(":");
@@ -19,22 +28,10 @@ export function shouldPreferStaticStationDetail(
   stationId,
   { hasBundledFeature = false } = {},
 ) {
-  if (hasBundledFeature) {
-    return false;
-  }
-  const normalized = String(stationId || "").trim();
-  const separatorIndex = normalized.indexOf(":");
-  if (separatorIndex <= 0) {
-    return true;
-  }
-  const namespace = normalized.slice(0, separatorIndex);
-  if (!/^[A-Z]{2}$/i.test(namespace)) {
-    return true;
-  }
-  // Germany retains its static-first deep-link behavior. Other country feeds
-  // can expose live/API stations before the next static bundle publication,
-  // so trying the catalog API first avoids a predictable missing-page 404.
-  return namespace.toUpperCase() === "DE";
+  // Station detail pages are now a single query-driven route. The catalog API
+  // must be attempted first because there is no per-station HTML file to use
+  // as a static-first fallback.
+  return false;
 }
 
 export function parseEmbeddedStationDetailPayload(htmlText) {

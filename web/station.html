@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="index,follow" />
+    <title>Charging station details | woladen.de</title>
+    <meta
+      name="description"
+      content="Charging station details, nearby amenities and navigation from woladen.de."
+    />
+    <link rel="canonical" href="https://woladen.de/station.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Charging station details | woladen.de" />
+    <meta
+      property="og:description"
+      content="Charging station details, nearby amenities and navigation from woladen.de."
+    />
+    <meta property="og:url" content="https://woladen.de/station.html" />
+    <meta property="og:site_name" content="woladen.de" />
+    <link rel="icon" href="/favicon.ico?v=20260411" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=20260411" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=20260411" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/touch-icon.png?v=20260411" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script id="station-page-schema" type="application/ld+json">
+      {"@context":"https://schema.org","@type":"WebPage","name":"Charging station details | woladen.de","url":"https://woladen.de/station.html"}
+    </script>
+  </head>
+  <body class="station-page station-query-page">
+    <main class="station-shell">
+      <a href="/" class="legal-back">← Back to woladen.de</a>
+
+      <article class="station-detail-panel" aria-labelledby="station-title">
+        <div class="detail-hero station-page-map" aria-label="Station location">
+          <div class="station-page-map-grid" aria-hidden="true"></div>
+          <div class="station-page-map-pin" aria-hidden="true">⚡</div>
+          <p id="station-map-caption" class="station-page-map-caption">
+            Station location
+          </p>
+        </div>
+
+        <div class="detail-body station-detail-page-body">
+          <div id="station-loading" class="station-page-state" role="status">
+            Loading station details …
+          </div>
+
+          <div id="station-error" class="station-page-state station-page-error" role="alert" hidden>
+            <h1>Station details unavailable</h1>
+            <p id="station-error-copy">
+              This page needs a station query parameter, for example
+              <code>?station=DE%3A47d719c1b62c750</code>.
+            </p>
+            <a class="action-btn" href="/">Open woladen.de</a>
+          </div>
+
+          <div id="station-content" hidden>
+            <header class="detail-header">
+              <div class="detail-title-block">
+                <p id="station-kicker" class="legal-kicker">Charging station</p>
+                <div class="detail-title-line">
+                  <h1 id="station-title">Charging station</h1>
+                </div>
+                <p id="station-name" class="station-page-subtitle"></p>
+              </div>
+            </header>
+
+            <div id="station-highlights" class="detail-highlights"></div>
+            <p id="station-address" class="detail-address"></p>
+
+            <div class="detail-actions station-page-actions">
+              <a id="station-app-link" class="action-btn" href="/">Web app</a>
+              <a
+                id="station-google-link"
+                class="action-btn secondary"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Google Maps
+              </a>
+              <a
+                id="station-apple-link"
+                class="icon-action-btn"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Apple Maps
+              </a>
+            </div>
+
+            <section class="amenity-list-section" aria-labelledby="station-amenities-title">
+              <h2 id="station-amenities-title">Nearby places</h2>
+              <div id="station-amenities" class="amenity-list"></div>
+            </section>
+
+            <section id="station-live-section" class="details-list-section" aria-labelledby="station-live-title" hidden>
+              <div class="detail-section-head">
+                <h2 id="station-live-title">Charging points</h2>
+                <span id="station-live-count" class="detail-section-chip"></span>
+              </div>
+              <div id="station-live" class="live-evse-list"></div>
+            </section>
+
+            <section class="details-list-section" aria-labelledby="station-details-title">
+              <h2 id="station-details-title">Details</h2>
+              <div id="station-details" class="details-list"></div>
+              <p id="station-source" class="detail-subnote compact" hidden></p>
+            </section>
+          </div>
+        </div>
+      </article>
+    </main>
+
+    <script type="module" src="./station-page.mjs?v=20260806-station-query1"></script>
+  </body>
+</html>

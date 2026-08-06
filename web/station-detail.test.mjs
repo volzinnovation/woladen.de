@@ -3,9 +3,18 @@ import test from "node:test";
 
 import {
   parseEmbeddedStationDetailPayload,
+  queryStationPagePath,
   shouldPreferStaticStationDetail,
   staticStationPagePath,
 } from "./station-detail.mjs";
+
+test("builds a query-driven public station page URL", () => {
+  assert.equal(
+    queryStationPagePath("AT:econtrol:at-cam-emaltacamp*001"),
+    "./station.html?station=AT%3Aecontrol%3Aat-cam-emaltacamp*001",
+  );
+  assert.equal(queryStationPagePath(""), "./station.html");
+});
 
 test("builds a public URL for percent-encoded station page filenames", () => {
   assert.equal(
@@ -19,7 +28,7 @@ test("builds a public URL for percent-encoded station page filenames", () => {
   assert.doesNotMatch(staticStationPagePath("..:index"), /\.\.\//);
 });
 
-test("uses the catalog API before optional static pages for non-DE live stations", () => {
+test("uses the catalog API before the query-driven station page", () => {
   assert.equal(
     shouldPreferStaticStationDetail(
       "be:be_energyvision_ocpi_locations:1f00b0f8-481a-6714-b53d-06f945fc8557",
@@ -32,15 +41,9 @@ test("uses the catalog API before optional static pages for non-DE live stations
   );
 });
 
-test("retains static-first lookup for unbundled German and legacy station IDs", () => {
-  assert.equal(
-    shouldPreferStaticStationDetail("DE:47d719c1b62c750"),
-    true,
-  );
-  assert.equal(
-    shouldPreferStaticStationDetail("47d719c1b62c750"),
-    true,
-  );
+test("does not require a materialized station page for unbundled stations", () => {
+  assert.equal(shouldPreferStaticStationDetail("DE:47d719c1b62c750"), false);
+  assert.equal(shouldPreferStaticStationDetail("47d719c1b62c750"), false);
   assert.equal(
     shouldPreferStaticStationDetail(
       "DE:47d719c1b62c750",

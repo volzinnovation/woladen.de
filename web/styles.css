@@ -3615,6 +3615,153 @@ input[type="text"]::placeholder {
   line-height: 1.6;
 }
 
+.station-detail-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-surface-strong);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  box-shadow: var(--shadow-lg);
+}
+
+.station-detail-page-body {
+  overflow: visible;
+  padding: 1.5rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.station-detail-page-body h1,
+.station-detail-page-body h2 {
+  color: var(--color-text-main);
+}
+
+.station-detail-page-body h1 {
+  margin: 0;
+  font-size: clamp(1.65rem, 4vw, 2.25rem);
+  line-height: 1.1;
+}
+
+.station-detail-page-body h2 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+}
+
+.station-page-subtitle {
+  margin: 0.5rem 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.station-page-map {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(15, 118, 110, 0.2), transparent 8rem),
+    linear-gradient(135deg, #dff4ef 0%, #dbeafe 100%);
+}
+
+.station-page-map-grid {
+  position: absolute;
+  inset: -20%;
+  opacity: 0.55;
+  background-image:
+    linear-gradient(26deg, transparent 47%, rgba(15, 118, 110, 0.18) 48%, transparent 50%),
+    linear-gradient(112deg, transparent 45%, rgba(30, 64, 175, 0.14) 46%, transparent 48%),
+    linear-gradient(90deg, transparent 49%, rgba(255, 255, 255, 0.72) 50%, transparent 51%),
+    linear-gradient(0deg, transparent 49%, rgba(255, 255, 255, 0.72) 50%, transparent 51%);
+  background-size: 160px 120px, 210px 160px, 70px 70px, 70px 70px;
+  transform: rotate(-8deg);
+}
+
+.station-page-map-pin {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border: 8px solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 1.5rem;
+  box-shadow: 0 12px 32px rgba(15, 118, 110, 0.3);
+}
+
+.station-page-map-caption {
+  position: absolute;
+  right: 1rem;
+  bottom: 0.9rem;
+  z-index: 1;
+  margin: 0;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #1e293b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+}
+
+.station-page-state {
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.station-page-error h1 {
+  margin: 0 0 0.6rem;
+  color: var(--color-text-main);
+  font-size: 1.35rem;
+}
+
+.station-page-error p {
+  margin: 0 0 1rem;
+}
+
+.station-page-error .action-btn {
+  display: inline-flex;
+  width: auto;
+  min-height: 44px;
+  padding-inline: 1rem;
+}
+
+.station-page-actions {
+  margin-bottom: 1.5rem;
+}
+
+.station-page-actions .action-btn,
+.station-page-actions .icon-action-btn {
+  min-height: 52px;
+}
+
+.station-page-actions a[hidden] {
+  display: none;
+}
+
+.station-query-page .amenity-list {
+  gap: 0.75rem;
+}
+
+.station-query-page .amenity-item {
+  min-height: 0;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.station-query-page .amenity-copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
 .seo-action-panel {
   display: grid;
   gap: 16px;
@@ -4125,6 +4272,20 @@ select:focus-visible {
   #modal-detail .close-btn-float {
     top: 1.25rem;
     right: 1.25rem;
+  }
+
+  .station-detail-panel {
+    display: grid;
+    grid-template-columns: minmax(300px, 0.82fr) minmax(420px, 1.18fr);
+  }
+
+  .station-page-map {
+    height: 100%;
+    min-height: 680px;
+  }
+
+  .station-detail-page-body {
+    padding: 2rem 2.25rem;
   }
 }
 

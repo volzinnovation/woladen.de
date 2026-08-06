@@ -1,3 +1,5 @@
+import { queryStationPagePath } from "./station-detail.mjs";
+
 const LEVELS = ["country", "provider", "operator", "location", "point"];
 const FILTER_KEYS = [
   "country_code",
@@ -35,7 +37,7 @@ export function scopeFromAfirDimensions(dimensions = {}) {
 
 export function afirStationDetailUrl(dimensions = {}) {
   const stationId = String(dimensions?.detail_station_id || "").trim();
-  return stationId ? `./?station=${encodeURIComponent(stationId)}` : "";
+  return stationId ? queryStationPagePath(stationId) : "";
 }
 
 export function afirAggregateFieldsUrl(level = "country", dimensions = {}) {

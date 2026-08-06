@@ -26,6 +26,8 @@ SITE_DIR = ROOT / "site"
 SITE_DATA_DIR = SITE_DIR / "data"
 STATION_DIR = SITE_DIR / "station"
 SITE_ORIGIN = "https://woladen.de"
+STATION_QUERY_PAGE_PATH = "station.html"
+SEO_STATION_ID = "at:econtrol:at-cam-emaltacamp*001"
 SITEMAP_MAX_URLS = 10_000
 SOCIAL_IMAGE_VERSION = "20260627-human1"
 SOCIAL_IMAGE_PATH = f"img/social-card-home.png?v={SOCIAL_IMAGE_VERSION}"
@@ -83,6 +85,7 @@ ROOT_URLS = [
     "status.html",
     "privacy.html",
     "imprint.html",
+    STATION_QUERY_PAGE_PATH,
 ]
 
 SEO_LANGUAGES = (
@@ -1189,6 +1192,13 @@ def station_query_url(station_id: str) -> str:
     return f"/?station={quote(public_station_id(station_id), safe=':')}"
 
 
+def station_query_page_path(station_id: str = "") -> str:
+    normalized = str(station_id or "").strip()
+    if not normalized:
+        return STATION_QUERY_PAGE_PATH
+    return f"{STATION_QUERY_PAGE_PATH}?station={quote(normalized, safe='')}"
+
+
 def absolute_url(path: str) -> str:
     clean = path.lstrip("/")
     if not clean:
@@ -1424,9 +1434,13 @@ def seo_amenity_path(amenity: SeoAmenity, language: str) -> str:
 
 
 def public_path(path: str) -> str:
-    if path.endswith("index.html"):
-        return path.removesuffix("index.html")
-    return path
+    split = urlsplit(str(path or "").lstrip("/"))
+    clean_path = split.path
+    if clean_path.endswith("/index.html"):
+        clean_path = clean_path.removesuffix("index.html")
+    elif clean_path == "index.html":
+        clean_path = ""
+    return urlunsplit(("", "", clean_path.lstrip("/"), split.query, split.fragment))
 
 
 def page_url(path: str) -> str:
@@ -2798,23 +2812,8 @@ def build_station_page(feature: dict[str, object]) -> tuple[str, str]:
 
 
 def write_station_pages() -> list[str]:
-    STATION_DIR.mkdir(parents=True, exist_ok=True)
-    page_paths: list[str] = []
-    for feature in iter_static_station_features():
-        if not isinstance(feature, dict):
-            continue
-        properties = feature.get("properties")
-        if not isinstance(properties, dict):
-            continue
-        station_id = public_station_id(properties.get("station_id"))
-        if not station_id:
-            continue
-        page_path, page_html = build_station_page(feature)
-        target = SITE_DIR / page_path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(page_html, encoding="utf-8")
-        page_paths.append(station_page_url_path(station_id))
-    return page_paths
+    """Keep station detail URLs query-driven instead of generating one file per station."""
+    return []
 
 
 def write_urlset_sitemap(relative_path: str, paths: list[str]) -> None:
@@ -2848,7 +2847,8 @@ def write_sitemap(
     lastmod: str | None = None,
 ) -> None:
     sitemap_paths: list[str] = []
-    write_urlset_sitemap("sitemap-pages.xml", ROOT_URLS)
+    page_urls = [*ROOT_URLS, station_query_page_path(SEO_STATION_ID)]
+    write_urlset_sitemap("sitemap-pages.xml", page_urls)
     sitemap_paths.append("sitemap-pages.xml")
 
     for relative_path, paths in sorted((seo_groups or {}).items()):
