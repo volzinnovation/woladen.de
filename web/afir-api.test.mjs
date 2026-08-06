@@ -51,6 +51,8 @@ test("AFIR query keeps the selected hierarchy scope", () => {
         },
         limit: 50,
         offset: 100,
+        sort: "charging_point_count",
+        direction: "desc",
       },
     ),
   );
@@ -62,6 +64,8 @@ test("AFIR query keeps the selected hierarchy scope", () => {
   assert.equal(url.searchParams.get("location_id"), "location");
   assert.equal(url.searchParams.get("limit"), "50");
   assert.equal(url.searchParams.get("offset"), "100");
+  assert.equal(url.searchParams.get("sort"), "charging_point_count");
+  assert.equal(url.searchParams.get("direction"), "desc");
 });
 
 test("AFIR data source uses public read-only endpoints", async () => {

@@ -94,6 +94,8 @@ export function buildAfirCurrentUrl(
     limit = 100,
     offset = 0,
     fieldId = "",
+    sort = "identity",
+    direction = "asc",
   } = {},
 ) {
   const normalizedBase = normalizeAfirApiBaseUrl(baseUrl);
@@ -107,6 +109,8 @@ export function buildAfirCurrentUrl(
     group_by: level,
     limit: String(limit),
     offset: String(offset),
+    sort: String(sort || "identity"),
+    direction: String(direction || "asc"),
   });
   for (const key of FILTER_KEYS) {
     const value = String(scope?.[key] || "").trim();

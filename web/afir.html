@@ -150,15 +150,16 @@
             id="afir-groups-table"
             class="afir-table afir-sortable"
             data-table-key="groups"
+            data-server-sort="true"
           >
             <thead>
               <tr>
-                <th scope="col" data-sort-type="text" data-sort-label="Einheit">Einheit</th>
-                <th scope="col" data-sort-type="number" data-sort-label="Statische Abdeckung">Statisch</th>
-                <th scope="col" data-sort-type="number" data-sort-label="Dynamische Abdeckung">Dynamisch</th>
-                <th scope="col" data-sort-type="number" data-sort-label="Aktualität">Aktualität</th>
-                <th scope="col" data-sort-type="number" data-sort-label="Standorte">Standorte</th>
-                <th scope="col" data-sort-type="number" data-sort-label="Ladepunkte">Ladepunkte</th>
+                <th scope="col" data-sort-key="identity" data-sort-type="text" data-sort-label="Einheit">Einheit</th>
+                <th scope="col" data-sort-key="static" data-sort-type="number" data-sort-label="Statische Abdeckung">Statisch</th>
+                <th scope="col" data-sort-key="dynamic" data-sort-type="number" data-sort-label="Dynamische Abdeckung">Dynamisch</th>
+                <th scope="col" data-sort-key="freshness" data-sort-type="number" data-sort-label="Aktualität">Aktualität</th>
+                <th scope="col" data-sort-key="station_count" data-sort-type="number" data-sort-label="Standorte">Standorte</th>
+                <th scope="col" data-sort-key="charging_point_count" data-sort-type="number" data-sort-label="Ladepunkte">Ladepunkte</th>
                 <th scope="col" class="unsortable" data-sortable="false"><span class="visually-hidden">Öffnen</span></th>
               </tr>
             </thead>

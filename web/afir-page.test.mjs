@@ -90,6 +90,22 @@ test("AFIR tables provide accessible sorting and retain aggregate field links", 
   assert.match(script, /staticFields = fields\.filter/);
 });
 
+test("AFIR aggregate sorting is delegated to the complete backend result set", () => {
+  assert.match(html, /id="afir-groups-table"[\s\S]*data-server-sort="true"/);
+  assert.match(script, /state\.sortColumn/);
+  assert.match(script, /state\.sortDirection/);
+  assert.match(script, /sort: state\.sortColumn/);
+  assert.match(script, /direction: state\.sortDirection/);
+  assert.match(script, /table\.dataset\.serverSort === "true"/);
+});
+
+test("AFIR breadcrumbs use hierarchy identifiers and display source names", () => {
+  assert.match(script, /breadcrumbLabel\(state\.level, group\.dimensions\)/);
+  assert.match(script, /country: "country_code"/);
+  assert.match(script, /`via \$\{label\}`/);
+  assert.match(script, /group\?\.source_uids/);
+});
+
 test("AFIR field ratios consistently use the current charging-point denominator", () => {
   assert.match(
     script,

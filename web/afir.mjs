@@ -26,6 +26,15 @@ const TABLE_SORT_COLLATOR = new Intl.Collator("de", {
   numeric: true,
   sensitivity: "base",
 });
+const AFIR_SORT_COLUMNS = new Set([
+  "identity",
+  "static",
+  "dynamic",
+  "freshness",
+  "station_count",
+  "charging_point_count",
+]);
+const AFIR_SORT_DIRECTIONS = new Set(["asc", "desc"]);
 const tableSortState = new Map();
 
 function element(id) {
@@ -141,6 +150,45 @@ function identityForGroup(level, dimensions) {
   return values[level];
 }
 
+function sourceDisplayName(sourceUid) {
+  const tokens = String(sourceUid || "")
+    .trim()
+    .toLowerCase()
+    .split("_")
+    .filter(Boolean);
+  if (tokens.length > 1 && /^[a-z]{2}$/.test(tokens[0])) {
+    tokens.shift();
+  }
+  while (
+    tokens.length &&
+    new Set([
+      "afir",
+      "baseline",
+      "charge_points",
+      "charging",
+      "datex",
+      "dynamic",
+      "evse",
+      "locations",
+      "register",
+      "status",
+      "static",
+      "tariffs",
+    ]).has(tokens[tokens.length - 1])
+  ) {
+    tokens.pop();
+  }
+  return tokens.join("_");
+}
+
+function sourceDescription(group) {
+  const sourceUids = Array.isArray(group?.source_uids)
+    ? group.source_uids
+    : [];
+  const labels = [...new Set(sourceUids.map(sourceDisplayName).filter(Boolean))];
+  return labels.length ? labels.map((label) => `via ${label}`).join(", ") : "";
+}
+
 function appendCell(row, content, className = "") {
   const cell = document.createElement("td");
   if (className) cell.className = className;
@@ -252,6 +300,19 @@ function refreshSortableTable(table) {
 }
 
 function toggleTableSort(table, header) {
+  if (table.dataset.serverSort === "true") {
+    const column = String(header.dataset.sortKey || "identity");
+    const direction =
+      state.sortColumn === column && state.sortDirection === "asc"
+        ? "desc"
+        : "asc";
+    state.sortColumn = column;
+    state.sortDirection = direction;
+    state.offset = 0;
+    updateUrl();
+    void loadGroups();
+    return;
+  }
   const tableKey = String(table.dataset.tableKey || "");
   const column = headerColumnIndex(header);
   const current = tableSortState.get(tableKey) || {
@@ -274,6 +335,7 @@ function toggleTableSort(table, header) {
 
 function wireSortableTables() {
   document.querySelectorAll("table.afir-sortable").forEach((table) => {
+    const serverSort = table.dataset.serverSort === "true";
     for (const header of sortableHeaders(table)) {
       if (
         header.dataset.sortable === "false" ||
@@ -300,6 +362,18 @@ function wireSortableTables() {
       header.dataset.sortWired = "true";
       header.setAttribute("aria-sort", "none");
       button.addEventListener("click", () => toggleTableSort(table, header));
+    }
+    if (serverSort) {
+      const activeHeader = sortableHeaders(table).find(
+        (header) => header.dataset.sortKey === state.sortColumn,
+      );
+      if (activeHeader) {
+        tableSortState.set(table.dataset.tableKey, {
+          column: headerColumnIndex(activeHeader),
+          direction:
+            state.sortDirection === "desc" ? "descending" : "ascending",
+        });
+      }
     }
     refreshSortableTable(table);
   });
@@ -344,6 +418,8 @@ const state = {
   payload: null,
   selectedGroup: null,
   loading: false,
+  sortColumn: "identity",
+  sortDirection: "asc",
 };
 
 const source = createAfirDataSource({ baseUrl: configuredBaseUrl() });
@@ -358,6 +434,8 @@ const loadingIndicator = createAfirLoadingIndicator({
 function updateUrl() {
   const query = new URLSearchParams();
   query.set("level", state.level);
+  query.set("sort", state.sortColumn);
+  query.set("direction", state.sortDirection);
   if (state.openFields && state.selectedGroup) {
     query.set("view", "fields");
   }
@@ -373,6 +451,14 @@ function restoreUrl() {
   if (Object.hasOwn(LEVEL_LABELS, requestedLevel)) {
     state.level = requestedLevel;
   }
+  const requestedSort = String(query.get("sort") || "identity").trim();
+  const requestedDirection = String(query.get("direction") || "asc").trim();
+  state.sortColumn = AFIR_SORT_COLUMNS.has(requestedSort)
+    ? requestedSort
+    : "identity";
+  state.sortDirection = AFIR_SORT_DIRECTIONS.has(requestedDirection)
+    ? requestedDirection
+    : "asc";
   state.openFields = query.get("view") === "fields";
   state.scope = Object.fromEntries(
     [
@@ -387,6 +473,30 @@ function restoreUrl() {
       .map((key) => [key, String(query.get(key) || "").trim()])
       .filter(([, value]) => value),
   );
+  const hierarchy = [
+    ["country", "country_code"],
+    ["provider", "provider_uid"],
+    ["operator", "operator_id"],
+    ["location", "location_id"],
+    ["point", "point_id"],
+  ];
+  const currentIndex = hierarchy.findIndex(([level]) => level === state.level);
+  state.trail = [];
+  for (let index = 0; index < currentIndex; index += 1) {
+    const [level, key] = hierarchy[index];
+    const value = state.scope[key];
+    if (!value) continue;
+    const scope = {};
+    for (let ancestor = 0; ancestor <= index; ancestor += 1) {
+      const ancestorKey = hierarchy[ancestor][1];
+      if (state.scope[ancestorKey]) scope[ancestorKey] = state.scope[ancestorKey];
+    }
+    state.trail.push({
+      label: value,
+      level,
+      scope,
+    });
+  }
 }
 
 function hasScopeMatch(dimensions, scope) {
@@ -446,6 +556,17 @@ function renderBreadcrumb() {
   const current = document.createElement("span");
   current.textContent = LEVEL_LABELS[state.level];
   root.append(document.createTextNode("›"), current);
+}
+
+function breadcrumbLabel(level, dimensions) {
+  const keys = {
+    country: "country_code",
+    provider: "provider_uid",
+    operator: "operator_id",
+    location: "location_id",
+    point: "point_id",
+  };
+  return String(dimensions?.[keys[level]] || "").trim() || LEVEL_LABELS[level];
 }
 
 function renderFields(group) {
@@ -524,11 +645,22 @@ function drillInto(group) {
     });
     return;
   }
-  const identity = identityForGroup(state.level, group.dimensions);
+  const breadcrumbScope = { ...state.scope };
+  const scopeKeyByLevel = {
+    country: "country_code",
+    provider: "provider_uid",
+    operator: "operator_id",
+    location: "location_id",
+    point: "point_id",
+  };
+  const scopeKey = scopeKeyByLevel[state.level];
+  if (scopeKey && group.dimensions?.[scopeKey]) {
+    breadcrumbScope[scopeKey] = group.dimensions[scopeKey];
+  }
   state.trail.push({
-    label: identity.primary,
+    label: breadcrumbLabel(state.level, group.dimensions),
     level: state.level,
-    scope: { ...state.scope },
+    scope: breadcrumbScope,
   });
   state.level = nextLevel;
   state.scope = scopeFromAfirDimensions(group.dimensions);
@@ -545,7 +677,9 @@ function appendGroupCells(row, group, identity, actionLabel = "→") {
   const primary = document.createElement("strong");
   primary.textContent = identity.primary;
   const secondary = document.createElement("small");
-  secondary.textContent = identity.secondary;
+  const sourceText =
+    state.level === "country" ? "" : sourceDescription(group);
+  secondary.textContent = sourceText || identity.secondary;
   identityBlock.append(primary, secondary);
   setSortValue(appendCell(row, identityBlock, "afir-identity"), identity.primary);
   setSortValue(
@@ -734,6 +868,8 @@ async function loadGroups() {
       scope: state.scope,
       limit: PAGE_SIZE,
       offset: state.offset,
+      sort: state.sortColumn,
+      direction: state.sortDirection,
     });
     loadingIndicator.received(progressToken, {
       labelText: `${levelLabel} sind eingetroffen.`,
