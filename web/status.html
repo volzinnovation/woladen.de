@@ -4,17 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="apple-itunes-app" content="app-id=6759499459" />
-    <title>woladen.de | Datenstatus</title>
+    <title>woladen.de | Betriebs- und Datenstatus</title>
     <meta
       name="description"
-      content="Datenstatus fuer woladen.de: statischer Ladekatalog, Tagesarchiv und lokale Bundle-Aktualitaet."
+      content="Betriebs- und Datenstatus fuer woladen.de: Ingestion, Live-SQLite, AFIR, Archive, PostgreSQL und Berichte."
     />
     <link rel="canonical" href="https://woladen.de/status.html" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="woladen.de | Datenstatus" />
+    <meta property="og:title" content="woladen.de | Betriebs- und Datenstatus" />
     <meta
       property="og:description"
-      content="Aktualitaet, Abdeckung und Tagesarchiv des woladen.de Ladekatalogs."
+      content="Aktualitaet und Betriebsbereitschaft der woladen.de Daten- und Berichtsdienste."
     />
     <meta property="og:url" content="https://woladen.de/status.html" />
     <meta property="og:site_name" content="woladen.de" />
@@ -24,10 +24,10 @@
       content="https://woladen.de/img/social-card-home.png?v=20260627-human1"
     />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="woladen.de | Datenstatus" />
+    <meta name="twitter:title" content="woladen.de | Betriebs- und Datenstatus" />
     <meta
       name="twitter:description"
-      content="Aktualitaet, Abdeckung und Tagesarchiv des woladen.de Ladekatalogs."
+      content="Aktualitaet und Betriebsbereitschaft der woladen.de Daten- und Berichtsdienste."
     />
     <meta
       name="twitter:image"
@@ -53,7 +53,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css?v=20260720-info-settings2" />
-    <script type="module" src="./status.mjs?v=20260701-data-status1"></script>
+    <script type="module" src="./status.mjs?v=20260806-operational1"></script>
   </head>
   <body class="management-page data-status-page">
     <main class="management-shell">
@@ -61,14 +61,78 @@
         <p class="management-kicker">
           <a href="https://woladen.de">woladen.de</a> Datenstatus
         </p>
-        <h1>Abdeckung und Aktualitaet des Ladekatalogs</h1>
+        <h1>Betrieb, Abdeckung und Aktualitaet</h1>
         <p class="management-subtitle">
-          Oeffentliche Uebersicht ueber den statischen Europa-Katalog, das
-          Tagesarchiv und die lokal ausgelieferten Statusdateien.
+          Eine gemeinsame Übersicht für Ingestion, Provider-Queues, Live-SQLite,
+          AFIR-Feldstatus, Archive, PostgreSQL, Berichte und die öffentliche Website.
         </p>
       </header>
 
       <div id="data-status-alert" class="management-status" hidden></div>
+
+      <section class="management-panel data-status-operational" aria-labelledby="operational-status-heading">
+        <div class="management-panel-head">
+          <h2 id="operational-status-heading">Aktueller Betriebsstatus</h2>
+          <p id="operational-summary">Live-Betriebsstatus wird geladen.</p>
+        </div>
+        <div id="operational-components" class="data-contract-checks"></div>
+      </section>
+
+      <section class="management-grid data-status-grid" aria-label="Ingestion Status">
+        <article class="management-panel">
+          <div class="management-panel-head">
+            <h2>Ingestion nach Land</h2>
+            <p>Provider-Anzahl, letzte Nachricht und unbearbeitete Queue-Einträge.</p>
+          </div>
+          <div class="management-table-wrap">
+            <table class="management-table">
+              <thead><tr><th>Land</th><th>Provider</th><th>Letzte Nachricht</th><th>Wartend</th><th>In Bearbeitung</th><th>Fehlgeschlagen</th></tr></thead>
+              <tbody id="operational-country-body"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="management-panel">
+          <div class="management-panel-head">
+            <h2>Provider-Queues</h2>
+            <p>Historische Fehler bleiben sichtbar; sie werden nicht zurückgesetzt.</p>
+          </div>
+          <div class="management-table-wrap">
+            <table class="management-table">
+              <thead><tr><th>Land</th><th>Provider</th><th>Letzte Nachricht</th><th>Wartend</th><th>In Bearbeitung</th><th>Fehlgeschlagen</th></tr></thead>
+              <tbody id="operational-provider-body"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="management-grid data-status-grid" aria-label="Archiv und Dienste">
+        <article class="management-panel">
+          <div class="management-panel-head">
+            <h2>Nächtliche Archive</h2>
+            <p>Lokale Archive nach Land; die HF-Zielkonfiguration wird separat ausgewiesen.</p>
+          </div>
+          <div class="management-table-wrap">
+            <table class="management-table">
+              <thead><tr><th>Land</th><th>Archive</th><th>Größe</th><th>Letzter Archivtag</th><th>Erzeugt</th></tr></thead>
+              <tbody id="operational-archive-body"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="management-panel">
+          <div class="management-panel-head">
+            <h2>Dienste und Berichte</h2>
+            <p>Abfrage-API, Datenbanken, Berichte, Website und künftige Nutzungsstatistik.</p>
+          </div>
+          <div class="management-table-wrap">
+            <table class="management-table">
+              <thead><tr><th>Dienst</th><th>Status</th><th>Nachweis</th></tr></thead>
+              <tbody id="operational-detail-body"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
 
       <section id="data-status-kpis" class="management-kpis" aria-label="Katalog Kennzahlen"></section>
 

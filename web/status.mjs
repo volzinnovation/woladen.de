@@ -3,6 +3,9 @@ const DATA_PATHS = {
   buildSummary: "./data/summary.json",
   managementIndex: "./data/management/index.json",
   occupancyIndex: "./data/station-occupancy/index.json",
+  operational: "https://live-eu.woladen.de/v1/operational-status",
+  liveEuHealth: "https://live-eu.woladen.de/healthz",
+  germanyLive: "https://live.woladen.de/healthz",
 };
 
 const numberFormat = new Intl.NumberFormat("de-DE");
@@ -22,6 +25,49 @@ const dateFormat = new Intl.DateTimeFormat("de-DE", {
 function formatNumber(value) {
   const number = Number(value || 0);
   return numberFormat.format(Number.isFinite(number) ? number : 0);
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatBytes(value) {
+  const bytes = Number(value || 0);
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    return "n/a";
+  }
+  if (bytes < 1000) {
+    return `${formatNumber(bytes)} B`;
+  }
+  const units = ["kB", "MB", "GB", "TB"];
+  let scaled = bytes;
+  let index = -1;
+  while (scaled >= 1000 && index < units.length - 1) {
+    scaled /= 1000;
+    index += 1;
+  }
+  return `${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 }).format(scaled)} ${units[index]}`;
+}
+
+function stateLabel(value) {
+  return {
+    healthy: "OK",
+    degraded: "Eingeschränkt",
+    unavailable: "Nicht erreichbar",
+    not_configured: "Nicht eingerichtet",
+  }[String(value || "").trim()] || "Unbekannt";
+}
+
+function stateClass(value) {
+  const state = String(value || "unknown").trim();
+  return ["healthy", "degraded", "unavailable", "not_configured"].includes(state)
+    ? state
+    : "unknown";
 }
 
 function parseDate(value) {
@@ -267,6 +313,66 @@ function renderSources(openStatic) {
   `;
 }
 
+function renderOperationalStatus(operational, liveEuHealth, germanyLive) {
+  const componentsContainer = document.getElementById("operational-components");
+  const summary = document.getElementById("operational-summary");
+  if (!componentsContainer || !summary) {
+    return;
+  }
+  if (!operational) {
+    summary.textContent = "Der Live-Betriebsstatus ist nicht erreichbar.";
+    componentsContainer.innerHTML = '<div class="data-contract-row unavailable"><span class="data-status-pill">Nicht erreichbar</span><div><strong>Live-eu Status-API</strong><span>https://live-eu.woladen.de/v1/operational-status</span></div></div>';
+    return;
+  }
+
+  const overall = stateClass(operational.overall_state);
+  summary.innerHTML = `<strong class="data-status-emphasis ${overall}">${escapeHtml(stateLabel(operational.overall_state))}</strong><span>Geprüft ${escapeHtml(formatTimestamp(operational.generated_at))}</span>`;
+  const componentLabels = {
+    commercial_ingestion: "Ingestion und Provider-Queues",
+    live_sqlite: "Live-SQLite",
+    afir_query_api: "AFIR-Abfrage-API",
+    nightly_archival: "Nächtliche Archive",
+    postgres_management: "Management-PostgreSQL",
+    report_generation: "Berichtserzeugung",
+    live_api: "Live-API",
+    web_frontend: "woladen.de Frontend",
+    usage_statistics: "Nutzungsstatistik",
+  };
+  componentsContainer.innerHTML = Object.entries(operational.components || {})
+    .map(([key, state]) => `<div class="data-contract-row ${stateClass(state)}"><span class="data-status-pill">${escapeHtml(stateLabel(state))}</span><div><strong>${escapeHtml(componentLabels[key] || key)}</strong><span>${escapeHtml(state)}</span></div></div>`)
+    .join("");
+
+  const ingestion = operational.ingestion || {};
+  const countries = Array.isArray(ingestion.countries) ? ingestion.countries : [];
+  document.getElementById("operational-country-body").innerHTML = countries.length
+    ? countries.map((row) => `<tr><td>${escapeHtml(row.country_code)}</td><td>${formatNumber(row.provider_count)}</td><td>${escapeHtml(formatTimestamp(row.last_received_at))}</td><td>${formatNumber(row.pending_count)}</td><td>${formatNumber(row.processing_count)}</td><td>${formatNumber(row.failed_count)}</td></tr>`).join("")
+    : '<tr><td colspan="6">Keine Länder-Queues geladen.</td></tr>';
+
+  const providers = Array.isArray(ingestion.providers) ? ingestion.providers : [];
+  document.getElementById("operational-provider-body").innerHTML = providers.length
+    ? providers.map((row) => `<tr><td>${escapeHtml(row.country_code)}</td><td><strong>${escapeHtml(row.display_name || row.source_uid)}</strong><span class="data-table-subline">${escapeHtml(row.source_uid)}</span></td><td>${escapeHtml(formatTimestamp(row.last_received_at))}</td><td>${formatNumber(row.pending_count)}</td><td>${formatNumber(row.processing_count)}</td><td>${formatNumber(row.failed_count)}</td></tr>`).join("")
+    : '<tr><td colspan="6">Keine Provider-Queues geladen.</td></tr>';
+
+  const archive = operational.archive || {};
+  const archiveRows = Array.isArray(archive.countries) ? archive.countries : [];
+  document.getElementById("operational-archive-body").innerHTML = archiveRows.length
+    ? archiveRows.map((row) => `<tr><td>${escapeHtml(row.country_code)}</td><td>${formatNumber(row.archive_count)}</td><td>${formatBytes(row.size_bytes)}</td><td>${escapeHtml(row.latest_archive_date || "n/a")}</td><td>${escapeHtml(formatTimestamp(row.latest_archive_at))}</td></tr>`).join("")
+    : '<tr><td colspan="5">Keine lokalen Archive gefunden.</td></tr>';
+
+  const details = [
+    ["Live-SQLite", operational.live_sqlite, `${formatNumber(operational.live_sqlite?.counts?.current_evse_count)} aktuelle Ladepunkte`],
+    ["AFIR-Abfrage-API", operational.afir, `${formatNumber(operational.afir?.field_count)} Felder`],
+    ["Management-PostgreSQL", operational.postgres, operational.postgres?.latest_archive_date ? `Letzter Tag ${operational.postgres.latest_archive_date}` : (operational.postgres?.reason || "")],
+    ["Berichtserzeugung", operational.reports, `${formatNumber(operational.reports?.artifact_count)} Artefakte`],
+    ["Live-eu API", liveEuHealth ? { state: liveEuHealth.ok ? "healthy" : "degraded" } : { state: "unavailable" }, "Health-Endpoint live-eu"],
+    ["Deutschland live API", germanyLive ? { state: germanyLive.ok ? "healthy" : "degraded" } : { state: "unavailable" }, germanyLive ? `${formatNumber(germanyLive.queue_pending_count)} wartend` : "Health-Endpoint nicht erreichbar"],
+    ["Nutzungsstatistik", operational.usage_statistics, "Web-App und Google Analytics"],
+  ];
+  document.getElementById("operational-detail-body").innerHTML = details
+    .map(([label, item, detail]) => `<tr><td>${escapeHtml(label)}</td><td><span class="data-status-pill ${stateClass(item?.state)}">${escapeHtml(stateLabel(item?.state))}</span></td><td>${escapeHtml(detail || "")}</td></tr>`)
+    .join("");
+}
+
 async function init() {
   try {
     const { data, failures } = await loadStatusData();
@@ -275,11 +381,13 @@ async function init() {
     renderContractChecks(data, failures);
     renderCountries(data.openStatic);
     renderSources(data.openStatic);
+    renderOperationalStatus(data.operational, data.liveEuHealth, data.germanyLive);
 
     if (failures.length) {
-      setAlert(`${failures.length} Statusdatei(en) konnten nicht geladen werden.`, true);
+      const operationalFailure = failures.some((failure) => failure.key === "operational");
+      setAlert(`${failures.length} Statusquelle(n) konnten nicht geladen werden${operationalFailure ? "; der Live-Betriebsstatus ist nicht erreichbar" : ""}.`, true);
     } else {
-      setAlert("Alle oeffentlichen Statusdateien wurden erfolgreich geladen.");
+      setAlert("Öffentliche Daten und Live-Betriebsstatus wurden erfolgreich geladen.");
     }
   } catch (error) {
     setAlert(`Datenstatus konnte nicht aufgebaut werden: ${error.message}`, true);

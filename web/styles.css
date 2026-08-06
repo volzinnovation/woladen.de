@@ -5397,6 +5397,58 @@ select:focus-visible {
   max-width: 1180px;
 }
 
+.data-status-operational {
+  margin-bottom: 1rem;
+}
+
+.data-status-operational .management-panel-head {
+  align-items: baseline;
+}
+
+#operational-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  color: rgba(19, 32, 41, 0.62);
+}
+
+.data-status-emphasis {
+  color: var(--color-primary);
+  font-size: 1.1rem;
+}
+
+.data-status-emphasis.degraded,
+.data-status-pill.degraded {
+  color: #9a6700;
+}
+
+.data-status-emphasis.unavailable,
+.data-status-pill.unavailable {
+  color: var(--color-danger);
+}
+
+.data-status-emphasis.not_configured,
+.data-status-pill.not_configured,
+.data-status-pill.unknown {
+  color: rgba(19, 32, 41, 0.58);
+}
+
+.data-contract-row.unavailable,
+.data-contract-row.degraded {
+  background: rgba(190, 128, 0, 0.04);
+}
+
+.data-contract-row.unavailable {
+  background: rgba(220, 38, 38, 0.04);
+}
+
+.data-table-subline {
+  display: block;
+  margin-top: 0.2rem;
+  color: rgba(19, 32, 41, 0.52);
+  font-size: 0.78rem;
+}
+
 .data-status-hero h1 {
   max-width: 13ch;
 }
