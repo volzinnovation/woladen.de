@@ -3,7 +3,10 @@ const DATA_PATHS = {
   buildSummary: "./data/summary.json",
   managementIndex: "./data/management/index.json",
   occupancyIndex: "./data/station-occupancy/index.json",
-  operational: "https://live-eu.woladen.de/v1/operational-status",
+  // The diagnostics path is already exposed by the current Caddy policy.
+  // The dedicated endpoint remains available after the next privileged
+  // Caddy reload; this fallback keeps the page operational immediately.
+  operational: "https://live-eu.woladen.de/commercial/v1/status?view=operational",
   liveEuHealth: "https://live-eu.woladen.de/healthz",
   germanyLive: "https://live.woladen.de/healthz",
 };
@@ -321,7 +324,7 @@ function renderOperationalStatus(operational, liveEuHealth, germanyLive) {
   }
   if (!operational) {
     summary.textContent = "Der Live-Betriebsstatus ist nicht erreichbar.";
-    componentsContainer.innerHTML = '<div class="data-contract-row unavailable"><span class="data-status-pill">Nicht erreichbar</span><div><strong>Live-eu Status-API</strong><span>https://live-eu.woladen.de/v1/operational-status</span></div></div>';
+    componentsContainer.innerHTML = '<div class="data-contract-row unavailable"><span class="data-status-pill">Nicht erreichbar</span><div><strong>Live-eu Status-API</strong><span>https://live-eu.woladen.de/commercial/v1/status?view=operational</span></div></div>';
     return;
   }
 

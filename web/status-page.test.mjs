@@ -15,7 +15,7 @@ test("status page exposes the operational service sections", () => {
   ]) {
     assert.match(html, new RegExp(`id=\"${id}\"`));
   }
-  assert.match(moduleText, /v1\/operational-status/);
+  assert.match(moduleText, /commercial\/v1\/status\?view=operational/);
   assert.match(html, /Historische Fehler bleiben sichtbar/);
 });
 
