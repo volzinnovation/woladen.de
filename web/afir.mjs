@@ -86,13 +86,11 @@ function pointCoverageRatio(coverage, phase = "current") {
     },
     previous: {
       countKey: "present_previous_count",
-      percentKey: "previous_coverage_pct",
-      denominatorKey: "previous_distinct_release_point_count",
+      denominatorKey: "denominator",
     },
     both: {
       countKey: "present_in_both_distinct_releases_count",
-      percentKey: "two_release_coverage_pct",
-      denominatorKey: "previous_distinct_release_point_count",
+      denominatorKey: "denominator",
     },
   };
   const selectedPhase = phases[phase] || phases.current;
@@ -100,9 +98,10 @@ function pointCoverageRatio(coverage, phase = "current") {
   const denominator = Number(
     coverage?.[selectedPhase.denominatorKey] || 0,
   );
+  const ratio = denominator > 0 ? (numerator / denominator) * 100 : null;
   return `${NUMBER.format(numerator)} / ${NUMBER.format(
     denominator,
-  )} · ${percent(coverage?.[selectedPhase.percentKey])}`;
+  )} · ${percent(ratio)}`;
 }
 
 function identityForGroup(level, dimensions) {
@@ -462,11 +461,8 @@ function renderFields(group) {
       const code = document.createElement("span");
       code.className = "afir-field-code";
       code.textContent = field.field_id || "–";
-      const key = document.createElement("small");
-      key.className = "afir-field-key";
-      key.textContent = field.technical_key || "";
       const identity = document.createElement("div");
-      identity.append(code, key);
+      identity.append(code);
       setSortValue(appendCell(row, identity), field.field_id || field.technical_key);
       setSortValue(
         appendCell(row, field.label || field.technical_key || "–"),

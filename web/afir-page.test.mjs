@@ -90,17 +90,27 @@ test("AFIR tables provide accessible sorting and retain aggregate field links", 
   assert.match(script, /staticFields = fields\.filter/);
 });
 
-test("AFIR previous-release ratios use their own point denominator", () => {
+test("AFIR field ratios consistently use the current charging-point denominator", () => {
   assert.match(
     script,
-    /previous:\s*\{[\s\S]*?denominatorKey:\s*"previous_distinct_release_point_count"/,
+    /previous:\s*\{[\s\S]*?denominatorKey:\s*"denominator"/,
   );
   assert.match(
     script,
-    /both:\s*\{[\s\S]*?denominatorKey:\s*"previous_distinct_release_point_count"/,
+    /both:\s*\{[\s\S]*?denominatorKey:\s*"denominator"/,
   );
   assert.match(
     script,
-    /coverage\?\.\[selectedPhase\.denominatorKey\]/,
+    /const ratio = denominator > 0 \? \(numerator \/ denominator\) \* 100 : null;/,
   );
+  assert.doesNotMatch(
+    script,
+    /previous_distinct_release_point_count/,
+  );
+});
+
+test("AFIR field rows show the field number without a redundant technical key", () => {
+  assert.match(script, /identity\.append\(code\);/);
+  assert.doesNotMatch(script, /className = "afir-field-key"/);
+  assert.doesNotMatch(script, /identity\.append\(code, key\)/);
 });
