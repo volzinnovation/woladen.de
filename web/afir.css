@@ -609,6 +609,12 @@ a {
   min-width: 340px;
 }
 
+.afir-field-value {
+  max-width: 360px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .afir-f3-note {
   max-width: 920px;
   margin: 24px 0 0;

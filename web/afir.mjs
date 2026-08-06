@@ -126,6 +126,28 @@ function pointCoverageRatio(coverage, phase = "current") {
   )} · ${percent(ratio)}`;
 }
 
+function fieldValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return UNASSESSED_LABEL;
+  }
+  if (typeof value === "string") {
+    const text = value.trim();
+    if (!text) return UNASSESSED_LABEL;
+    if (
+      (text.startsWith("{") && text.endsWith("}")) ||
+      (text.startsWith("[") && text.endsWith("]"))
+    ) {
+      try {
+        return JSON.stringify(JSON.parse(text));
+      } catch {
+        // Keep the exact retained text when it is not valid JSON.
+      }
+    }
+    return text;
+  }
+  return String(value);
+}
+
 function identityForGroup(level, dimensions) {
   const countryCode = String(dimensions?.country_code || "");
   const values = {
@@ -600,6 +622,10 @@ function renderFields(group) {
   const fields = Array.isArray(group?.fields) ? group.fields : [];
   const dynamicFields = fields.filter((field) => field.data_kind === "dynamic");
   const staticFields = fields.filter((field) => field.data_kind !== "dynamic");
+  const showPointValues = state.level === "point";
+  document.querySelectorAll(".afir-point-value-column").forEach((header) => {
+    header.hidden = !showPointValues;
+  });
 
   function renderFieldRows(body, fieldRows, dynamic) {
     body.replaceChildren();
@@ -615,6 +641,15 @@ function renderFields(group) {
         appendCell(row, field.label || field.technical_key || "–"),
         field.label || field.technical_key,
       );
+      const valueCell = setSortValue(
+        appendCell(
+          row,
+          showPointValues ? fieldValue(field.value) : "",
+          "afir-field-value afir-point-value-column",
+        ),
+        field.value,
+      );
+      valueCell.hidden = !showPointValues;
       const pointCoverage = field.charging_point_coverage || {};
       setSortValue(
         appendCell(row, pointCoverageRatio(pointCoverage, "current")),
@@ -708,10 +743,13 @@ function appendGroupCells(row, group, identity, actionLabel = "→") {
   secondary.textContent = sourceText || identity.secondary;
   identityBlock.append(primary, secondary);
   if (state.level === "point") {
-    const updated = document.createElement("small");
-    updated.className = "afir-group-updated";
-    updated.textContent = `Stand: ${sourceTimestamp(group.static_last_updated)}`;
-    identityBlock.append(updated);
+    const updatedAt = sourceTimestamp(group.static_last_updated);
+    if (updatedAt !== UNASSESSED_LABEL) {
+      const updated = document.createElement("small");
+      updated.className = "afir-group-updated";
+      updated.textContent = `Stand: ${updatedAt}`;
+      identityBlock.append(updated);
+    }
   }
   setSortValue(appendCell(row, identityBlock, "afir-identity"), identity.primary);
   setSortValue(

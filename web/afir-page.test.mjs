@@ -90,8 +90,9 @@ test("AFIR tables provide accessible sorting and retain aggregate field links", 
   assert.match(script, /staticFields = fields\.filter/);
 });
 
-test("AFIR point rows show the static source update and omit unit counts", () => {
+test("AFIR point rows omit an unavailable static source update and omit unit counts", () => {
   assert.match(script, /sourceTimestamp\(group\.static_last_updated\)/);
+  assert.match(script, /updatedAt !== UNASSESSED_LABEL/);
   assert.match(script, /state\.level === "point"/);
   assert.match(script, /afir-count-stations/);
   assert.match(script, /afir-count-points/);
@@ -150,4 +151,16 @@ test("AFIR field rows show the field number without a redundant technical key", 
   assert.match(script, /identity\.append\(code\);/);
   assert.doesNotMatch(script, /className = "afir-field-key"/);
   assert.doesNotMatch(script, /identity\.append\(code, key\)/);
+});
+
+test("AFIR point field details show each retained current value in German", () => {
+  assert.equal(
+    (html.match(/data-sort-label="Wert">Wert<\/th>/g) || []).length,
+    2,
+  );
+  assert.match(html, /class="afir-point-value-column"/);
+  assert.match(script, /const showPointValues = state\.level === "point"/);
+  assert.match(script, /showPointValues \? fieldValue\(field\.value\) : ""/);
+  assert.match(script, /field\.value/);
+  assert.match(css, /\.afir-field-value/);
 });
