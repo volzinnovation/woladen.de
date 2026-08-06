@@ -36,6 +36,7 @@ const AFIR_SORT_COLUMNS = new Set([
 ]);
 const AFIR_SORT_DIRECTIONS = new Set(["asc", "desc"]);
 const tableSortState = new Map();
+const UNASSESSED_LABEL = "-";
 
 function element(id) {
   return document.getElementById(id);
@@ -50,22 +51,22 @@ function configuredBaseUrl() {
 
 function percent(value) {
   if (value === null || value === undefined || value === "") {
-    return "nicht bewertet";
+    return UNASSESSED_LABEL;
   }
   const number = Number(value);
   return Number.isFinite(number)
     ? `${new Intl.NumberFormat("de-DE", {
         maximumFractionDigits: 1,
       }).format(number)} %`
-    : "nicht bewertet";
+    : UNASSESSED_LABEL;
 }
 
 function duration(seconds) {
   if (seconds === null || seconds === undefined || seconds === "") {
-    return "nicht bewertet";
+    return UNASSESSED_LABEL;
   }
   const value = Number(seconds);
-  if (!Number.isFinite(value)) return "nicht bewertet";
+  if (!Number.isFinite(value)) return UNASSESSED_LABEL;
   if (value < 60) return `${Math.round(value)} s`;
   if (value < 3600) return `${Math.round(value / 60)} min`;
   if (value < 86400) {
@@ -80,7 +81,7 @@ function duration(seconds) {
 
 function sourceTimestamp(value) {
   const text = String(value || "").trim();
-  if (!text) return "nicht bewertet";
+  if (!text) return UNASSESSED_LABEL;
   const parsed = new Date(text);
   if (Number.isNaN(parsed.getTime())) return text;
   return `${new Intl.DateTimeFormat("de-DE", {
@@ -728,7 +729,7 @@ function appendGroupCells(row, group, identity, actionLabel = "→") {
   setSortValue(
     appendCell(
     row,
-      freshness === "" ? "nicht bewertet" : duration(freshness),
+      freshness === "" ? UNASSESSED_LABEL : duration(freshness),
     ),
     freshness,
   );
