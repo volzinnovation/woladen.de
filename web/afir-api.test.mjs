@@ -53,6 +53,7 @@ test("AFIR query keeps the selected hierarchy scope", () => {
         offset: 100,
         sort: "charging_point_count",
         direction: "desc",
+        search: "energy",
       },
     ),
   );
@@ -66,6 +67,16 @@ test("AFIR query keeps the selected hierarchy scope", () => {
   assert.equal(url.searchParams.get("offset"), "100");
   assert.equal(url.searchParams.get("sort"), "charging_point_count");
   assert.equal(url.searchParams.get("direction"), "desc");
+  assert.equal(url.searchParams.get("search"), "energy");
+});
+
+test("AFIR short search terms are not sent as name queries", () => {
+  const url = new URL(
+    buildAfirCurrentUrl("https://example.test/v1/afir-compliance", {
+      search: "de",
+    }),
+  );
+  assert.equal(url.searchParams.has("search"), false);
 });
 
 test("AFIR data source uses public read-only endpoints", async () => {

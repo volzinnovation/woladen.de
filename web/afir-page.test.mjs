@@ -99,6 +99,13 @@ test("AFIR aggregate sorting is delegated to the complete backend result set", (
   assert.match(script, /table\.dataset\.serverSort === "true"/);
 });
 
+test("AFIR name search is sent to the backend with a three-character minimum", () => {
+  assert.match(html, /<span>Suche nach<\/span>/);
+  assert.match(script, /query\.set\("search", state\.searchQuery\)/);
+  assert.match(script, /value\.length < 3/);
+  assert.match(script, /search: state\.searchQuery/);
+});
+
 test("AFIR breadcrumbs use hierarchy identifiers and display source names", () => {
   assert.match(script, /breadcrumbLabel\(state\.level, group\.dimensions\)/);
   assert.match(script, /country: "country_code"/);

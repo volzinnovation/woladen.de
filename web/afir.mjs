@@ -420,6 +420,7 @@ const state = {
   loading: false,
   sortColumn: "identity",
   sortDirection: "asc",
+  searchQuery: "",
 };
 
 const source = createAfirDataSource({ baseUrl: configuredBaseUrl() });
@@ -436,6 +437,7 @@ function updateUrl() {
   query.set("level", state.level);
   query.set("sort", state.sortColumn);
   query.set("direction", state.sortDirection);
+  if (state.searchQuery) query.set("search", state.searchQuery);
   if (state.openFields && state.selectedGroup) {
     query.set("view", "fields");
   }
@@ -459,6 +461,8 @@ function restoreUrl() {
   state.sortDirection = AFIR_SORT_DIRECTIONS.has(requestedDirection)
     ? requestedDirection
     : "asc";
+  const requestedSearch = String(query.get("search") || "").trim();
+  state.searchQuery = requestedSearch.length >= 3 ? requestedSearch : "";
   state.openFields = query.get("view") === "fields";
   state.scope = Object.fromEntries(
     [
@@ -767,10 +771,7 @@ function renderEu27Aggregate() {
 function renderGroups() {
   const body = element("afir-groups");
   body.replaceChildren();
-  const query = element("afir-search").value.trim().toLocaleLowerCase("de");
-  const groups = (state.payload?.groups || []).filter(
-    (group) => !query || groupSearchText(group).includes(query),
-  );
+  const groups = state.payload?.groups || [];
   for (const group of groups) {
     const row = document.createElement("tr");
     row.tabIndex = 0;
@@ -823,7 +824,7 @@ function renderGroups() {
     const row = document.createElement("tr");
     const cell = appendCell(
       row,
-      query
+      state.searchQuery
         ? "Auf dieser Seite wurde kein passender Eintrag gefunden."
         : "Für diese Ebene liegen noch keine bewertbaren Daten vor.",
     );
@@ -870,6 +871,7 @@ async function loadGroups() {
       offset: state.offset,
       sort: state.sortColumn,
       direction: state.sortDirection,
+      search: state.searchQuery,
     });
     loadingIndicator.received(progressToken, {
       labelText: `${levelLabel} sind eingetroffen.`,
@@ -937,7 +939,24 @@ async function loadMeta() {
   }
 }
 
-element("afir-search").addEventListener("input", renderGroups);
+let searchTimer = null;
+element("afir-search").addEventListener("input", (event) => {
+  const value = String(event.target.value || "").trim();
+  if (searchTimer !== null) clearTimeout(searchTimer);
+  if (value && value.length < 3) {
+    state.searchQuery = "";
+    updateUrl();
+    setStatus("Bitte mindestens 3 Zeichen für die Suche eingeben.");
+    renderGroups();
+    return;
+  }
+  state.searchQuery = value;
+  searchTimer = setTimeout(() => {
+    state.offset = 0;
+    updateUrl();
+    void loadGroups();
+  }, 250);
+});
 element("afir-previous-page").addEventListener("click", () => {
   state.offset = Math.max(0, state.offset - PAGE_SIZE);
   void loadGroups();
@@ -948,5 +967,6 @@ element("afir-next-page").addEventListener("click", () => {
 });
 
 restoreUrl();
+element("afir-search").value = state.searchQuery;
 wireSortableTables();
 void Promise.all([loadMeta(), loadGroups()]);

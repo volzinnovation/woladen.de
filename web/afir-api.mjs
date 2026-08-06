@@ -96,6 +96,7 @@ export function buildAfirCurrentUrl(
     fieldId = "",
     sort = "identity",
     direction = "asc",
+    search = "",
   } = {},
 ) {
   const normalizedBase = normalizeAfirApiBaseUrl(baseUrl);
@@ -118,6 +119,10 @@ export function buildAfirCurrentUrl(
   }
   if (String(fieldId || "").trim()) {
     query.set("field_id", String(fieldId).trim().toUpperCase());
+  }
+  const normalizedSearch = String(search || "").trim();
+  if (normalizedSearch.length >= 3) {
+    query.set("search", normalizedSearch);
   }
   return `${normalizedBase}/current?${query.toString()}`;
 }
