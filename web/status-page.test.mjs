@@ -17,6 +17,9 @@ test("status page exposes the operational service sections", () => {
   }
   assert.match(moduleText, /commercial\/v1\/status\?view=operational/);
   assert.match(html, /Historische Fehler bleiben sichtbar/);
+  assert.match(moduleText, /Ingestionstakt/);
+  assert.match(moduleText, /formatDuration/);
+  assert.match(html, /Aufbewahrte Fehler/);
 });
 
 test("status page keeps the source-backed static data sections", () => {

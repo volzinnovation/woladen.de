@@ -107,6 +107,19 @@ function ageLabel(value) {
   return `${days} Tage alt`;
 }
 
+function formatDuration(seconds) {
+  const value = Number(seconds);
+  if (!Number.isFinite(value) || value < 0) {
+    return "n/a";
+  }
+  if (value < 60) return `${Math.round(value)} s`;
+  if (value < 3600) return `${Math.round(value / 60)} min`;
+  if (value < 86400) {
+    return `${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 }).format(value / 3600)} h`;
+  }
+  return `${new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 }).format(value / 86400)} Tage`;
+}
+
 function setAlert(message, error = false) {
   const alert = document.getElementById("data-status-alert");
   if (!alert) {
@@ -362,8 +375,13 @@ function renderOperationalStatus(operational, liveEuHealth, germanyLive) {
     ? archiveRows.map((row) => `<tr><td>${escapeHtml(row.country_code)}</td><td>${formatNumber(row.archive_count)}</td><td>${formatBytes(row.size_bytes)}</td><td>${escapeHtml(row.latest_archive_date || "n/a")}</td><td>${escapeHtml(formatTimestamp(row.latest_archive_at))}</td></tr>`).join("")
     : '<tr><td colspan="5">Keine lokalen Archive gefunden.</td></tr>';
 
+  const scheduler = ingestion.scheduler || {};
+  const schedulerDetail = scheduler.last_cycle_finished_at
+    ? `Letzter Lauf ${formatTimestamp(scheduler.last_cycle_finished_at)} · ${formatDuration(scheduler.last_cycle_age_seconds)} alt${scheduler.last_cycle_ok ? "" : " · fehlgeschlagen"}${Array.isArray(scheduler.failed_step_names) && scheduler.failed_step_names.length ? ` · ${scheduler.failed_step_names.join(", ")}` : ""}`
+    : (scheduler.reason || "Kein Ausführungsnachweis");
   const details = [
-    ["Live-SQLite", operational.live_sqlite, `${formatNumber(operational.live_sqlite?.counts?.current_evse_count)} aktuelle Ladepunkte`],
+    ["Ingestionstakt", scheduler, schedulerDetail],
+    ["Live-SQLite", operational.live_sqlite, `${formatNumber(operational.live_sqlite?.counts?.charging_point_count)} Ladepunkte im lokalen Stand · ${formatNumber(operational.live_sqlite?.counts?.current_evse_count)} mit aktuellem Live-Zustand`],
     ["AFIR-Abfrage-API", operational.afir, `${formatNumber(operational.afir?.field_count)} Felder`],
     ["Management-PostgreSQL", operational.postgres, operational.postgres?.latest_archive_date ? `Letzter Tag ${operational.postgres.latest_archive_date}` : (operational.postgres?.reason || "")],
     ["Berichtserzeugung", operational.reports, `${formatNumber(operational.reports?.artifact_count)} Artefakte`],
