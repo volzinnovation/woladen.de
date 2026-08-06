@@ -1,4 +1,5 @@
 import {
+  buildLiveStationDetailPath,
   normalizeLiveApiBaseUrl,
   normalizeLiveStationId,
   resolveLiveApiBaseUrl,
@@ -70,6 +71,12 @@ export function catalogStationDetailUrl(baseUrl, stationId) {
     : "";
 }
 
+export function liveStationDetailUrl(baseUrl, stationId) {
+  const base = normalizeLiveApiBaseUrl(baseUrl) || DEFAULT_API_BASE_URL;
+  const path = buildLiveStationDetailPath(stationId);
+  return path ? `${base}${path}` : "";
+}
+
 function catalogLookupIds(stationId) {
   const normalized = normalizeLiveStationId(stationId);
   const ids = [normalized];
@@ -78,7 +85,7 @@ function catalogLookupIds(stationId) {
   return Array.from(new Set(ids.filter(Boolean)));
 }
 
-async function fetchStation(stationId) {
+async function fetchCatalogStation(stationId) {
   let lastError = null;
   for (const lookupId of catalogLookupIds(stationId)) {
     try {
@@ -102,6 +109,51 @@ async function fetchStation(stationId) {
     }
   }
   throw lastError || new Error("station_api_failed");
+}
+
+async function fetchLiveStation(stationId) {
+  const response = await fetch(
+    liveStationDetailUrl(stationPageApiBaseUrl(), stationId),
+    {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`live_station_api_${response.status}`);
+  }
+  const payload = await response.json();
+  if (!payload || typeof payload !== "object" || !payload.station) {
+    throw new Error("live_station_api_invalid_payload");
+  }
+  return payload;
+}
+
+export function combineStationDetails(catalogPayload, livePayload) {
+  const catalog = catalogPayload && typeof catalogPayload === "object"
+    ? catalogPayload
+    : {};
+  const live = livePayload && typeof livePayload === "object" ? livePayload : null;
+  const liveChargers = Array.isArray(live?.evses) ? live.evses : [];
+
+  return {
+    ...catalog,
+    // The catalogue identifies and describes the station. The live endpoint is
+    // authoritative for availability, operational status and current tariffs.
+    // Do not infer a point-by-point match where the catalogue has no EVSE ID.
+    chargers: liveChargers.length > 0 ? liveChargers : catalog.chargers,
+    live_station: live?.station || null,
+  };
+}
+
+async function fetchStation(stationId) {
+  const catalogPayload = await fetchCatalogStation(stationId);
+  try {
+    return combineStationDetails(catalogPayload, await fetchLiveStation(stationId));
+  } catch (error) {
+    console.warn("Failed to load live station details", error);
+    return combineStationDetails(catalogPayload, null);
+  }
 }
 
 function formatPower(value) {
@@ -308,8 +360,13 @@ function renderStation(payload, stationId) {
 
   const source = firstText(station.source_uid, station.provider_uid);
   const updated = firstText(station.detail_last_updated);
+  const liveUpdated = firstText(payload.live_station?.source_observed_at);
   const sourceNode = element("station-source");
-  sourceNode.textContent = [source && `Details via ${source}`, updated && `updated ${updated}`]
+  sourceNode.textContent = [
+    source && `Details via ${source}`,
+    updated && `updated ${updated}`,
+    liveUpdated && `Live status: ${liveUpdated}`,
+  ]
     .filter(Boolean)
     .join(" · ");
   sourceNode.hidden = !sourceNode.textContent;
