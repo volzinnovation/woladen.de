@@ -16,9 +16,9 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./afir.css?v=20260805-afir-fields1" />
+    <link rel="stylesheet" href="./afir.css?v=20260806-afir-point3" />
     <script src="./config.js?v=20260729-afir-live2"></script>
-    <script type="module" src="./afir.mjs?v=20260806-station-query1"></script>
+    <script type="module" src="./afir.mjs?v=20260806-afir-point3"></script>
   </head>
   <body>
     <header class="afir-header">
@@ -132,7 +132,7 @@
           <h2 id="afir-level-title">Länder</h2>
         </div>
         <label class="afir-search">
-          <span>Suche nach</span>
+          <span>Suche nach Name oder Kennung</span>
           <input
             id="afir-search"
             type="search"
@@ -141,6 +141,12 @@
           />
         </label>
       </section>
+
+      <div id="afir-search-summary" class="afir-search-summary" hidden role="status" aria-live="polite">
+        <span class="afir-search-summary-label">Aktive Suche</span>
+        <strong id="afir-search-summary-value"></strong>
+        <button id="afir-search-clear" type="button">Suche löschen</button>
+      </div>
 
       <div id="afir-status" class="afir-status" role="status" aria-live="polite"></div>
 

@@ -311,6 +311,50 @@ a {
   border-color: var(--accent);
 }
 
+.afir-search-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  background: var(--wash);
+  color: var(--ink);
+}
+
+.afir-search-summary-label {
+  color: var(--accent-dark);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.afir-search-summary strong {
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.afir-search-summary button {
+  margin-left: auto;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  padding: 2px 0;
+  background: transparent;
+  color: var(--accent-dark);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.afir-search-summary button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
 .afir-status {
   min-height: 24px;
   margin-bottom: 14px;
@@ -441,6 +485,12 @@ a {
   overflow-wrap: anywhere;
   color: var(--muted);
   font-size: 11px;
+}
+
+.afir-identity .afir-group-updated {
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .afir-metric {
@@ -642,6 +692,10 @@ a {
 
   .afir-search {
     min-width: 0;
+  }
+
+  .afir-search-summary button {
+    margin-left: 0;
   }
 
   .afir-loading-copy {

@@ -90,6 +90,16 @@ test("AFIR tables provide accessible sorting and retain aggregate field links", 
   assert.match(script, /staticFields = fields\.filter/);
 });
 
+test("AFIR point rows show the static source update and omit unit counts", () => {
+  assert.match(script, /sourceTimestamp\(group\.static_last_updated\)/);
+  assert.match(script, /state\.level === "point"/);
+  assert.match(script, /afir-count-stations/);
+  assert.match(script, /afir-count-points/);
+  assert.match(script, /updateAggregateCountColumns/);
+  assert.match(html, /data-sort-key="station_count"/);
+  assert.match(html, /data-sort-key="charging_point_count"/);
+});
+
 test("AFIR aggregate sorting is delegated to the complete backend result set", () => {
   assert.match(html, /id="afir-groups-table"[\s\S]*data-server-sort="true"/);
   assert.match(script, /state\.sortColumn/);
@@ -100,10 +110,14 @@ test("AFIR aggregate sorting is delegated to the complete backend result set", (
 });
 
 test("AFIR name search is sent to the backend with a three-character minimum", () => {
-  assert.match(html, /<span>Suche nach<\/span>/);
+  assert.match(html, /<span>Suche nach Name oder Kennung<\/span>/);
+  assert.match(html, /id="afir-search-summary"[^>]+role="status"/);
+  assert.match(html, /id="afir-search-clear"/);
   assert.match(script, /query\.set\("search", state\.searchQuery\)/);
   assert.match(script, /value\.length < 3/);
   assert.match(script, /search: state\.searchQuery/);
+  assert.match(script, /renderSearchSummary\(\)/);
+  assert.match(css, /\.afir-search-summary/);
 });
 
 test("AFIR breadcrumbs use hierarchy identifiers and display source names", () => {

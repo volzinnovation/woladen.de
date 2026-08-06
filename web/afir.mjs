@@ -78,6 +78,18 @@ function duration(seconds) {
   }).format(value / 86400)} d`;
 }
 
+function sourceTimestamp(value) {
+  const text = String(value || "").trim();
+  if (!text) return "nicht bewertet";
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return text;
+  return `${new Intl.DateTimeFormat("de-DE", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(parsed)} UTC`;
+}
+
 function coverageState(summary) {
   return String(afirPointCoverage(summary)?.coverage_state || "unassessed");
 }
@@ -403,6 +415,15 @@ function groupSearchText(group) {
     .toLocaleLowerCase("de");
 }
 
+function renderSearchSummary() {
+  const summary = element("afir-search-summary");
+  const value = element("afir-search-summary-value");
+  if (!summary || !value) return;
+  const query = String(state.searchQuery || "").trim();
+  summary.hidden = !query;
+  value.textContent = query ? `„${query}“` : "";
+}
+
 function fieldContext(group) {
   return Object.values(group?.dimensions || {})
     .filter(Boolean)
@@ -685,6 +706,12 @@ function appendGroupCells(row, group, identity, actionLabel = "→") {
     state.level === "country" ? "" : sourceDescription(group);
   secondary.textContent = sourceText || identity.secondary;
   identityBlock.append(primary, secondary);
+  if (state.level === "point") {
+    const updated = document.createElement("small");
+    updated.className = "afir-group-updated";
+    updated.textContent = `Stand: ${sourceTimestamp(group.static_last_updated)}`;
+    identityBlock.append(updated);
+  }
   setSortValue(appendCell(row, identityBlock, "afir-identity"), identity.primary);
   setSortValue(
     appendCell(row, metric(group.static_compliance)),
@@ -705,11 +732,30 @@ function appendGroupCells(row, group, identity, actionLabel = "→") {
     ),
     freshness,
   );
-  const stationCount = Number(group.entity_counts?.station_count || 0);
-  const chargingPointCount = afirChargingPointCount(group);
-  setSortValue(appendCell(row, NUMBER.format(stationCount)), stationCount);
-  setSortValue(appendCell(row, NUMBER.format(chargingPointCount)), chargingPointCount);
+  if (state.level !== "point") {
+    const stationCount = Number(group.entity_counts?.station_count || 0);
+    const chargingPointCount = afirChargingPointCount(group);
+    setSortValue(
+      appendCell(row, NUMBER.format(stationCount), "afir-count-stations"),
+      stationCount,
+    );
+    setSortValue(
+      appendCell(row, NUMBER.format(chargingPointCount), "afir-count-points"),
+      chargingPointCount,
+    );
+  }
   appendCell(row, actionLabel, "afir-open");
+}
+
+function updateAggregateCountColumns() {
+  const table = element("afir-groups-table");
+  if (!table) return;
+  const hidden = state.level === "point";
+  table.querySelectorAll(
+    '[data-sort-key="station_count"], [data-sort-key="charging_point_count"], .afir-count-stations, .afir-count-points',
+  ).forEach((cell) => {
+    cell.hidden = hidden;
+  });
 }
 
 function selectAggregateFields(group) {
@@ -771,6 +817,7 @@ function renderEu27Aggregate() {
 function renderGroups() {
   const body = element("afir-groups");
   body.replaceChildren();
+  updateAggregateCountColumns();
   const groups = state.payload?.groups || [];
   for (const group of groups) {
     const row = document.createElement("tr");
@@ -828,7 +875,7 @@ function renderGroups() {
         ? "Auf dieser Seite wurde kein passender Eintrag gefunden."
         : "Für diese Ebene liegen noch keine bewertbaren Daten vor.",
     );
-    cell.colSpan = 7;
+    cell.colSpan = state.level === "point" ? 5 : 7;
     body.append(row);
   }
   refreshSortableTable(element("afir-groups-table"));
@@ -858,6 +905,7 @@ async function loadGroups() {
   state.payload = null;
   element("afir-field-section").hidden = true;
   element("afir-level-title").textContent = levelLabel;
+  renderSearchSummary();
   renderBreadcrumb();
   renderEu27Aggregate();
   renderGroups();
@@ -946,16 +994,27 @@ element("afir-search").addEventListener("input", (event) => {
   if (value && value.length < 3) {
     state.searchQuery = "";
     updateUrl();
+    renderSearchSummary();
     setStatus("Bitte mindestens 3 Zeichen für die Suche eingeben.");
     renderGroups();
     return;
   }
   state.searchQuery = value;
+  renderSearchSummary();
   searchTimer = setTimeout(() => {
     state.offset = 0;
     updateUrl();
     void loadGroups();
   }, 250);
+});
+element("afir-search-clear").addEventListener("click", () => {
+  if (searchTimer !== null) clearTimeout(searchTimer);
+  state.searchQuery = "";
+  element("afir-search").value = "";
+  state.offset = 0;
+  updateUrl();
+  renderSearchSummary();
+  void loadGroups();
 });
 element("afir-previous-page").addEventListener("click", () => {
   state.offset = Math.max(0, state.offset - PAGE_SIZE);
@@ -968,5 +1027,6 @@ element("afir-next-page").addEventListener("click", () => {
 
 restoreUrl();
 element("afir-search").value = state.searchQuery;
+renderSearchSummary();
 wireSortableTables();
 void Promise.all([loadMeta(), loadGroups()]);
