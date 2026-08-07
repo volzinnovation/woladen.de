@@ -324,6 +324,10 @@ a {
   color: var(--ink);
 }
 
+.afir-search-summary[hidden] {
+  display: none;
+}
+
 .afir-search-summary-label {
   color: var(--accent-dark);
   font-size: 11px;
