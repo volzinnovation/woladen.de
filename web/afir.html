@@ -16,9 +16,9 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./afir.css?v=20260806-afir-point4" />
+    <link rel="stylesheet" href="./afir.css?v=20260807-afir-country-status1" />
     <script src="./config.js?v=20260729-afir-live2"></script>
-    <script type="module" src="./afir.mjs?v=20260807-afir-server-sort1"></script>
+    <script type="module" src="./afir.mjs?v=20260807-afir-country-status1"></script>
   </head>
   <body>
     <header class="afir-header">
@@ -113,6 +113,8 @@
             <thead>
               <tr>
                 <th scope="col" data-sort-type="text" data-sort-label="Einheit">Einheit</th>
+                <th scope="col" class="afir-country-only unsortable" data-sortable="false">Technische Umsetzung</th>
+                <th scope="col" class="afir-country-only" data-sort-type="number" data-sort-label="Datenanbieter">Datenanbieter</th>
                 <th scope="col" data-sort-type="number" data-sort-label="Statische Abdeckung">Statisch</th>
                 <th scope="col" data-sort-type="number" data-sort-label="Dynamische Abdeckung">Dynamisch</th>
                 <th scope="col" data-sort-type="number" data-sort-label="Aktualität">Aktualität</th>
@@ -161,6 +163,8 @@
             <thead>
               <tr>
                 <th scope="col" data-sort-key="identity" data-sort-type="text" data-sort-label="Einheit">Einheit</th>
+                <th scope="col" class="afir-country-only unsortable" data-sortable="false">Technische Umsetzung</th>
+                <th scope="col" class="afir-country-only" data-sort-key="data_provider_count" data-sort-type="number" data-sort-label="Datenanbieter">Datenanbieter</th>
                 <th scope="col" data-sort-key="static" data-sort-type="number" data-sort-label="Statische Abdeckung">Statisch</th>
                 <th scope="col" data-sort-key="dynamic" data-sort-type="number" data-sort-label="Dynamische Abdeckung">Dynamisch</th>
                 <th scope="col" data-sort-key="freshness" data-sort-type="number" data-sort-label="Aktualität">Aktualität</th>
@@ -177,6 +181,22 @@
           <span id="afir-page-status">–</span>
           <button id="afir-next-page" type="button">Weiter →</button>
         </div>
+      </section>
+
+      <section
+        id="afir-country-implementation-notes"
+        class="afir-country-implementation-notes"
+        aria-labelledby="afir-country-implementation-title"
+        hidden
+      >
+        <p class="afir-section-kicker">Einordnung der Lieferwege</p>
+        <h2 id="afir-country-implementation-title">Technische Umsetzung</h2>
+        <p>
+          Diese Einordnung beschreibt den dokumentierten technischen
+          Lieferweg. Sie ist weder eine Aussage über die Abdeckung der
+          einzelnen AFIR-Felder noch über die Aktualität dynamischer Angaben.
+        </p>
+        <ol id="afir-country-implementation-footnotes"></ol>
       </section>
 
       <section id="afir-field-section" class="afir-field-section" hidden>

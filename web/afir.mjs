@@ -33,10 +33,21 @@ const AFIR_SORT_COLUMNS = new Set([
   "freshness",
   "station_count",
   "charging_point_count",
+  "data_provider_count",
 ]);
 const AFIR_SORT_DIRECTIONS = new Set(["asc", "desc"]);
 const tableSortState = new Map();
 const UNASSESSED_LABEL = "-";
+const IMPLEMENTATION_STATUS_LABELS = {
+  datex_ii: "DATEX II",
+  datex_ii_json: "DATEX-II-Modell (JSON)",
+  mixed_datex_ocpi: "Gemischt: DATEX II / OCPI",
+  mixed_datex_other: "Gemischt: DATEX II / weitere Schnittstelle",
+  mixed_datex_unverified: "Gemischt: DATEX II / ungeprüft",
+  non_datex_structured: "Andere Schnittstelle",
+  workaround_non_datex: "Ersatzweg, kein DATEX II",
+  no_assessable_central_feed: "Keine zentrale AFIR-Quelle",
+};
 
 function element(id) {
   return document.getElementById(id);
@@ -752,6 +763,55 @@ function appendGroupCells(row, group, identity, actionLabel = "→") {
     }
   }
   setSortValue(appendCell(row, identityBlock, "afir-identity"), identity.primary);
+  const implementation = group.implementation_status;
+  const implementationBlock = document.createElement("div");
+  implementationBlock.className = "afir-implementation";
+  const implementationLabel = document.createElement("strong");
+  const implementationStatus = String(implementation?.status || "");
+  implementationLabel.textContent = implementationStatus
+    ? (IMPLEMENTATION_STATUS_LABELS[implementationStatus] || "Nicht eingeordnet")
+    : "Gemischte Lieferwege";
+  implementationBlock.append(implementationLabel);
+  if (implementation?.marker) {
+    const marker = document.createElement("sup");
+    marker.textContent = String(implementation.marker);
+    implementationBlock.append(marker);
+  }
+  if (implementation?.scope_de) {
+    const scope = document.createElement("small");
+    scope.textContent = String(implementation.scope_de);
+    implementationBlock.append(scope);
+  }
+  appendCell(
+    row,
+    implementationBlock,
+    "afir-country-only afir-implementation-cell",
+  );
+
+  const providerCount = Number(group.entity_counts?.data_provider_count || 0);
+  const sourceCount = Number(group.entity_counts?.source_count || 0);
+  const providerBlock = document.createElement("div");
+  providerBlock.className = "afir-provider-count";
+  const providerValue = document.createElement("strong");
+  providerValue.textContent = `${NUMBER.format(providerCount)} Anbieter`;
+  providerBlock.append(providerValue);
+  if (sourceCount > 0) {
+    const sourceValue = document.createElement("small");
+    sourceValue.textContent = `${NUMBER.format(sourceCount)} Quellen`;
+    providerBlock.append(sourceValue);
+  }
+  const providerCell = setSortValue(
+    appendCell(
+      row,
+      providerBlock,
+      "afir-country-only afir-data-provider-count",
+    ),
+    providerCount,
+  );
+  providerCell.title = (
+    "Anzahl unterschiedlicher Anbieterkennungen im aktuellen "
+    + "statischen Katalog"
+  );
   setSortValue(
     appendCell(row, metric(group.static_compliance)),
     coveragePercent(group.static_compliance),
@@ -795,6 +855,34 @@ function updateAggregateCountColumns() {
   ).forEach((cell) => {
     cell.hidden = hidden;
   });
+  const countryOnlyHidden = state.level !== "country";
+  table.querySelectorAll(".afir-country-only").forEach((cell) => {
+    cell.hidden = countryOnlyHidden;
+  });
+}
+
+function renderCountryImplementationNotes() {
+  const section = element("afir-country-implementation-notes");
+  const list = element("afir-country-implementation-footnotes");
+  if (!section || !list) return;
+  list.replaceChildren();
+  const rootCountryView =
+    state.level === "country" && Object.keys(state.scope).length === 0;
+  const footnotes = state.payload?.country_implementation_catalog?.footnotes || {};
+  const visibleStatuses = new Set(
+    (state.payload?.groups || [])
+      .map((group) => String(group?.implementation_status?.status || ""))
+      .filter(Boolean),
+  );
+  section.hidden = !rootCountryView || !visibleStatuses.size;
+  if (section.hidden) return;
+  for (const [status, footnote] of Object.entries(footnotes)) {
+    if (!visibleStatuses.has(status)) continue;
+    const item = document.createElement("li");
+    const marker = String(footnote?.marker || "").trim();
+    item.textContent = `${marker ? `${marker}. ` : ""}${String(footnote?.text_de || "")}`;
+    list.append(item);
+  }
 }
 
 function selectAggregateFields(group) {
@@ -857,6 +945,7 @@ function renderGroups() {
   const body = element("afir-groups");
   body.replaceChildren();
   updateAggregateCountColumns();
+  renderCountryImplementationNotes();
   const groups = state.payload?.groups || [];
   for (const group of groups) {
     const row = document.createElement("tr");
@@ -914,7 +1003,7 @@ function renderGroups() {
         ? "Auf dieser Seite wurde kein passender Eintrag gefunden."
         : "Für diese Ebene liegen noch keine bewertbaren Daten vor.",
     );
-    cell.colSpan = state.level === "point" ? 5 : 7;
+    cell.colSpan = state.level === "country" ? 9 : state.level === "point" ? 5 : 7;
     body.append(row);
   }
   refreshSortableTable(element("afir-groups-table"));

@@ -110,6 +110,20 @@ test("AFIR aggregate sorting is delegated to the complete backend result set", (
   assert.match(script, /table\.dataset\.serverSort === "true"/);
 });
 
+test("AFIR country overview separates technical delivery status from field coverage", () => {
+  assert.match(html, /Technische Umsetzung/);
+  assert.match(html, /data-sort-key="data_provider_count"/);
+  assert.match(html, /id="afir-country-implementation-notes"/);
+  assert.match(html, /id="afir-country-implementation-footnotes"/);
+  assert.match(script, /IMPLEMENTATION_STATUS_LABELS/);
+  assert.match(script, /mixed_datex_ocpi: "Gemischt: DATEX II \/ OCPI"/);
+  assert.match(script, /workaround_non_datex: "Ersatzweg, kein DATEX II"/);
+  assert.match(script, /country_implementation_catalog/);
+  assert.match(script, /data_provider_count/);
+  assert.match(script, /source_count/);
+  assert.match(script, /renderCountryImplementationNotes/);
+});
+
 test("AFIR name search is sent to the backend with a three-character minimum", () => {
   assert.match(html, /<span>Suche nach Name oder Kennung<\/span>/);
   assert.match(html, /id="afir-search-summary"[^>]+role="status"/);
