@@ -18,7 +18,7 @@ Our aim is cover all of EU27 (subject to AFIR regulation), CH and NO.
 - Finds European recharging stations depending on user criteria
 - Augments stations with nearby amenities, e.h. Restaurants, etc., such that humans have something to do while charging the car.
 - The commercial backend provides AFIR live status data from the various NAP in the EU and national open data providers.
-- Displays live occupancy from `https://live.woladen.de` and `https://live-eu.woladen.de`, where available.
+- Displays live occupancy from `https://live-eu.woladen.de`, where available.
 - Includes a web charging-stop planner that matches visible stations to a planned stop duration and needed kWh.
 - Ships an installable PWA shell with conservative static caching; live, API, and data feeds remain network-first.
 - Provides web, iPhone and Android app source and assets. Web site works perfectly fine, e.g. on a Tesla or NIO in-car browser.
@@ -117,14 +117,11 @@ material, and backend deploy secrets belong in `Woladen.de-analytics`.
 The static frontend and live backends are deployed separately:
 
 - `https://woladen.de`: static frontend from this repository
-- `https://live.woladen.de`: Germany/Mobilithek backend from
-  `Woladen.de-analytics`
-- `https://live-eu.woladen.de`: EU catalog/routing backend from
-  `Woladen.de-analytics`
+- `https://live-eu.woladen.de`: EU catalog/routing and Germany/Mobilithek
+  live backend from `Woladen.de-analytics`
 
 Useful backend smoke endpoints:
 
-- `GET https://live.woladen.de/healthz`
 - `GET https://live-eu.woladen.de/healthz`
 
 ## Local Usage
@@ -143,7 +140,7 @@ Build site bundle:
 python3 scripts/build_site.py
 ```
 
-Test the built web app locally against `https://live.woladen.de`:
+Test the built web app locally against `https://live-eu.woladen.de`:
 
 ```bash
 python3 scripts/build_site.py

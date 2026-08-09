@@ -8,7 +8,6 @@ const DATA_PATHS = {
   // Caddy reload; this fallback keeps the page operational immediately.
   operational: "https://live-eu.woladen.de/commercial/v1/status?view=operational",
   liveEuHealth: "https://live-eu.woladen.de/healthz",
-  germanyLive: "https://live.woladen.de/healthz",
 };
 
 const numberFormat = new Intl.NumberFormat("de-DE");
@@ -329,7 +328,7 @@ function renderSources(openStatic) {
   `;
 }
 
-function renderOperationalStatus(operational, liveEuHealth, germanyLive) {
+function renderOperationalStatus(operational, liveEuHealth) {
   const componentsContainer = document.getElementById("operational-components");
   const summary = document.getElementById("operational-summary");
   if (!componentsContainer || !summary) {
@@ -386,7 +385,6 @@ function renderOperationalStatus(operational, liveEuHealth, germanyLive) {
     ["Management-PostgreSQL", operational.postgres, operational.postgres?.latest_archive_date ? `Letzter Tag ${operational.postgres.latest_archive_date}` : (operational.postgres?.reason || "")],
     ["Berichtserzeugung", operational.reports, `${formatNumber(operational.reports?.artifact_count)} Artefakte`],
     ["Live-eu API", liveEuHealth ? { state: liveEuHealth.ok ? "healthy" : "degraded" } : { state: "unavailable" }, "Health-Endpoint live-eu"],
-    ["Deutschland live API", germanyLive ? { state: germanyLive.ok ? "healthy" : "degraded" } : { state: "unavailable" }, germanyLive ? `${formatNumber(germanyLive.queue_pending_count)} wartend` : "Health-Endpoint nicht erreichbar"],
     ["Nutzungsstatistik", operational.usage_statistics, "Web-App und Google Analytics"],
   ];
   document.getElementById("operational-detail-body").innerHTML = details
@@ -402,7 +400,7 @@ async function init() {
     renderContractChecks(data, failures);
     renderCountries(data.openStatic);
     renderSources(data.openStatic);
-    renderOperationalStatus(data.operational, data.liveEuHealth, data.germanyLive);
+    renderOperationalStatus(data.operational, data.liveEuHealth);
 
     if (failures.length) {
       const operationalFailure = failures.some((failure) => failure.key === "operational");

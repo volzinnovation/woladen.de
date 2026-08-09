@@ -66,12 +66,12 @@ repository.
 
 ## Live Deployment Boundary
 
-- Keep `live.woladen.de` and `live-eu.woladen.de` mentally separate.
-- Both live backend deployments are owned by `Woladen.de-analytics`.
-- `live.woladen.de` is the Germany/Mobilithek live-ingester deployment from
-  `Woladen.de-analytics` via `deploy/ionos/*`.
-- `live-eu.woladen.de` is the EU/open-static routing and catalog API from
-  `Woladen.de-analytics` via `deploy/onboarded-ingest/*`.
+- `live-eu.woladen.de` is the single production backend for EU/open-static
+  routing, catalog queries, and Germany/Mobilithek live ingestion. It is owned
+  by `Woladen.de-analytics` via `deploy/onboarded-ingest/*`.
+- `live.woladen.de` is a retired legacy host, retained offline only until its
+  backup evidence is complete. Do not add it to clients, status checks, or
+  deployment workflows.
 - Do not add or revive live backend deploy workflows in this frontend repo.
 - A failing backend deploy is an analytics repository problem unless proven
   otherwise. Do not treat it as a frontend regression just because the public

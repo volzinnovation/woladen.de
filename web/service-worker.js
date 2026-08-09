@@ -41,7 +41,6 @@ const DATA_PATH_PREFIXES = [
 ];
 
 const NEVER_CACHE_HOSTS = new Set([
-  "live.woladen.de",
   "live-eu.woladen.de",
 ]);
 
