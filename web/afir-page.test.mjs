@@ -101,6 +101,16 @@ test("AFIR point rows omit an unavailable static source update and omit unit cou
   assert.match(html, /data-sort-key="charging_point_count"/);
 });
 
+test("AFIR group row visibility is applied after dynamic rows are rendered", () => {
+  const renderGroupsStart = script.indexOf("function renderGroups()");
+  const renderPaginationStart = script.indexOf("function renderPagination()");
+  const renderGroups = script.slice(renderGroupsStart, renderPaginationStart);
+  assert.match(
+    renderGroups,
+    /body\.append\(row\);[\s\S]*updateAggregateCountColumns\(\);[\s\S]*refreshSortableTable/,
+  );
+});
+
 test("AFIR aggregate sorting is delegated to the complete backend result set", () => {
   assert.match(html, /id="afir-groups-table"[\s\S]*data-server-sort="true"/);
   assert.match(script, /state\.sortColumn/);
@@ -108,6 +118,10 @@ test("AFIR aggregate sorting is delegated to the complete backend result set", (
   assert.match(script, /sort: state\.sortColumn/);
   assert.match(script, /direction: state\.sortDirection/);
   assert.match(script, /table\.dataset\.serverSort === "true"/);
+  assert.match(
+    script,
+    /tableSortState\.set\(table\.dataset\.tableKey,[\s\S]*updateSortHeaderState\(table, tableColumn, tableDirection\)/,
+  );
 });
 
 test("AFIR country overview separates technical delivery status from field coverage", () => {

@@ -352,6 +352,14 @@ function toggleTableSort(table, header) {
       state.sortColumn === column && state.sortDirection === "asc"
         ? "desc"
         : "asc";
+    const tableColumn = headerColumnIndex(header);
+    const tableDirection =
+      direction === "desc" ? "descending" : "ascending";
+    tableSortState.set(table.dataset.tableKey, {
+      column: tableColumn,
+      direction: tableDirection,
+    });
+    updateSortHeaderState(table, tableColumn, tableDirection);
     state.sortColumn = column;
     state.sortDirection = direction;
     state.offset = 0;
@@ -944,7 +952,6 @@ function renderEu27Aggregate() {
 function renderGroups() {
   const body = element("afir-groups");
   body.replaceChildren();
-  updateAggregateCountColumns();
   renderCountryImplementationNotes();
   const groups = state.payload?.groups || [];
   for (const group of groups) {
@@ -1006,6 +1013,7 @@ function renderGroups() {
     cell.colSpan = state.level === "country" ? 9 : state.level === "point" ? 5 : 7;
     body.append(row);
   }
+  updateAggregateCountColumns();
   refreshSortableTable(element("afir-groups-table"));
 }
 
