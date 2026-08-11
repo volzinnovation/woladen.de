@@ -1697,6 +1697,23 @@ async function fetchOptionalJson(path) {
   }
 }
 
+async function loadOpenStaticSummaryData() {
+  const configuredPath = typeof window.WOLADEN_OPEN_STATIC_SUMMARY_URL === "string"
+    ? window.WOLADEN_OPEN_STATIC_SUMMARY_URL.trim()
+    : "";
+  const paths = [...new Set([
+    configuredPath,
+    "./data/open_static_summary.json",
+  ].filter(Boolean))];
+  for (const path of paths) {
+    const payload = await fetchOptionalJson(path);
+    if (payload) {
+      return payload;
+    }
+  }
+  return null;
+}
+
 function latestManagementSnapshotPath(indexData) {
   const snapshotPaths = indexData?.snapshot_paths;
   if (!snapshotPaths || typeof snapshotPaths !== "object") {
@@ -1742,7 +1759,7 @@ async function loadData() {
       managementIndexData,
     ] = await Promise.all([
       fetch("./data/summary.json"),
-      fetchOptionalJson("./data/open_static_summary.json"),
+      loadOpenStaticSummaryData(),
       fetchOptionalJson("./data/chargers_fast.geojson"),
       fetchOptionalJson("./data/spa_locations.json"),
       fetchOptionalJson("./data/management/index.json"),

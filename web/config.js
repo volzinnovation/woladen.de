@@ -1,6 +1,10 @@
 window.WOLADEN_OPEN_STATIC_API_BASE_URL =
   window.WOLADEN_OPEN_STATIC_API_BASE_URL || "./api/open-static";
 
+window.WOLADEN_OPEN_STATIC_SUMMARY_URL =
+  window.WOLADEN_OPEN_STATIC_SUMMARY_URL ||
+  "https://live-eu.woladen.de/data/open_static_summary.json";
+
 window.WOLADEN_OPEN_STATIC_FEATURE_LIMIT =
   window.WOLADEN_OPEN_STATIC_FEATURE_LIMIT || "";
 

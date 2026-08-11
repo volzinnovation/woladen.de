@@ -1,5 +1,5 @@
 const DATA_PATHS = {
-  openStatic: "./data/open_static_summary.json",
+  openStatic: "https://live-eu.woladen.de/data/open_static_summary.json",
   buildSummary: "./data/summary.json",
   managementIndex: "./data/management/index.json",
   occupancyIndex: "./data/station-occupancy/index.json",

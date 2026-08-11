@@ -1125,19 +1125,25 @@ function wireAppPromoDismiss() {
 }
 
 async function loadOpenStaticSummary() {
-  try {
-    const response = await fetch("./data/open_static_summary.json", {
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+  const paths = [...new Set([
+    window.WOLADEN_OPEN_STATIC_SUMMARY_URL,
+    "./data/open_static_summary.json",
+  ].filter((path) => typeof path === "string" && path.trim()))];
+  for (const path of paths) {
+    try {
+      const response = await fetch(path, {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (error) {
+      // Try the local generated copy as an outage fallback.
     }
-    return await response.json();
-  } catch (error) {
-    console.warn("Der statische Katalogvergleich ist nicht verfügbar.", error);
-    return { countries: [] };
   }
+  console.warn("Der statische Katalogvergleich ist nicht verfügbar.");
+  return { countries: [] };
 }
 
 async function waitForChart() {
