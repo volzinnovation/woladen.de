@@ -15,7 +15,6 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
 DEFAULT_OUTPUT_PATH = DATA_DIR / "open_static_summary.json"
 DEFAULT_BUNDLE_CANDIDATES = (
-    DATA_DIR / "eu27_ch_static" / "open_static.sqlite3",
     ROOT.parent / "Woladen.de-analytics" / "data" / "eu27_ch_static" / "open_static.sqlite3",
     ROOT.parent / "woladen.de-analytics" / "data" / "eu27_ch_static" / "open_static.sqlite3",
 )
