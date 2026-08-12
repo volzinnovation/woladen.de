@@ -4,10 +4,11 @@ import {
   afirPointCoverage,
   afirAggregateFieldsUrl,
   afirStationDetailUrl,
+  AFIR_COVERAGE_MODES,
   createAfirDataSource,
   nextAfirLevel,
   scopeFromAfirDimensions,
-} from "./afir-api.mjs?v=20260806-station-query1";
+} from "./afir-api.mjs?v=20260812-coverage-mode1";
 import {
   createAfirLoadingIndicator,
 } from "./afir-loading.mjs?v=20260730-afir-progress1";
@@ -484,6 +485,7 @@ const state = {
   sortColumn: "identity",
   sortDirection: "asc",
   searchQuery: "",
+  coverage: "both",
 };
 
 const source = createAfirDataSource({ baseUrl: configuredBaseUrl() });
@@ -500,6 +502,7 @@ function updateUrl() {
   query.set("level", state.level);
   query.set("sort", state.sortColumn);
   query.set("direction", state.sortDirection);
+  query.set("coverage", state.coverage);
   if (state.searchQuery) query.set("search", state.searchQuery);
   if (state.openFields && state.selectedGroup) {
     query.set("view", "fields");
@@ -526,6 +529,12 @@ function restoreUrl() {
     : "asc";
   const requestedSearch = String(query.get("search") || "").trim();
   state.searchQuery = requestedSearch.length >= 3 ? requestedSearch : "";
+  const requestedCoverage = String(query.get("coverage") || "both")
+    .trim()
+    .toLowerCase();
+  state.coverage = AFIR_COVERAGE_MODES.includes(requestedCoverage)
+    ? requestedCoverage
+    : "both";
   state.openFields = query.get("view") === "fields";
   state.scope = Object.fromEntries(
     [
@@ -696,6 +705,14 @@ function renderFields(group) {
     `${NUMBER.format(dynamicFields.length)} Felder`;
   element("afir-static-field-count").textContent =
     `${NUMBER.format(staticFields.length)} Felder`;
+  const dynamicFieldGroup = element("afir-dynamic-fields-table")?.closest(
+    ".afir-field-group",
+  );
+  const staticFieldGroup = element("afir-static-fields-table")?.closest(
+    ".afir-field-group",
+  );
+  if (dynamicFieldGroup) dynamicFieldGroup.hidden = !dynamicFields.length;
+  if (staticFieldGroup) staticFieldGroup.hidden = !staticFields.length;
   for (const table of [
     element("afir-dynamic-fields-table"),
     element("afir-static-fields-table"),
@@ -821,11 +838,11 @@ function appendGroupCells(row, group, identity, actionLabel = "→") {
     + "statischen Katalog"
   );
   setSortValue(
-    appendCell(row, metric(group.static_compliance)),
+    appendCell(row, metric(group.static_compliance), "afir-static-coverage-column"),
     coveragePercent(group.static_compliance),
   );
   setSortValue(
-    appendCell(row, metric(group.dynamic_compliance)),
+    appendCell(row, metric(group.dynamic_compliance), "afir-dynamic-coverage-column"),
     coveragePercent(group.dynamic_compliance),
   );
   const freshness =
@@ -834,8 +851,9 @@ function appendGroupCells(row, group, identity, actionLabel = "→") {
       : "";
   setSortValue(
     appendCell(
-    row,
+      row,
       freshness === "" ? UNASSESSED_LABEL : duration(freshness),
+      "afir-dynamic-coverage-column",
     ),
     freshness,
   );
@@ -862,6 +880,18 @@ function updateAggregateCountColumns() {
     '[data-sort-key="station_count"], [data-sort-key="charging_point_count"], .afir-count-stations, .afir-count-points',
   ).forEach((cell) => {
     cell.hidden = hidden;
+  });
+  const staticHidden = state.coverage === "dynamic";
+  const dynamicHidden = state.coverage === "static";
+  table.querySelectorAll(
+    '[data-sort-key="static"], .afir-static-coverage-column',
+  ).forEach((cell) => {
+    cell.hidden = hidden || staticHidden;
+  });
+  table.querySelectorAll(
+    '[data-sort-key="dynamic"], [data-sort-key="freshness"], .afir-dynamic-coverage-column',
+  ).forEach((cell) => {
+    cell.hidden = hidden || dynamicHidden;
   });
   const countryOnlyHidden = state.level !== "country";
   table.querySelectorAll(".afir-country-only").forEach((cell) => {
@@ -930,7 +960,11 @@ function renderEu27Aggregate() {
   );
   const fieldsLink = document.createElement("a");
   fieldsLink.className = "afir-detail-link";
-  fieldsLink.href = afirAggregateFieldsUrl("country", aggregate.dimensions || {});
+  fieldsLink.href = afirAggregateFieldsUrl(
+    "country",
+    aggregate.dimensions || {},
+    state.coverage,
+  );
   fieldsLink.textContent = "Felder →";
   fieldsLink.setAttribute("aria-label", "AFIR-Felder für EU-27 anzeigen");
   fieldsLink.addEventListener("click", (event) => {
@@ -981,7 +1015,11 @@ function renderGroups() {
     } else {
       const fieldsLink = document.createElement("a");
       fieldsLink.className = "afir-detail-link";
-      fieldsLink.href = afirAggregateFieldsUrl(state.level, group.dimensions);
+      fieldsLink.href = afirAggregateFieldsUrl(
+        state.level,
+        group.dimensions,
+        state.coverage,
+      );
       fieldsLink.textContent = "Felder →";
       fieldsLink.setAttribute(
         "aria-label",
@@ -1056,6 +1094,7 @@ async function loadGroups() {
       sort: state.sortColumn,
       direction: state.sortDirection,
       search: state.searchQuery,
+      coverage: state.coverage,
     });
     loadingIndicator.received(progressToken, {
       labelText: `${levelLabel} sind eingetroffen.`,
@@ -1107,6 +1146,15 @@ async function loadGroups() {
 }
 
 async function loadMeta() {
+  if (state.coverage !== "both") {
+    const label = state.coverage === "static" ? "Statisch" : "Dynamisch";
+    const fieldCount = state.coverage === "static" ? 34 : 3;
+    element("afir-meta-status").textContent = `${label} angefragt`;
+    element("afir-meta-entities").textContent = "–";
+    element("afir-meta-fields").textContent =
+      `${NUMBER.format(fieldCount)} AFIR-Felder`;
+    return;
+  }
   try {
     const meta = await source.loadMeta();
     const count = Number(meta.entity_release_pair_count || 0);

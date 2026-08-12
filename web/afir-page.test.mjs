@@ -85,7 +85,7 @@ test("AFIR tables provide accessible sorting and retain aggregate field links", 
   assert.match(script, /wireSortableTables\(\)/);
   assert.match(script, /afir-sort-button/);
   assert.match(script, /toggleTableSort/);
-  assert.match(script, /afirAggregateFieldsUrl\(state\.level/);
+  assert.match(script, /afirAggregateFieldsUrl\(\s*state\.level/);
   assert.match(script, /dynamicFields = fields\.filter/);
   assert.match(script, /staticFields = fields\.filter/);
 });

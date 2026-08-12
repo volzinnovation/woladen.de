@@ -1,6 +1,7 @@
 import { queryStationPagePath } from "./station-detail.mjs";
 
 const LEVELS = ["country", "provider", "operator", "location", "point"];
+const COVERAGE_MODES = ["static", "dynamic", "both"];
 const FILTER_KEYS = [
   "country_code",
   "provider_uid",
@@ -40,13 +41,20 @@ export function afirStationDetailUrl(dimensions = {}) {
   return stationId ? queryStationPagePath(stationId) : "";
 }
 
-export function afirAggregateFieldsUrl(level = "country", dimensions = {}) {
+export function afirAggregateFieldsUrl(
+  level = "country",
+  dimensions = {},
+  coverage = "both",
+) {
   const safeLevel = LEVELS.includes(String(level || "").toLowerCase())
     ? String(level || "").toLowerCase()
     : "country";
   const query = new URLSearchParams({
     level: safeLevel,
     view: "fields",
+    coverage: COVERAGE_MODES.includes(String(coverage || "").toLowerCase())
+      ? String(coverage || "").toLowerCase()
+      : "both",
   });
   for (const key of FIELD_SCOPE_KEYS) {
     const value = String(dimensions?.[key] || "").trim();
@@ -97,6 +105,7 @@ export function buildAfirCurrentUrl(
     sort = "identity",
     direction = "asc",
     search = "",
+    coverage = "both",
   } = {},
 ) {
   const normalizedBase = normalizeAfirApiBaseUrl(baseUrl);
@@ -112,6 +121,9 @@ export function buildAfirCurrentUrl(
     offset: String(offset),
     sort: String(sort || "identity"),
     direction: String(direction || "asc"),
+    coverage: COVERAGE_MODES.includes(String(coverage || "").toLowerCase())
+      ? String(coverage || "").toLowerCase()
+      : "both",
   });
   for (const key of FILTER_KEYS) {
     const value = String(scope?.[key] || "").trim();
@@ -168,3 +180,4 @@ export function createAfirDataSource({
 }
 
 export const AFIR_HIERARCHY_LEVELS = Object.freeze([...LEVELS]);
+export const AFIR_COVERAGE_MODES = Object.freeze([...COVERAGE_MODES]);

@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   afirChargingPointCount,
+  afirAggregateFieldsUrl,
   afirCountryDisplayName,
   afirPointCoverage,
   afirStationDetailUrl,
@@ -54,6 +55,7 @@ test("AFIR query keeps the selected hierarchy scope", () => {
         sort: "charging_point_count",
         direction: "desc",
         search: "energy",
+        coverage: "dynamic",
       },
     ),
   );
@@ -68,6 +70,25 @@ test("AFIR query keeps the selected hierarchy scope", () => {
   assert.equal(url.searchParams.get("sort"), "charging_point_count");
   assert.equal(url.searchParams.get("direction"), "desc");
   assert.equal(url.searchParams.get("search"), "energy");
+  assert.equal(url.searchParams.get("coverage"), "dynamic");
+});
+
+test("AFIR coverage mode defaults to both and is explicit for fast smoke tests", () => {
+  const defaultUrl = new URL(
+    buildAfirCurrentUrl("https://example.test/v1/afir-compliance"),
+  );
+  const staticUrl = new URL(
+    buildAfirCurrentUrl("https://example.test/v1/afir-compliance", {
+      coverage: "static",
+    }),
+  );
+  assert.equal(defaultUrl.searchParams.get("coverage"), "both");
+  assert.equal(staticUrl.searchParams.get("coverage"), "static");
+  const dynamicFields = new URL(
+    afirAggregateFieldsUrl("country", {}, "dynamic"),
+    "https://example.test/",
+  );
+  assert.equal(dynamicFields.searchParams.get("coverage"), "dynamic");
 });
 
 test("AFIR short search terms are not sent as name queries", () => {
