@@ -5,6 +5,37 @@ import XCTest
 final class LiveFeatureFormattingTests: XCTestCase {
     func testLiveAPIClientDefaultsToEuropeanLiveAPIBase() {
         XCTAssertEqual(LiveAPIClient.defaultBaseURL.absoluteString, "https://live-eu.woladen.de")
+        XCTAssertEqual(LiveAPIClient.openStaticSummaryPath, "/data/open_static_summary.json")
+    }
+
+    func testCatalogInfoSummaryUsesBundleSummaryEndpoint() async throws {
+        let recorder = LiveAPIRequestRecorder()
+        LiveAPIMockURLProtocol.requestHandler = { request in
+            recorder.append(request)
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, Data(#"{"bundle":{"station_count":327858,"charger_count":860462},"countries":[],"sources":[]}"#.utf8))
+        }
+        defer {
+            LiveAPIMockURLProtocol.requestHandler = nil
+        }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [LiveAPIMockURLProtocol.self]
+        let client = LiveAPIClient(
+            baseURL: URL(string: "https://api.example.test")!,
+            session: URLSession(configuration: configuration)
+        )
+
+        let summary = try await client.catalogInfoSummary()
+
+        XCTAssertEqual(recorder.requests.first?.url?.path, "/data/open_static_summary.json")
+        XCTAssertEqual(summary.stationCount, 327_858)
+        XCTAssertEqual(summary.chargerCount, 860_462)
     }
 
     func testSupportedLanguageResolverKeepsWebLanguageAliases() {

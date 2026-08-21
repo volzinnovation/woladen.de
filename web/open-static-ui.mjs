@@ -1,4 +1,14 @@
 const LICENSE_DATE_RE = /_(\d{4}-\d{2}-\d{2})$/;
+export const LIVE_OPEN_STATIC_SUMMARY_URL =
+  "https://live-eu.woladen.de/data/open_static_summary.json";
+
+export function openStaticSummaryPaths(configuredPath = "") {
+  return [...new Set([
+    String(configuredPath || "").trim(),
+    LIVE_OPEN_STATIC_SUMMARY_URL,
+    "./data/open_static_summary.json",
+  ].filter(Boolean))];
+}
 
 function normalizeCode(value) {
   return String(value || "").trim().toUpperCase();

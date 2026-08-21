@@ -201,24 +201,8 @@ class ChargerRepository(
             return summary
         }
 
-        val webSummary = runCatching {
-            val openStaticSummary = liveApiClient.webOpenStaticSummary()
-            val buildSummary = runCatching { liveApiClient.webBuildSummary() }.getOrNull()
-            CatalogInfoSummary(
-                openStaticSummary = openStaticSummary,
-                buildSummary = buildSummary
-            )
-        }
-        webSummary.onSuccess { summary ->
-            synchronized(cacheLock) {
-                infoSummaryCache = CacheEntry(summary)
-            }
-            return summary
-        }
-
         staleSummary?.let { return it }
-        throw webSummary.exceptionOrNull()
-            ?: liveSummary.exceptionOrNull()
+        throw liveSummary.exceptionOrNull()
             ?: IOException("Catalog summary could not be loaded")
     }
 

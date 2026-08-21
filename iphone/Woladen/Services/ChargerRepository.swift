@@ -46,21 +46,10 @@ final class ChargerRepository {
             await cache.storeInfoSummary(summary)
             return summary
         } catch {
-            do {
-                let openStaticSummary = try await client.webOpenStaticSummary()
-                let buildSummary = try? await client.webBuildSummary()
-                let summary = CatalogInfoSummary(
-                    openStaticSummary: openStaticSummary,
-                    buildSummary: buildSummary
-                )
-                await cache.storeInfoSummary(summary)
-                return summary
-            } catch {
-                if let stale = await cache.infoSummary(maxAge: .infoStale) {
-                    return stale
-                }
-                throw error
+            if let stale = await cache.infoSummary(maxAge: .infoStale) {
+                return stale
             }
+            throw error
         }
     }
 

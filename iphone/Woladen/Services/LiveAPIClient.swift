@@ -20,8 +20,7 @@ enum LiveAPIError: LocalizedError {
 
 final class LiveAPIClient {
     static let defaultBaseURL = URL(string: "https://live-eu.woladen.de")!
-    static let defaultWebOpenStaticSummaryURL = URL(string: "https://woladen.de/data/open_static_summary.json")!
-    static let defaultWebBuildSummaryURL = URL(string: "https://woladen.de/data/summary.json")!
+    static let openStaticSummaryPath = "/data/open_static_summary.json"
     static let maxLookupStationIDs = 20
     private static let catalogSearchTimeout: TimeInterval = 30.0
     private static let routeChargerTimeout: TimeInterval = 120.0
@@ -133,7 +132,7 @@ final class LiveAPIClient {
     }
 
     func catalogInfoSummary() async throws -> CatalogInfoSummary {
-        guard let url = endpointURL(path: "/v1/catalog/summary") else {
+        guard let url = endpointURL(path: Self.openStaticSummaryPath) else {
             throw LiveAPIError.invalidBaseURL
         }
 
@@ -159,16 +158,6 @@ final class LiveAPIClient {
         var request = makeRequest(url: url, method: "POST", timeout: Self.routeChargerTimeout)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(payload)
-        return try await send(request)
-    }
-
-    func webOpenStaticSummary() async throws -> OpenStaticSummary {
-        let request = makeRequest(url: Self.defaultWebOpenStaticSummaryURL, method: "GET", timeout: 5.0)
-        return try await send(request)
-    }
-
-    func webBuildSummary() async throws -> BundleBuildSummary {
-        let request = makeRequest(url: Self.defaultWebBuildSummaryURL, method: "GET", timeout: 5.0)
         return try await send(request)
     }
 

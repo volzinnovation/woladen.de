@@ -18,6 +18,7 @@ class LiveApiClientRequestTest {
     @Test
     fun defaultBaseUrlUsesEuropeanLiveBackend() {
         assertEquals("https://live-eu.woladen.de", LiveApiClient.DEFAULT_BASE_URL)
+        assertEquals("/data/open_static_summary.json", LiveApiClient.OPEN_STATIC_SUMMARY_PATH)
     }
 
     @Test

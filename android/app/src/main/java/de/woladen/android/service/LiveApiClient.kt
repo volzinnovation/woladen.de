@@ -119,7 +119,7 @@ class LiveApiClient(
 
     suspend fun catalogInfoSummary(): CatalogInfoSummary = withContext(Dispatchers.IO) {
         val connection = openConnection(
-            path = "/v1/catalog/summary",
+            path = OPEN_STATIC_SUMMARY_PATH,
             method = "GET",
             timeoutMs = CATALOG_SUMMARY_TIMEOUT_MS
         )
@@ -146,41 +146,9 @@ class LiveApiClient(
         parseRouteChargerResponse(readJsonResponse(connection))
     }
 
-    suspend fun webOpenStaticSummary(): OpenStaticSummary = withContext(Dispatchers.IO) {
-        val connection = openAbsoluteConnection(
-            url = DEFAULT_WEB_OPEN_STATIC_SUMMARY_URL,
-            method = "GET",
-            timeoutMs = WEB_SUMMARY_TIMEOUT_MS
-        )
-        connection.setRequestProperty("Accept", "application/json")
-        parseOpenStaticSummaryPayload(readJsonResponse(connection))
-    }
-
-    suspend fun webBuildSummary(): BundleBuildSummary = withContext(Dispatchers.IO) {
-        val connection = openAbsoluteConnection(
-            url = DEFAULT_WEB_BUILD_SUMMARY_URL,
-            method = "GET",
-            timeoutMs = WEB_SUMMARY_TIMEOUT_MS
-        )
-        connection.setRequestProperty("Accept", "application/json")
-        parseBundleBuildSummaryPayload(readJsonResponse(connection))
-    }
-
     private fun openConnection(path: String, method: String, timeoutMs: Int): HttpURLConnection {
         val normalizedBaseUrl = baseUrl.trimEnd('/')
         val connection = URL("$normalizedBaseUrl$path").openConnection(Proxy.NO_PROXY) as HttpURLConnection
-        connection.requestMethod = method
-        connection.connectTimeout = timeoutMs
-        connection.readTimeout = timeoutMs
-        connection.instanceFollowRedirects = true
-        if (acceptLanguage.isNotBlank()) {
-            connection.setRequestProperty("Accept-Language", acceptLanguage)
-        }
-        return connection
-    }
-
-    private fun openAbsoluteConnection(url: String, method: String, timeoutMs: Int): HttpURLConnection {
-        val connection = URL(url).openConnection(Proxy.NO_PROXY) as HttpURLConnection
         connection.requestMethod = method
         connection.connectTimeout = timeoutMs
         connection.readTimeout = timeoutMs
@@ -864,8 +832,7 @@ class LiveApiClient(
 
     companion object {
         val DEFAULT_BASE_URL: String = BuildConfig.LIVE_API_BASE_URL
-        const val DEFAULT_WEB_OPEN_STATIC_SUMMARY_URL = "https://woladen.de/data/open_static_summary.json"
-        const val DEFAULT_WEB_BUILD_SUMMARY_URL = "https://woladen.de/data/summary.json"
+        const val OPEN_STATIC_SUMMARY_PATH = "/data/open_static_summary.json"
         const val MAX_LOOKUP_STATION_IDS = 20
         const val MAX_CATALOG_SEARCH_RESULTS = 100
         private const val LOOKUP_TIMEOUT_MS = 3_500
@@ -874,7 +841,6 @@ class LiveApiClient(
         private const val CATALOG_DETAIL_TIMEOUT_MS = 4_500
         private const val CATALOG_SUMMARY_TIMEOUT_MS = 5_000
         private const val ROUTE_CHARGER_TIMEOUT_MS = 120_000
-        private const val WEB_SUMMARY_TIMEOUT_MS = 5_000
     }
 }
 

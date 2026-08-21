@@ -73,7 +73,8 @@ import {
   formatBundleSourceTitle,
   normalizeBundleSources,
   normalizeMappedCountries,
-} from "./open-static-ui.mjs?v=20260618-commercial-merge";
+  openStaticSummaryPaths,
+} from "./open-static-ui.mjs?v=20260821-live-summary1";
 import {
   getMapKeyboardAction,
   performMapKeyboardAction,
@@ -1685,9 +1686,9 @@ let catalogSearchSequence = 0;
 let catalogMapMoveTimer = 0;
 let mapGPSRefreshTimer = 0;
 
-async function fetchOptionalJson(path) {
+async function fetchOptionalJson(path, options) {
   try {
-    const response = await fetch(path);
+    const response = await fetch(path, options);
     if (!response.ok) {
       return null;
     }
@@ -1701,12 +1702,8 @@ async function loadOpenStaticSummaryData() {
   const configuredPath = typeof window.WOLADEN_OPEN_STATIC_SUMMARY_URL === "string"
     ? window.WOLADEN_OPEN_STATIC_SUMMARY_URL.trim()
     : "";
-  const paths = [...new Set([
-    configuredPath,
-    "./data/open_static_summary.json",
-  ].filter(Boolean))];
-  for (const path of paths) {
-    const payload = await fetchOptionalJson(path);
+  for (const path of openStaticSummaryPaths(configuredPath)) {
+    const payload = await fetchOptionalJson(path, { cache: "no-store" });
     if (payload) {
       return payload;
     }

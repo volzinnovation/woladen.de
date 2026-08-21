@@ -2,11 +2,25 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  LIVE_OPEN_STATIC_SUMMARY_URL,
   formatBundleSourceTitle,
   formatLicenseStatus,
   normalizeBundleSources,
   normalizeMappedCountries,
+  openStaticSummaryPaths,
 } from "./open-static-ui.mjs";
+
+test("prefers the live bundle summary and retains the generated file as fallback", () => {
+  assert.deepEqual(openStaticSummaryPaths(), [
+    LIVE_OPEN_STATIC_SUMMARY_URL,
+    "./data/open_static_summary.json",
+  ]);
+  assert.deepEqual(openStaticSummaryPaths("https://preview.example.test/summary.json"), [
+    "https://preview.example.test/summary.json",
+    LIVE_OPEN_STATIC_SUMMARY_URL,
+    "./data/open_static_summary.json",
+  ]);
+});
 
 test("normalizes mapped countries from generated open-static summary metadata", () => {
   const countries = normalizeMappedCountries({
