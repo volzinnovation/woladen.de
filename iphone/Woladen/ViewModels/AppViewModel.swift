@@ -30,6 +30,7 @@ final class AppViewModel: ObservableObject {
     @Published private(set) var isLoadingInfoSummary: Bool = false
     @Published private(set) var routeSummary: RouteSummary?
     @Published private(set) var routeFeatures: [GeoJSONFeature] = []
+    @Published private(set) var persistedRoutePlan: RoutePlan?
     @Published private(set) var routeError: String?
     @Published private(set) var isLoadingRoute: Bool = false
 
@@ -129,7 +130,9 @@ final class AppViewModel: ObservableObject {
                 self.currentCatalogCenter = loaded.catalogCenter
                 self.loadError = nil
                 self.isAwaitingFirstLocationFix = false
-                self.didSeedFromUserLocation = userLocation != nil
+                if userLocation != nil {
+                    self.didSeedFromUserLocation = true
+                }
                 self.applyLocalFilters(userLocation: userLocation, resetDiscovered: resetResults)
             case .failure(let error):
                 self.loadError = error.localizedDescription
@@ -219,9 +222,13 @@ final class AppViewModel: ObservableObject {
         }
     }
 
-    func reloadMapForCenter(_ center: CLLocationCoordinate2D?) {
+    func reloadMapForCenter(_ center: CLLocationCoordinate2D?, force: Bool = false) {
         guard let center else {
             waitForLocation()
+            return
+        }
+        if force {
+            loadCatalog(center: center, userLocation: nil, resetResults: true)
             return
         }
         guard !allFeatures.isEmpty else {
@@ -326,8 +333,19 @@ final class AppViewModel: ObservableObject {
         isLoadingRoute = false
         routeSummary = nil
         routeFeatures = []
+        persistedRoutePlan = nil
         routeError = nil
         routeCalculatedFilters = nil
+    }
+
+    func showPersistedRoutePlan(_ plan: RoutePlan) {
+        routeSearchTask?.cancel()
+        isLoadingRoute = false
+        routeSummary = nil
+        routeFeatures = []
+        routeError = nil
+        routeCalculatedFilters = plan.route.filter
+        persistedRoutePlan = plan
     }
 
     func routeDisplayFeatures(userLocation: CLLocation? = nil) -> [GeoJSONFeature] {

@@ -229,6 +229,20 @@ struct TripRouteSnapshot: Codable, Equatable {
     }
 }
 
+extension TripRouteSnapshot {
+    /// Rehydrates the persisted route into the same map-facing model used by
+    /// a freshly calculated route. Persisted plans otherwise only appeared in
+    /// their dedicated minimap.
+    var mapRouteSummary: RouteSummary {
+        RouteSummary(
+            source: "saved-plan",
+            distanceM: distanceM,
+            durationS: durationS,
+            geometry: RouteGeometry(coordinates: geometryCoordinates)
+        )
+    }
+}
+
 struct TripAmenitySnapshot: Codable, Identifiable, Equatable {
     let category: String
     let name: String?

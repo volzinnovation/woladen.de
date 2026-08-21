@@ -31,7 +31,7 @@ struct MapTabView: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Map(position: $cameraPosition) {
-                if let route = viewModel.routeSummary {
+                if let route = mapRouteSummary {
                     let coordinates = routePolylineCoordinates(route)
                     if coordinates.count > 1 {
                         MapPolyline(coordinates: coordinates)
@@ -53,6 +53,12 @@ struct MapTabView: View {
                     }
                 }
 
+                ForEach(persistedRouteStations) { station in
+                    Annotation("", coordinate: station.coordinate) {
+                        persistedRouteMarker(station)
+                    }
+                }
+
                 if let current = locationService.currentLocation {
                     UserAnnotation()
                     Annotation(String(localized: "aria.locate"), coordinate: current.coordinate) {
@@ -65,7 +71,7 @@ struct MapTabView: View {
             }
             .ignoresSafeArea(edges: [.top, .horizontal])
             .onMapCameraChange(frequency: .onEnd) { context in
-                guard viewModel.routeSummary == nil else { return }
+                guard !hasEstablishedRoute else { return }
                 guard hasCenteredInitialLocation else { return }
                 let center = context.region.center
                 guard shouldQuery(for: center) else { return }
@@ -107,7 +113,7 @@ struct MapTabView: View {
             handleActivation()
         }
         .onChange(of: routeMapCameraKey) { _, _ in
-            if viewModel.routeSummary != nil {
+            if mapRouteSummary != nil {
                 focusMapOnRoute()
             }
         }
@@ -117,10 +123,23 @@ struct MapTabView: View {
     }
 
     private func mapItems() -> [GeoJSONFeature] {
-        if viewModel.routeSummary != nil {
+        if hasEstablishedRoute {
             return viewModel.routeDisplayFeatures(userLocation: locationService.currentLocation)
         }
         return viewModel.discoveredFeatures
+    }
+
+    private var mapRouteSummary: RouteSummary? {
+        viewModel.routeSummary ?? viewModel.persistedRoutePlan?.route.mapRouteSummary
+    }
+
+    private var hasEstablishedRoute: Bool {
+        mapRouteSummary != nil
+    }
+
+    private var persistedRouteStations: [TripStationSnapshot] {
+        guard viewModel.routeSummary == nil else { return [] }
+        return viewModel.persistedRoutePlan?.rawStations ?? []
     }
 
     private var mapControlsOverlay: some View {
@@ -298,8 +317,8 @@ struct MapTabView: View {
         )
         lastQueriedCenter = coordinate
         hasCenteredInitialLocation = true
-        if viewModel.routeSummary == nil {
-            viewModel.handleMapCenterChange(coordinate)
+        if !hasEstablishedRoute {
+            viewModel.reloadMapForCenter(coordinate, force: true)
         }
     }
 
@@ -328,7 +347,7 @@ struct MapTabView: View {
             )
         )
         lastQueriedCenter = location.coordinate
-        if viewModel.routeSummary == nil {
+        if !hasEstablishedRoute {
             viewModel.handleMapCenterChange(location.coordinate)
         }
     }
@@ -362,13 +381,13 @@ struct MapTabView: View {
         while !Task.isCancelled {
             try? await Task.sleep(nanoseconds: mapGPSRefreshIntervalNanoseconds)
             guard !Task.isCancelled, scenePhase == .active else { continue }
-            guard viewModel.routeSummary == nil else { continue }
+            guard !hasEstablishedRoute else { continue }
             refreshFromGPSPosition()
         }
     }
 
     private func refreshFromGPSPosition() {
-        guard viewModel.routeSummary == nil else { return }
+        guard !hasEstablishedRoute else { return }
         guard locationService.authorizationStatus == .authorizedWhenInUse ||
                 locationService.authorizationStatus == .authorizedAlways else {
             return
@@ -383,15 +402,17 @@ struct MapTabView: View {
     }
 
     private var routeMapCameraKey: String {
-        guard let route = viewModel.routeSummary else { return "" }
-        let ids = viewModel.routeDisplayFeatures(userLocation: locationService.currentLocation).map(\.id).joined(separator: ",")
+        guard let route = mapRouteSummary else { return "" }
+        let ids = mapItems().map(\.id).joined(separator: ",")
+            + "|"
+            + persistedRouteStations.map(\.id).joined(separator: ",")
         return "\(route.distanceM):\(route.durationS):\(route.geometry.coordinates.count):\(ids)"
     }
 
     @discardableResult
     private func focusMapOnRoute() -> Bool {
-        guard let route = viewModel.routeSummary,
-              let rect = routeMapRect(route: route, features: viewModel.routeDisplayFeatures(userLocation: locationService.currentLocation)) else {
+        guard let route = mapRouteSummary,
+              let rect = routeMapRect(route: route, features: mapItems(), stations: persistedRouteStations) else {
             return false
         }
         cameraPosition = .rect(rect)
@@ -409,8 +430,12 @@ struct MapTabView: View {
         }
     }
 
-    private func routeMapRect(route: RouteSummary, features: [GeoJSONFeature]) -> MKMapRect? {
-        let coordinates = routePolylineCoordinates(route) + features.map(\.coordinate)
+    private func routeMapRect(
+        route: RouteSummary,
+        features: [GeoJSONFeature],
+        stations: [TripStationSnapshot] = []
+    ) -> MKMapRect? {
+        let coordinates = routePolylineCoordinates(route) + features.map(\.coordinate) + stations.map(\.coordinate)
         guard !coordinates.isEmpty else { return nil }
 
         var rect = MKMapRect.null
@@ -483,6 +508,28 @@ struct MapTabView: View {
         let stationLabel = String(localized: "station.chargingStation")
         let favoritePrefix = isFavorite ? "\(String(localized: "info.legendFavorite")): " : ""
         return "\(favoritePrefix)\(stationLabel), \(feature.properties.operatorName), \(feature.properties.city), \(Int(feature.properties.displayedMaxPowerKW.rounded())) kW"
+    }
+
+    @ViewBuilder
+    private func persistedRouteMarker(_ station: TripStationSnapshot) -> some View {
+        if let plan = viewModel.persistedRoutePlan,
+           let stopIndex = plan.selectedStopIDs.firstIndex(of: station.stationID) {
+            Text("\(stopIndex + 1)")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 28, height: 28)
+                .background(woladenBrandColor, in: Circle())
+                .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                .shadow(radius: 2, y: 1)
+                .accessibilityLabel("Route stop \(stopIndex + 1), \(station.operatorName), \(station.city)")
+        } else {
+            Circle()
+                .fill(Color(.systemBackground))
+                .frame(width: 18, height: 18)
+                .overlay(Circle().stroke(woladenBrandColor, lineWidth: 3))
+                .shadow(radius: 2, y: 1)
+                .accessibilityLabel("Route charger, \(station.operatorName), \(station.city)")
+        }
     }
 
     @ViewBuilder

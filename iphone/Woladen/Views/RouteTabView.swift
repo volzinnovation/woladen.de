@@ -250,9 +250,9 @@ struct RouteTabView: View {
                 VStack(spacing: 5) {
                     Image(systemName: "car.side")
                         .font(.title3)
-                    Text(String(localized: "trip.settings.title", defaultValue: "Trip settings"))
-                        .font(.headline)
                     Text(tripStore.preferences.activeVehicleProfile.name)
+                        .font(.headline)
+                    Text(String(localized: "trip.settings.buttonSubtitle", defaultValue: "Settings"))
                         .font(.caption)
                         .lineLimit(1)
                 }
@@ -771,6 +771,7 @@ struct RouteTabView: View {
 
     private func loadPlan(_ plan: RoutePlan) {
         currentPlanID = plan.id
+        viewModel.showPersistedRoutePlan(plan)
         originEndpoint = plan.route.origin
         destinationEndpoint = plan.route.destination
         originText = plan.route.origin.label
