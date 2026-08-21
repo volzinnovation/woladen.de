@@ -8,6 +8,7 @@ __pycache__/
 # Backup files
 *.old
 *.old.*
+*.swp
 
 # Local secrets
 secret/
