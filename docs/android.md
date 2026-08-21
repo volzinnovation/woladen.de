@@ -6,7 +6,7 @@ This folder contains an Android port of the iPhone app in `iphone/Woladen`.
 
 - Kotlin + Jetpack Compose
 - OSMDroid (`org.osmdroid:osmdroid-android`)
-- Offline-first data bundle strategy identical to iOS
+- API-backed catalog and live data from `https://live-eu.woladen.de`
 
 ## Behavior Parity With iPhone
 
@@ -25,20 +25,11 @@ This folder contains an Android port of the iPhone app in `iphone/Woladen`.
   - map/list tap opens detail sheet
   - detail mini-map shows station + amenity overlays
   - favorite toggle and navigation handoff actions
-- Same data bundle flow:
-  - installed bundle (`files/WoladenDataBundle/current`) takes precedence
-  - baseline fallback from packaged assets
-  - import/remove actions in Info tab
+## Data Source
 
-## Baseline Data Source
-
-The Android app reuses the iPhone baseline files directly via Gradle `sourceSets`:
-
-- `../../iphone/Woladen/Resources/Data/baseline/chargers_fast.geojson`
-- `../../iphone/Woladen/Resources/Data/baseline/operators.json`
-- `../../iphone/Woladen/Resources/Data/baseline/data_manifest.json`
-
-This avoids duplicate large data files and keeps iOS/Android baselines aligned.
+Catalog search, station detail, live summaries, live station detail, and bundle
+statistics use the same `live-eu` contracts as the iPhone app. The Android app
+does not package or import a local catalog bundle.
 
 ## Open In Android Studio
 

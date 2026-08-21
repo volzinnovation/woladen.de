@@ -1,9 +1,0 @@
-{
-  "schema_version": "woladen-open-static-release-access-v1",
-  "hf_repo_id": "loffenauer/AFIR",
-  "hf_repo_type": "dataset",
-  "hf_prefix": "AFIR/open-static/releases",
-  "hf_stable_alias": "open-static-ios-regional-latest",
-  "source_repository": "volzinnovation/Woladen.de-analytics",
-  "hf_read_token": "optional_hf_read_token"
-}

@@ -302,7 +302,7 @@ class ChargerRepository(
                 serviceTypesDisplay = "",
                 detailsJson = "",
                 amenitiesTotal = amenitiesTotal,
-                amenitiesSource = "open_static.sqlite3",
+                amenitiesSource = "live-eu catalog",
                 amenityExamples = amenityExamples,
                 amenityCounts = amenityCounts
             ),
