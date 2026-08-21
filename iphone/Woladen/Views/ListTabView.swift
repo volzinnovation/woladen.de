@@ -224,8 +224,9 @@ struct ListTabView: View {
                                         .padding(14)
                                     }
                                     .buttonStyle(.plain)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                                    VStack(spacing: 6) {
+                                    VStack(alignment: .trailing, spacing: 6) {
                                         if let distanceText = viewModel.distanceText(
                                             from: locationService.currentLocation,
                                             to: feature.coordinate
@@ -234,6 +235,17 @@ struct ListTabView: View {
                                                 .font(.subheadline)
                                                 .foregroundStyle(.secondary)
                                                 .lineLimit(1)
+                                        }
+
+                                        if !feature.displayPrice.isEmpty {
+                                            Text(feature.displayPrice)
+                                                .font(.caption)
+                                                .lineLimit(1)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 3)
+                                                .background(Color.green.opacity(0.12))
+                                                .foregroundStyle(Color.green)
+                                                .clipShape(Capsule())
                                         }
 
                                         Button {
@@ -246,11 +258,12 @@ struct ListTabView: View {
                                             )
                                         } label: {
                                             Image(systemName: "play.fill")
-                                                .font(.headline)
+                                                .font(.headline.weight(.bold))
+                                                .foregroundStyle(.white)
                                                 .frame(width: 44, height: 44)
+                                                .background(woladenBrandColor, in: Circle())
                                         }
-                                        .buttonStyle(.borderedProminent)
-                                        .tint(woladenBrandColor)
+                                        .buttonStyle(.plain)
                                         .accessibilityLabel(
                                             Text(
                                                 String(localized: "trip.station.driveTarget", defaultValue: "Use {station} as driving target")
@@ -258,6 +271,7 @@ struct ListTabView: View {
                                             )
                                         )
                                     }
+                                    .frame(minWidth: 72, maxWidth: 94, alignment: .trailing)
                                     .padding(.vertical, 10)
                                     .padding(.trailing, 10)
                                 }
@@ -487,22 +501,19 @@ struct ListTabView: View {
         }
 
         Button {
-            openNavigationLink(feature, google: true)
+            openNavigationLink(feature)
         } label: {
-            Label("Google", systemImage: "location.north.line.fill")
-        }
-
-        Button {
-            openNavigationLink(feature, google: false)
-        } label: {
-            Label("Apple", systemImage: "location.north.line.fill")
+            Label(
+                String(localized: "detail.startNavigation", defaultValue: "Start navigation"),
+                systemImage: "location.north.line.fill"
+            )
         }
     }
 
-    private func openNavigationLink(_ feature: GeoJSONFeature, google: Bool) {
+    private func openNavigationLink(_ feature: GeoJSONFeature) {
         let lat = feature.coordinate.latitude
         let lon = feature.coordinate.longitude
-        let urlString = google
+        let urlString = tripStore.preferences.preferredNavigationApp == .googleMaps
             ? "https://www.google.com/maps/dir/?api=1&destination=\(lat),\(lon)"
             : "http://maps.apple.com/?daddr=\(lat),\(lon)"
         guard let url = URL(string: urlString) else { return }
@@ -634,7 +645,6 @@ private struct StationRowView: View {
     var body: some View {
         let topAmenities = feature.properties.topAmenities()
         let occupancy = feature.occupancySummaryLabel
-        let priceDisplay = feature.displayPrice
 
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -651,52 +661,42 @@ private struct StationRowView: View {
                 Spacer()
             }
 
-            Text("\(feature.properties.city) • \(Int(feature.properties.displayedMaxPowerKW.rounded())) kW • \(chargingPointLabel(feature.properties.chargingPointsCount))")
+            Text(feature.properties.city)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            if occupancy != nil || !priceDisplay.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        if let occupancy {
-                            Label(occupancy, systemImage: "dot.radiowaves.left.and.right")
-                                .font(.caption)
-                                .lineLimit(1)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(occupancyBackgroundColor.opacity(0.16))
-                                .foregroundStyle(occupancyBackgroundColor)
-                                .clipShape(Capsule())
-                        }
+            Text("\(feature.properties.chargingPointsCount) × \(Int(feature.properties.displayedMaxPowerKW.rounded())) kW")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
 
-                        if !priceDisplay.isEmpty {
-                            Label(priceDisplay, systemImage: "eurosign")
-                                .font(.caption)
-                                .lineLimit(1)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(Color.green.opacity(0.12))
-                                .foregroundStyle(Color.green)
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
+            if let occupancy {
+                Label(occupancy, systemImage: "dot.radiowaves.left.and.right")
+                    .font(.caption)
+                    .lineLimit(1)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(occupancyBackgroundColor.opacity(0.16))
+                    .foregroundStyle(occupancyBackgroundColor)
+                    .clipShape(Capsule())
             }
 
             if !topAmenities.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(topAmenities, id: \.key) { item in
-                            Label("\(item.count)", systemImage: AmenityCatalog.symbol(for: item.key))
-                                .font(.caption)
-                                .lineLimit(1)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(StationVisualStyle.controlSurface)
-                                .clipShape(Capsule())
-                        }
+                HStack(spacing: 6) {
+                    Text("\(feature.properties.amenitiesTotal)")
+                        .font(.caption.weight(.semibold))
+                    ForEach(topAmenities, id: \.key) { item in
+                        Image(systemName: AmenityCatalog.symbol(for: item.key))
+                            .font(.caption)
+                            .accessibilityLabel("\(item.count)")
                     }
                 }
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(StationVisualStyle.controlSurface)
+                .clipShape(Capsule())
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(feature.properties.amenitiesTotal) amenities")
             }
         }
         .padding(.vertical, 4)

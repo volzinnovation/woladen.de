@@ -62,19 +62,33 @@ struct StationDetailView: View {
     }
 
     private func compactDetail(_ feature: GeoJSONFeature) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                mapSection(feature, showsBackButton: true)
-                detailContent(feature)
-                    .padding(.horizontal)
-                    .padding(.top, 12)
-                    .padding(.bottom, 20)
+        HStack(spacing: 0) {
+            StationClassificationRail(
+                classification: feature.stationClassification,
+                width: 26
+            )
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    mapSection(feature, showsBackButton: true)
+                    detailContent(feature)
+                        .padding(.horizontal)
+                        .padding(.top, 12)
+                        .padding(.bottom, 20)
+                }
             }
+            .background(feature.stationCardBackground)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func wideDetail(_ feature: GeoJSONFeature) -> some View {
         HStack(spacing: 0) {
+            StationClassificationRail(
+                classification: feature.stationClassification,
+                width: 26
+            )
+
             mapContent(feature)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(StationVisualStyle.controlSurface)
@@ -86,7 +100,7 @@ struct StationDetailView: View {
                     .padding(24)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(.systemBackground))
+            .background(feature.stationCardBackground)
         }
         .overlay(alignment: .topTrailing) {
             Button {
@@ -257,8 +271,6 @@ struct StationDetailView: View {
     }
 
     private func headerSection(_ feature: GeoJSONFeature) -> some View {
-        let occupancy = feature.occupancySummaryLabel
-
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 Button {
@@ -283,14 +295,9 @@ struct StationDetailView: View {
                 Spacer(minLength: 0)
             }
 
-            if feature.hasPrimaryDetailHighlights {
+            if !feature.properties.openingHoursDisplay.isEmpty {
                 HStack(spacing: 8) {
-                    if !feature.displayPrice.isEmpty {
-                        detailChip(text: feature.displayPrice, systemImage: "eurosign")
-                    }
-                    if !feature.properties.openingHoursDisplay.isEmpty {
-                        detailChip(text: feature.properties.openingHoursDisplay, systemImage: "clock")
-                    }
+                    detailChip(text: feature.properties.openingHoursDisplay, systemImage: "clock")
                 }
             }
 
@@ -324,19 +331,14 @@ struct StationDetailView: View {
 
             HStack(spacing: 6) {
                 Button {
-                    openNavigationLink(feature, google: true)
+                    openNavigationLink(feature)
                 } label: {
-                    actionButtonLabel("Google", systemImage: "location.north.line.fill")
+                    actionButtonLabel(
+                        String(localized: "detail.startNavigation", defaultValue: "Start navigation"),
+                        systemImage: "location.north.line.fill"
+                    )
                 }
                 .buttonStyle(.borderedProminent)
-                .frame(maxWidth: .infinity, minHeight: 50)
-
-                Button {
-                    openNavigationLink(feature, google: false)
-                } label: {
-                    actionButtonLabel("Apple", systemImage: "location.north.line.fill")
-                }
-                .buttonStyle(.bordered)
                 .frame(maxWidth: .infinity, minHeight: 50)
 
                 if !feature.properties.helpdeskPhone.isEmpty {
@@ -353,20 +355,17 @@ struct StationDetailView: View {
 
             HStack(alignment: .top, spacing: 10) {
                 detailStatCard(
-                    text: maxPowerLabel(for: feature),
+                    lines: chargingPointPowerLines(for: feature),
                     systemImage: "bolt.fill"
                 )
-                if let occupancy {
+                availabilityStatCard(for: feature)
+                if !feature.displayPrice.isEmpty {
                     detailStatCard(
-                        text: occupancy,
-                        systemImage: "dot.radiowaves.left.and.right",
-                        tint: statusColor(for: feature.availabilityStatus)
+                        lines: priceLines(for: feature.displayPrice),
+                        systemImage: "eurosign",
+                        tint: Color.green
                     )
                 }
-                detailStatCard(
-                    text: feature.stationClassification.title,
-                    systemImage: "medal.fill"
-                )
             }
 
             if let reliability = feature.properties.reliabilityPercent {
@@ -619,10 +618,10 @@ struct StationDetailView: View {
         return parts.isEmpty ? "" : parts.joined(separator: " • ")
     }
 
-    private func openNavigationLink(_ feature: GeoJSONFeature, google: Bool) {
+    private func openNavigationLink(_ feature: GeoJSONFeature) {
         let lat = feature.coordinate.latitude
         let lon = feature.coordinate.longitude
-        let urlString = google
+        let urlString = tripStore.preferences.preferredNavigationApp == .googleMaps
             ? "https://www.google.com/maps/dir/?api=1&destination=\(lat),\(lon)"
             : "http://maps.apple.com/?daddr=\(lat),\(lon)"
         guard let url = URL(string: urlString) else { return }
@@ -635,18 +634,24 @@ struct StationDetailView: View {
         openURL(url)
     }
 
-    private func maxPowerLabel(for feature: GeoJSONFeature) -> String {
-        String(localized: "station.maxPower")
-            .replacingOccurrences(of: "{power}", with: "\(Int(feature.properties.displayedMaxPowerKW.rounded()))")
-            .replacingOccurrences(of: "{points}", with: chargingPointLabel(feature.properties.chargingPointsCount))
+    private func chargingPointPowerLines(for feature: GeoJSONFeature) -> [(String, Color)] {
+        [
+            ("\(feature.properties.chargingPointsCount) x", .primary),
+            ("\(Int(feature.properties.displayedMaxPowerKW.rounded())) kW", .primary)
+        ]
     }
 
-    private func chargingPointLabel(_ count: Int) -> String {
-        let template = count == 1
-            ? String(localized: "station.chargingPointOne")
-            : String(localized: "station.chargingPointMany")
-        return template
-            .replacingOccurrences(of: "{count}", with: "\(count)")
+    private func priceLines(for price: String) -> [(String, Color)] {
+        let parts = price.split(separator: " ", omittingEmptySubsequences: true)
+        guard parts.count > 1 else {
+            return [(price, .green), ("€/kWh", .green)]
+        }
+        let amount = parts.dropLast().joined(separator: " ")
+        let unit = String(parts.last!)
+        return [
+            (amount, .green),
+            (unit, .green)
+        ]
     }
 
     private func detailChip(text: String, systemImage: String) -> some View {
@@ -667,17 +672,70 @@ struct StationDetailView: View {
         }
     }
 
-    private func detailStatCard(text: String, systemImage: String, tint: Color = .primary) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label(text, systemImage: systemImage)
-                .font(.subheadline.weight(.semibold))
+    private func detailStatCard(
+        lines: [(String, Color)],
+        systemImage: String,
+        tint: Color = .primary
+    ) -> some View {
+        VStack(alignment: .center, spacing: 4) {
+            Image(systemName: systemImage)
+                .font(.title3.weight(.semibold))
                 .foregroundStyle(tint)
-                .fixedSize(horizontal: false, vertical: true)
+
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                Text(line.0)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(line.1)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 10)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, minHeight: 88, alignment: .center)
+        .padding(.vertical, 6)
         .padding(.horizontal, 12)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func availabilityStatCard(for feature: GeoJSONFeature) -> some View {
+        let counts = feature.availabilityCounts
+        let lines: [(String, Color)]
+
+        if counts.total > 0 {
+            lines = [
+                ("\(counts.available)", .teal),
+                (String(localized: "availability.free"), .teal)
+            ]
+        } else {
+            lines = [
+                ("\(counts.unknown)", .secondary),
+                (String(localized: "availability.unknown"), .secondary)
+            ]
+        }
+
+        return detailStatCard(
+            lines: lines,
+            systemImage: "dot.radiowaves.left.and.right",
+            tint: .secondary
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(availabilityAccessibilityLabel(for: counts)))
+    }
+
+    private func availabilityAccessibilityLabel(for counts: AvailabilityCounts) -> String {
+        if counts.total > 0 {
+            return [
+                availabilityLineText("availability.available", count: counts.available),
+                availabilityLineText("availability.occupiedCount", count: counts.occupied),
+                availabilityLineText("availability.outOfOrderCount", count: counts.outOfOrder)
+            ].joined(separator: ", ")
+        }
+        return availabilityLineText("availability.unknownCount", count: counts.unknown)
+    }
+
+    private func availabilityLineText(_ key: String, count: Int) -> String {
+        NSLocalizedString(key, comment: "")
+            .replacingOccurrences(of: "{count}", with: "\(count)")
     }
 
     private func actionButtonLabel(_ title: String, systemImage: String) -> some View {

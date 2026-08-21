@@ -11760,6 +11760,23 @@
         }
       }
     },
+    "detail.startNavigation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Navigation starten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start navigation"
+          }
+        }
+      }
+    },
     "detail.help" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -52599,6 +52616,23 @@
         }
       }
     },
+    "trip.end.longPressHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zum Beenden der aktiven Fahrt gedrückt halten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press and hold to end the active trip."
+          }
+        }
+      }
+    },
     "trip.eta" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -54322,13 +54356,30 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Navigationsübergabe"
+            "value" : "Google Maps für Navigation verwenden"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Navigation handoff"
+            "value" : "Use Google Maps for navigation"
+          }
+        }
+      }
+    },
+    "trip.settings.navigationSelected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{app} wird für den Navigationsbutton verwendet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{app} is used for the navigation button."
           }
         }
       }
@@ -54339,13 +54390,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Woladen verwendet MapKit für die Verkehrs-Ankunftszeit in der App. Apple Maps oder Google Maps wird erst beim Navigationsstart geöffnet."
+            "value" : "Wähle die Navigations-App für den einzigen Navigationsbutton. Woladen verwendet MapKit für die Verkehrs-Ankunftszeit in der App."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Woladen uses MapKit for in-app traffic ETA. Apple Maps or Google Maps is opened only when you start navigation."
+            "value" : "Choose the navigation app used by the single navigation button. Woladen uses MapKit for in-app traffic ETA."
           }
         }
       }

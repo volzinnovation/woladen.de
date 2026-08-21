@@ -213,18 +213,22 @@ struct TripSettingsView: View {
 
     private var navigationSection: some View {
         Section {
-            Picker(
-                String(localized: "trip.settings.navigationApp", defaultValue: "Navigation handoff"),
-                selection: navigationAppBinding
-            ) {
-                ForEach(NavigationApp.allCases) { app in
-                    Text(app.title).tag(app)
+            Toggle(isOn: googleMapsBinding) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(localized: "trip.settings.navigationApp", defaultValue: "Use Google Maps for navigation"))
+                    Text(
+                        String(localized: "trip.settings.navigationSelected", defaultValue: "{app} is used for the navigation button.")
+                            .replacingOccurrences(of: "{app}", with: draft.preferredNavigationApp.title)
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
             }
+            .tint(woladenBrandColor)
         } header: {
             Text(String(localized: "trip.settings.navigation", defaultValue: "Navigation"))
         } footer: {
-            Text(String(localized: "trip.settings.navigationHelp", defaultValue: "Woladen uses MapKit for in-app traffic ETA. Apple Maps or Google Maps is opened only when you start navigation."))
+            Text(String(localized: "trip.settings.navigationHelp", defaultValue: "Choose the navigation app used by the single navigation button. Woladen uses MapKit for in-app traffic ETA."))
         }
     }
 
@@ -335,10 +339,10 @@ struct TripSettingsView: View {
         )
     }
 
-    private var navigationAppBinding: Binding<NavigationApp> {
+    private var googleMapsBinding: Binding<Bool> {
         Binding(
-            get: { draft.preferredNavigationApp },
-            set: { draft.navigationApp = $0 }
+            get: { draft.preferredNavigationApp == .googleMaps },
+            set: { draft.navigationApp = $0 ? .googleMaps : .appleMaps }
         )
     }
 

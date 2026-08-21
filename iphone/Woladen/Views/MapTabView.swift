@@ -10,6 +10,7 @@ struct MapTabView: View {
     @EnvironmentObject private var viewModel: AppViewModel
     @EnvironmentObject private var locationService: LocationService
     @EnvironmentObject private var favoritesStore: FavoritesStore
+    @EnvironmentObject private var tripStore: TripStore
 
     @Binding var showingFilter: Bool
 
@@ -548,22 +549,19 @@ struct MapTabView: View {
         }
 
         Button {
-            openNavigationLink(feature, google: true)
+            openNavigationLink(feature)
         } label: {
-            Label("Google", systemImage: "location.north.line.fill")
-        }
-
-        Button {
-            openNavigationLink(feature, google: false)
-        } label: {
-            Label("Apple", systemImage: "location.north.line.fill")
+            Label(
+                String(localized: "detail.startNavigation", defaultValue: "Start navigation"),
+                systemImage: "location.north.line.fill"
+            )
         }
     }
 
-    private func openNavigationLink(_ feature: GeoJSONFeature, google: Bool) {
+    private func openNavigationLink(_ feature: GeoJSONFeature) {
         let lat = feature.coordinate.latitude
         let lon = feature.coordinate.longitude
-        let urlString = google
+        let urlString = tripStore.preferences.preferredNavigationApp == .googleMaps
             ? "https://www.google.com/maps/dir/?api=1&destination=\(lat),\(lon)"
             : "http://maps.apple.com/?daddr=\(lat),\(lon)"
         guard let url = URL(string: urlString) else { return }

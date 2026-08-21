@@ -8,7 +8,6 @@ struct TripView: View {
 
     @State private var showingSettings = false
     @State private var showingSubstitutes = false
-    @State private var confirmingEndTrip = false
     @State private var expandedAmenityStationIDs: Set<String> = []
 
     var body: some View {
@@ -27,16 +26,6 @@ struct TripView: View {
         .sheet(isPresented: $showingSubstitutes) {
             SubstituteStationView()
                 .environmentObject(tripStore)
-        }
-        .confirmationDialog(
-            String(localized: "trip.end.confirm", defaultValue: "End the active trip?"),
-            isPresented: $confirmingEndTrip,
-            titleVisibility: .visible
-        ) {
-            Button(String(localized: "trip.end.action", defaultValue: "End trip"), role: .destructive) {
-                tripStore.endTrip()
-            }
-            Button(String(localized: "common.cancel", defaultValue: "Cancel"), role: .cancel) {}
         }
         .task {
             await tripStore.refreshLive(force: true)
@@ -237,8 +226,7 @@ struct TripView: View {
                     openPreferredNavigation(to: station.coordinate, name: station.operatorName)
                 } label: {
                     Label(
-                        String(localized: "trip.navigatePreferred", defaultValue: "Navigate with {app}")
-                            .replacingOccurrences(of: "{app}", with: tripStore.preferences.preferredNavigationApp.title),
+                        String(localized: "detail.startNavigation", defaultValue: "Start navigation"),
                         systemImage: "arrow.triangle.turn.up.right.diamond.fill"
                     )
                         .font(.headline)
@@ -306,8 +294,7 @@ struct TripView: View {
                 openPreferredNavigation(to: plan.route.destination.coordinate, name: plan.route.destination.label)
             } label: {
                 Label(
-                    String(localized: "trip.navigateDestinationWith", defaultValue: "Navigate to destination with {app}")
-                        .replacingOccurrences(of: "{app}", with: tripStore.preferences.preferredNavigationApp.title),
+                    String(localized: "detail.startNavigation", defaultValue: "Start navigation"),
                     systemImage: "map.fill"
                 )
                     .frame(maxWidth: .infinity, minHeight: 48)
@@ -406,12 +393,19 @@ struct TripView: View {
 
     private var tripManagementActions: some View {
         Button(role: .destructive) {
-            confirmingEndTrip = true
+            // Ending the active trip is intentionally protected by the long-press gesture below.
         } label: {
             Text(String(localized: "trip.end.action", defaultValue: "End trip"))
                 .frame(maxWidth: .infinity, minHeight: 48)
         }
         .buttonStyle(.bordered)
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.7)
+                .onEnded { _ in
+                    tripStore.endTrip()
+                }
+        )
+        .accessibilityHint(Text(String(localized: "trip.end.longPressHint", defaultValue: "Press and hold to end the active trip.")))
     }
 
     private var noActiveTrip: some View {
