@@ -23,9 +23,12 @@ output/
 audits/
 build/
 
-# Generated site bundle. GitHub Pages builds and uploads this from `web/` and
-# `data/`; do not commit generated site files.
+# Generated site bundle. GitHub Pages builds and uploads this from `web/`;
+# do not commit generated site files.
 site/
+# Catalog, analytics, occupancy, and provider data belong to
+# Woladen.de-analytics. Keep any local checkout artifacts untracked here.
+data/
 data/live_state.sqlite3
 data/live_state.sqlite3-shm
 data/live_state.sqlite3-wal

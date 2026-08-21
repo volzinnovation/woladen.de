@@ -21,8 +21,8 @@ repository.
 - The core static dataset comes from the open-static European charging catalog; Germany/Mobilithek/Bundesnetzagentur is one source path, not the product boundary.
 - The default fast-charger threshold is `>= 50 kW`.
 - The default amenity radius is `250 m`.
-- Live AFIR / OCPI data enriches the product, but the baseline static experience must remain useful when live data is missing.
-- Generated data files are product outputs. A bad `summary.json` or `chargers_fast.geojson` is a user-facing regression, not harmless build noise.
+- Web and native clients consume catalog and live data only from
+  `https://live-eu.woladen.de`; do not add packaged catalog fallbacks.
 
 ## Source Of Truth
 
@@ -37,13 +37,8 @@ repository.
 - Do not add backend runtime, provider ingestion, deployment, credential, or
   analytics code here. Those belong in the private sister repository
   `Woladen.de-analytics`.
-- Treat `data/chargers_fast.geojson`, `data/operators.json`,
-  `data/open_static_summary.json`, `data/management/`, and
-  `data/station-occupancy/` as generated frontend contract artifacts consumed
-  by the web/native clients.
-- Treat generated data schema as a shared contract across the web app, generated
-  site, analytics scripts, and native clients. If you rename or remove fields,
-  audit consumers first.
+- Do not commit generated catalog, management, occupancy, or spa payloads. They
+  are served by `live-eu` and produced by `Woladen.de-analytics`.
 - German/Mobilithek and EU provider catalogs, static-live matches,
   subscriptions, raw payloads, live state, open-static bundle generation,
   derived station characteristics, and management reports are owned by
@@ -57,7 +52,7 @@ repository.
 - Backend, data-pipeline, provider onboarding, provider mapping, deployment, or
   management-report change:
   Work in `Woladen.de-analytics` and run the targeted backend/data tests there.
-- If web code or generated data changes:
+- If web code changes:
   Build the local `site/` bundle, smoke-test it with
   `python3 -m http.server 4173 --directory site`, and inspect the relevant flow
   in a browser. Do not commit the generated `site/` directory.
@@ -104,13 +99,9 @@ repository.
 
 ## Known Regression Traps
 
-- Never finish frontend work without confirming the generated `site/` bundle can
-  be rebuilt from `web/` and `data/`.
-- Do not patch generated JSON or GeoJSON to hide an upstream bug. Fix frontend
-  bundle issues in `scripts/build_site.py`; fix backend/data producer issues in
-  `Woladen.de-analytics`.
+- Never finish frontend work without confirming the generated `site/` shell can
+  be rebuilt from `web/`.
 - Sanity-check amenity coverage after pipeline changes. This project has already regressed once when the build fell back to `overpass` with an ineffective query budget and almost all stations lost amenities.
-- Treat `data/summary.json`, `data/operators.json`, and `data/chargers_fast.geojson` as contract artifacts. If one changes shape unexpectedly, expect frontend regressions.
 - Provider mapping regressions are product regressions. A feed can look healthy while coverage silently collapses because identifiers stopped matching.
 - Do not “fix” poor provider coverage by loosening location heuristics first. Identifier reconciliation is preferred over approximation of location.
 - Map and modal work is regression-prone. If you touch those areas, verify the first-open detail minimap zoom and the locate button behavior.
@@ -122,7 +113,7 @@ repository.
 ## Release Discipline
 
 - The safe frontend release order is:
-  `analytics bundle/API ready -> build_site -> local smoke check`.
+  `analytics API ready -> build_site -> local smoke check`.
 - Before finishing, review `git status --short` and make sure only intended files changed.
 - Mention regenerated local artifacts explicitly in the final update.
 - Do not deploy, push, or clean up branches unless the user explicitly asks.
@@ -131,9 +122,8 @@ repository.
 
 - The original project goal was a mobile-ready web frontend that helps EV
   drivers find fast chargers with useful nearby amenities.
-- Static bundle generation should be reproducible: fetch public source data,
-  cache inputs where appropriate, derive deterministic frontend/app contract
-  outputs, and publish the static site through GitHub Pages.
+- Static bundle generation is owned by `Woladen.de-analytics`; this repository
+  publishes only the frontend shell through GitHub Pages.
 - GitHub Actions remains suitable for recurring low-volume frontend/data bundle
   publication, while provider ingestion and analytics execution live in
   `Woladen.de-analytics`.

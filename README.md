@@ -29,7 +29,6 @@ Our aim is cover all of EU27 (subject to AFIR regulation), CH and NO.
 - `web/`: Frontend app (Leaflet + vanilla JS/CSS/HTML).
 - `iphone/`: Native iPhone app (SwiftUI + MapKit).
 - `android/`: Native Android app (Jetpack Compose + OSMDroid).
-- `data/`: Generated frontend contract data consumed by web/native builds.
 - `docs/`: Technical plans, native app notes, audits, and historical project docs.
 - `site/`: Generated locally by `scripts/build_site.py` and deployed by GitHub
   Pages; it is intentionally ignored by git.
@@ -58,7 +57,7 @@ The open static bundle currently supports these country sources:
 | GR | Electrokinisi IDRO static charging-station JSON ZIP |
 | HU | NAP subscription DATEX II static snapshots for Eco-Movement and MVM Mobiliti |
 | IT | PUN public web-app signed static charging API aggregate |
-| LT | Via Lietuva DATEX II public charging infrastructure table, with tracked static fallback during backend challenge periods |
+| LT | Via Lietuva DATEX II public charging infrastructure table |
 | LU | Public electrical charging stations WFS GeoJSON |
 | LV | Transportdata Eco-Movement and LVC DATEX energy infrastructure snapshots |
 | MT | Transport Malta eGIS Charging Points ArcGIS layer |
@@ -70,41 +69,13 @@ The open static bundle currently supports these country sources:
 | SI | NAP Prometej IDACS Energy Infrastructure Table Publication |
 | OSM | OpenStreetMap/Geofabrik PBFs for nearby amenities |
 
-## Bundle Coverage
+## Live Data
 
-Counts below are from `data/open_static_summary.json`, generated from an
-immutable revision-scoped SQLite release discovered through the
-`open-static-ios-regional-latest` Hugging Face stable channel. `Fast stations`
-counts station rows with `max_power_kw >= 50`.
-
-| Country | Stations | Chargers | Fast stations |
-| --- | ---: | ---: | ---: |
-| AT | 14,661 | 38,771 | 3,435 |
-| BE | 4,219 | 12,907 | 112 |
-| CH | 8,670 | 18,725 | 1,217 |
-| CY | 100 | 171 | 11 |
-| CZ | 3,755 | 6,594 | 1,878 |
-| DE | 72,155 | 197,527 | 16,633 |
-| DK | 3,396 | 13,533 | 503 |
-| ES | 12,237 | 36,432 | 5,441 |
-| FI | 3,674 | 19,430 | 1,254 |
-| FR | 63,728 | 159,613 | 11,911 |
-| GR | 3,975 | 9,250 | 718 |
-| HU | 1,346 | 2,523 | 372 |
-| IT | 27,339 | 69,679 | 7,022 |
-| LT | 2,496 | 13,814 | 760 |
-| LU | 530 | 530 | 17 |
-| LV | 1,102 | 3,203 | 772 |
-| MT | 184 | 184 | 32 |
-| NL | 61,244 | 157,380 | 1,408 |
-| NO | 5,175 | 32,672 | 1,924 |
-| PL | 6,600 | 13,070 | 2,961 |
-| PT | 7,978 | 19,340 | 3,018 |
-| SE | 8,922 | 61,108 | 2,218 |
-| SI | 1,191 | 3,405 | 186 |
-| **Total** | **314,677** | **889,861** | **63,803** |
-
-The generated `source_attribution.json` records source URLs, source UIDs, license review status, static/dynamic boundaries, and credential handling. Treat that file as the bundle's machine-readable attribution contract.
+The web, iPhone, and Android clients obtain catalog data, station details, live
+status, ratings, routing, geocoding, and bundle statistics from
+`https://live-eu.woladen.de`. Bundle production and data-quality reporting are
+owned by `Woladen.de-analytics`; this repository does not publish or package
+catalog snapshots.
 
 ## GitHub Setup
 
@@ -169,11 +140,5 @@ node --test web/filtering.test.mjs web/location.test.mjs
 - Rebuild and smoke-test generated `site/` after web changes, but do not commit
   the generated bundle.
 - Keep user-facing docs/help in German and technical docs in English.
-- If BNetzA fetch fails and no local cache exists, the pipeline fails intentionally.
-- On a successful data run, generated artifacts in `data/` and the data-status block below are updated and committed by CI.
-- Treat `site/`, `output/`, `test-results/`, `data/eu27_ch_static/`, `data/onboarded_static/`, `data/osm_pbf_cache/`, `data/commercial_raw/`, and `data/commercial_archives/` as generated or cached outputs.
-
-<!-- DATA_STATUS_START -->
-## Data Build Status
-
-- Last build (UTC): `2026-06-28T01:46:27+00:00`
+- Keep any local analytics checkout or generated data under ignored paths; do
+  not commit it to this repository.
