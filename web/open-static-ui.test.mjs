@@ -10,15 +10,10 @@ import {
   openStaticSummaryPaths,
 } from "./open-static-ui.mjs";
 
-test("prefers the live bundle summary and retains the generated file as fallback", () => {
-  assert.deepEqual(openStaticSummaryPaths(), [
-    LIVE_OPEN_STATIC_SUMMARY_URL,
-    "./data/open_static_summary.json",
-  ]);
+test("uses only the live-eu bundle summary", () => {
+  assert.deepEqual(openStaticSummaryPaths(), [LIVE_OPEN_STATIC_SUMMARY_URL]);
   assert.deepEqual(openStaticSummaryPaths("https://preview.example.test/summary.json"), [
-    "https://preview.example.test/summary.json",
     LIVE_OPEN_STATIC_SUMMARY_URL,
-    "./data/open_static_summary.json",
   ]);
 });
 

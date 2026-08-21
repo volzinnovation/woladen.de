@@ -22,7 +22,7 @@ test("status page exposes the operational service sections", () => {
   assert.match(html, /Aufbewahrte Fehler/);
 });
 
-test("status page keeps the source-backed static data sections", () => {
+test("status page reads catalog statistics from live-eu", () => {
   assert.match(moduleText, /open_static_summary\.json/);
   assert.match(html, /Tagesarchiv-Index|Top-Laender/);
   assert.match(moduleText, /renderOperationalStatus/);

@@ -1,4 +1,8 @@
-import { createManagementDataSource } from "./management-api.mjs";
+import {
+  createManagementDataSource,
+  LIVE_MANAGEMENT_API_BASE_URL,
+} from "./management-api.mjs";
+import { LIVE_OPEN_STATIC_SUMMARY_URL } from "./open-static-ui.mjs";
 
 const TOP_STATIONS_LIMIT = 10;
 const DISPLAYED_FULL_UTILIZATION_THRESHOLD = 0.9995;
@@ -452,15 +456,6 @@ export function dateRangeForWindow(endDate, windowDays) {
   const start = new Date(`${normalized}T00:00:00Z`);
   start.setUTCDate(start.getUTCDate() - days + 1);
   return { startDate: start.toISOString().slice(0, 10), endDate: normalized };
-}
-
-export function snapshotPathForDate(dateText) {
-  const normalized = normalizeManagementDate(dateText);
-  if (!normalized) {
-    return "";
-  }
-  const [year, month, day] = normalized.split("-");
-  return `./data/management/days/${year}/${month}/${day}/snapshot.json`;
 }
 
 export function buildManagementSubtitle(dateText, countryCode = "") {
@@ -1125,24 +1120,17 @@ function wireAppPromoDismiss() {
 }
 
 async function loadOpenStaticSummary() {
-  const paths = [...new Set([
-    window.WOLADEN_OPEN_STATIC_SUMMARY_URL,
-    "./data/open_static_summary.json",
-  ].filter((path) => typeof path === "string" && path.trim()))];
-  for (const path of paths) {
-    try {
-      const response = await fetch(path, {
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-      });
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      // Try the local generated copy as an outage fallback.
+  try {
+    const response = await fetch(LIVE_OPEN_STATIC_SUMMARY_URL, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (response.ok) {
+      return await response.json();
     }
+  } catch (error) {
+    console.warn("Der Katalogvergleich ist nicht verfügbar.", error);
   }
-  console.warn("Der statische Katalogvergleich ist nicht verfügbar.");
   return { countries: [] };
 }
 
@@ -1837,8 +1825,7 @@ async function initManagementPage() {
   wireAppPromoLinks();
   wireAppPromoDismiss();
   const dataSource = createManagementDataSource({
-    apiBaseUrl: window.WOLADEN_MANAGEMENT_API_BASE_URL || "",
-    staticFallbackEnabled: window.WOLADEN_MANAGEMENT_STATIC_FALLBACK_ENABLED !== false,
+    apiBaseUrl: window.WOLADEN_MANAGEMENT_API_BASE_URL || LIVE_MANAGEMENT_API_BASE_URL,
   });
   const indexPayload = await dataSource.loadIndex();
   const countriesPayload = await dataSource.loadCountries();

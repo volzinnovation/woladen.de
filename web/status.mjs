@@ -1,8 +1,6 @@
 const DATA_PATHS = {
   openStatic: "https://live-eu.woladen.de/data/open_static_summary.json",
-  buildSummary: "./data/summary.json",
-  managementIndex: "./data/management/index.json",
-  occupancyIndex: "./data/station-occupancy/index.json",
+  managementIndex: "https://live-eu.woladen.de/v1/management/dashboard/index",
   // The diagnostics path is already exposed by the current Caddy policy.
   // The dedicated endpoint remains available after the next privileged
   // Caddy reload; this fallback keeps the page operational immediately.
@@ -323,7 +321,7 @@ function renderSources(openStatic) {
     </div>
     <p>
       Die maschinenlesbare Quellenliste bleibt Teil von
-      <code>data/open_static_summary.json</code>.
+      <code>live-eu.woladen.de/data/open_static_summary.json</code>.
     </p>
   `;
 }

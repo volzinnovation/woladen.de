@@ -110,23 +110,6 @@ test("info about intro stays factual across localized bundles", () => {
   }
 });
 
-test("occupancy history note is bound to the translation bundle", () => {
-  const indexHtml = readText(INDEX_HTML_URL);
-  const appJs = readText(new URL("./app.js", import.meta.url));
-  assert.match(indexHtml, /<p class="detail-subnote compact" data-i18n="station\.typicalOccupancyNote">/);
-  assert.match(indexHtml, /data-i18n-aria-label="rating\.ariaLabel"/);
-  assert.doesNotMatch(appJs, /occupancy-history-value/);
-});
-
-test("occupancy history layout keeps desktop bars visible", () => {
-  const styles = readText(STYLES_URL);
-  assert.match(styles, /\.occupancy-history-label\s*\{[\s\S]*?grid-row:\s*2;/);
-  assert.match(styles, /\.occupancy-history-track\s*\{[\s\S]*?grid-row:\s*1;[\s\S]*?height:\s*100%;/);
-  const mobileBlock = styles.match(/@media \(max-width: 640px\) \{[\s\S]*?\/\* INFO VIEW \*\//)?.[0] || "";
-  assert.match(mobileBlock, /\.occupancy-history-label\s*\{[\s\S]*?grid-column:\s*1;[\s\S]*?grid-row:\s*1;/);
-  assert.match(mobileBlock, /\.occupancy-history-track\s*\{[\s\S]*?grid-column:\s*2;[\s\S]*?grid-row:\s*1;/);
-});
-
 test("map app install promo keeps its dismiss button clickable", () => {
   const styles = readText(STYLES_URL);
   assert.match(styles, /\.map-controls-overlay > \.app-install-promo\s*\{[\s\S]*?pointer-events:\s*auto;/);

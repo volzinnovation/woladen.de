@@ -1,8 +1,7 @@
 # Management PostgreSQL live-data adapter
 
 The management page now uses the PostgreSQL analytics API owned by
-`Woladen.de-analytics`. Existing static JSON remains an explicit rebuildable
-Germany-only fallback for outages.
+`Woladen.de-analytics`. There is no local snapshot fallback.
 
 The page has three modes:
 
@@ -35,25 +34,14 @@ rate-limiting, origin policy, and any customer session/entitlement decision;
 never place the backend shared management token in JavaScript, HTML, a URL, or
 browser storage.
 
-When the live proxy is unavailable and static fallback is enabled, the page
-uses:
-
-```text
-data/management/index.json
-data/management/days/YYYY/MM/DD/snapshot.json
-data/management/trends.json
-```
-
-`window.WOLADEN_MANAGEMENT_STATIC_FALLBACK_ENABLED` defaults to `true`. The
-fallback contains the historical Germany page only; it does not invent
-country reports for missing live data.
+When the live proxy is unavailable, the page reports the API failure rather
+than presenting stale local data.
 
 ## Source visibility and testing
 
 The page records the active source as
-`document.documentElement.dataset.managementDataSource`, with either
-`postgresql` or `static-cache`. Tests cover live success, live-to-static
-fallback, URL normalization, and browser rendering for both sources.
+`document.documentElement.dataset.managementDataSource` as `live-eu`. Tests
+cover API success, URL normalization, pagination, and browser rendering.
 
 The overview uses grouped country and provider reports rather than one
 dashboard request per row. Country and provider details each load one scoped

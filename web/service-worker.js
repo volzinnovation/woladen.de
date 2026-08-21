@@ -1,12 +1,12 @@
-const CACHE_NAME = "woladen-shell-20260730-station-api-fallback1";
+const CACHE_NAME = "woladen-shell-20260821-live-eu-only1";
 
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=20260727-spa-ratings2",
+  "/styles.css?v=20260821-live-eu-only1",
   "/app-install-promo.js?v=20260620-eu-i18n9",
   "/pwa-register.js?v=20260701-pwa1",
-  "/app.js?v=20260730-station-api-fallback1",
+  "/app.js?v=20260821-live-eu-only1",
   "/filtering.mjs?v=20260626-routing-web1",
   "/filter-settings.mjs?v=20260626-routing-web1",
   "/favorite-metadata.mjs?v=20260626-favorites-web1",
@@ -16,10 +16,9 @@ const APP_SHELL = [
   "/geocoding.mjs?v=20260618-commercial-merge",
   "/routing.mjs?v=20260626-routing-web1",
   "/charge-plan.mjs?v=20260717-settings2",
-  "/open-static-ui.mjs?v=20260618-commercial-merge",
+  "/open-static-ui.mjs?v=20260821-live-summary1",
   "/map-keyboard.mjs?v=20260618-keyboard-restore",
   "/rating.mjs",
-  "/spa-rating.mjs?v=20260727-spa-ratings1",
   "/note.mjs",
   "/i18n.mjs?v=20260730-afir-dynamic-fields1",
   "/styles.css",
@@ -35,7 +34,6 @@ const APP_SHELL = [
 
 const DATA_PATH_PREFIXES = [
   "/api/",
-  "/data/",
   "/live/",
   "/daily-occupancy/",
 ];

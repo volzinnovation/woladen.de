@@ -26,7 +26,6 @@ import {
   providerDisplayName,
   rankedTableTitle,
   shouldShowOverviewChart,
-  snapshotPathForDate,
   staticCatalogCountsForCountry,
   statusMetricsAreUsable,
   SUPPORTED_WINDOW_DAYS,
@@ -37,14 +36,6 @@ test("normalizeManagementDate accepts ISO dates and rejects junk", () => {
   assert.equal(normalizeManagementDate("2026-04-17"), "2026-04-17");
   assert.equal(normalizeManagementDate("17.04.2026"), "");
   assert.equal(normalizeManagementDate(""), "");
-});
-
-test("snapshotPathForDate builds the dated management JSON path", () => {
-  assert.equal(
-    snapshotPathForDate("2026-04-17"),
-    "./data/management/days/2026/04/17/snapshot.json",
-  );
-  assert.equal(snapshotPathForDate("not-a-date"), "");
 });
 
 test("buildManagementSubtitle omits the redundant date on country reports", () => {
