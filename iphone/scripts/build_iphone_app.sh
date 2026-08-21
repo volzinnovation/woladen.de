@@ -30,7 +30,8 @@ Modes:
   upload   Archive and upload to App Store Connect.
 
 Environment:
-  WOLADEN_GITHUB_RELEASE_TOKEN_FILE   defaults to $ROOT_DIR/secret/gh_iphone_download_token.txt
+  WOLADEN_HF_RELEASE_TOKEN_FILE       defaults to $ROOT_DIR/secret/hf_iphone_download_token.txt
+  WOLADEN_REQUIRE_HF_RELEASE_TOKEN    set to 1 only for a private HF mirror
   DEVELOPMENT_TEAM                    optional Apple Developer Team ID
   WOLADEN_IOS_CONFIGURATION           default: Release
   WOLADEN_IOS_ARCHIVE_PATH            optional explicit .xcarchive path
@@ -60,16 +61,7 @@ esac
 
 cd "$IPHONE_DIR"
 
-require_token=0
-if [[ "$MODE" != "test" && "$MODE" != "build" ]]; then
-  require_token=1
-fi
-
-if [[ "$require_token" == "1" ]]; then
-  "$IPHONE_DIR/scripts/write_github_release_access_config.sh" --require
-else
-  "$IPHONE_DIR/scripts/write_github_release_access_config.sh"
-fi
+"$IPHONE_DIR/scripts/write_github_release_access_config.sh"
 
 xcodegen generate
 

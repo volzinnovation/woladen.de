@@ -72,7 +72,10 @@ The open static bundle currently supports these country sources:
 
 ## Bundle Coverage
 
-Counts below are from `data/open_static_summary.json`, generated from the aggregate `open-static-ios-regional-latest` SQLite bundle. `Fast stations` counts station rows with `max_power_kw >= 50`.
+Counts below are from `data/open_static_summary.json`, generated from an
+immutable revision-scoped SQLite release discovered through the
+`open-static-ios-regional-latest` Hugging Face stable channel. `Fast stations`
+counts station rows with `max_power_kw >= 50`.
 
 | Country | Stations | Chargers | Fast stations |
 | --- | ---: | ---: | ---: |
