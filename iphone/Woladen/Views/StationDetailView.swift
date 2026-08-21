@@ -716,7 +716,7 @@ struct StationDetailView: View {
         return detailStatCard(
             lines: lines,
             systemImage: "dot.radiowaves.left.and.right",
-            tint: .secondary
+            tint: .teal
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(availabilityAccessibilityLabel(for: counts)))
