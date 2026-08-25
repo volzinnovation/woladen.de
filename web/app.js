@@ -105,6 +105,7 @@ import {
   setLanguage,
   t,
 } from "./i18n.mjs?v=20260730-afir-dynamic-fields1";
+import { distinctStationOperatorName } from "./station-detail.mjs?v=20260825-detail-operator1";
 
 /**
  * woladen.de - Modern Frontend Logic
@@ -1306,6 +1307,7 @@ const els = {
   },
   detail: {
     title: document.getElementById("detail-title"),
+    operatorName: document.getElementById("detail-operator-name"),
     address: document.getElementById("detail-address"),
     powerChip: document.getElementById("detail-power-chip"),
     power: document.getElementById("detail-power"),
@@ -3021,6 +3023,7 @@ function catalogStationToFeature(station) {
   const props = {
     station_id: normalizeStationId(station?.station_id || ""),
     operator: firstText(station?.operator_name, station?.operator, t("station.unknownOperator")),
+    operator_name: firstText(station?.operator_name, station?.operator),
     station_name: firstText(station?.station_name, station?.operator_name, station?.operator),
     address: firstText(station?.address),
     postcode: firstText(station?.postal_code, station?.postcode),
@@ -6625,7 +6628,11 @@ function populateDetailContent(feature, liveDetail = null) {
     points: formatChargingPointCount(p),
   });
 
-  els.detail.title.textContent = stationDisplayName(p);
+  const stationName = stationDisplayName(p);
+  const operatorName = distinctStationOperatorName(p);
+  els.detail.title.textContent = stationName;
+  els.detail.operatorName.textContent = operatorName;
+  els.detail.operatorName.hidden = !operatorName;
   els.detail.address.textContent = `${p.address || ""}, ${p.postcode || ""} ${p.city || ""}`;
   els.detail.power.textContent = powerDisplay;
   els.detail.powerChip.hidden = !powerDisplay;

@@ -1,12 +1,13 @@
-const CACHE_NAME = "woladen-shell-20260825-station-name1";
+const CACHE_NAME = "woladen-shell-20260825-detail-operator1";
 
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/styles.css?v=20260821-live-eu-only1",
+  "/styles.css?v=20260825-detail-operator1",
   "/app-install-promo.js?v=20260620-eu-i18n9",
   "/pwa-register.js?v=20260701-pwa1",
-  "/app.js?v=20260825-station-name1",
+  "/app.js?v=20260825-detail-operator1",
+  "/station-detail.mjs?v=20260825-detail-operator1",
   "/filtering.mjs?v=20260626-routing-web1",
   "/filter-settings.mjs?v=20260626-routing-web1",
   "/favorite-metadata.mjs?v=20260626-favorites-web1",

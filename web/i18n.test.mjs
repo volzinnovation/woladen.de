@@ -90,7 +90,9 @@ test("customer station labels prefer station name and fall back to operator", ()
     /station_name: firstText\(station\?\.station_name, station\?\.operator_name, station\?\.operator\)/,
   );
   assert.match(appJs, /<h3 class="card-title">\$\{escapeHtml\(stationDisplayName\(p\)\)\}<\/h3>/);
-  assert.match(appJs, /els\.detail\.title\.textContent = stationDisplayName\(p\)/);
+  assert.match(appJs, /const stationName = stationDisplayName\(p\)/);
+  assert.match(appJs, /const operatorName = distinctStationOperatorName\(p\)/);
+  assert.match(appJs, /els\.detail\.operatorName\.hidden = !operatorName/);
 });
 
 test("localized route bundles include route action labels", () => {
