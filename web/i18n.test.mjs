@@ -75,6 +75,24 @@ test("catalog freshness uses the effective catalog timestamp and explicit wordin
   }
 });
 
+test("customer station labels prefer station name and fall back to operator", () => {
+  const appJs = readText(new URL("./app.js", import.meta.url));
+  const helper = appJs.slice(
+    appJs.indexOf("function stationDisplayName"),
+    appJs.indexOf("function catalogAmenityExamplesFromStation"),
+  );
+  assert.match(
+    helper,
+    /station\?\.station_name,[\s\S]*station\?\.operator_name,[\s\S]*station\?\.operator/,
+  );
+  assert.match(
+    appJs,
+    /station_name: firstText\(station\?\.station_name, station\?\.operator_name, station\?\.operator\)/,
+  );
+  assert.match(appJs, /<h3 class="card-title">\$\{escapeHtml\(stationDisplayName\(p\)\)\}<\/h3>/);
+  assert.match(appJs, /els\.detail\.title\.textContent = stationDisplayName\(p\)/);
+});
+
 test("localized route bundles include route action labels", () => {
   const routeActionKeys = [
     "addAllFavorites",

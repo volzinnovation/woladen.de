@@ -279,7 +279,7 @@ function renderLivePoints(payload) {
 }
 
 function updateMetadata(station, stationId) {
-  const operator = firstText(station.operator_name, station.operator, station.station_name, "Charging station");
+  const operator = firstText(station.station_name, station.operator_name, station.operator, "Charging station");
   const city = firstText(station.city, station.country_code);
   const title = `${operator}${city ? ` in ${city}` : ""} | Charging station | woladen.de`;
   const description = `${operator}${city ? ` in ${city}` : ""}. ${formatPower(station.max_power_kw)} charging station details, nearby places and navigation.`;
@@ -310,7 +310,7 @@ function updateMetadata(station, stationId) {
 
 function renderStation(payload, stationId) {
   const station = payload.station;
-  const operator = firstText(station.operator_name, station.operator, station.station_name, "Charging station");
+  const operator = firstText(station.station_name, station.operator_name, station.operator, "Charging station");
   const stationName = firstText(station.station_name);
   const latitude = finiteNumber(station.latitude);
   const longitude = finiteNumber(station.longitude);

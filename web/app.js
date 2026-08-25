@@ -2931,6 +2931,15 @@ function firstText(...values) {
   return "";
 }
 
+function stationDisplayName(station) {
+  return firstText(
+    station?.station_name,
+    station?.operator_name,
+    station?.operator,
+    t("station.unknownOperator"),
+  );
+}
+
 function finiteNumber(value, fallback = 0) {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : fallback;
@@ -3011,8 +3020,8 @@ function catalogStationToFeature(station) {
     : {};
   const props = {
     station_id: normalizeStationId(station?.station_id || ""),
-    operator: firstText(station?.operator_name, station?.operator, station?.station_name, t("station.unknownOperator")),
-    station_name: firstText(station?.station_name),
+    operator: firstText(station?.operator_name, station?.operator, t("station.unknownOperator")),
+    station_name: firstText(station?.station_name, station?.operator_name, station?.operator),
     address: firstText(station?.address),
     postcode: firstText(station?.postal_code, station?.postcode),
     city: firstText(station?.city),
@@ -4480,7 +4489,7 @@ function getStationCardStateClass(props) {
 
 function formatStationMarkerLabel(feature) {
   const props = feature?.properties || {};
-  const name = firstText(props.operator, props.station_name, t("station.chargingStation"));
+  const name = stationDisplayName(props);
   const city = firstText(props.city);
   const power = Math.round(getDisplayedMaxPowerKw(props));
   const powerText = power > 0 ? `${power} kW` : "";
@@ -5723,7 +5732,7 @@ function createStationCard(feature, options = {}) {
   div.dataset.stationId = stationId;
   div.setAttribute(
     "aria-label",
-    `${t("aria.detailsOpen")}: ${p.operator || t("station.chargingStation")} ${p.city || ""}`.trim(),
+    `${t("aria.detailsOpen")}: ${stationDisplayName(p)} ${p.city || ""}`.trim(),
   );
   if (stationId && state.keyboard.selectedStationId === stationId) {
     div.classList.add("keyboard-selected");
@@ -5789,7 +5798,7 @@ function createStationCard(feature, options = {}) {
     <div class="card-header">
       <div class="card-title-row">
         ${cardMarker}
-        <h3 class="card-title">${escapeHtml(p.operator || t("station.unknownOperator"))}</h3>
+        <h3 class="card-title">${escapeHtml(stationDisplayName(p))}</h3>
       </div>
       ${metricsMarkup}
     </div>
@@ -6260,8 +6269,8 @@ function compareFavoriteFeaturesByDistance(a, b) {
 }
 
 function compareFavoriteFeaturesByName(a, b) {
-  const leftName = String(a.properties?.operator || "");
-  const rightName = String(b.properties?.operator || "");
+  const leftName = stationDisplayName(a.properties);
+  const rightName = stationDisplayName(b.properties);
   const nameDiff = leftName.localeCompare(rightName, "de");
   if (nameDiff !== 0) {
     return nameDiff;
@@ -6616,7 +6625,7 @@ function populateDetailContent(feature, liveDetail = null) {
     points: formatChargingPointCount(p),
   });
 
-  els.detail.title.textContent = p.operator || t("station.unknownOperator");
+  els.detail.title.textContent = stationDisplayName(p);
   els.detail.address.textContent = `${p.address || ""}, ${p.postcode || ""} ${p.city || ""}`;
   els.detail.power.textContent = powerDisplay;
   els.detail.powerChip.hidden = !powerDisplay;
