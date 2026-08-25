@@ -40,11 +40,19 @@ struct CatalogStation: Decodable {
     let paymentMethods: String
     let authMethods: String
     let greenEnergy: Bool?
+    let greenEnergyDisplay: Bool?
     let helpdeskPhone: String
     let priceDisplay: String
     let priceCurrency: String
     let priceEnergyEURKwhMin: String
     let priceEnergyEURKwhMax: String
+    let priceQuality: String
+    let serviceSupport: String
+    let supportsBankCard: Bool?
+    let supportsContactlessCard: Bool?
+    let supportsAdhocPayment: String
+    let paymentProviders: String
+    let supportsContractPayment: Bool?
     let detailLastUpdated: String
     let amenitiesTotal: Int
     let nearestAmenityKind: String
@@ -91,11 +99,19 @@ struct CatalogStation: Decodable {
         case paymentMethods = "payment_methods"
         case authMethods = "auth_methods"
         case greenEnergy = "green_energy"
+        case greenEnergyDisplay = "green_energy_display"
         case helpdeskPhone = "helpdesk_phone"
         case priceDisplay = "price_display"
         case priceCurrency = "price_currency"
         case priceEnergyEURKwhMin = "price_energy_eur_kwh_min"
         case priceEnergyEURKwhMax = "price_energy_eur_kwh_max"
+        case priceQuality = "price_quality"
+        case serviceSupport = "service_support"
+        case supportsBankCard = "supports_bank_card"
+        case supportsContactlessCard = "supports_contactless_card"
+        case supportsAdhocPayment = "supports_adhoc_payment"
+        case paymentProviders = "payment_providers"
+        case supportsContractPayment = "supports_contract_payment"
         case detailLastUpdated = "detail_last_updated"
         case amenitiesTotal = "amenities_total"
         case nearestAmenityKind = "nearest_amenity_kind"
@@ -143,11 +159,19 @@ struct CatalogStation: Decodable {
         paymentMethods = container.decodeLossyString(forKey: .paymentMethods)
         authMethods = container.decodeLossyString(forKey: .authMethods)
         greenEnergy = container.decodeLossyBool(forKey: .greenEnergy)
+        greenEnergyDisplay = container.decodeLossyBool(forKey: .greenEnergyDisplay)
         helpdeskPhone = container.decodeLossyString(forKey: .helpdeskPhone)
         priceDisplay = container.decodeLossyString(forKey: .priceDisplay)
         priceCurrency = container.decodeLossyString(forKey: .priceCurrency)
         priceEnergyEURKwhMin = container.decodeLossyString(forKey: .priceEnergyEURKwhMin)
         priceEnergyEURKwhMax = container.decodeLossyString(forKey: .priceEnergyEURKwhMax)
+        priceQuality = container.decodeLossyString(forKey: .priceQuality)
+        serviceSupport = container.decodeLossyString(forKey: .serviceSupport)
+        supportsBankCard = container.decodeLossyBool(forKey: .supportsBankCard)
+        supportsContactlessCard = container.decodeLossyBool(forKey: .supportsContactlessCard)
+        supportsAdhocPayment = container.decodeLossyString(forKey: .supportsAdhocPayment)
+        paymentProviders = container.decodeLossyString(forKey: .paymentProviders)
+        supportsContractPayment = container.decodeLossyBool(forKey: .supportsContractPayment)
         detailLastUpdated = container.decodeLossyString(forKey: .detailLastUpdated)
         amenitiesTotal = container.decodeLossyInt(forKey: .amenitiesTotal) ?? 0
         nearestAmenityKind = container.decodeLossyString(forKey: .nearestAmenityKind)
@@ -272,17 +296,21 @@ struct CatalogStation: Decodable {
             priceEnergyEURKwhMin: priceEnergyEURKwhMin,
             priceEnergyEURKwhMax: priceEnergyEURKwhMax,
             priceCurrency: priceCurrency,
-            priceQuality: priceDisplay.isEmpty ? "" : "catalog",
+            priceQuality: priceQuality,
             openingHoursDisplay: openingHours,
             openingHoursIs24_7: isAlwaysOpen(openingHours),
             helpdeskPhone: helpdeskPhone,
-            paymentMethodsDisplay: formattedCSV(paymentMethods),
+            paymentMethodsDisplay: uniqueDisplayValues([
+                formattedCSV(paymentMethods),
+                formattedCSV(paymentProviders),
+                formattedCSV(supportsAdhocPayment)
+            ]).joined(separator: ", "),
             authMethodsDisplay: formattedCSV(authMethods),
             connectorTypesDisplay: connectorDisplay(chargers: chargers),
             currentTypesDisplay: currentTypeDisplay(chargers: chargers),
             connectorCount: chargerTotal,
-            greenEnergy: greenEnergy,
-            serviceTypesDisplay: "",
+            greenEnergy: greenEnergy ?? greenEnergyDisplay,
+            serviceTypesDisplay: serviceSupport,
             detailsJSON: "",
             amenitiesTotal: max(amenities?.amenitiesTotal ?? amenitiesTotal, normalizedCounts.values.reduce(0, +)),
             amenitiesSource: catalogDetailSourceName,

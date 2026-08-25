@@ -146,6 +146,14 @@ final class LiveFeatureFormattingTests: XCTestCase {
                 "max_power_kw": 150,
                 "connector_types": "ccs,type2",
                 "price_display": "0.59 EUR/kWh",
+                "price_quality": "exact",
+                "green_energy_display": true,
+                "service_support": "24/7 hotline",
+                "supports_bank_card": true,
+                "supports_contactless_card": true,
+                "supports_adhoc_payment": "app",
+                "payment_providers": "Visa",
+                "supports_contract_payment": true,
                 "amenities_total": 1,
                 "amenity_category_counts": {"restaurant": 1}
               },
@@ -182,6 +190,13 @@ final class LiveFeatureFormattingTests: XCTestCase {
         XCTAssertEqual(feature.properties.amenityCounts["amenity_toilets"], 1)
         XCTAssertEqual(feature.properties.amenityExamples.first?.category, "restaurant")
         XCTAssertEqual(feature.displayPrice, "0.59 EUR/kWh")
+        XCTAssertEqual(feature.properties.greenEnergy, true)
+        XCTAssertEqual(feature.properties.serviceTypesDisplay, "24/7 hotline")
+        XCTAssertEqual(detail.station.supportsBankCard, true)
+        XCTAssertEqual(detail.station.supportsContactlessCard, true)
+        XCTAssertEqual(detail.station.supportsAdhocPayment, "app")
+        XCTAssertEqual(detail.station.paymentProviders, "Visa")
+        XCTAssertEqual(detail.station.supportsContractPayment, true)
     }
 
     func testCatalogInfoSummaryUsesWebCountryAndSourceContract() throws {

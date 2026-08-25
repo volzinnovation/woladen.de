@@ -336,7 +336,9 @@ function renderStation(payload, stationId) {
   highlights.append(createChip("🔌", `${integer(station.charger_count || station.charging_points_count, 1)} charging points`));
   if (firstText(station.price_display)) highlights.append(createChip("€", station.price_display));
   if (firstText(station.opening_hours)) highlights.append(createChip("🕒", station.opening_hours));
-  if (station.green_energy === true) highlights.append(createChip("♻", "Green energy"));
+  if ((station.green_energy ?? station.green_energy_display) === true) {
+    highlights.append(createChip("♻", "Green energy"));
+  }
 
   const appLink = element("station-app-link");
   appLink.href = appUrl;

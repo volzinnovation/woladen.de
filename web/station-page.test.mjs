@@ -55,3 +55,26 @@ test("station detail keeps catalogue facts while displaying live EVSE fields", (
   }]);
   assert.equal(combined.live_station.source_observed_at, "2026-08-06T19:35:35Z");
 });
+
+test("GP Joule catalogue fields survive when no live price replaces them", () => {
+  const station = {
+    station_id: "DE:d1a9820c7c3c5140",
+    source_station_id: "station-43149",
+    price_display: "0,65 €/kWh",
+    payment_methods: "Onlinezahlungsverfahren;RFID-Karte",
+    helpdesk_phone: "+4532266299",
+    green_energy_display: true,
+    service_support: "24/7 hotline",
+    supports_bank_card: true,
+    supports_contactless_card: true,
+    supports_adhoc_payment: "app",
+    payment_providers: "Visa",
+    supports_contract_payment: true,
+  };
+
+  const combined = combineStationDetails({ station, chargers: [] }, null);
+
+  assert.deepEqual(combined.station, station);
+  assert.equal(combined.station.price_display, "0,65 €/kWh");
+  assert.equal(combined.station.green_energy_display, true);
+});

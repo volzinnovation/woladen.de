@@ -791,6 +791,8 @@ function buildStaticDetailRows(props) {
   };
 
   pushRow(t("staticDetails.payment"), props.payment_methods_display);
+  pushRow(t("staticDetails.payment"), props.payment_providers);
+  pushRow(t("staticDetails.payment"), props.supports_adhoc_payment);
   pushRow(t("staticDetails.access"), props.auth_methods_display);
   pushRow(t("staticDetails.connectors"), props.connector_types_display);
   pushRow(t("staticDetails.currentType"), props.current_types_display);
@@ -3026,13 +3028,20 @@ function catalogStationToFeature(station) {
     current_types_display: firstText(station?.current_types),
     payment_methods_display: firstText(station?.payment_methods),
     auth_methods_display: firstText(station?.auth_methods),
-    service_types_display: firstText(station?.service_types),
+    service_types_display: firstText(station?.service_support, station?.service_types),
     opening_hours: firstText(station?.opening_hours),
     opening_hours_display: firstText(station?.opening_hours),
-    green_energy: station?.green_energy,
+    green_energy: station?.green_energy ?? station?.green_energy_display,
+    green_energy_display: station?.green_energy_display,
     helpdesk_phone: firstText(station?.helpdesk_phone),
     price_display: firstText(station?.price_display),
     price_currency: firstText(station?.price_currency),
+    price_quality: firstText(station?.price_quality),
+    supports_bank_card: station?.supports_bank_card,
+    supports_contactless_card: station?.supports_contactless_card,
+    supports_adhoc_payment: firstText(station?.supports_adhoc_payment),
+    payment_providers: firstText(station?.payment_providers),
+    supports_contract_payment: station?.supports_contract_payment,
     detail_source_uid: firstText(station?.source_uid, station?.provider_uid),
     detail_source_name: firstText(station?.provider_uid, station?.source_uid),
     detail_last_updated: firstText(station?.detail_last_updated),
