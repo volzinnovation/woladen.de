@@ -393,11 +393,13 @@ final class AppViewModel: ObservableObject {
     }
 
     func refreshFavoritesLiveSummaries(_ favorites: Set<String>, force: Bool = false) async {
+        guard ProcessInfo.processInfo.environment["WOLADEN_SCREENSHOT_MODE"] != "1" else { return }
         await hydrateFavoriteDetails(favorites)
         await requestLiveSummaries(forStationIDs: Array(favorites), force: force)
     }
 
     func refreshFavoriteStaticDetails(_ favorites: Set<String>) async {
+        guard ProcessInfo.processInfo.environment["WOLADEN_SCREENSHOT_MODE"] != "1" else { return }
         for stationID in favorites.sorted() {
             await requestStaticDetailIfNeeded(for: stationID)
         }

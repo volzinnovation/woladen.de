@@ -100,6 +100,53 @@ struct FilterState: Codable, Equatable {
         return count
     }
 
+    var activeDisplayLabels: [String] {
+        var labels = selectedOperatorNames.sorted {
+            $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
+        }
+        let query = amenityNameQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !query.isEmpty {
+            labels.append(
+                String(localized: "filters.namePrefix")
+                    .replacingOccurrences(of: "{value}", with: query)
+            )
+        }
+        if availableOnly {
+            labels.append(String(localized: "filters.availableOnly"))
+        }
+        if currentlyOpenOnly {
+            labels.append(String(localized: "filters.currentlyOpen"))
+        }
+        if minPowerKW > 0 {
+            labels.append(
+                String(localized: "filters.minPowerLabel")
+                    .replacingOccurrences(of: "{value}", with: "\(Int(minPowerKW.rounded()))")
+            )
+        }
+        if minAmenityCount > 0 {
+            labels.append(
+                String(localized: "filters.minAmenitiesLabel")
+                    .replacingOccurrences(of: "{value}", with: "\(Int(minAmenityCount.rounded()))")
+            )
+        }
+        if let routeMaxDistanceFromLocationKM {
+            labels.append(
+                String(localized: "filters.routeRangeLabel")
+                    .replacingOccurrences(of: "{value}", with: "\(Int(routeMaxDistanceFromLocationKM.rounded())) km")
+            )
+        }
+        selectedAmenities
+            .map { AmenityCatalog.label(for: $0) }
+            .sorted { $0.localizedCompare($1) == .orderedAscending }
+            .forEach { labels.append($0) }
+        return labels
+    }
+
+    var activeDisplaySummary: String {
+        String(localized: "filters.selectedOnly")
+            .replacingOccurrences(of: "{labels}", with: activeDisplayLabels.joined(separator: " · "))
+    }
+
     var clearableState: FilterState {
         FilterState(
             selectedOperatorNames: [],
@@ -131,14 +178,24 @@ enum FilterStateStore {
     private static let key = "woladen.filterState.v1"
 
     static func load() -> FilterState {
-        guard let data = UserDefaults.standard.data(forKey: key) else {
-            return FilterState()
+        if let data = UserDefaults.standard.data(forKey: key),
+           let decoded = try? JSONDecoder().decode(FilterState.self, from: data) {
+            WoladenShared.defaults.set(data, forKey: key)
+            WoladenWidgetStateStore.saveFilter(decoded.widgetFilter)
+            return decoded
         }
-        return (try? JSONDecoder().decode(FilterState.self, from: data)) ?? FilterState()
+        if let data = WoladenShared.defaults.data(forKey: key),
+           let decoded = try? JSONDecoder().decode(FilterState.self, from: data) {
+            UserDefaults.standard.set(data, forKey: key)
+            return decoded
+        }
+        return FilterState()
     }
 
     static func save(_ state: FilterState) {
         guard let data = try? JSONEncoder().encode(state) else { return }
         UserDefaults.standard.set(data, forKey: key)
+        WoladenShared.defaults.set(data, forKey: key)
+        WoladenWidgetStateStore.saveFilter(state.widgetFilter)
     }
 }

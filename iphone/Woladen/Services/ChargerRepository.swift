@@ -72,6 +72,13 @@ final class ChargerRepository {
             return cached
         }
 
+        if Self.isScreenshotMode, ProcessInfo.processInfo.environment["WOLADEN_SCREENSHOT_FORCE_FALLBACK"] == "1" {
+            let fallbackFeatures = Self.screenshotFallbackFeatures(center: center)
+            let result = SearchResult(features: fallbackFeatures, operators: operators(from: fallbackFeatures))
+            await cache.storeSearchResult(result, for: key)
+            return result
+        }
+
         do {
             let operatorNames = filter.selectedOperatorNames.sorted()
             let responses: [CatalogSearchResponse]
@@ -105,7 +112,19 @@ final class ChargerRepository {
                     response.stations.map { $0.feature() }
                 }
             )
-            let result = SearchResult(features: features, operators: operators(from: features))
+            let screenshotFeatures = features.filter { feature in
+                let stationLocation = CLLocation(latitude: feature.coordinate.latitude, longitude: feature.coordinate.longitude)
+                let searchCenter = CLLocation(latitude: center.latitude, longitude: center.longitude)
+                return searchCenter.distance(from: stationLocation) <= CLLocationDistance(radiusM)
+            }
+            if Self.isScreenshotMode, screenshotFeatures.isEmpty {
+                let fallbackFeatures = Self.screenshotFallbackFeatures(center: center)
+                let result = SearchResult(features: fallbackFeatures, operators: operators(from: fallbackFeatures))
+                await cache.storeSearchResult(result, for: key)
+                return result
+            }
+            let resultFeatures = Self.isScreenshotMode ? screenshotFeatures : features
+            let result = SearchResult(features: resultFeatures, operators: operators(from: resultFeatures))
             await cache.storeSearchResult(result, for: key)
             return result
         } catch {
@@ -212,6 +231,9 @@ private extension ChargerRepository {
         outOfOrderEVSEs: Int
     ) -> GeoJSONFeature {
         let totalEVSEs = max(availableEVSEs + occupiedEVSEs + outOfOrderEVSEs, 4)
+        let screenshotCity = ProcessInfo.processInfo.environment["WOLADEN_SCREENSHOT_CITY"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let city = screenshotCity.flatMap { $0.isEmpty ? nil : $0 } ?? "Hamburg"
         let properties = ChargerProperties(
             stationID: stationID,
             operatorName: operatorName,
@@ -220,7 +242,7 @@ private extension ChargerRepository {
             chargingPointsCount: totalEVSEs,
             maxIndividualPowerKW: 300,
             postcode: "20095",
-            city: "Hamburg",
+            city: city,
             address: "Woladen Screenshot Standort",
             occupancySourceUID: "screenshot",
             occupancySourceName: "Screenshot fallback",

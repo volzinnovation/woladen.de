@@ -51,9 +51,66 @@ struct WoladenApp: App {
                     tripStore.updateLocation(newValue)
                 }
             }
+            .onOpenURL { url in
+                handleWidgetDeepLink(url)
+            }
+            .task(id: widgetProjectionKey) {
+                WoladenWidgetBridge.publish(
+                    viewModel: viewModel,
+                    tripStore: tripStore,
+                    location: locationService.currentLocation
+                )
+            }
             .task(id: screenshotPreparationKey) {
                 await prepareScreenshotIfNeeded()
             }
+        }
+    }
+
+    private var widgetProjectionKey: String {
+        let location = locationService.currentLocation.map {
+            String(format: "%.4f,%.4f", $0.coordinate.latitude, $0.coordinate.longitude)
+        } ?? "none"
+        let filter = viewModel.filterState
+        return [
+            tripStore.mode.rawValue,
+            tripStore.activePlanID?.uuidString ?? "none",
+            tripStore.liveUpdatedAt?.description ?? "none",
+            filter.selectedOperatorNames.sorted().joined(separator: ","),
+            String(filter.minPowerKW),
+            String(filter.minAmenityCount),
+            filter.selectedAmenities.sorted().joined(separator: ","),
+            filter.amenityNameQuery,
+            String(filter.availableOnly),
+            String(filter.currentlyOpenOnly),
+            String(viewModel.allFeatures.count),
+            location
+        ].joined(separator: "|")
+    }
+
+    @MainActor
+    private func handleWidgetDeepLink(_ url: URL) {
+        guard url.scheme?.lowercased() == "woladen" else { return }
+        switch url.host?.lowercased() {
+        case "trip", "fahrt":
+            if tripStore.activePlan != nil { tripStore.mode = .trip }
+        case "plan":
+            tripStore.mode = .plan
+            viewModel.selectedTab = .list
+        case "station":
+            guard let rawID = url.pathComponents.dropFirst().first,
+                  let stationID = rawID.removingPercentEncoding,
+                  !stationID.isEmpty else { return }
+            tripStore.mode = .plan
+            viewModel.selectedTab = .list
+            Task { @MainActor in
+                await viewModel.requestStaticDetailIfNeeded(for: stationID)
+                if let feature = viewModel.feature(forStationID: stationID) {
+                    viewModel.selectFeature(feature)
+                }
+            }
+        default:
+            break
         }
     }
 
@@ -97,6 +154,23 @@ struct WoladenApp: App {
             }
         case .favorites:
             viewModel.selectedTab = .favorites
+            if ProcessInfo.processInfo.environment["WOLADEN_SCREENSHOT_MODE"] == "1" {
+                let visibleStationIDs = Set(viewModel.allFeatures.map { $0.properties.stationID })
+                for stationID in favoritesStore.favorites where !visibleStationIDs.contains(stationID) {
+                    favoritesStore.remove(stationID)
+                }
+                if favoritesStore.favorites.isEmpty, let feature = viewModel.allFeatures.first {
+                    favoritesStore.toggle(feature.properties.stationID)
+                }
+            }
+        case .driving:
+            if let feature = viewModel.allFeatures.first {
+                _ = tripStore.activateStationTarget(
+                    feature: feature,
+                    alternatives: viewModel.allFeatures,
+                    from: locationService.currentLocation
+                )
+            }
         case .info:
             viewModel.selectedTab = .info
         }
@@ -160,6 +234,7 @@ private struct AppStoreScreenshotConfig {
         case map
         case route
         case favorites
+        case driving
         case info
     }
 
@@ -170,7 +245,7 @@ private struct AppStoreScreenshotConfig {
 
     var renderDelayNanoseconds: UInt64 {
         switch scene {
-        case .list, .search, .favorites, .info:
+        case .list, .search, .favorites, .driving, .info:
             return 1_000_000_000
         case .detail:
             return 2_000_000_000

@@ -268,6 +268,8 @@ struct CatalogStation: Decodable {
 
         return ChargerProperties(
             stationID: stationID,
+            countryCode: countryCode,
+            stationName: stationName,
             operatorName: firstNonEmpty(operatorName, stationName, "Unbekannter Betreiber"),
             status: publicBundleStatus,
             maxPowerKW: effectiveMaxPower,

@@ -385,50 +385,11 @@ struct ListTabView: View {
     }
 
     private var activeFilterLabels: [String] {
-        let filter = viewModel.filterState
-        var labels: [String] = []
-        labels.append(contentsOf: filter.selectedOperatorNames.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending })
-        let query = filter.amenityNameQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !query.isEmpty {
-            labels.append(
-                String(localized: "filters.namePrefix")
-                    .replacingOccurrences(of: "{value}", with: query)
-            )
-        }
-        if filter.availableOnly {
-            labels.append(String(localized: "filters.availableOnly"))
-        }
-        if filter.currentlyOpenOnly {
-            labels.append(String(localized: "filters.currentlyOpen"))
-        }
-        if filter.minPowerKW > 0 {
-            labels.append(
-                String(localized: "filters.minPowerLabel")
-                    .replacingOccurrences(of: "{value}", with: "\(Int(filter.minPowerKW.rounded()))")
-            )
-        }
-        if filter.minAmenityCount > 0 {
-            labels.append(
-                String(localized: "filters.minAmenitiesLabel")
-                    .replacingOccurrences(of: "{value}", with: "\(Int(filter.minAmenityCount.rounded()))")
-            )
-        }
-        if let routeMaxDistanceKM = filter.routeMaxDistanceFromLocationKM {
-            labels.append(
-                String(localized: "filters.routeRangeLabel")
-                    .replacingOccurrences(of: "{value}", with: "\(Int(routeMaxDistanceKM.rounded())) km")
-            )
-        }
-        filter.selectedAmenities
-            .map { AmenityCatalog.label(for: $0) }
-            .sorted { $0.localizedCompare($1) == .orderedAscending }
-            .forEach { labels.append($0) }
-        return labels
+        viewModel.filterState.activeDisplayLabels
     }
 
     private var activeFilterSummaryText: String {
-        String(localized: "filters.selectedOnly")
-            .replacingOccurrences(of: "{labels}", with: activeFilterLabels.joined(separator: " · "))
+        viewModel.filterState.activeDisplaySummary
     }
 
     private var hasClearableFilters: Bool {

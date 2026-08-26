@@ -248,14 +248,23 @@ struct TripAmenitySnapshot: Codable, Identifiable, Equatable {
     let name: String?
     let openingHours: String?
     let distanceM: Double?
+    let latitude: Double?
+    let longitude: Double?
 
     var id: String {
         [
             category,
             name ?? "",
             openingHours ?? "",
-            distanceM.map { String(format: "%.1f", $0) } ?? ""
+            distanceM.map { String(format: "%.1f", $0) } ?? "",
+            latitude.map { String(format: "%.6f", $0) } ?? "",
+            longitude.map { String(format: "%.6f", $0) } ?? ""
         ].joined(separator: "|")
+    }
+
+    var coordinate: CLLocationCoordinate2D? {
+        guard let latitude, let longitude else { return nil }
+        return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
     init(example: AmenityExample) {
@@ -263,23 +272,31 @@ struct TripAmenitySnapshot: Codable, Identifiable, Equatable {
         name = example.name
         openingHours = example.openingHours
         distanceM = example.distanceM
+        latitude = example.lat
+        longitude = example.lon
     }
 
     init(
         category: String,
         name: String? = nil,
         openingHours: String? = nil,
-        distanceM: Double? = nil
+        distanceM: Double? = nil,
+        latitude: Double? = nil,
+        longitude: Double? = nil
     ) {
         self.category = category
         self.name = name
         self.openingHours = openingHours
         self.distanceM = distanceM
+        self.latitude = latitude
+        self.longitude = longitude
     }
 }
 
 struct TripStationSnapshot: Codable, Identifiable, Equatable {
     let stationID: String
+    let countryCode: String?
+    let stationName: String?
     let operatorName: String
     let city: String
     let address: String
@@ -293,11 +310,17 @@ struct TripStationSnapshot: Codable, Identifiable, Equatable {
     let availabilityStatusRaw: String
     let availableEVSEs: Int
     let totalEVSEs: Int
+    let occupiedEVSEs: Int?
+    let outOfOrderEVSEs: Int?
+    let unknownEVSEs: Int?
     let lastUpdated: String
     let classificationRaw: String?
     let reliabilityPercent: Double?
     let lastUnavailableAt: String?
     let providerID: String?
+    let priceDisplay: String?
+    let oftenBrokenDailyAnalysis: Bool?
+    let oftenOccupiedDailyAnalysis: Bool?
     let amenitiesTotal: Int?
     let amenities: [TripAmenitySnapshot]?
 
@@ -313,9 +336,13 @@ struct TripStationSnapshot: Codable, Identifiable, Equatable {
         return .unclassified
     }
 
-    init(feature: GeoJSONFeature) {
+    init(feature: GeoJSONFeature, routePositionM routePositionOverride: Int? = nil) {
         let counts = feature.availabilityCounts
         stationID = feature.properties.stationID
+        let normalizedCountryCode = feature.properties.countryCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        countryCode = normalizedCountryCode.isEmpty ? nil : normalizedCountryCode
+        let normalizedStationName = feature.properties.stationName.trimmingCharacters(in: .whitespacesAndNewlines)
+        stationName = normalizedStationName.isEmpty ? nil : normalizedStationName
         operatorName = feature.properties.operatorName
         city = feature.properties.city
         address = feature.properties.address
@@ -323,12 +350,15 @@ struct TripStationSnapshot: Codable, Identifiable, Equatable {
         longitude = feature.coordinate.longitude
         maxPowerKW = feature.properties.displayedMaxPowerKW
         chargingPointsCount = feature.properties.chargingPointsCount
-        routePositionM = feature.routeMetadata?.routePositionM ?? 0
+        routePositionM = routePositionOverride ?? feature.routeMetadata?.routePositionM ?? 0
         driveDistanceToRouteM = feature.routeMetadata?.driveDistanceToRouteM ?? 0
         routeDetourM = feature.routeMetadata?.routeDetourM ?? 0
         availabilityStatusRaw = feature.availabilityStatus.rawValue
         availableEVSEs = counts.available
         totalEVSEs = counts.total
+        occupiedEVSEs = counts.occupied
+        outOfOrderEVSEs = counts.outOfOrder
+        unknownEVSEs = counts.unknown
         lastUpdated = [
             feature.liveSummary?.sourceObservedAt ?? "",
             feature.liveSummary?.fetchedAt ?? "",
@@ -338,12 +368,18 @@ struct TripStationSnapshot: Codable, Identifiable, Equatable {
         reliabilityPercent = feature.properties.reliabilityPercent
         lastUnavailableAt = feature.properties.lastUnavailableAt
         providerID = normalizedProviderKey(feature.properties.providerCanonicalID ?? feature.properties.operatorName)
+        let featurePrice = feature.displayPrice.trimmingCharacters(in: .whitespacesAndNewlines)
+        priceDisplay = featurePrice.isEmpty ? nil : featurePrice
+        oftenBrokenDailyAnalysis = feature.isOftenBrokenFromDailyAnalysis
+        oftenOccupiedDailyAnalysis = feature.isOftenOccupiedFromDailyAnalysis
         amenitiesTotal = feature.properties.amenitiesTotal
         amenities = feature.properties.amenityExamples.map(TripAmenitySnapshot.init(example:))
     }
 
     init(
         stationID: String,
+        countryCode: String? = nil,
+        stationName: String? = nil,
         operatorName: String,
         city: String = "",
         address: String = "",
@@ -357,15 +393,23 @@ struct TripStationSnapshot: Codable, Identifiable, Equatable {
         availabilityStatus: AvailabilityStatus = .unknown,
         availableEVSEs: Int = 0,
         totalEVSEs: Int = 0,
+        occupiedEVSEs: Int? = nil,
+        outOfOrderEVSEs: Int? = nil,
+        unknownEVSEs: Int? = nil,
         lastUpdated: String = "",
         classification: StationClassification = .unclassified,
         reliabilityPercent: Double? = nil,
         lastUnavailableAt: String? = nil,
         providerID: String? = nil,
+        priceDisplay: String? = nil,
+        oftenBrokenDailyAnalysis: Bool? = nil,
+        oftenOccupiedDailyAnalysis: Bool? = nil,
         amenitiesTotal: Int? = nil,
         amenities: [TripAmenitySnapshot]? = nil
     ) {
         self.stationID = stationID
+        self.countryCode = countryCode
+        self.stationName = stationName
         self.operatorName = operatorName
         self.city = city
         self.address = address
@@ -379,11 +423,17 @@ struct TripStationSnapshot: Codable, Identifiable, Equatable {
         self.availabilityStatusRaw = availabilityStatus.rawValue
         self.availableEVSEs = max(0, availableEVSEs)
         self.totalEVSEs = max(0, totalEVSEs)
+        self.occupiedEVSEs = occupiedEVSEs.map { max(0, $0) }
+        self.outOfOrderEVSEs = outOfOrderEVSEs.map { max(0, $0) }
+        self.unknownEVSEs = unknownEVSEs.map { max(0, $0) }
         self.lastUpdated = lastUpdated
         self.classificationRaw = classification.rawValue
         self.reliabilityPercent = reliabilityPercent
         self.lastUnavailableAt = lastUnavailableAt
         self.providerID = providerID ?? normalizedProviderKey(operatorName)
+        self.priceDisplay = priceDisplay
+        self.oftenBrokenDailyAnalysis = oftenBrokenDailyAnalysis
+        self.oftenOccupiedDailyAnalysis = oftenOccupiedDailyAnalysis
         self.amenitiesTotal = amenitiesTotal
         self.amenities = amenities
     }

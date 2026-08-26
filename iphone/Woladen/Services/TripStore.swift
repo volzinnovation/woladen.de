@@ -12,6 +12,7 @@ final class TripStore: ObservableObject {
     @Published private(set) var plans: [RoutePlan]
     @Published private(set) var activePlanID: UUID?
     @Published private(set) var liveSummaries: [String: LiveStationSummary] = [:]
+    @Published private(set) var liveDetails: [String: LiveStationDetail] = [:]
     @Published private(set) var liveUpdatedAt: Date?
     @Published private(set) var eta: TripETAState = .unavailable
     @Published private(set) var currentRoutePositionM = 0
@@ -25,6 +26,8 @@ final class TripStore: ObservableObject {
     private let decoder = JSONDecoder()
     private var liveRefreshTask: Task<Void, Never>?
     private var etaTask: Task<Void, Never>?
+    private var liveDetailFetchedAtByStationID: [String: Date] = [:]
+    private var pendingLiveDetailStationIDs: Set<String> = []
     private var lastETALocation: CLLocation?
     private var roadSpeedFixCount = 0
     private var lowSpeedFixCount = 0
@@ -118,7 +121,8 @@ final class TripStore: ObservableObject {
             filter: RouteFilterPayload(filter: filter),
             initialSOCPercent: initialSOCPercent
         )
-        let snapshots = features.map(TripStationSnapshot.init).sorted { $0.routePositionM < $1.routePositionM }
+        let snapshots = features.map { TripStationSnapshot(feature: $0) }
+            .sorted { $0.routePositionM < $1.routePositionM }
         let previousSelections = existing?.stopSelections ?? []
         let energyAnchors = previousSelections
             .filter { [.planned, .completed].contains($0.state) }
@@ -337,16 +341,11 @@ final class TripStore: ObservableObject {
             .sorted { $0.routePositionM < $1.routePositionM }
         let candidateIDs = allStations.map(\.stationID)
         let settings = preferences.activeVehicleSettings.normalized
-        let initialSOC = 100.0
-        let projectedSOC = Dictionary(uniqueKeysWithValues: allStations.map {
-            (
-                $0.stationID,
-                settings.projectedArrivalSOC(
-                    departureSOCPercent: initialSOC,
-                    distanceKM: Double($0.routePositionM) / 1000
-                )
-            )
-        })
+        // A station-only target has no user-entered or vehicle-reported SOC.
+        // Keep the projection unknown so charging estimates use the configured
+        // reserve fallback instead of falsely assuming a full battery.
+        let initialSOC = settings.reserveSOCPercent
+        let projectedSOC: [String: Double] = [:]
         let summary = RouteSummary(
             source: "station-target",
             distanceM: targetDistanceM,
@@ -474,6 +473,9 @@ final class TripStore: ObservableObject {
         activePlanID = nil
         mode = .plan
         liveSummaries = [:]
+        liveDetails = [:]
+        liveDetailFetchedAtByStationID = [:]
+        pendingLiveDetailStationIDs = []
         liveUpdatedAt = nil
         eta = .unavailable
         currentRoutePositionM = 0
@@ -591,6 +593,36 @@ final class TripStore: ObservableObject {
         liveSummaries[stationID]
     }
 
+    func liveDetail(for stationID: String) -> LiveStationDetail? {
+        liveDetails[stationID]
+    }
+
+    func refreshLiveDetail(for stationID: String, force: Bool = false) async {
+        let trimmed = stationID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, liveAPIClient.isEnabled else { return }
+        guard !pendingLiveDetailStationIDs.contains(trimmed) else { return }
+
+        let now = Date()
+        if !force,
+           let fetchedAt = liveDetailFetchedAtByStationID[trimmed],
+           now.timeIntervalSince(fetchedAt) < 60 {
+            return
+        }
+
+        pendingLiveDetailStationIDs.insert(trimmed)
+        defer { pendingLiveDetailStationIDs.remove(trimmed) }
+
+        do {
+            let detail = try await liveAPIClient.stationDetail(stationID: trimmed)
+            liveDetails[trimmed] = detail
+            liveSummaries[trimmed] = detail.station
+            liveDetailFetchedAtByStationID[trimmed] = Date()
+            liveUpdatedAt = Date()
+        } catch {
+            // Keep the aggregate live state visible when detail is temporarily unavailable.
+        }
+    }
+
     func substitutesForNextStop() -> (earlier: [TripStationSnapshot], detour: [TripStationSnapshot]) {
         guard let routePlan = activePlan, let next = routePlan.nextStop else { return ([], []) }
         let ids = EnergyRoutePlanner.substituteStationIDs(
@@ -639,30 +671,7 @@ final class TripStore: ObservableObject {
     }
 
     private func stationSnapshot(_ feature: GeoJSONFeature, routePositionM: Int) -> TripStationSnapshot {
-        let counts = feature.availabilityCounts
-        return TripStationSnapshot(
-            stationID: feature.properties.stationID,
-            operatorName: feature.properties.operatorName,
-            city: feature.properties.city,
-            address: feature.properties.address,
-            latitude: feature.coordinate.latitude,
-            longitude: feature.coordinate.longitude,
-            maxPowerKW: feature.properties.displayedMaxPowerKW,
-            chargingPointsCount: feature.properties.chargingPointsCount,
-            routePositionM: routePositionM,
-            driveDistanceToRouteM: feature.routeMetadata?.driveDistanceToRouteM ?? 0,
-            routeDetourM: feature.routeMetadata?.routeDetourM ?? 0,
-            availabilityStatus: feature.availabilityStatus,
-            availableEVSEs: counts.available,
-            totalEVSEs: counts.total,
-            lastUpdated: feature.liveSummary?.sourceObservedAt
-                ?? feature.liveSummary?.fetchedAt
-                ?? feature.properties.occupancyLastUpdated,
-            classification: feature.stationClassification,
-            reliabilityPercent: feature.properties.reliabilityPercent,
-            lastUnavailableAt: feature.properties.lastUnavailableAt,
-            providerID: feature.properties.providerCanonicalID
-        )
+        TripStationSnapshot(feature: feature, routePositionM: routePositionM)
     }
 
     private func refreshETAAfterStopChange() {

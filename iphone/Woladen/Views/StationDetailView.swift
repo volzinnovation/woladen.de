@@ -271,6 +271,8 @@ struct StationDetailView: View {
     }
 
     private func headerSection(_ feature: GeoJSONFeature) -> some View {
+        let chipBackground = feature.stationCardBackground.opacity(0.55)
+
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 Button {
@@ -297,7 +299,10 @@ struct StationDetailView: View {
 
             if !feature.properties.openingHoursDisplay.isEmpty {
                 HStack(spacing: 8) {
-                    detailChip(text: feature.properties.openingHoursDisplay, systemImage: "clock")
+                    detailChip(
+                        text: feature.properties.openingHoursDisplay,
+                        systemImage: "clock"
+                    )
                 }
             }
 
@@ -356,14 +361,16 @@ struct StationDetailView: View {
             HStack(alignment: .top, spacing: 10) {
                 detailStatCard(
                     lines: chargingPointPowerLines(for: feature),
-                    systemImage: "bolt.fill"
+                    systemImage: "bolt.fill",
+                    background: chipBackground
                 )
-                availabilityStatCard(for: feature)
+                availabilityStatCard(for: feature, background: chipBackground)
                 if !feature.displayPrice.isEmpty {
                     detailStatCard(
                         lines: priceLines(for: feature.displayPrice),
                         systemImage: "eurosign",
-                        tint: Color.green
+                        tint: Color.green,
+                        background: chipBackground
                     )
                 }
             }
@@ -675,7 +682,8 @@ struct StationDetailView: View {
     private func detailStatCard(
         lines: [(String, Color)],
         systemImage: String,
-        tint: Color = .primary
+        tint: Color = .primary,
+        background: Color = Color(.secondarySystemBackground)
     ) -> some View {
         VStack(alignment: .center, spacing: 4) {
             Image(systemName: systemImage)
@@ -694,10 +702,10 @@ struct StationDetailView: View {
         .frame(maxWidth: .infinity, minHeight: 88, alignment: .center)
         .padding(.vertical, 6)
         .padding(.horizontal, 12)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+        .background(background, in: RoundedRectangle(cornerRadius: 12))
     }
 
-    private func availabilityStatCard(for feature: GeoJSONFeature) -> some View {
+    private func availabilityStatCard(for feature: GeoJSONFeature, background: Color) -> some View {
         let counts = feature.availabilityCounts
         let lines: [(String, Color)]
 
@@ -716,7 +724,8 @@ struct StationDetailView: View {
         return detailStatCard(
             lines: lines,
             systemImage: "dot.radiowaves.left.and.right",
-            tint: .teal
+            tint: .teal,
+            background: background
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(availabilityAccessibilityLabel(for: counts)))

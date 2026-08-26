@@ -76,6 +76,8 @@ struct GeoJSONPointGeometry: Decodable {
 
 struct ChargerProperties: Decodable {
     let stationID: String
+    let countryCode: String
+    let stationName: String
     let operatorName: String
     let status: String
     let maxPowerKW: Double
@@ -127,6 +129,8 @@ struct ChargerProperties: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case stationID = "station_id"
+        case countryCode = "country_code"
+        case stationName = "station_name"
         case operatorName = "operator"
         case status
         case maxPowerKW = "max_power_kw"
@@ -178,6 +182,8 @@ struct ChargerProperties: Decodable {
 
     init(
         stationID: String,
+        countryCode: String = "",
+        stationName: String = "",
         operatorName: String,
         status: String,
         maxPowerKW: Double,
@@ -228,6 +234,8 @@ struct ChargerProperties: Decodable {
         providerCanonicalID: String? = nil
     ) {
         self.stationID = stationID
+        self.countryCode = countryCode
+        self.stationName = stationName
         self.operatorName = operatorName
         self.status = status
         self.maxPowerKW = maxPowerKW
@@ -282,6 +290,8 @@ struct ChargerProperties: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         stationID = try container.decode(String.self, forKey: .stationID)
+        countryCode = (try? container.decode(String.self, forKey: .countryCode)) ?? ""
+        stationName = (try? container.decode(String.self, forKey: .stationName)) ?? ""
         operatorName = try container.decode(String.self, forKey: .operatorName)
         status = (try? container.decode(String.self, forKey: .status)) ?? ""
         maxPowerKW = container.decodeLossyDouble(forKey: .maxPowerKW) ?? 0

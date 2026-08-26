@@ -271,6 +271,36 @@ final class TripPlanningTests: XCTestCase {
         XCTAssertEqual(preferences.normalized.activeVehicleSettings.batteryCapacityKWh, 45)
     }
 
+    @MainActor
+    func testStationTargetTripKeepsArrivalSOCUnknownWithoutVehicleSOC() throws {
+        let suiteName = "TripPlanningTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let store = TripStore(defaults: defaults)
+        let feature = stationFeature(id: "direct-target")
+        let origin = CLLocation(latitude: 48.09, longitude: 8.29)
+
+        XCTAssertTrue(store.activateStationTarget(feature: feature, alternatives: [], from: origin))
+
+        let plan = try XCTUnwrap(store.activePlan)
+        XCTAssertEqual(
+            plan.route.initialSOCPercent,
+            plan.vehicleSettings.normalized.reserveSOCPercent,
+            accuracy: 0.01
+        )
+        XCTAssertNil(plan.projectedArrivalSOC(for: feature.properties.stationID))
+
+        let chargePlan = CarPlayChargePlan(
+            settings: plan.vehicleSettings,
+            maxPowerKW: feature.properties.displayedMaxPowerKW,
+            status: feature.availabilityStatus,
+            available: feature.availabilityCounts.available,
+            total: feature.availabilityCounts.total,
+            fromSOCPercent: plan.projectedArrivalSOC(for: feature.properties.stationID)
+        )
+        XCTAssertNotEqual(chargePlan.tier, .notNeeded)
+    }
+
     func testTripStationAmenitiesPersistAndRemainBackwardCompatible() throws {
         let station = TripStationSnapshot(
             stationID: "amenity-station",
@@ -282,7 +312,9 @@ final class TripPlanningTests: XCTestCase {
                     category: "restaurant",
                     name: "Roadhouse",
                     openingHours: "Mo-Su 06:00-23:00",
-                    distanceM: 80
+                    distanceM: 80,
+                    latitude: 48.12,
+                    longitude: 8.34
                 )
             ]
         )
@@ -291,8 +323,18 @@ final class TripPlanningTests: XCTestCase {
         let decoded = try JSONDecoder().decode(TripStationSnapshot.self, from: encoded)
         XCTAssertEqual(decoded.amenitiesTotal, 2)
         XCTAssertEqual(decoded.amenities?.first?.openingHours, "Mo-Su 06:00-23:00")
+        XCTAssertEqual(decoded.amenities?.first?.coordinate?.latitude, 48.12)
 
         var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        if var legacyAmenity = (legacyObject["amenities"] as? [[String: Any]])?.first {
+            legacyAmenity.removeValue(forKey: "latitude")
+            legacyAmenity.removeValue(forKey: "longitude")
+            legacyObject["amenities"] = [legacyAmenity]
+        }
+        let legacyAmenityData = try JSONSerialization.data(withJSONObject: legacyObject)
+        let legacyAmenityDecoded = try JSONDecoder().decode(TripStationSnapshot.self, from: legacyAmenityData)
+        XCTAssertNil(legacyAmenityDecoded.amenities?.first?.coordinate)
+
         legacyObject.removeValue(forKey: "amenities")
         legacyObject.removeValue(forKey: "amenitiesTotal")
         let legacyData = try JSONSerialization.data(withJSONObject: legacyObject)
@@ -308,6 +350,60 @@ final class TripPlanningTests: XCTestCase {
             latitude: 48,
             longitude: 8,
             routePositionM: positionKM * 1000
+        )
+    }
+
+    private func stationFeature(id: String) -> GeoJSONFeature {
+        GeoJSONFeature(
+            id: id,
+            geometry: GeoJSONPointGeometry(coordinates: [8.3, 48.1]),
+            properties: ChargerProperties(
+                stationID: id,
+                operatorName: "IONITY",
+                status: "In Betrieb",
+                maxPowerKW: 300,
+                chargingPointsCount: 4,
+                maxIndividualPowerKW: 300,
+                postcode: "76571",
+                city: "Gaggenau",
+                address: "Teststraße 1",
+                occupancySourceUID: "",
+                occupancySourceName: "",
+                occupancyStatus: "free",
+                occupancyLastUpdated: "",
+                occupancyTotalEVSEs: 4,
+                occupancyAvailableEVSEs: 2,
+                occupancyOccupiedEVSEs: 2,
+                occupancyChargingEVSEs: 0,
+                occupancyOutOfOrderEVSEs: 0,
+                occupancyUnknownEVSEs: 0,
+                detailSourceUID: "",
+                detailSourceName: "",
+                detailLastUpdated: "",
+                datexSiteID: "",
+                datexStationIDs: "",
+                datexChargePointIDs: "",
+                priceDisplay: "0,65 €/kWh",
+                priceEnergyEURKwhMin: "0.65",
+                priceEnergyEURKwhMax: "0.65",
+                priceCurrency: "EUR",
+                priceQuality: "live",
+                openingHoursDisplay: "24/7",
+                openingHoursIs24_7: true,
+                helpdeskPhone: "",
+                paymentMethodsDisplay: "",
+                authMethodsDisplay: "",
+                connectorTypesDisplay: "CCS",
+                currentTypesDisplay: "DC",
+                connectorCount: 4,
+                greenEnergy: nil,
+                serviceTypesDisplay: "",
+                detailsJSON: "",
+                amenitiesTotal: 0,
+                amenitiesSource: "",
+                amenityExamples: [],
+                amenityCounts: [:]
+            )
         )
     }
 

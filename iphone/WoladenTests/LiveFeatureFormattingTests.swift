@@ -135,6 +135,7 @@ final class LiveFeatureFormattingTests: XCTestCase {
             {
               "station": {
                 "station_id": "at:test:fast",
+                "country_code": "AT",
                 "operator_name": "Fast Operator",
                 "station_name": "Fast Station",
                 "address": "Fast Street 1",
@@ -181,6 +182,8 @@ final class LiveFeatureFormattingTests: XCTestCase {
         let feature = detail.feature(preserving: nil)
 
         XCTAssertEqual(feature.properties.stationID, "at:test:fast")
+        XCTAssertEqual(feature.properties.countryCode, "AT")
+        XCTAssertEqual(feature.properties.stationName, "Fast Station")
         XCTAssertEqual(feature.properties.operatorName, "Fast Operator")
         XCTAssertEqual(feature.properties.connectorCount, 1)
         XCTAssertEqual(feature.properties.connectorTypesDisplay, "ccs, type2")

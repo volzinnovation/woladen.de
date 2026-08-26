@@ -294,6 +294,41 @@ enum StationCardState: Equatable {
     case oftenOccupied
 }
 
+func woladenStationCardState(
+    status: AvailabilityStatus,
+    counts: AvailabilityCounts,
+    oftenBroken: Bool = false,
+    oftenOccupied: Bool = false
+) -> StationCardState {
+    let hasAvailability = counts.total > 0
+    if hasAvailability, status == .outOfOrder { return .outOfOrder }
+    if hasAvailability, status == .occupied { return .occupied }
+    if hasAvailability, counts.total > 1, counts.available == 1 { return .oneFreeLeft }
+    if oftenBroken { return .oftenBroken }
+    if oftenOccupied { return .oftenOccupied }
+    if !hasAvailability || status == .unknown { return .unknown }
+    return .default
+}
+
+func woladenAvailabilitySummary(_ counts: AvailabilityCounts) -> String? {
+    guard counts.total > 0 else { return nil }
+
+    var parts: [String] = []
+    if counts.available > 0 {
+        parts.append(localizedCount("availability.available", count: counts.available))
+    }
+    if counts.occupied > 0 {
+        parts.append(localizedCount("availability.occupiedCount", count: counts.occupied))
+    }
+    if counts.outOfOrder > 0 {
+        parts.append(localizedCount("availability.outOfOrderCount", count: counts.outOfOrder))
+    }
+    if counts.unknown > 0 {
+        parts.append(localizedCount("availability.unknownCount", count: counts.unknown))
+    }
+    return parts.isEmpty ? String(localized: "availability.summaryUnknown") : parts.joined(separator: ", ")
+}
+
 extension GeoJSONFeature {
     var displayPrice: String {
         if let livePrice = liveSummaryForDisplay?.priceDisplay.trimmingCharacters(in: .whitespacesAndNewlines), !livePrice.isEmpty {
@@ -364,34 +399,16 @@ extension GeoJSONFeature {
 
     var stationCardState: StationCardState {
         let counts = availabilityCounts
-        let hasAvailability = counts.total > 0
-        if hasAvailability, availabilityStatus == .outOfOrder { return .outOfOrder }
-        if hasAvailability, availabilityStatus == .occupied { return .occupied }
-        if hasAvailability, counts.total > 1, counts.available == 1 { return .oneFreeLeft }
-        if isOftenBrokenFromDailyAnalysis { return .oftenBroken }
-        if isOftenOccupiedFromDailyAnalysis { return .oftenOccupied }
-        if !hasAvailability || availabilityStatus == .unknown { return .unknown }
-        return .default
+        return woladenStationCardState(
+            status: availabilityStatus,
+            counts: counts,
+            oftenBroken: isOftenBrokenFromDailyAnalysis,
+            oftenOccupied: isOftenOccupiedFromDailyAnalysis
+        )
     }
 
     var occupancySummaryLabel: String? {
-        let counts = availabilityCounts
-        guard counts.total > 0 else { return nil }
-
-        var parts: [String] = []
-        if counts.available > 0 {
-            parts.append(localizedCount("availability.available", count: counts.available))
-        }
-        if counts.occupied > 0 {
-            parts.append(localizedCount("availability.occupiedCount", count: counts.occupied))
-        }
-        if counts.outOfOrder > 0 {
-            parts.append(localizedCount("availability.outOfOrderCount", count: counts.outOfOrder))
-        }
-        if counts.unknown > 0 {
-            parts.append(localizedCount("availability.unknownCount", count: counts.unknown))
-        }
-        return parts.isEmpty ? String(localized: "availability.summaryUnknown") : parts.joined(separator: ", ")
+        woladenAvailabilitySummary(availabilityCounts)
     }
 
     var occupancySourceLabel: String? {
@@ -700,7 +717,7 @@ private func firstNonEmpty(_ values: String?...) -> String {
     return ""
 }
 
-private extension LiveStationSummary {
+extension LiveStationSummary {
     var isOftenBrokenFromDailyAnalysis: Bool {
         frequentlyOutOfOrderDailyAnalysis ||
         ["sehr_hellrot", "hellrot"].contains(normalizedDailyAnalysisColor(dailyAnalysisOutOfOrderColor))

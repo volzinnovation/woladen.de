@@ -50,9 +50,15 @@ struct TripView: View {
                         mapGlance(plan)
                     }
                 }
-                .padding(14)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
                 .frame(maxWidth: 920)
                 .frame(maxWidth: .infinity)
+            }
+            .task(id: plan.nextStop?.stationID) {
+                guard let stationID = plan.nextStop?.stationID else { return }
+                await tripStore.refreshLiveDetail(for: stationID)
+                await viewModel.requestStaticDetailIfNeeded(for: stationID)
             }
         }
     }
@@ -85,9 +91,12 @@ struct TripView: View {
                 showingSettings = true
             } label: {
                 Image(systemName: "slider.horizontal.3")
-                    .frame(width: 44, height: 44)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(woladenBrandColor)
+                    .frame(width: 42, height: 42)
+                    .background(StationVisualStyle.controlSurface, in: Circle())
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.plain)
             .disabled(tripStore.isLikelyDriving)
             .accessibilityLabel(Text(String(localized: "trip.settings.title", defaultValue: "Trip settings")))
         }
@@ -98,7 +107,7 @@ struct TripView: View {
     }
 
     private func commandCenter(_ plan: RoutePlan) -> some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 10) {
             if let next = plan.nextStop {
                 nextStopCard(next, plan: plan, prominent: true)
             }
@@ -106,12 +115,14 @@ struct TripView: View {
                 destinationCard(plan, prominent: false)
                 remainingStopsStrip(plan)
             }
-            tripManagementActions
+            if plan.nextStop == nil {
+                tripManagementActions
+            }
         }
     }
 
     private func routeProgression(_ plan: RoutePlan) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             if let next = plan.nextStop {
                 nextStopCard(next, plan: plan, prominent: false)
             }
@@ -151,12 +162,14 @@ struct TripView: View {
             if !plan.isStationTargetTrip {
                 destinationCard(plan, prominent: false)
             }
-            tripManagementActions
+            if plan.nextStop == nil {
+                tripManagementActions
+            }
         }
     }
 
     private func mapGlance(_ plan: RoutePlan) -> some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 10) {
             if let next = plan.nextStop {
                 nextStopCard(next, plan: plan, prominent: false)
             }
@@ -164,7 +177,9 @@ struct TripView: View {
             if !plan.isStationTargetTrip {
                 destinationCard(plan, prominent: false)
             }
-            tripManagementActions
+            if plan.nextStop == nil {
+                tripManagementActions
+            }
         }
     }
 
@@ -174,53 +189,75 @@ struct TripView: View {
         let available = live?.availableEVSEs ?? station.availableEVSEs
         let total = live?.totalEVSEs ?? station.totalEVSEs
         let colors = stationLiveCardColors(status: status, available: available, total: total)
+        let title = stationTitle(for: station)
+        let operatorLine = stationOperatorLine(for: station)
 
         return HStack(spacing: 0) {
             StationClassificationRail(
                 classification: station.classification,
-                width: prominent ? 18 : 14
+                width: prominent ? 10 : 8
             )
 
-            VStack(alignment: .leading, spacing: prominent ? 16 : 12) {
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .center, spacing: 8) {
                         Text(String(localized: "trip.nextStop", defaultValue: "NEXT CHARGING STOP"))
                             .font(.caption.weight(.bold))
                             .foregroundStyle(woladenBrandColor)
-                        Text(station.operatorName)
-                            .font(prominent ? .largeTitle.weight(.bold) : .title2.weight(.bold))
-                            .lineLimit(2)
-                        Text("\(station.classification.title) · \(stationSubtitle(station))")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        Spacer(minLength: 8)
+                        liveBadge(status: status, available: available, total: total)
                     }
-                    Spacer(minLength: 8)
-                    liveBadge(status: status, available: available, total: total)
+
+                    Text(title)
+                        .font(prominent ? .title2.weight(.bold) : .title3.weight(.bold))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let operatorLine {
+                        Text(operatorLine)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Label(stationSubtitle(station), systemImage: "location.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .labelStyle(.titleAndIcon)
                 }
 
-                HStack(spacing: 10) {
+                HStack(spacing: 0) {
                     etaMetric(
                         title: String(localized: "trip.eta", defaultValue: "ETA"),
                         value: nextStopETAText
                     )
+                    Divider()
+                        .frame(height: 34)
                     etaMetric(
                         title: String(localized: "trip.distance", defaultValue: "Distance"),
                         value: remainingDistanceText(to: station.routePositionM)
                     )
                     if status == .occupied {
+                        Divider()
+                            .frame(height: 34)
                         etaMetric(
                             title: String(localized: "trip.liveStatus", defaultValue: "Status"),
                             value: status.label
                         )
                     } else if let soc = plan.projectedArrivalSOC(for: station.stationID) {
+                        Divider()
+                            .frame(height: 34)
                         etaMetric(
                             title: String(localized: "trip.arrivalCharge", defaultValue: "Arrival"),
                             value: "\(Int(soc.rounded()))%"
                         )
                     }
                 }
-
-                stationDetailsDisclosure(station)
+                .padding(.vertical, 8)
+                .background(
+                    Color(.systemBackground).opacity(0.72),
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                )
 
                 Button {
                     openPreferredNavigation(to: station.coordinate, name: station.operatorName)
@@ -230,9 +267,10 @@ struct TripView: View {
                         systemImage: "arrow.triangle.turn.up.right.diamond.fill"
                     )
                         .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .frame(maxWidth: .infinity, minHeight: 48)
                 }
                 .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.roundedRectangle(radius: 14))
                 .tint(woladenBrandColor)
 
                 HStack(spacing: 10) {
@@ -240,30 +278,47 @@ struct TripView: View {
                         showingSubstitutes = true
                     } label: {
                         Label(String(localized: "trip.substitute", defaultValue: "Find substitute"), systemImage: "arrow.triangle.2.circlepath")
-                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.bordered)
+                    .buttonBorderShape(.roundedRectangle(radius: 12))
+                    .tint(woladenBrandColor)
 
                     Button {
                         tripStore.completeNextStop()
                     } label: {
                         Label(String(localized: "trip.stopComplete", defaultValue: "Stop complete"), systemImage: "checkmark")
-                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.bordered)
+                    .buttonBorderShape(.roundedRectangle(radius: 12))
+                    .tint(woladenBrandColor)
                 }
+
+                stationDetailsSection(station)
 
                 Text(liveFreshnessText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Divider()
+
+                tripManagementActions
             }
-            .padding(prominent ? 20 : 16)
+            .padding(.horizontal, 14)
+            .padding(.vertical, prominent ? 14 : 12)
         }
         .background(colors.background)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(colors.border, lineWidth: 1)
         }
     }
@@ -392,20 +447,9 @@ struct TripView: View {
     }
 
     private var tripManagementActions: some View {
-        Button(role: .destructive) {
-            // Ending the active trip is intentionally protected by the long-press gesture below.
-        } label: {
-            Text(String(localized: "trip.end.action", defaultValue: "End trip"))
-                .frame(maxWidth: .infinity, minHeight: 48)
+        PressAndHoldEndTripButton {
+            tripStore.endTrip()
         }
-        .buttonStyle(.bordered)
-        .simultaneousGesture(
-            LongPressGesture(minimumDuration: 0.7)
-                .onEnded { _ in
-                    tripStore.endTrip()
-                }
-        )
-        .accessibilityHint(Text(String(localized: "trip.end.longPressHint", defaultValue: "Press and hold to end the active trip.")))
     }
 
     private var noActiveTrip: some View {
@@ -459,93 +503,237 @@ struct TripView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func stationDetailsDisclosure(_ station: TripStationSnapshot) -> some View {
+    private func stationDetailsSection(_ station: TripStationSnapshot) -> some View {
         let amenities = amenitySnapshots(for: station)
         let total = max(station.amenitiesTotal ?? amenities.count, amenities.count)
+        let live = tripStore.liveSummary(for: station.stationID)
+        let liveDetail = tripStore.liveDetail(for: station.stationID)
+        let isExpanded = expandedAmenityStationIDs.contains(station.stationID)
+        let visibleAmenities = isExpanded ? amenities : Array(amenities.prefix(5))
+        let hiddenAmenityCount = amenities.count - visibleAmenities.count
+        let amenityCountText = (
+            total == 1
+                ? String(localized: "amenity.one", defaultValue: "{count} nearby place")
+                : String(localized: "amenity.many", defaultValue: "{count} nearby places")
+        )
+        .replacingOccurrences(of: "{count}", with: "\(total)")
 
-        return DisclosureGroup(isExpanded: amenityExpansionBinding(for: station.stationID)) {
-            VStack(alignment: .leading, spacing: 10) {
-                if amenities.isEmpty {
-                    Text(String(localized: "amenity.noDetails"))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(amenities) { amenity in
-                        HStack(alignment: .top, spacing: 10) {
-                            Image(systemName: AmenityCatalog.symbol(for: "amenity_\(amenity.category)"))
-                                .frame(width: 24)
-                                .foregroundStyle(woladenBrandColor)
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Label {
+                    Text(amenityCountText)
+                        .foregroundStyle(.primary)
+                } icon: {
+                    Image(systemName: "fork.knife")
+                        .foregroundStyle(woladenBrandColor)
+                }
+                .font(.headline)
+                Spacer(minLength: 0)
+            }
 
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(amenity.name ?? AmenityCatalog.label(for: "amenity_\(amenity.category)"))
-                                    .font(.subheadline.weight(.semibold))
-                                Text(amenityMeta(amenity))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer(minLength: 0)
-                        }
-                    }
+            if amenities.isEmpty {
+                Text(String(localized: "amenity.noDetails", defaultValue: "No nearby amenities listed"))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(visibleAmenities) { amenity in
+                    amenityRow(amenity, countryCode: station.countryCode)
                 }
 
-                if let feature = viewModel.feature(forStationID: station.stationID) {
+                if hiddenAmenityCount > 0 {
                     Button {
-                        viewModel.selectFeature(feature)
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            _ = expandedAmenityStationIDs.insert(station.stationID)
+                        }
                     } label: {
-                        Label(String(localized: "trip.station.openDetails", defaultValue: "Open station details"), systemImage: "info.circle")
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                        Label(
+                            String(localized: "list.more", defaultValue: "...and {count} more")
+                                .replacingOccurrences(of: "{count}", with: "\(hiddenAmenityCount)"),
+                            systemImage: "chevron.down"
+                        )
+                        .font(.subheadline.weight(.semibold))
                     }
-                    .buttonStyle(.bordered)
-                    .disabled(tripStore.isLikelyDriving)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(woladenBrandColor)
+                    .padding(.leading, 42)
+                    .padding(.vertical, 4)
                 }
             }
-            .padding(.top, 10)
-        } label: {
-            Label {
-                Text(
-                    String(localized: "trip.station.detailsAndAmenities", defaultValue: "Station details & amenities")
-                        + (total > 0 ? " · \(total)" : "")
+
+            Divider()
+                .padding(.vertical, 2)
+
+            if let liveDetail {
+                chargingPointsSection(liveDetail.evses)
+            } else {
+                chargingPointsPlaceholder(
+                    available: live?.availableEVSEs ?? station.availableEVSEs,
+                    total: live?.totalEVSEs ?? max(station.totalEVSEs, station.chargingPointsCount)
                 )
-                .font(.subheadline.weight(.semibold))
-            } icon: {
-                Image(systemName: "fork.knife")
-                    .foregroundStyle(woladenBrandColor)
+            }
+
+            if let feature = viewModel.feature(forStationID: station.stationID) {
+                Divider()
+                    .padding(.top, 2)
+
+                Button {
+                    viewModel.selectFeature(feature)
+                } label: {
+                    HStack {
+                        Label(String(localized: "trip.station.openDetails", defaultValue: "Open station details"), systemImage: "info.circle")
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 42)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(woladenBrandColor)
+                .disabled(tripStore.isLikelyDriving)
             }
         }
-        .padding(12)
-        .background(Color(.systemBackground).opacity(0.78), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .disabled(tripStore.isLikelyDriving)
-    }
-
-    private func amenityExpansionBinding(for stationID: String) -> Binding<Bool> {
-        Binding(
-            get: { expandedAmenityStationIDs.contains(stationID) },
-            set: { isExpanded in
-                if isExpanded {
-                    expandedAmenityStationIDs.insert(stationID)
-                } else {
-                    expandedAmenityStationIDs.remove(stationID)
-                }
-            }
-        )
+        .padding(.top, 2)
     }
 
     private func amenitySnapshots(for station: TripStationSnapshot) -> [TripAmenitySnapshot] {
-        if let amenities = station.amenities, !amenities.isEmpty {
-            return amenities
-        }
-        return viewModel.feature(forStationID: station.stationID)?
+        let savedAmenities = station.amenities ?? []
+        let currentAmenities = viewModel.feature(forStationID: station.stationID)?
             .properties
             .amenityExamples
             .map(TripAmenitySnapshot.init(example:)) ?? []
+        let orderedSources = currentAmenities.count >= savedAmenities.count
+            ? currentAmenities + savedAmenities
+            : savedAmenities + currentAmenities
+        var seenIDs: Set<String> = []
+
+        return orderedSources
+            .filter { seenIDs.insert($0.id).inserted }
+            .sorted { lhs, rhs in
+                let lhsDistance = lhs.distanceM ?? .greatestFiniteMagnitude
+                let rhsDistance = rhs.distanceM ?? .greatestFiniteMagnitude
+                if lhsDistance == rhsDistance { return lhs.id < rhs.id }
+                return lhsDistance < rhsDistance
+            }
     }
 
-    private func amenityMeta(_ amenity: TripAmenitySnapshot) -> String {
+    private func amenityRow(_ amenity: TripAmenitySnapshot, countryCode: String?) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: AmenityCatalog.symbol(for: "amenity_\(amenity.category)"))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(woladenBrandColor)
+                .frame(width: 30, height: 30)
+                .background(woladenBrandColor.opacity(0.10), in: Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(amenity.name ?? AmenityCatalog.label(for: "amenity_\(amenity.category)"))
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                Text(amenityMeta(amenity, countryCode: countryCode))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(minHeight: 38)
+    }
+
+    private func chargingPointsSection(_ evses: [LiveEVSE]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Label(String(localized: "trip.station.pads", defaultValue: "Charging points"), systemImage: "bolt.circle.fill")
+                    .font(.headline)
+                Spacer()
+                if !evses.isEmpty {
+                    Text("\(evses.count)")
+                        .font(.caption.weight(.bold).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if evses.isEmpty {
+                Text(String(localized: "amenity.noDetails", defaultValue: "No details available."))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(Array(evses.enumerated()), id: \.offset) { index, evse in
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: statusSymbol(evse.availabilityStatus))
+                            .foregroundStyle(statusColor(evse.availabilityStatus))
+                            .frame(width: 32)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(
+                                String(localized: "trip.station.point", defaultValue: "Charging point {number}")
+                                    .replacingOccurrences(of: "{number}", with: "\(index + 1)")
+                            )
+                            .font(.subheadline.weight(.semibold))
+                            Text(chargingPointMeta(evse))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .frame(minHeight: 38)
+                }
+            }
+        }
+    }
+
+    private func chargingPointsPlaceholder(available: Int, total: Int) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "bolt.circle.fill")
+                .foregroundStyle(.teal)
+                .frame(width: 32)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(String(localized: "trip.station.pads", defaultValue: "Charging points"))
+                    .font(.headline)
+                if total > 0 {
+                    Text("\(available)/\(total)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Text(String(localized: "station.liveDataAvailable", defaultValue: "Live details loading…"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func chargingPointMeta(_ evse: LiveEVSE) -> String {
+        var values: [String] = [evse.availabilityStatus.label]
+        let operationalStatus = evse.operationalStatus.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !operationalStatus.isEmpty,
+           operationalStatus.caseInsensitiveCompare(evse.availabilityStatus.rawValue) != .orderedSame {
+            values.append(operationalStatus)
+        }
+        let price = evse.priceDisplay.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !price.isEmpty {
+            values.append(price)
+        }
+        let providerID = evse.providerEVSEID.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !providerID.isEmpty {
+            values.append(providerID)
+        }
+        return values.joined(separator: " · ")
+    }
+
+    private func amenityMeta(_ amenity: TripAmenitySnapshot, countryCode: String?) -> String {
         var values: [String] = []
         if let openingHours = amenity.openingHours, !openingHours.isEmpty {
-            values.append("\(String(localized: "amenity.hours")): \(openingHours)")
+            let display = woladenAmenityOpeningDisplay(
+                openingHours,
+                now: Date(),
+                timeZone: woladenOpeningTimeZone(countryCode: countryCode),
+                countryCode: countryCode,
+                locale: .current
+            ) ?? openingHours
+            values.append(display)
         } else {
-            values.append(String(localized: "amenity.unknownHours"))
+            values.append(String(localized: "amenity.unknownHours", defaultValue: "Hours unknown"))
         }
         if let distanceM = amenity.distanceM {
             values.append("\(Int(distanceM.rounded())) m")
@@ -564,23 +752,43 @@ struct TripView: View {
                 .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
-        .background(Color(.systemBackground).opacity(0.8), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func liveBadge(status: AvailabilityStatus, available: Int, total: Int) -> some View {
-        VStack(spacing: 2) {
+        HStack(spacing: 5) {
+            Image(systemName: statusSymbol(status))
             Text(status.label)
-                .font(.caption.weight(.bold))
             if total > 0 {
                 Text("\(available)/\(total)")
-                    .font(.caption.monospacedDigit())
+                    .monospacedDigit()
             }
         }
+        .font(.subheadline.weight(.bold))
         .foregroundStyle(statusColor(status))
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 9)
+        .padding(.vertical, 6)
         .background(statusColor(status).opacity(0.12), in: Capsule())
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private func stationTitle(for station: TripStationSnapshot) -> String {
+        let title = station.stationName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return title.isEmpty ? station.operatorName : title
+    }
+
+    private func stationOperatorLine(for station: TripStationSnapshot) -> String? {
+        let operatorName = station.operatorName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !operatorName.isEmpty else { return nil }
+        return operatorName.caseInsensitiveCompare(stationTitle(for: station)) == .orderedSame ? nil : operatorName
+    }
+
+    private func statusSymbol(_ status: AvailabilityStatus) -> String {
+        switch status {
+        case .free: return "checkmark.circle.fill"
+        case .occupied: return "clock.fill"
+        case .outOfOrder: return "exclamationmark.triangle.fill"
+        case .unknown: return "questionmark.circle.fill"
+        }
     }
 
     private func stationSubtitle(_ station: TripStationSnapshot) -> String {
@@ -661,6 +869,104 @@ struct TripView: View {
         let raw = "https://www.google.com/maps/dir/?api=1&destination=\(coordinate.latitude),\(coordinate.longitude)&travelmode=driving"
         guard let url = URL(string: raw) else { return }
         UIApplication.shared.open(url)
+    }
+}
+
+private struct PressAndHoldEndTripButton: View {
+    let action: () -> Void
+
+    @State private var countdown: Int?
+    @State private var countdownTask: Task<Void, Never>?
+
+    var body: some View {
+        let title = String(localized: "trip.end.action", defaultValue: "End trip")
+
+        ZStack {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+
+            HStack {
+                Group {
+                    if let countdown {
+                        Text("\(countdown)")
+                            .font(.subheadline.weight(.bold).monospacedDigit())
+                            .foregroundStyle(.white)
+                            .frame(width: 28, height: 28)
+                            .background(Color.red, in: Circle())
+                            .contentTransition(.numericText())
+                    } else {
+                        Image(systemName: "stop.circle")
+                            .font(.title3)
+                            .frame(width: 28, height: 28)
+                    }
+                }
+
+                Spacer()
+
+                Color.clear
+                    .frame(width: 28, height: 28)
+            }
+        }
+            .foregroundStyle(.red)
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity, minHeight: 48)
+            .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.red.opacity(0.24), lineWidth: 1)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in beginPress() }
+                    .onEnded { _ in endPress() }
+            )
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(title))
+            .accessibilityValue(Text(countdown.map(String.init) ?? ""))
+            .accessibilityHint(
+                Text(
+                    String(
+                        localized: "trip.end.longPressHint",
+                        defaultValue: "Press and hold to end the active trip."
+                    )
+                )
+            )
+            .onDisappear { cancelPress() }
+            .animation(.easeInOut(duration: 0.15), value: countdown)
+    }
+
+    private func beginPress() {
+        guard countdown == nil, countdownTask == nil else { return }
+        countdown = 3
+        countdownTask = Task { @MainActor in
+            for value in stride(from: 3, through: 1, by: -1) {
+                guard !Task.isCancelled else { return }
+                countdown = value
+                do {
+                    try await Task.sleep(for: .seconds(1))
+                } catch {
+                    return
+                }
+            }
+            guard !Task.isCancelled else { return }
+            countdown = 0
+            countdownTask = nil
+            action()
+        }
+    }
+
+    private func endPress() {
+        guard countdownTask != nil else { return }
+        countdownTask?.cancel()
+        countdownTask = nil
+        countdown = nil
+    }
+
+    private func cancelPress() {
+        countdownTask?.cancel()
+        countdownTask = nil
+        countdown = nil
     }
 }
 
