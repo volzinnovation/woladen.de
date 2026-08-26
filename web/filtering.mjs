@@ -3,6 +3,10 @@ import { hasOpenAmenity } from "./opening-hours.mjs";
 const COMBINING_MARKS = /[\u0300-\u036f]/g;
 const NON_ALPHANUMERIC = /[^\p{L}\p{N}]+/gu;
 
+export function compareOperatorNames(left, right, locale) {
+  return String(left).localeCompare(String(right), locale, { sensitivity: "accent" });
+}
+
 export function normalizeAmenityNameQuery(value = "") {
   return String(value)
     .trim()

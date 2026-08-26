@@ -1,4 +1,8 @@
-import { countActiveFilters, matchesFeatureFilters } from "./filtering.mjs?v=20260626-routing-web1";
+import {
+  compareOperatorNames,
+  countActiveFilters,
+  matchesFeatureFilters,
+} from "./filtering.mjs?v=20260825-operator-sort1";
 import {
   DEFAULT_FILTER_SETTINGS,
   parseStoredFilterSettings,
@@ -4267,7 +4271,7 @@ function populateOperators() {
   const operators = Array.from(operatorCounts.entries())
     .filter(([, stations]) => stations >= 1)
     .map(([name]) => name)
-    .sort();
+    .sort((left, right) => compareOperatorNames(left, right, getLocale()));
 
   els.filter.operator.querySelectorAll("option:not([value=''])").forEach((option) => {
     option.remove();

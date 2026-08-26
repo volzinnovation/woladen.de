@@ -2,11 +2,21 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  compareOperatorNames,
   countActiveFilters,
   hasAvailableChargingPoint,
   matchesAmenityNameQuery,
   matchesFeatureFilters,
 } from "./filtering.mjs";
+
+test("operator names sort alphabetically regardless of letter case", () => {
+  const operators = ["Zunder", "chargecloud", "Allego", "be.ENERGISED"];
+
+  assert.deepEqual(
+    operators.sort((left, right) => compareOperatorNames(left, right, "en")),
+    ["Allego", "be.ENERGISED", "chargecloud", "Zunder"],
+  );
+});
 
 test("matches amenity names ignoring case, punctuation, and diacritics", () => {
   const properties = {
