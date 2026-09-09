@@ -10816,13 +10816,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🥉 Bronze"
+            "value" : "🟠 Bronze"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🥉 Bronze"
+            "value" : "🟠 Bronze"
           }
         }
       }
@@ -10833,13 +10833,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🥇 Gold"
+            "value" : "🟡 Gold"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🥇 Gold"
+            "value" : "🟡 Gold"
           }
         }
       }
@@ -10850,13 +10850,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🥈 Silber"
+            "value" : "⚪ Silber"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "🥈 Silver"
+            "value" : "⚪ Silver"
           }
         }
       }
@@ -11411,13 +11411,13 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "⬜ Grau · Belegt"
+            "value" : "⚫ Schwarz · Belegt"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "⬜ Grey · Occupied"
+            "value" : "⚫ Black · Occupied"
           }
         }
       }

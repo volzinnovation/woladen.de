@@ -406,22 +406,18 @@ private struct CarPlayStationContent {
 
     var classificationText: String {
         switch classification {
-        case .gold:
-            return String(localized: "carplay.classification.gold", defaultValue: "🥇 Gold")
-        case .silver:
-            return String(localized: "carplay.classification.silver", defaultValue: "🥈 Silver")
-        case .bronze:
-            return String(localized: "carplay.classification.bronze", defaultValue: "🥉 Bronze")
-        case .unclassified:
-            return String(localized: "carplay.classification.unclassified", defaultValue: "Unclassified")
+        case .gold: return "🟡"
+        case .silver: return "⚪"
+        case .bronze: return "🟠"
+        case .unclassified: return ""
         }
     }
 
     var classificationEmoji: String? {
         switch classification {
-        case .gold: return "🥇"
-        case .silver: return "🥈"
-        case .bronze: return "🥉"
+        case .gold: return "🟡"
+        case .silver: return "⚪"
+        case .bronze: return "🟠"
         case .unclassified: return nil
         }
     }
@@ -431,7 +427,7 @@ private struct CarPlayStationContent {
         case .outOfOrder:
             return String(localized: "carplay.status.outOfOrder", defaultValue: "🔴 Red · Out of order")
         case .occupied:
-            return String(localized: "carplay.status.occupied", defaultValue: "⬜ Grey · Occupied")
+            return String(localized: "carplay.status.occupied", defaultValue: "⚫ Black · Occupied")
         case .oneFreeLeft:
             return String(localized: "carplay.status.oneFreeLeft", defaultValue: "🟡 Nearly occupied · One charging point left")
         case .oftenBroken:
@@ -889,9 +885,9 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
 
     private func planningClassificationPrefix(_ classification: StationClassification) -> String {
         switch classification {
-        case .gold: return "[GOLD]"
-        case .silver: return "[SILVER]"
-        case .bronze: return "[BRONZE]"
+        case .gold: return "🟡"
+        case .silver: return "⚪"
+        case .bronze: return "🟠"
         case .unclassified: return ""
         }
     }
