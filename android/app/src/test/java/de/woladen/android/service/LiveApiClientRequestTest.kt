@@ -9,6 +9,8 @@ import de.woladen.android.model.OpenStaticBundle
 import de.woladen.android.model.OpenStaticCountry
 import de.woladen.android.model.OpenStaticSource
 import de.woladen.android.model.OpenStaticSummary
+import de.woladen.android.model.OperatorEntry
+import de.woladen.android.model.RouteFilterPayload
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -84,6 +86,22 @@ class LiveApiClientRequestTest {
             "/v1/catalog/search?lat=52.520000&lon=13.405000&radius_m=20000&limit=100&mode=travel&min_power_kw=50.0&operator_group_id=EnBW&operator_group_id=IONITY",
             path
         )
+    }
+
+    @Test
+    fun migratedOperatorSelectionsUseSameCanonicalIdsForCatalogAndRouting() {
+        val operators = listOf(
+            OperatorEntry(id = "ionity", name = "IONITY", stations = 0, aliases = listOf("IONITY GmbH")),
+            OperatorEntry(id = "enbw", name = "EnBW", stations = 0)
+        )
+        val filter = FilterState(selectedOperatorNames = setOf("IONITY GmbH", "EnBW", "obsolete"))
+            .canonicalized(using = operators)
+        val path = catalogSearchPath(52.52, 13.405, 20_000, 100, filter)
+        val route = RouteFilterPayload.from(filter)
+
+        assertTrue(path.endsWith("&operator_group_id=enbw&operator_group_id=ionity"))
+        assertEquals(listOf("enbw", "ionity"), route.operatorGroupIds)
+        assertEquals("", route.operator)
     }
 
     @Test

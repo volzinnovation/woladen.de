@@ -29,7 +29,6 @@ import de.woladen.android.service.lookupStationIdBatches
 import de.woladen.android.util.AppStrings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -67,8 +66,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var filterState: FilterState
         get() = filterStateBacking
         set(value) {
-            filterStateBacking = value
-            saveFilterState(value)
+            filterStateBacking = value.canonicalized(using = operators)
+            saveFilterState(filterStateBacking)
         }
 
     var selectedFeature: GeoJsonFeature? by mutableStateOf(null)
@@ -132,8 +131,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val pendingLiveDetailStationIds: MutableSet<String> = mutableSetOf()
     private val pendingCatalogDetailStationIds: MutableSet<String> = mutableSetOf()
     private var routeCalculatedFilters: RouteFilterPayload? = null
-    private var normativeOperators: List<OperatorEntry>? = null
-
+    private var operatorCatalogJob: Job? = null
     private var refreshNearbyJob: Job? = null
     private var liveSummaryRefreshJob: Job? = null
     private var selectedFeatureRefreshJob: Job? = null
@@ -141,6 +139,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var routeSearchJob: Job? = null
 
     init {
+        refreshOperatorCatalog()
         startLiveSummaryRefreshLoop()
     }
 
@@ -150,6 +149,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         selectedFeatureRefreshJob?.cancel()
         infoSummaryJob?.cancel()
         routeSearchJob?.cancel()
+        operatorCatalogJob?.cancel()
         super.onCleared()
     }
 
@@ -199,6 +199,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun load(userLocation: Location?) {
+        refreshOperatorCatalog()
         if (userLocation == null) {
             waitForLocation()
             return
@@ -212,7 +213,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             filterPool = emptyList()
             discoveredFeatures = emptyList()
             allFeatures = emptyList()
-            operators = emptyList()
             activeCatalogInfo = ActiveCatalogSourceInfo(
                 source = "catalog_api",
                 manifest = CatalogSourceManifest(
@@ -309,6 +309,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun waitForLocation() {
+        refreshOperatorCatalog()
         refreshNearbyJob?.cancel()
         isLoading = false
         loadError = null
@@ -316,7 +317,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         if (allFeatures.isEmpty()) {
             filterPool = emptyList()
             discoveredFeatures = emptyList()
-            operators = emptyList()
             activeCatalogInfo = null
         }
     }
@@ -711,7 +711,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         allFeatures = byStationId.values.toList()
         filterPool = allFeatures.filter { feature -> feature.properties.matches(filterState) }
         removeDiscoveredStationIds(removedStationIds)
-        rebuildOperators()
     }
 
     private fun mergeCatalogFeature(existing: GeoJsonFeature, incoming: GeoJsonFeature): GeoJsonFeature {
@@ -724,19 +723,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    private fun rebuildOperators() {
-        normativeOperators?.let {
-            operators = it
-            return
-        }
-        operators = allFeatures
-            .asSequence()
-            .map { it.properties.operatorName.trim() }
-            .filter { it.isNotBlank() }
-            .groupingBy { it }
-            .eachCount()
-            .map { (name, count) -> OperatorEntry(name = name, stations = count) }
-            .sortedWith(compareBy<OperatorEntry> { it.name.lowercase() }.thenBy { it.name })
+    private fun refreshOperatorCatalog(): Job {
+        operatorCatalogJob?.takeIf { it.isActive }?.let { return it }
+        return viewModelScope.launch {
+            val catalog = runCatching { repository.operatorCatalog() }.getOrNull()
+            if (!isActive || catalog.isNullOrEmpty()) return@launch
+            operators = catalog
+            val migrated = filterState.canonicalized(using = catalog)
+            if (migrated != filterState) filterState = migrated
+        }.also { operatorCatalogJob = it }
     }
 
     private fun updateFeatureCollections(
@@ -804,15 +799,8 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             isLoading = allFeatures.isEmpty() || cachedPool.isEmpty()
-            val operatorCatalog = async { runCatching { repository.operatorCatalog() }.getOrNull() }
-            val loadedOperators = operatorCatalog.await()
+            refreshOperatorCatalog().join()
             if (!isActive) return@launch
-            normativeOperators = loadedOperators
-            loadedOperators?.let { catalog ->
-                operators = catalog
-                val migrated = filterState.canonicalized(using = catalog)
-                if (migrated != filterState) filterState = migrated
-            }
             val result = runCatching {
                 repository.searchCatalog(
                     latitude = centerLat,

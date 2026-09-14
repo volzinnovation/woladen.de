@@ -13,3 +13,9 @@ data class OperatorEntry(
     val id: String = name,
     val aliases: List<String> = emptyList()
 )
+
+internal fun resolvedOperatorGroupIds(groupIds: List<String>, groupId: String): Set<String> {
+    val normalized = groupIds.map { it.trim() }.filter { it.isNotBlank() }.toSet()
+    if (normalized.isNotEmpty()) return normalized
+    return groupId.trim().takeIf { it.isNotBlank() }?.let { setOf(it) }.orEmpty()
+}

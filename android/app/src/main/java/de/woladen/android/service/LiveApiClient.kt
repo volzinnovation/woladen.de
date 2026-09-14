@@ -20,6 +20,7 @@ import de.woladen.android.model.OpenStaticSource
 import de.woladen.android.model.OpenStaticSummary
 import de.woladen.android.model.OperatorCatalog
 import de.woladen.android.model.OperatorEntry
+import de.woladen.android.model.resolvedOperatorGroupIds
 import de.woladen.android.model.LiveEvse
 import de.woladen.android.model.LiveJsonValue
 import de.woladen.android.model.LiveStationDetail
@@ -486,10 +487,11 @@ class LiveApiClient(
         val operators = mutableListOf<OperatorEntry>()
         for (index in 0 until operatorArray.length()) {
             val entry = operatorArray.optJSONObject(index) ?: continue
+            val id = entry.optCleanString("id")
             val name = entry.optCleanString("name")
-            if (name.isBlank()) continue
+            if (id.isBlank() || name.isBlank()) continue
             operators += OperatorEntry(
-                id = entry.optCleanString("id").ifBlank { name },
+                id = id,
                 name = name,
                 stations = entry.optInt("stations", 0),
                 aliases = entry.optJSONArray("aliases")
@@ -629,9 +631,12 @@ class LiveApiClient(
             nearestAmenityName = payload.optCleanString("nearest_amenity_name"),
             nearestAmenityDistanceM = payload.optNullableDouble("nearest_amenity_distance_m"),
             liveSummary = liveSummary,
-            operatorGroupIds = payload.optJSONArray("operator_group_ids")
-                ?.let { values -> (0 until values.length()).map { values.optString(it) }.filter { it.isNotBlank() }.toSet() }
-                ?: emptySet(),
+            operatorGroupIds = resolvedOperatorGroupIds(
+                groupIds = payload.optJSONArray("operator_group_ids")
+                    ?.let { values -> (0 until values.length()).map { values.optString(it) } }
+                    .orEmpty(),
+                groupId = payload.optCleanString("operator_group_id")
+            ),
             stationClassification = payload.optCleanString("station_classification"),
             reliabilityPercent = payload.optNullableDouble("reliability_percent"),
             lastUnavailableAt = payload.optCleanString("last_unavailable_at").ifBlank { null },

@@ -234,12 +234,13 @@ internal class WoladenNearbyScreen(carContext: CarContext) : Screen(carContext) 
     private suspend fun loadNearby(origin: Location): List<GeoJsonFeature> {
         val result = withContext(Dispatchers.IO) {
             application.filterStateStore.refresh()
+            val operators = runCatching { repository.operatorCatalog() }.getOrDefault(emptyList())
             repository.searchCatalog(
                 latitude = origin.latitude,
                 longitude = origin.longitude,
                 radiusMeters = SEARCH_RADIUS_METERS,
                 limit = SEARCH_LIMIT,
-                filterState = application.filterStateStore.state
+                filterState = application.filterStateStore.state.canonicalized(using = operators)
             )
         }
         return enrichLive(result.features)

@@ -82,6 +82,84 @@ class FilterMatchingTest {
     }
 
     @Test
+    fun canonicalOperatorGroupsMatchAcrossCountriesAndTechnicalNames() {
+        val stations = listOf(
+            Triple("ionity", "FR*ION", "FR"),
+            Triple("ionity", "IONITY GmbH", "DE"),
+            Triple("enbw", "DE*EBW", "DE"),
+            Triple("enbw", "EnBW mobility+", "AT"),
+            Triple("tesla", "NL*TSL", "NL"),
+            Triple("tesla", "Tesla Supercharger", "NO")
+        )
+        for ((group, name, country) in stations) {
+            val properties = sampleProperties(operatorName = name).copy(
+                countryCode = country,
+                operatorGroupIds = setOf(group)
+            )
+            for (selected in listOf("ionity", "enbw", "tesla")) {
+                assertEquals(
+                    "$selected / $name / $country",
+                    selected == group,
+                    properties.matches(FilterState(selectedOperatorNames = setOf(selected)))
+                )
+            }
+        }
+    }
+
+    @Test
+    fun operatorGroupMetadataTakesPrecedenceOverDisplayName() {
+        val properties = sampleProperties(operatorName = "ionity").copy(operatorGroupIds = setOf("tesla"))
+
+        assertFalse(properties.matches(FilterState(selectedOperatorNames = setOf("ionity"))))
+        assertTrue(properties.matches(FilterState(selectedOperatorNames = setOf("tesla"))))
+    }
+
+    @Test
+    fun conflictingSingularGroupCannotBroadenAuthoritativePluralGroups() {
+        val properties = sampleProperties(operatorName = "ionity").copy(
+            operatorGroupIds = resolvedOperatorGroupIds(listOf(" tesla ", "tesla", " "), "ionity")
+        )
+
+        assertEquals(setOf("tesla"), properties.operatorGroupIds)
+        assertFalse(properties.matches(FilterState(selectedOperatorNames = setOf("ionity"))))
+        assertTrue(properties.matches(FilterState(selectedOperatorNames = setOf("tesla"))))
+        assertEquals(setOf("ionity"), resolvedOperatorGroupIds(listOf(" "), " ionity "))
+        assertTrue(resolvedOperatorGroupIds(emptyList(), " ").isEmpty())
+    }
+
+    @Test
+    fun savedOperatorNamesAndAliasesMigrateToCanonicalIdsAndDiscardUnsupportedChoices() {
+        val operators = listOf(
+            OperatorEntry(id = "ionity", name = "IONITY", stations = 0, aliases = listOf("IONITY GmbH")),
+            OperatorEntry(id = "enbw", name = "EnBW", stations = 0, aliases = listOf("EnBW mobility+")),
+            OperatorEntry(id = "tesla", name = "Tesla", stations = 0, aliases = listOf("Tesla Supercharger"))
+        )
+        val filter = FilterState(selectedOperatorNames = setOf(" IONITY GMBH ", "enbw", "Tesla Supercharger", "unsupported"))
+
+        assertEquals(setOf("ionity", "enbw", "tesla"), filter.canonicalized(using = operators).normalizedOperatorNames)
+        assertTrue(FilterState(selectedOperatorNames = setOf("unsupported"))
+            .canonicalized(using = operators).normalizedOperatorNames.isEmpty())
+    }
+
+    @Test
+    fun canonicalOperatorIdWinsOverAnotherBrandsAlias() {
+        val filter = FilterState(selectedOperatorNames = setOf(" IONITY "))
+        val operators = listOf(
+            OperatorEntry(id = "other", name = "Other", stations = 0, aliases = listOf("IONITY")),
+            OperatorEntry(id = "ionity", name = "IONITY", stations = 0)
+        )
+
+        assertEquals(setOf("ionity"), filter.canonicalized(using = operators).normalizedOperatorNames)
+    }
+
+    @Test
+    fun missingOperatorCatalogPreservesSavedChoicesUntilAuthoritativeListArrives() {
+        val filter = FilterState(selectedOperatorNames = setOf("IONITY GmbH", "unknown"))
+
+        assertEquals(filter, filter.canonicalized(using = emptyList()))
+    }
+
+    @Test
     fun availableOnlyRequiresKnownFreeChargingPoint() {
         val available = sampleProperties(occupancyTotalEvses = 4, occupancyAvailableEvses = 1)
         val occupied = sampleProperties(

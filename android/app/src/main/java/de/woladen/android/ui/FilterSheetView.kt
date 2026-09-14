@@ -361,7 +361,7 @@ private fun OperatorControl(
             for (entry in sortedOperators) {
                 val checked = entry.id in selected
                 DropdownMenuItem(
-                    text = { Text("${entry.name} (${entry.stations})") },
+                    text = { Text(entry.name) },
                     leadingIcon = {
                         Icon(
                             imageVector = if (checked) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,

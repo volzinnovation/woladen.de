@@ -12,11 +12,13 @@ data class FilterState(
 ) {
     fun canonicalized(using: List<OperatorEntry>): FilterState {
         if (normalizedOperatorNames.isEmpty() || using.isEmpty()) return this
-        val migrated = normalizedOperatorNames.map { selected ->
-            using.firstOrNull { entry ->
-                listOf(entry.id, entry.name).plus(entry.aliases)
-                    .any { candidate -> candidate.equals(selected, ignoreCase = true) }
-            }?.id ?: selected
+        val migrated = normalizedOperatorNames.mapNotNull { selected ->
+            val exactID = using.firstOrNull { it.id.equals(selected, ignoreCase = true) }
+            val namedEntry = using.firstOrNull { entry ->
+                listOf(entry.name).plus(entry.aliases)
+                    .any { candidate -> candidate.trim().equals(selected, ignoreCase = true) }
+            }
+            (exactID ?: namedEntry)?.id
         }.toSet()
         return if (migrated == normalizedOperatorNames) this else copy(selectedOperatorNames = migrated)
     }
