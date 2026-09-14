@@ -61,17 +61,17 @@ class LiveApiClientRequestTest {
             longitude = 13.405,
             radiusMeters = 20_000,
             limit = 500,
-            filterState = FilterState(selectedOperatorNames = setOf("AC/DC GmbH"), minPowerKw = 150.0)
+            filterState = FilterState(selectedOperatorNames = setOf("operator-acdc"), minPowerKw = 150.0)
         )
 
         assertEquals(
-            "/v1/catalog/search?lat=52.520000&lon=13.405000&radius_m=20000&limit=100&mode=travel&min_power_kw=150.0&operator=AC%2FDC+GmbH",
+            "/v1/catalog/search?lat=52.520000&lon=13.405000&radius_m=20000&limit=100&mode=travel&min_power_kw=150.0&operator_group_id=operator-acdc",
             path
         )
     }
 
     @Test
-    fun catalogSearchPathOmitsOperatorWhenMultipleOperatorsAreSelected() {
+    fun catalogSearchPathRepeatsOperatorGroupParameterForMultipleSelections() {
         val path = catalogSearchPath(
             latitude = 52.52,
             longitude = 13.405,
@@ -81,7 +81,7 @@ class LiveApiClientRequestTest {
         )
 
         assertEquals(
-            "/v1/catalog/search?lat=52.520000&lon=13.405000&radius_m=20000&limit=100&mode=travel&min_power_kw=50.0",
+            "/v1/catalog/search?lat=52.520000&lon=13.405000&radius_m=20000&limit=100&mode=travel&min_power_kw=50.0&operator_group_id=EnBW&operator_group_id=IONITY",
             path
         )
     }

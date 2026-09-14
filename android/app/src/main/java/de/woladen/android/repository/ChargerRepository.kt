@@ -52,6 +52,22 @@ class ChargerRepository(
     private val stationSummaryCache = BoundedLruCache<String, GeoJsonFeature>(MAX_STATION_CACHE_ENTRIES)
     private val stationDetailCache = BoundedLruCache<String, CacheEntry<GeoJsonFeature>>(MAX_DETAIL_CACHE_ENTRIES)
     private var infoSummaryCache: CacheEntry<CatalogInfoSummary>? = null
+    private var operatorCatalogCache: CacheEntry<List<OperatorEntry>>? = null
+
+    suspend fun operatorCatalog(): List<OperatorEntry> {
+        synchronized(cacheLock) {
+            operatorCatalogCache?.let { entry ->
+                if (System.currentTimeMillis() - entry.storedAtMs <= INFO_FRESH_TTL_MS) {
+                    return entry.value
+                }
+            }
+        }
+        val operators = liveApiClient.operatorCatalog().operators
+        synchronized(cacheLock) {
+            operatorCatalogCache = CacheEntry(operators)
+        }
+        return operators
+    }
 
     suspend fun searchCatalog(
         latitude: Double,
@@ -84,28 +100,15 @@ class ChargerRepository(
         }
 
         val responses = runCatching {
-            val operatorNames = filterState.normalizedOperatorNames.sorted()
-            if (operatorNames.size <= 1) {
-                listOf(
-                    liveApiClient.catalogSearch(
-                        latitude = latitude,
-                        longitude = longitude,
-                        radiusMeters = radiusMeters,
-                        limit = limit,
-                        filterState = filterState
-                    )
+            listOf(
+                liveApiClient.catalogSearch(
+                    latitude = latitude,
+                    longitude = longitude,
+                    radiusMeters = radiusMeters,
+                    limit = limit,
+                    filterState = filterState
                 )
-            } else {
-                operatorNames.map { operatorName ->
-                    liveApiClient.catalogSearch(
-                        latitude = latitude,
-                        longitude = longitude,
-                        radiusMeters = radiusMeters,
-                        limit = limit,
-                        filterState = filterState.copy(selectedOperatorNames = setOf(operatorName))
-                    )
-                }
-            }
+            )
         }.getOrElse { error ->
             staleSearch?.let { return it }
             throw error
@@ -218,6 +221,7 @@ class ChargerRepository(
             stationDetailCache.clear()
             stationSummaryCache.clear()
             infoSummaryCache = null
+            operatorCatalogCache = null
         }
     }
 
@@ -258,6 +262,7 @@ class ChargerRepository(
             properties = ChargerProperties(
                 stationId = station.stationId,
                 operatorName = firstNonBlank(station.operatorName, station.stationName, "Unbekannt"),
+                operatorGroupIds = station.operatorGroupIds,
                 status = station.publicBundleStatus,
                 maxPowerKw = maxPowerKw,
                 chargingPointsCount = chargerCount,
@@ -309,7 +314,12 @@ class ChargerRepository(
                 amenitiesSource = "live-eu catalog",
                 amenityExamples = amenityExamples,
                 amenityCounts = amenityCounts,
-                countryCode = station.countryCode
+                countryCode = station.countryCode,
+                stationName = station.stationName,
+                stationClassification = station.stationClassification,
+                reliabilityPercent = station.reliabilityPercent,
+                lastUnavailableAt = station.lastUnavailableAt,
+                providerCanonicalId = station.providerCanonicalId
             ),
             liveSummary = station.liveSummary
         )

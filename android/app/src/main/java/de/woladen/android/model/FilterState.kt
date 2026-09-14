@@ -10,6 +10,17 @@ data class FilterState(
     val currentlyOpenOnly: Boolean = false,
     val routeMaxDistanceFromLocationKm: Double? = null
 ) {
+    fun canonicalized(using: List<OperatorEntry>): FilterState {
+        if (normalizedOperatorNames.isEmpty() || using.isEmpty()) return this
+        val migrated = normalizedOperatorNames.map { selected ->
+            using.firstOrNull { entry ->
+                listOf(entry.id, entry.name).plus(entry.aliases)
+                    .any { candidate -> candidate.equals(selected, ignoreCase = true) }
+            }?.id ?: selected
+        }.toSet()
+        return if (migrated == normalizedOperatorNames) this else copy(selectedOperatorNames = migrated)
+    }
+
     val operatorName: String
         get() = normalizedOperatorNames.singleOrNull().orEmpty()
 

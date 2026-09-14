@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         locationService = LocationService(applicationContext)
         favoritesStore = (application as WoladenApplication).favoritesStore
+        viewModel.handleDeepLink(intent?.data)
 
         val isDebuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         if (isDebuggable) {
@@ -111,5 +112,11 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        viewModel.handleDeepLink(intent.data)
     }
 }

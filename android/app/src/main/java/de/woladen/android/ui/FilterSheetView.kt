@@ -342,7 +342,7 @@ private fun OperatorControl(
         )
         OutlinedButton(onClick = { onExpandedChange(true) }, modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = operatorSelectionLabel(selected, stringResource(R.string.i18n_filters_alloperators)),
+                text = operatorSelectionLabel(selected, operators, stringResource(R.string.i18n_filters_alloperators)),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -359,7 +359,7 @@ private fun OperatorControl(
                 }
             )
             for (entry in sortedOperators) {
-                val checked = entry.name in selected
+                val checked = entry.id in selected
                 DropdownMenuItem(
                     text = { Text("${entry.name} (${entry.stations})") },
                     leadingIcon = {
@@ -369,7 +369,7 @@ private fun OperatorControl(
                         )
                     },
                     onClick = {
-                        onToggle(entry.name)
+                        onToggle(entry.id)
                     }
                 )
             }
@@ -377,9 +377,16 @@ private fun OperatorControl(
     }
 }
 
-private fun operatorSelectionLabel(selectedValues: Set<String>, allLabel: String): String {
+private fun operatorSelectionLabel(
+    selectedValues: Set<String>,
+    operators: List<OperatorEntry>,
+    allLabel: String
+): String {
     if (selectedValues.isEmpty()) return allLabel
-    return selectedValues.sortedWith(compareBy<String> { it.lowercase() }.thenBy { it }).joinToString(" · ")
+    return selectedValues
+        .map { selected -> operators.firstOrNull { it.id == selected }?.name ?: selected }
+        .sortedWith(compareBy<String> { it.lowercase() }.thenBy { it })
+        .joinToString(" · ")
 }
 
 @Composable

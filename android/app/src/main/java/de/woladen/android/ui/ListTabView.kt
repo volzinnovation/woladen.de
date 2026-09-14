@@ -67,6 +67,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import de.woladen.android.R
 import de.woladen.android.model.AvailabilityStatus
 import de.woladen.android.model.FilterState
+import de.woladen.android.model.OperatorEntry
 import de.woladen.android.model.StationCardState
 import de.woladen.android.model.availabilityStatus
 import de.woladen.android.model.GeoJsonFeature
@@ -279,7 +280,7 @@ private fun ActiveFilterSummary(
     viewModel: AppViewModel,
     locationService: LocationService
 ) {
-    val labels = activeFilterLabels(viewModel.filterState)
+    val labels = activeFilterLabels(viewModel.filterState, viewModel.operators)
     if (labels.isEmpty()) return
     val summaryText = stringResource(R.string.i18n_filters_selectedonly)
         .replace("{labels}", labels.joinToString(" · "))
@@ -344,9 +345,11 @@ private val FilterState.hasClearableFilters: Boolean
         minAmenityCount.toInt() != 0
 
 @Composable
-private fun activeFilterLabels(filter: FilterState): List<String> {
+private fun activeFilterLabels(filter: FilterState, operators: List<OperatorEntry>): List<String> {
     val labels = mutableListOf<String>()
-    labels += filter.normalizedOperatorNames.sorted()
+    labels += filter.normalizedOperatorNames
+        .map { selectedID -> operators.firstOrNull { it.id == selectedID }?.name ?: selectedID }
+        .sorted()
     val query = filter.amenityNameQuery.trim()
     if (query.isNotBlank()) {
         labels += stringResource(R.string.i18n_filters_nameprefix).replace("{value}", query)

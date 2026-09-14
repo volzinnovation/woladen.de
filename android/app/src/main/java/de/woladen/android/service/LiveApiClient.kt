@@ -18,6 +18,8 @@ import de.woladen.android.model.OpenStaticBundle
 import de.woladen.android.model.OpenStaticCountry
 import de.woladen.android.model.OpenStaticSource
 import de.woladen.android.model.OpenStaticSummary
+import de.woladen.android.model.OperatorCatalog
+import de.woladen.android.model.OperatorEntry
 import de.woladen.android.model.LiveEvse
 import de.woladen.android.model.LiveJsonValue
 import de.woladen.android.model.LiveStationDetail
@@ -25,6 +27,7 @@ import de.woladen.android.model.LiveStationLookupResponse
 import de.woladen.android.model.LiveStationSummary
 import de.woladen.android.model.RouteChargerResponse
 import de.woladen.android.model.RouteEndpoint
+import de.woladen.android.model.GeocodeResult
 import de.woladen.android.model.RouteFilterPayload
 import de.woladen.android.model.RouteGeometry
 import de.woladen.android.model.RouteNearestPoint
@@ -117,6 +120,16 @@ class LiveApiClient(
         parseCatalogStationDetail(readJsonResponse(connection))
     }
 
+    suspend fun operatorCatalog(): OperatorCatalog = withContext(Dispatchers.IO) {
+        val connection = openConnection(
+            path = "/v1/catalog/operators",
+            method = "GET",
+            timeoutMs = CATALOG_SUMMARY_TIMEOUT_MS
+        )
+        connection.setRequestProperty("Accept", "application/json")
+        parseOperatorCatalog(readJsonResponse(connection))
+    }
+
     suspend fun catalogInfoSummary(): CatalogInfoSummary = withContext(Dispatchers.IO) {
         val connection = openConnection(
             path = OPEN_STATIC_SUMMARY_PATH,
@@ -144,6 +157,27 @@ class LiveApiClient(
             writer.write(routeChargerRequestBody(origin, destination, filters))
         }
         parseRouteChargerResponse(readJsonResponse(connection))
+    }
+
+    suspend fun geocodeAutocomplete(
+        query: String,
+        latitude: Double? = null,
+        longitude: Double? = null,
+        limit: Int = 5
+    ): List<GeocodeResult> = withContext(Dispatchers.IO) {
+        val params = buildString {
+            append("q=").append(URLEncoder.encode(query.trim(), Charsets.UTF_8.name()))
+            latitude?.let { append("&lat=").append(it) }
+            longitude?.let { append("&lon=").append(it) }
+            append("&limit=").append(limit.coerceIn(1, 10))
+        }
+        val connection = openConnection(
+            path = "/v1/geocode/autocomplete?$params",
+            method = "GET",
+            timeoutMs = CATALOG_SEARCH_TIMEOUT_MS
+        )
+        connection.setRequestProperty("Accept", "application/json")
+        parseGeocodeResponse(readJsonResponse(connection))
     }
 
     private fun openConnection(path: String, method: String, timeoutMs: Int): HttpURLConnection {
@@ -384,6 +418,58 @@ class LiveApiClient(
         )
     }
 
+    private fun parseGeocodeResponse(payload: JSONObject): List<GeocodeResult> {
+        val values = payload.optJSONArray("results") ?: return emptyList()
+        return buildList {
+            for (index in 0 until values.length()) {
+                val item = values.optJSONObject(index) ?: continue
+                val label = item.optCleanString("label").ifBlank { item.optCleanString("name") }
+                val lat = item.optNullableDouble("lat") ?: continue
+                val lon = item.optNullableDouble("lon") ?: continue
+                if (label.isBlank()) continue
+                add(
+                    GeocodeResult(
+                        id = item.optCleanString("id").ifBlank { label },
+                        label = label,
+                        name = item.optCleanString("name").ifBlank { label },
+                        lat = lat,
+                        lon = lon,
+                        country = item.optCleanString("country"),
+                        countryCode = item.optCleanString("country_code").uppercase(Locale.ROOT),
+                        region = item.optCleanString("region"),
+                        locality = item.optCleanString("locality"),
+                        postalCode = item.optCleanString("postal_code"),
+                        confidence = item.optNullableDouble("confidence")
+                    )
+                )
+            }
+        }
+    }
+
+    private fun parseOperatorCatalog(payload: JSONObject): OperatorCatalog {
+        val operatorArray = payload.optJSONArray("operators") ?: JSONArray()
+        val operators = mutableListOf<OperatorEntry>()
+        for (index in 0 until operatorArray.length()) {
+            val entry = operatorArray.optJSONObject(index) ?: continue
+            val name = entry.optCleanString("name")
+            if (name.isBlank()) continue
+            operators += OperatorEntry(
+                id = entry.optCleanString("id").ifBlank { name },
+                name = name,
+                stations = entry.optInt("stations", 0),
+                aliases = entry.optJSONArray("aliases")
+                    ?.let { values -> (0 until values.length()).map { values.optString(it).trim() }.filter { it.isNotBlank() } }
+                    ?: emptyList()
+            )
+        }
+        return OperatorCatalog(
+            generatedAt = payload.optCleanString("generated_at").ifBlank { null },
+            minStations = payload.optInt("min_stations", 0),
+            totalOperators = payload.optInt("total_operators", operators.size),
+            operators = operators
+        )
+    }
+
     private fun parseRouteChargerResponse(payload: JSONObject): RouteChargerResponse {
         val stationArray = payload.optJSONArray("stations") ?: JSONArray()
         val stations = mutableListOf<RouteStationCandidate>()
@@ -507,7 +593,14 @@ class LiveApiClient(
             nearestAmenityKind = payload.optCleanString("nearest_amenity_kind"),
             nearestAmenityName = payload.optCleanString("nearest_amenity_name"),
             nearestAmenityDistanceM = payload.optNullableDouble("nearest_amenity_distance_m"),
-            liveSummary = liveSummary
+            liveSummary = liveSummary,
+            operatorGroupIds = payload.optJSONArray("operator_group_ids")
+                ?.let { values -> (0 until values.length()).map { values.optString(it) }.filter { it.isNotBlank() }.toSet() }
+                ?: emptySet(),
+            stationClassification = payload.optCleanString("station_classification"),
+            reliabilityPercent = payload.optNullableDouble("reliability_percent"),
+            lastUnavailableAt = payload.optCleanString("last_unavailable_at").ifBlank { null },
+            providerCanonicalId = payload.optCleanString("provider_canonical_id").ifBlank { null }
         )
     }
 
@@ -866,6 +959,7 @@ internal fun routeChargerRequestBody(
             "filters",
             JSONObject()
                 .put("operator", filters.operator)
+                .put("operator_group_ids", JSONArray(filters.operatorGroupIds))
                 .put("min_power_kw", filters.minPowerKw)
                 .put("min_amenities_total", filters.minAmenitiesTotal)
                 .put("selected_amenities", JSONArray(filters.selectedAmenities))
@@ -1056,14 +1150,13 @@ internal fun catalogSearchPath(
         "mode" to "travel",
         "min_power_kw" to "%.1f".format(Locale.ROOT, filterState.minPowerKw.coerceAtLeast(0.0))
     )
-    val operator = filterState.normalizedOperatorNames.singleOrNull().orEmpty()
-    if (operator.isNotBlank()) {
-        params["operator"] = operator
-    }
-
-    return "/v1/catalog/search?" + params.entries.joinToString("&") { (key, value) ->
+    val operatorParams = filterState.normalizedOperatorNames.sorted()
+        .filter { it.isNotBlank() }
+        .joinToString("&") { value -> "operator_group_id=${urlEncode(value)}" }
+    val baseParams = params.entries.joinToString("&") { (key, value) ->
         "${urlEncode(key)}=${urlEncode(value)}"
     }
+    return "/v1/catalog/search?" + listOf(baseParams, operatorParams).filter { it.isNotBlank() }.joinToString("&")
 }
 
 internal fun catalogStationDetailPath(stationId: String): String {

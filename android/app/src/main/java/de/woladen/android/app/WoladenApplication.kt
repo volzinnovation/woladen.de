@@ -6,6 +6,7 @@ import de.woladen.android.repository.ChargerRepository
 import de.woladen.android.service.LiveApiClient
 import de.woladen.android.store.FavoritesStore
 import de.woladen.android.store.FilterStateStore
+import de.woladen.android.store.TripStore
 import de.woladen.android.util.AppStrings
 
 class WoladenApplication : Application() {
@@ -13,6 +14,7 @@ class WoladenApplication : Application() {
     val chargerRepository: ChargerRepository by lazy { ChargerRepository(liveApiClient) }
     val favoritesStore: FavoritesStore by lazy { FavoritesStore(this) }
     val filterStateStore: FilterStateStore by lazy { FilterStateStore(this) }
+    val tripStore: TripStore by lazy { TripStore(this) }
 
     override fun onCreate() {
         super.onCreate()

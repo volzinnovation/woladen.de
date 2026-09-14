@@ -3,6 +3,7 @@ package de.woladen.android.viewmodel
 import android.app.Application
 import android.content.Context
 import android.location.Location
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -28,6 +29,7 @@ import de.woladen.android.service.lookupStationIdBatches
 import de.woladen.android.util.AppStrings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -130,6 +132,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val pendingLiveDetailStationIds: MutableSet<String> = mutableSetOf()
     private val pendingCatalogDetailStationIds: MutableSet<String> = mutableSetOf()
     private var routeCalculatedFilters: RouteFilterPayload? = null
+    private var normativeOperators: List<OperatorEntry>? = null
 
     private var refreshNearbyJob: Job? = null
     private var liveSummaryRefreshJob: Job? = null
@@ -330,6 +333,23 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         selectedFeatureRefreshJob = null
     }
 
+    /** Handles the same woladen:// links used by the iPhone app and widget. */
+    fun handleDeepLink(uri: Uri?) {
+        if (uri?.scheme != "woladen") return
+        when (uri.host?.lowercase()) {
+            "trip", "plan" -> selectedTab = AppTab.ROUTE
+            "station" -> {
+                val stationId = uri.pathSegments.lastOrNull()?.trim().orEmpty()
+                if (stationId.isBlank()) return
+                selectedTab = AppTab.LIST
+                viewModelScope.launch {
+                    runCatching { repository.loadCatalogStationDetail(stationId) }
+                        .onSuccess(::selectFeature)
+                }
+            }
+        }
+    }
+
     fun featureForStationId(stationId: String): GeoJsonFeature? {
         return allFeatures.firstOrNull { it.properties.stationId == stationId }
             ?: discoveredFeatures.firstOrNull { it.properties.stationId == stationId }
@@ -428,6 +448,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun routeFiltersRequireRecalculation(): Boolean {
         val baseline = routeCalculatedFilters ?: return false
         val current = RouteFilterPayload.from(routeEffectiveFilter())
+        if (baseline.operatorGroupIds.isNotEmpty() && current.operatorGroupIds != baseline.operatorGroupIds) return true
         if (baseline.operator.isNotBlank() && current.operator != baseline.operator) return true
         if (baseline.operator.isBlank() && current.operator.isNotBlank()) return false
         if (current.minPowerKw < baseline.minPowerKw) return true
@@ -704,6 +725,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun rebuildOperators() {
+        normativeOperators?.let {
+            operators = it
+            return
+        }
         operators = allFeatures
             .asSequence()
             .map { it.properties.operatorName.trim() }
@@ -779,6 +804,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             isLoading = allFeatures.isEmpty() || cachedPool.isEmpty()
+            val operatorCatalog = async { runCatching { repository.operatorCatalog() }.getOrNull() }
+            val loadedOperators = operatorCatalog.await()
+            if (!isActive) return@launch
+            normativeOperators = loadedOperators
+            loadedOperators?.let { catalog ->
+                operators = catalog
+                val migrated = filterState.canonicalized(using = catalog)
+                if (migrated != filterState) filterState = migrated
+            }
             val result = runCatching {
                 repository.searchCatalog(
                     latitude = centerLat,

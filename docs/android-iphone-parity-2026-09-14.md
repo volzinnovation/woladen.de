@@ -4,18 +4,35 @@ Date: 2026-09-14. Scope: current source on `main`, including the pre-existing un
 
 ## Implementation status
 
-The first milestone described here is now implemented in the Android source:
+The first milestone described here is now implemented in the Android source,
+and the first trip-parity slice is also in place:
 
 - AndroidX Car App 1.7.0 is configured with the POI service, map-template
-  capability, production host validation, and API 36 target.
+  capability, a release host-validator hook, and API 36 target. The current
+  release path still uses the library sample host resource until the exact
+  production host IDs are confirmed.
 - Android Auto has nearby and favorite charger screens, live status enrichment,
   station details, shared phone filters/favorites, location permission handling,
   and navigation handoff through `geo:`.
 - Android CI now runs lint, unit tests, and a debug APK build.
+- Android persists saved route plans, vehicle energy settings, SOC assumptions,
+  charging windows, stop selections and Plan/Fahrt mode in a shared trip store.
+- The route tab can save, reopen, edit, delete and activate plans; it now exposes
+  charging-window station selection, vehicle profile fields, live progress,
+  base ETA, projected arrival SOC and complete/skip/end controls.
+- Android Auto opens the same active-trip state with navigation, progress/ETA,
+  complete/skip and replacement-stop actions; a compact home-screen widget also
+  reflects the active plan.
+- Android route search uses the live API autocomplete endpoint, and station
+  detail models expose classification, reliability, last-unavailable and
+  provider-canonical metadata when supplied.
+- `woladen://trip`, `woladen://plan` and `woladen://station/{id}` deep links are
+  routed into the phone app. Android Auto now rejects missing, stale (over five
+  minutes) or inaccurate (over 250 m) last-known locations.
 
-The persistent route/energy/Fahrt domain, widgets/deep links, and traffic-aware
-ETA remain the follow-on work described below; this milestone does not claim
-full iPhone feature parity for those areas.
+This closes the core persisted-trip and trip-aware-car slice. Traffic-aware ETA,
+single-station target trips, richer provider coverage preferences and
+real-head-unit validation remain follow-on work.
 
 ## Recommendation
 
@@ -33,16 +50,16 @@ References below point to the inspected working-tree source. Source behavior tak
 | --- | --- | --- | --- |
 | Charger discovery | List, map, search, filters, live status and adaptive layouts | Substantially present | Preserve behavior and compare representative phone/tablet flows. |
 | Favorites and station details | Categories, route-to-favorites, amenity map, EVSE status, price and contact/navigation actions | Substantially present | Add the trip-target actions described below; avoid rebuilding existing functionality. |
-| Optional station history | Reliability percentage and last-unavailable timestamp, when supplied | Missing from Android station model/detail UI | Carry through the optional API fields and display them only when available. |
+| Optional station history | Reliability percentage and last-unavailable timestamp, when supplied | Carried through the Android catalog/detail model and shown when supplied; classification and provider ID are also shown | Validate production payload coverage and formatting. |
 | Basic route search | Origin/destination, route chargers, map and filtering | Present | Reuse the existing route response and station identifiers. |
-| Persistent route plans | Save, edit, reopen, recalculate, delete, select stops and start a route | Missing; route data is ViewModel/UI state | Port route models, persistence and editor semantics. Saving route chargers as favorites is already available, but does not persist a trip plan. |
-| Energy planning | Named vehicle profiles, battery capacity, consumption, average charging power, initial/reserve/target SOC, charging windows and provider coverage/preference | Missing | Port the deterministic planner and its tests, then add the phone controls. |
-| Fahrt mode | Dedicated driving view with three layouts, next stop, progress, ETA, projected arrival SOC, complete/skip/replace and end trip | Missing | Port the trip state machine and phone views. |
-| Single-station trip | Select a nearby/favorite station as the active target without planning a full route | Missing | Persist the target and expose it to phone, car and widget. |
-| In-car UI | Substantial CarPlay charging implementation | No Android Auto integration | Add service, session, templated screens, host navigation and car lifecycle handling. |
-| Widgets/deep links | Small/medium home-screen widget, nearest matching charger or active target; links to a station, planning mode or active trip | Missing | Add Android widget, refresh scheduling, station links and mode entry. |
-| Traffic-aware ETA | MapKit calculation, including remaining stops and estimated charging time | No equivalent service | Confirm an available traffic-capable API/provider; distinguish this from a route-duration estimate. |
-| Search implementation | MapKit address/POI completion | Android Geocoder suggestions, embedded in UI code | Extract search behind an interface and validate equivalent destination discovery; exact provider results will differ. |
+| Persistent route plans | Save, edit, reopen, recalculate, delete, select stops and start a route | Shared persisted plans with save/load/edit/delete, charging-window station selection and Plan/Fahrt activation | Add provider constraints and richer editor polish. |
+| Energy planning | Named vehicle profiles, battery capacity, consumption, average charging power, initial/reserve/target SOC, charging windows and provider coverage/preference | Vehicle profile fields, SOC settings and deterministic charging-window calculations are persisted and editable from the route card | Add named multi-profile management and provider preferences. |
+| Fahrt mode | Dedicated driving view with three layouts, next stop, progress, ETA, projected arrival SOC, complete/skip/replace and end trip | Active phone card and Android Auto detail expose next stop, progress, base ETA, projected SOC, complete/skip/replace and end trip | Port the richer iPhone layouts and traffic feed. |
+| Single-station trip | Select a nearby/favorite station as the active target without planning a full route | Still requires a route plan | Persist a standalone station target and expose it to phone, car and widget. |
+| In-car UI | Substantial CarPlay charging implementation | Android Auto POI finder plus active-trip detail, navigation, progress, stop transitions and replacement actions | Validate host IDs, DHU and a real head unit. |
+| Widgets/deep links | Small/medium home-screen widget, nearest matching charger or active target; links to a station, planning mode or active trip | Compact active-trip/planner widget plus trip/plan/station deep links | Add nearest-matching station selection, richer widget families and exact planning payloads. |
+| Traffic-aware ETA | MapKit calculation, including remaining stops and estimated charging time | Shared base ETA includes remaining drive, charging windows and projected destination SOC; it is explicitly not traffic-adjusted | Confirm an available traffic-capable API/provider. |
+| Search implementation | MapKit address/POI completion | Live API autocomplete with structured labels and locality/region metadata | Validate production endpoint availability and equivalent destination discovery; exact provider results will differ. |
 
 Core evidence:
 
@@ -102,13 +119,17 @@ Required wiring:
 
 No new backend endpoint is evident for this first release: the app already has catalog search/detail, live lookup/detail and favorites persistence. Continue using `https://live-eu.woladen.de` for catalog/live data, EU + Switzerland + Norway coverage, the 50 kW default threshold and 250 m amenity radius.
 
-### Shared state is the prerequisite
+### Shared state and the remaining trip work
 
-The implementation now keeps the live API client, charger repository, favorites
-store and persisted filter view in `WoladenApplication`. `MainActivity`,
-`AppViewModel` and the car session therefore share catalog caches and phone/car
-favorite and filter state while keeping presentation state separate. The later
-trip port still needs an application-level trip store. [MainActivity](/Users/raphaelvolz/Github/woladen.de/android/app/src/main/java/de/woladen/android/MainActivity.kt:28), [AppViewModel](/Users/raphaelvolz/Github/woladen.de/android/app/src/main/java/de/woladen/android/viewmodel/AppViewModel.kt:110), [application services](/Users/raphaelvolz/Github/woladen.de/android/app/src/main/java/de/woladen/android/app/WoladenApplication.kt:8)
+The implementation keeps the live API client, charger repository, favorites
+store, persisted filters and the new trip store in `WoladenApplication`.
+`MainActivity`, `AppViewModel`, the route tab, widget and car session can
+therefore read the same active plan while keeping presentation state separate.
+The shared state is now dynamic for progress, base ETA, stop completion/skip/
+replacement and vehicle settings. Remaining parity work is traffic ETA,
+standalone station targets, named multi-profile/provider preferences and richer
+phone/car presentation.
+[MainActivity](/Users/raphaelvolz/Github/woladen.de/android/app/src/main/java/de/woladen/android/MainActivity.kt:28), [AppViewModel](/Users/raphaelvolz/Github/woladen.de/android/app/src/main/java/de/woladen/android/viewmodel/AppViewModel.kt:110), [application services](/Users/raphaelvolz/Github/woladen.de/android/app/src/main/java/de/woladen/android/app/WoladenApplication.kt:8)
 
 Keep subscriptions and network/location work scoped to active consumers, not
 merely to the lifetime of the application singleton. Retain bounded caches and
@@ -122,7 +143,10 @@ Use `CarContext.requestPermissions` when required; on Android Auto the permissio
 
 ### Second release: trip-aware car view
 
-Once Android has persistent trip/energy state, expose the active stop, progress, ETA, estimated arrival SOC, live availability and a short replacement flow in the car. Changes made on either display must affect the same trip. Preserve a standalone station target with unknown arrival SOC when no meaningful energy projection exists.
+Android now has persistent trip/energy state and exposes live progress, base
+ETA, estimated arrival SOC, stop completion/skip and a short replacement flow in
+the car. Changes made on either display affect the same trip. A standalone
+station target with unknown arrival SOC is still a separate follow-on item.
 
 Port the domain semantics from Swift into testable Kotlin: route ordering, stop eligibility, energy windows, provider constraints, activation, completion, skipping and replacement. Add the corresponding phone views faithfully to the existing product design. Cross-check current web semantics when implementing; this repository's policy keeps web as the feature/design reference.
 
@@ -143,7 +167,7 @@ Car quality requirements include completing tasks within five screens, respondin
 
 Recommended evidence before release:
 
-- Existing Android unit tests and phone smoke flows pass; add route and trip scenarios currently absent from the smoke suite.
+- Android unit tests, lint, a debug APK and a signed release bundle pass; add route/trip UI and car scenarios currently absent from the smoke suite.
 - Port meaningful cases from iPhone's [TripPlanningTests.swift](/Users/raphaelvolz/Github/woladen.de/iphone/WoladenTests/TripPlanningTests.swift:16), [CarPlay filtering/location cases](/Users/raphaelvolz/Github/woladen.de/iphone/WoladenTests/FilterMatchingTests.swift:90), and [widget selection cases](/Users/raphaelvolz/Github/woladen.de/iphone/WoladenTests/WidgetStationSelectionTests.swift:6).
 - Test templates, navigation intents, permission handling and session transitions with the library testing helpers. [TestCarContext](https://developer.android.com/reference/kotlin/androidx/car/app/testing/TestCarContext), [SessionController](https://developer.android.com/reference/androidx/car/app/testing/SessionController)
 - Run the Desktop Head Unit with a phone, then at least one real head unit. Cover cold launch, reconnect, phone locked, process recreation, day/night, different screen/input configurations, no location, slow/no network and live status changes. The DHU is Google's Android Auto head-unit emulator. [DHU testing](https://developer.android.com/training/cars/testing/dhu)

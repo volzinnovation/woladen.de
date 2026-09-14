@@ -80,7 +80,13 @@ data class ChargerProperties(
     val amenitiesTotal: Int,
     val amenitiesSource: String,
     val amenityExamples: List<AmenityExample>,
-    val amenityCounts: Map<String, Int>
+    val amenityCounts: Map<String, Int>,
+    val operatorGroupIds: Set<String> = emptySet(),
+    val stationName: String = "",
+    val stationClassification: String = "",
+    val reliabilityPercent: Double? = null,
+    val lastUnavailableAt: String? = null,
+    val providerCanonicalId: String? = null
 ) {
     val displayedMaxPowerKw: Double
         get() {
@@ -154,8 +160,33 @@ data class ChargerProperties(
     val hasPrimaryDetailHighlights: Boolean
         get() = priceDisplay.isNotBlank() || openingHoursDisplay.isNotBlank()
 
+    val effectiveStationClassification: String
+        get() = stationClassification.trim().lowercase().takeIf {
+            it in setOf("gold", "silver", "bronze", "unclassified")
+        } ?: when {
+            amenitiesTotal > 10 -> "gold"
+            amenitiesTotal > 5 -> "silver"
+            amenitiesTotal > 0 -> "bronze"
+            else -> "unclassified"
+        }
+
     val staticDetailRows: List<DetailRow>
         get() = buildList {
+            add(
+                DetailRow(
+                    AppStrings.get(R.string.i18n_station_classification),
+                    effectiveStationClassification.replaceFirstChar { character -> character.uppercase() }
+                )
+            )
+            reliabilityPercent?.takeIf { it.isFinite() }?.let {
+                add(DetailRow(AppStrings.get(R.string.i18n_station_reliability), "${it.coerceIn(0.0, 100.0).toInt()}%"))
+            }
+            lastUnavailableAt?.trim()?.takeIf { it.isNotBlank() }?.let {
+                add(DetailRow(AppStrings.get(R.string.i18n_station_lastunavailable), it))
+            }
+            providerCanonicalId?.trim()?.takeIf { it.isNotBlank() }?.let {
+                add(DetailRow(AppStrings.get(R.string.i18n_station_providerid), it))
+            }
             if (paymentMethodsDisplay.isNotBlank()) add(DetailRow(AppStrings.get(R.string.i18n_staticdetails_payment), paymentMethodsDisplay))
             if (authMethodsDisplay.isNotBlank()) add(DetailRow(AppStrings.get(R.string.i18n_staticdetails_access), authMethodsDisplay))
             if (connectorTypesDisplay.isNotBlank()) add(DetailRow(AppStrings.get(R.string.i18n_staticdetails_connectors), connectorTypesDisplay))

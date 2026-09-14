@@ -56,7 +56,12 @@ data class CatalogStation(
     val nearestAmenityKind: String,
     val nearestAmenityName: String,
     val nearestAmenityDistanceM: Double?,
-    val liveSummary: LiveStationSummary?
+    val liveSummary: LiveStationSummary?,
+    val operatorGroupIds: Set<String> = emptySet(),
+    val stationClassification: String = "",
+    val reliabilityPercent: Double? = null,
+    val lastUnavailableAt: String? = null,
+    val providerCanonicalId: String? = null
 )
 
 data class CatalogCharger(

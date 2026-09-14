@@ -152,7 +152,7 @@ fun StationDetailSheet(
                         )
                     }
                     Text(
-                        text = feature.properties.operatorName,
+                        text = feature.properties.stationName.ifBlank { feature.properties.operatorName },
                         style = MaterialTheme.typography.titleLarge,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -329,7 +329,7 @@ fun StationDetailPane(
                     )
                 }
                 Text(
-                    text = feature.properties.operatorName,
+                    text = feature.properties.stationName.ifBlank { feature.properties.operatorName },
                     style = MaterialTheme.typography.titleLarge,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -478,7 +478,7 @@ fun StationDetailWideDialog(
                                 )
                             }
                             Text(
-                                text = feature.properties.operatorName,
+                                text = feature.properties.stationName.ifBlank { feature.properties.operatorName },
                                 style = MaterialTheme.typography.titleLarge,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,

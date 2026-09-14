@@ -9,5 +9,7 @@ data class OperatorCatalog(
 
 data class OperatorEntry(
     val name: String,
-    val stations: Int
+    val stations: Int,
+    val id: String = name,
+    val aliases: List<String> = emptyList()
 )

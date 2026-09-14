@@ -9,8 +9,12 @@ private val nonAlphanumericRegex = "[^\\p{L}\\p{N}]+".toRegex()
 
 fun ChargerProperties.matches(filterState: FilterState): Boolean {
     val selectedOperators = filterState.normalizedOperatorNames
-    if (selectedOperators.isNotEmpty() && operatorName !in selectedOperators) {
-        return false
+    if (selectedOperators.isNotEmpty()) {
+        if (operatorGroupIds.isNotEmpty()) {
+            if (selectedOperators.intersect(operatorGroupIds).isEmpty()) return false
+        } else if (operatorName !in selectedOperators) {
+            return false
+        }
     }
     if (maxPowerKw < filterState.minPowerKw) {
         return false

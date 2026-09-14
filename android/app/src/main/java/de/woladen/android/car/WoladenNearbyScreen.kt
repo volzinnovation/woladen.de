@@ -27,6 +27,9 @@ import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import de.woladen.android.app.WoladenApplication
 import de.woladen.android.model.GeoJsonFeature
+import de.woladen.android.model.RoutePlan
+import de.woladen.android.model.TripEtaEstimator
+import de.woladen.android.model.projectRoutePositionM
 import de.woladen.android.model.availabilityStatus
 import de.woladen.android.model.availabilityCounts
 import de.woladen.android.model.displayPrice
@@ -95,15 +98,39 @@ internal class WoladenNearbyScreen(carContext: CarContext) : Screen(carContext) 
         } else {
             "No fast chargers found nearby"
         }
-        if (stations.isEmpty()) {
+        val activePlan = application.tripStore.activePlan
+        if (stations.isEmpty() && activePlan == null) {
             return ItemList.Builder().setNoItemsMessage(message).build()
         }
 
         val builder = ItemList.Builder()
+        activePlan?.let { builder.addItem(buildTripRow(it)) }
         stations.take(MAX_CAR_ITEMS).forEach { station ->
             builder.addItem(buildStationRow(station))
         }
         return builder.build()
+    }
+
+    private fun buildTripRow(plan: RoutePlan): Row {
+        val nextStop = plan.nextStop
+        val currentPosition = location?.let { projectRoutePositionM(plan.route, it.latitude, it.longitude) } ?: 0
+        val eta = TripEtaEstimator.estimate(plan, currentPosition)
+        val soc = nextStop?.let { station ->
+            plan.windows.firstNotNullOfOrNull { window -> window.projectedArrivalSocByStationId[station.stationId] }
+        } ?: eta.projectedArrivalSocPercent
+        val detail = listOfNotNull(
+            nextStop?.let { "Next stop: ${it.stationName.ifBlank { it.operatorName }}" },
+            "Arrival SOC ${soc.toInt()}%",
+            "ETA ${formatEta(eta.destinationArrivalEpochMs)}",
+            "${(eta.progress * 100.0).roundToInt()}% complete"
+        ).joinToString(" • ")
+        return Row.Builder()
+            .setTitle("Active trip")
+            .addText(detail)
+            .setOnClickListener {
+                screenManager.push(WoladenTripDetailScreen(carContext))
+            }
+            .build()
     }
 
     private fun buildStationRow(station: GeoJsonFeature): Row {
@@ -126,7 +153,8 @@ internal class WoladenNearbyScreen(carContext: CarContext) : Screen(carContext) 
             amenities,
             station.occupancySourceLabel ?: station.liveUpdatedLabel
         ).joinToString(" • ")
-        val title = station.properties.operatorName.ifBlank { station.properties.city }
+        val title = station.properties.stationName.ifBlank { station.properties.operatorName }
+            .ifBlank { station.properties.city }
             .ifBlank { station.id }
         val text = if (distanceLabel.isBlank()) detail else "$distanceLabel • $detail"
         val spannedText = SpannableString(text)
@@ -288,7 +316,10 @@ internal class WoladenNearbyScreen(carContext: CarContext) : Screen(carContext) 
             .mapNotNull { provider -> runCatching { manager.getLastKnownLocation(provider) }.getOrNull() }
             .maxByOrNull { it.time }
         return candidate?.takeIf {
-            it.time <= 0L || System.currentTimeMillis() - it.time <= MAX_LOCATION_AGE_MS
+            isUsableCarLocation(
+                timestampMillis = it.time,
+                accuracyMeters = if (it.hasAccuracy()) it.accuracy else null
+            )
         }
     }
 
@@ -297,8 +328,117 @@ internal class WoladenNearbyScreen(carContext: CarContext) : Screen(carContext) 
         private const val SEARCH_LIMIT = 20
         private const val MAX_CAR_ITEMS = 6
         private const val LIVE_LOOKUP_TIMEOUT_MS = 3_000L
-        private const val MAX_LOCATION_AGE_MS = 15 * 60 * 1_000L
+        internal const val MAX_LOCATION_AGE_MS = 5 * 60 * 1_000L
+        internal const val MAX_LOCATION_ACCURACY_METERS = 250f
     }
+}
+
+internal fun isUsableCarLocation(
+    timestampMillis: Long,
+    accuracyMeters: Float?,
+    nowMillis: Long = System.currentTimeMillis()
+): Boolean {
+    val age = nowMillis - timestampMillis
+    return timestampMillis > 0L && age in 0..WoladenNearbyScreen.MAX_LOCATION_AGE_MS &&
+        accuracyMeters != null && accuracyMeters <= WoladenNearbyScreen.MAX_LOCATION_ACCURACY_METERS
+}
+
+/** Active trip controls available from the Android Auto surface. */
+internal class WoladenTripDetailScreen(carContext: CarContext) : Screen(carContext) {
+    private val application = carContext.applicationContext as WoladenApplication
+
+    override fun onGetTemplate(): Template {
+        val plan = application.tripStore.activePlan
+        if (plan == null) {
+            return ListTemplate.Builder()
+                .setTitle("Active trip")
+                .setHeaderAction(Action.BACK)
+                .setSingleList(ItemList.Builder().setNoItemsMessage("No active trip").build())
+                .build()
+        }
+        val location = lastKnownCarLocation(carContext)
+        val routePosition = location?.let { projectRoutePositionM(plan.route, it.latitude, it.longitude) } ?: 0
+        val eta = TripEtaEstimator.estimate(plan, routePosition)
+        val rows = mutableListOf<Row>()
+        val nextStop = plan.nextStop
+        rows += Row.Builder()
+            .setTitle("Trip progress")
+            .addText("${(eta.progress * 100.0).roundToInt()}% • ETA ${formatEta(eta.destinationArrivalEpochMs)} • Arrival SOC ${eta.projectedArrivalSocPercent.toInt()}%")
+            .build()
+        if (nextStop != null) {
+            rows += Row.Builder()
+                .setTitle("Navigate to next stop")
+                .addText(nextStop.stationName.ifBlank { nextStop.operatorName })
+                .setOnClickListener {
+                    carContext.startCarApp(
+                        Intent(CarContext.ACTION_NAVIGATE, Uri.parse("geo:${nextStop.latitude},${nextStop.longitude}"))
+                    )
+                }
+                .build()
+            rows += Row.Builder()
+                .setTitle("Complete stop")
+                .addText("Mark ${nextStop.stationName.ifBlank { nextStop.operatorName }} as charged")
+                .setOnClickListener {
+                    application.tripStore.completeNextStop()
+                    invalidate()
+                }
+                .build()
+            rows += Row.Builder()
+                .setTitle("Skip stop")
+                .addText("Continue without charging here")
+                .setOnClickListener {
+                    application.tripStore.skipNextStop()
+                    invalidate()
+                }
+                .build()
+            val window = plan.windows.firstOrNull { nextStop.stationId in it.candidateStationIds }
+            window?.candidateStationIds
+                ?.filterNot { it == nextStop.stationId }
+                ?.mapNotNull(plan::station)
+                ?.take(3)
+                ?.forEach { candidate ->
+                    rows += Row.Builder()
+                        .setTitle("Replace with ${candidate.stationName.ifBlank { candidate.operatorName }}")
+                        .addText("Arrival SOC ${window.projectedArrivalSocByStationId[candidate.stationId]?.toInt() ?: 0}%")
+                        .setOnClickListener {
+                            application.tripStore.replaceStop(plan.id, nextStop.stationId, candidate.stationId)
+                            invalidate()
+                        }
+                        .build()
+                }
+        }
+        rows += Row.Builder()
+            .setTitle("End trip")
+            .addText("Leave trip mode and keep this plan saved")
+            .setOnClickListener {
+                application.tripStore.endTrip()
+                screenManager.pop()
+            }
+            .build()
+        return ListTemplate.Builder()
+            .setTitle("Active trip")
+            .setHeaderAction(Action.BACK)
+            .setSingleList(ItemList.Builder().apply { rows.take(10).forEach(::addItem) }.build())
+            .build()
+    }
+}
+
+private fun lastKnownCarLocation(carContext: CarContext): Location? {
+    if (carContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED &&
+        carContext.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED
+    ) return null
+    val manager = carContext.getSystemService(LocationManager::class.java) ?: return null
+    val candidate = manager.getProviders(true)
+        .mapNotNull { provider -> runCatching { manager.getLastKnownLocation(provider) }.getOrNull() }
+        .maxByOrNull { it.time }
+    return candidate?.takeIf {
+        isUsableCarLocation(it.time, if (it.hasAccuracy()) it.accuracy else null)
+    }
+}
+
+private fun formatEta(epochMillis: Long): String {
+    val formatter = java.text.SimpleDateFormat("HH:mm", Locale.getDefault())
+    return formatter.format(java.util.Date(epochMillis))
 }
 
 internal class WoladenStationDetailScreen(
@@ -328,7 +468,9 @@ internal class WoladenStationDetailScreen(
 
     override fun onGetTemplate(): Template {
         val properties = feature.properties
-        val stationTitle = properties.operatorName.ifBlank { properties.city }.ifBlank { feature.id }
+        val stationTitle = properties.stationName.ifBlank { properties.operatorName }
+            .ifBlank { properties.city }
+            .ifBlank { feature.id }
         val rows = mutableListOf<Row>()
         rows += Row.Builder()
             .setTitle("Navigate")
@@ -407,4 +549,65 @@ private fun formatDistance(meters: Float): String {
 
 private fun formatNumber(value: Double): String {
     return if (value % 1.0 == 0.0) value.toInt().toString() else String.format(Locale.getDefault(), "%.1f", value)
+}
+
+private fun de.woladen.android.model.TripStationSnapshot.toFeature(): GeoJsonFeature {
+    val properties = de.woladen.android.model.ChargerProperties(
+        stationId = stationId,
+        countryCode = countryCode,
+        stationName = stationName,
+        operatorName = operatorName,
+        status = "",
+        maxPowerKw = maxPowerKw,
+        chargingPointsCount = chargingPointsCount,
+        maxIndividualPowerKw = maxPowerKw,
+        postcode = "",
+        city = city,
+        address = address,
+        occupancySourceUid = "",
+        occupancySourceName = "",
+        occupancyStatus = availabilityStatus.rawValue,
+        occupancyLastUpdated = "",
+        occupancyTotalEvses = totalEvses,
+        occupancyAvailableEvses = availableEvses,
+        occupancyOccupiedEvses = totalEvses - availableEvses,
+        occupancyChargingEvses = 0,
+        occupancyOutOfOrderEvses = 0,
+        occupancyUnknownEvses = 0,
+        detailSourceUid = "",
+        detailSourceName = "",
+        detailLastUpdated = "",
+        datexSiteId = "",
+        datexStationIds = "",
+        datexChargePointIds = "",
+        priceDisplay = priceDisplay,
+        priceEnergyEurKwhMin = null,
+        priceEnergyEurKwhMax = null,
+        priceCurrency = "",
+        priceQuality = "",
+        openingHoursDisplay = "",
+        openingHoursIs24_7 = false,
+        helpdeskPhone = "",
+        paymentMethodsDisplay = "",
+        authMethodsDisplay = "",
+        connectorTypesDisplay = "",
+        currentTypesDisplay = "",
+        connectorCount = chargingPointsCount,
+        greenEnergy = null,
+        serviceTypesDisplay = "",
+        detailsJson = "",
+        amenitiesTotal = 0,
+        amenitiesSource = "",
+        amenityExamples = emptyList(),
+        amenityCounts = emptyMap(),
+        stationClassification = classification,
+        reliabilityPercent = reliabilityPercent,
+        lastUnavailableAt = lastUnavailableAt,
+        providerCanonicalId = providerCanonicalId
+    )
+    return GeoJsonFeature(
+        id = stationId,
+        geometry = de.woladen.android.model.GeoJsonPointGeometry("Point", listOf(longitude, latitude)),
+        properties = properties
+    )
 }

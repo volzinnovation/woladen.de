@@ -1,8 +1,7 @@
 package de.woladen.android.ui
 
+import android.location.Location
 import android.content.Context
-import android.location.Address
-import android.location.Geocoder
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -69,9 +68,16 @@ import androidx.compose.ui.unit.dp
 import de.woladen.android.R
 import de.woladen.android.model.AvailabilityStatus
 import de.woladen.android.model.GeoJsonFeature
+import de.woladen.android.model.GeocodeResult
 import de.woladen.android.model.RouteEndpoint
 import de.woladen.android.model.RouteStationMetadata
 import de.woladen.android.model.RouteSummary
+import de.woladen.android.model.RoutePlan
+import de.woladen.android.model.TripEtaEstimator
+import de.woladen.android.model.TripStationSnapshot
+import de.woladen.android.model.VehicleEnergySettings
+import de.woladen.android.model.WoladenMode
+import de.woladen.android.model.projectRoutePositionM
 import de.woladen.android.model.StationCardState
 import de.woladen.android.model.availabilityStatus
 import de.woladen.android.model.displayPrice
@@ -79,14 +85,13 @@ import de.woladen.android.model.occupancySummaryLabel
 import de.woladen.android.model.stationCardState
 import de.woladen.android.service.LocationService
 import de.woladen.android.store.FavoritesStore
+import de.woladen.android.app.WoladenApplication
 import de.woladen.android.store.normalizeCategoryLabel
 import de.woladen.android.ui.components.RoutePreviewMapView
 import de.woladen.android.ui.components.markerColorForKey
 import de.woladen.android.viewmodel.AppViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -106,6 +111,7 @@ fun RouteTabView(
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
+    val tripStore = remember(context) { (context.applicationContext as WoladenApplication).tripStore }
     var originText by rememberSaveable { mutableStateOf("") }
     var destinationText by rememberSaveable { mutableStateOf("") }
     var originEndpoint by remember { mutableStateOf<RouteEndpoint?>(null) }
@@ -117,6 +123,8 @@ fun RouteTabView(
     var isResolving by rememberSaveable { mutableStateOf(false) }
     var statusMessage by rememberSaveable { mutableStateOf("") }
     var statusIsError by rememberSaveable { mutableStateOf(false) }
+    var initialSocText by rememberSaveable { mutableStateOf(tripStore.vehicleSettings.targetSocPercent.toInt().toString()) }
+    var currentPlanId by rememberSaveable { mutableStateOf<String?>(null) }
 
     val currentLocationLabel = stringResource(R.string.i18n_route_currentlocation)
     val routeOriginFallback = stringResource(R.string.i18n_route_origin)
@@ -257,8 +265,23 @@ fun RouteTabView(
         }
     }
 
+    LaunchedEffect(tripStore.activePlanId, tripStore.mode) {
+        val activePlan = tripStore.activePlan
+        if (activePlan != null) currentPlanId = activePlan.id
+        if (activePlan != null && tripStore.mode == WoladenMode.TRIP && viewModel.routeSummary == null) {
+            originEndpoint = activePlan.route.origin
+            destinationEndpoint = activePlan.route.destination
+            originText = activePlan.route.origin.label
+            destinationText = activePlan.route.destination.label
+            initialSocText = activePlan.route.initialSocPercent.toInt().toString()
+            viewModel.searchRoute(activePlan.route.origin, activePlan.route.destination)
+        }
+    }
+
+    val currentPlan = currentPlanId?.let { id -> tripStore.plans.firstOrNull { it.id == id } }
+
     Column(modifier = Modifier.fillMaxSize().testTag("route-root")) {
-        RouteHeader()
+        RouteHeader(mode = tripStore.mode, hasActiveTrip = tripStore.activePlan != null, onToggleMode = tripStore::toggleMode)
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -361,6 +384,25 @@ fun RouteTabView(
                     )
 
                     if (viewModel.routeSummary == null && !viewModel.isLoadingRoute) {
+                        SavedTripPlans(
+                            plans = tripStore.sortedPlans,
+                            activePlanId = tripStore.activePlanId,
+                            onLoad = { plan ->
+                                currentPlanId = plan.id
+                                originEndpoint = plan.route.origin
+                                destinationEndpoint = plan.route.destination
+                                originText = plan.route.origin.label
+                                destinationText = plan.route.destination.label
+                                initialSocText = plan.route.initialSocPercent.toInt().toString()
+                                statusMessage = ""
+                                viewModel.searchRoute(plan.route.origin, plan.route.destination)
+                            },
+                            onDelete = tripStore::delete,
+                            onStartTrip = { plan ->
+                                currentPlanId = plan.id
+                                tripStore.activate(plan.id)
+                            }
+                        )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.Center
@@ -374,6 +416,62 @@ fun RouteTabView(
 
                     viewModel.routeSummary?.let { summary ->
                         RouteSummaryRow(summary = summary, stationCount = routeDisplayFeatures.size)
+                        if (tripStore.mode == WoladenMode.TRIP && tripStore.activePlan != null) {
+                            ActiveTripCard(
+                                plan = tripStore.activePlan!!,
+                                currentLocation = locationService.currentLocation,
+                                onCompleteStop = tripStore::completeNextStop,
+                                onSkipStop = tripStore::skipNextStop,
+                                onEndTrip = { tripStore.endTrip() }
+                            )
+                        }
+                        TripEnergyCard(
+                            summary = summary,
+                            stations = routeDisplayFeatures,
+                            initialSocText = initialSocText,
+                            onInitialSocChange = { value -> initialSocText = value.filter(Char::isDigit).take(3) },
+                            settings = tripStore.vehicleSettings,
+                            plan = currentPlan,
+                            onSelectStop = { planId, stationId -> tripStore.selectStop(planId, stationId) },
+                            onSettingsChanged = tripStore::updateVehicleSettings
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    val origin = originEndpoint
+                                    val destination = destinationEndpoint
+                                    if (origin != null && destination != null) {
+                                        val initialSoc = initialSocText.toDoubleOrNull()?.coerceIn(1.0, 100.0) ?: 80.0
+                                        val savedPlan = tripStore.saveCalculatedRoute(
+                                            origin = origin,
+                                            destination = destination,
+                                            summary = summary,
+                                            features = routeDisplayFeatures,
+                                            filter = viewModel.filterState,
+                                            initialSocPercent = initialSoc,
+                                            existingPlanId = currentPlanId
+                                        )
+                                        currentPlanId = savedPlan.id
+                                        statusMessage = context.getString(R.string.i18n_route_plansaved)
+                                        statusIsError = false
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(stringResource(R.string.i18n_route_saveplan))
+                            }
+                            if (tripStore.activePlan != null && tripStore.mode == WoladenMode.TRIP) {
+                                OutlinedButton(
+                                    onClick = tripStore::leaveTripMode,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(stringResource(R.string.i18n_route_endtrip))
+                                }
+                            }
+                        }
                     }
 
                     if (viewModel.routeSummary != null && viewModel.routeFiltersRequireRecalculation()) {
@@ -478,7 +576,239 @@ fun RouteTabView(
 }
 
 @Composable
-private fun RouteHeader() {
+private fun SavedTripPlans(
+    plans: List<RoutePlan>,
+    activePlanId: String?,
+    onLoad: (RoutePlan) -> Unit,
+    onDelete: (String) -> Unit,
+    onStartTrip: (RoutePlan) -> Unit
+) {
+    if (plans.isEmpty()) return
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(stringResource(R.string.i18n_route_savedplans), style = MaterialTheme.typography.titleMedium)
+        plans.take(5).forEach { plan ->
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(plan.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                text = "${formatRouteDistanceKilometers(plan.route.distanceM)} · ${plan.rawStations.size} stations · ${plan.route.initialSocPercent.toInt()}% SOC",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(onClick = { onDelete(plan.id) }) {
+                            Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.i18n_route_deleteplan))
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { onLoad(plan) }, modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.i18n_route_loadplan))
+                        }
+                        if (activePlanId != plan.id) {
+                            Button(onClick = { onStartTrip(plan) }, modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.i18n_route_starttrip))
+                            }
+                        } else {
+                            Text(
+                                stringResource(R.string.i18n_route_active),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.align(Alignment.CenterVertically)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TripEnergyCard(
+    summary: RouteSummary,
+    stations: List<GeoJsonFeature>,
+    initialSocText: String,
+    onInitialSocChange: (String) -> Unit,
+    settings: VehicleEnergySettings,
+    plan: RoutePlan?,
+    onSelectStop: (String, String) -> Boolean,
+    onSettingsChanged: (VehicleEnergySettings) -> Unit
+) {
+    val initialSoc = initialSocText.toDoubleOrNull()?.coerceIn(1.0, 100.0) ?: 80.0
+    val range = settings.usableRangeKm(initialSoc)
+    val windows = de.woladen.android.model.EnergyRoutePlanner.build(
+        routeDistanceM = summary.distanceM,
+        stations = stations.map(de.woladen.android.model.TripStationSnapshot.Companion::fromFeature),
+        settings = settings,
+        initialSocPercent = initialSoc
+    )
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(stringResource(R.string.i18n_route_energytitle), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        text = "${stringResource(R.string.i18n_route_usable_range)}: ${formatRouteDistanceKilometers((range * 1000.0).toInt())} · ${windows.size} ${stringResource(R.string.i18n_route_chargingwindows)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                OutlinedTextField(
+                    value = initialSocText,
+                    onValueChange = onInitialSocChange,
+                    label = { Text(stringResource(R.string.i18n_route_initialsoc)) },
+                    suffix = { Text("%") },
+                    singleLine = true,
+                    modifier = Modifier.widthIn(min = 92.dp, max = 112.dp)
+                )
+            }
+            if (plan != null && plan.windows.isNotEmpty()) {
+                Text("Charging stops", style = MaterialTheme.typography.labelLarge)
+                plan.windows.forEach { window ->
+                    val selected = window.selectedStationId
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(
+                            "Window ${window.index + 1} · ${formatRouteDistanceKilometers(window.endPositionM)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row(
+                            modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            window.candidateStationIds.take(5).forEach { stationId ->
+                                val station = plan.station(stationId)
+                                OutlinedButton(
+                                    onClick = { onSelectStop(plan.id, stationId) },
+                                    colors = if (stationId == selected) ButtonDefaults.outlinedButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                        contentColor = MaterialTheme.colorScheme.primary
+                                    ) else ButtonDefaults.outlinedButtonColors(),
+                                    modifier = Modifier.heightIn(min = 36.dp)
+                                ) {
+                                    Text(
+                                        station?.stationName?.ifBlank { station.operatorName } ?: stationId,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            VehicleSettingsEditor(settings = settings, onSettingsChanged = onSettingsChanged)
+        }
+    }
+}
+
+@Composable
+private fun VehicleSettingsEditor(
+    settings: VehicleEnergySettings,
+    onSettingsChanged: (VehicleEnergySettings) -> Unit
+) {
+    var batteryText by remember(settings.batteryCapacityKWh) { mutableStateOf(settings.batteryCapacityKWh.toString()) }
+    var consumptionText by remember(settings.consumptionKWhPer100Km) { mutableStateOf(settings.consumptionKWhPer100Km.toString()) }
+    var reserveText by remember(settings.reserveSocPercent) { mutableStateOf(settings.reserveSocPercent.toString()) }
+    var targetText by remember(settings.targetSocPercent) { mutableStateOf(settings.targetSocPercent.toString()) }
+    var powerText by remember(settings.averageChargingPowerKw) { mutableStateOf(settings.averageChargingPowerKw.toString()) }
+    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Text("Vehicle profile", style = MaterialTheme.typography.labelLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            OutlinedTextField(batteryText, { batteryText = it.filter { c -> c.isDigit() || c == '.' }.take(6) }, label = { Text("Battery kWh") }, singleLine = true, modifier = Modifier.weight(1f))
+            OutlinedTextField(consumptionText, { consumptionText = it.filter { c -> c.isDigit() || c == '.' }.take(6) }, label = { Text("Consumption") }, singleLine = true, modifier = Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            OutlinedTextField(reserveText, { reserveText = it.filter { c -> c.isDigit() || c == '.' }.take(5) }, label = { Text("Reserve %") }, singleLine = true, modifier = Modifier.weight(1f))
+            OutlinedTextField(targetText, { targetText = it.filter { c -> c.isDigit() || c == '.' }.take(5) }, label = { Text("Target %") }, singleLine = true, modifier = Modifier.weight(1f))
+            OutlinedTextField(powerText, { powerText = it.filter { c -> c.isDigit() || c == '.' }.take(6) }, label = { Text("Charge kW") }, singleLine = true, modifier = Modifier.weight(1f))
+        }
+        OutlinedButton(
+            onClick = {
+                onSettingsChanged(
+                    settings.copy(
+                        batteryCapacityKWh = batteryText.toDoubleOrNull() ?: settings.batteryCapacityKWh,
+                        consumptionKWhPer100Km = consumptionText.toDoubleOrNull() ?: settings.consumptionKWhPer100Km,
+                        reserveSocPercent = reserveText.toDoubleOrNull() ?: settings.reserveSocPercent,
+                        targetSocPercent = targetText.toDoubleOrNull() ?: settings.targetSocPercent,
+                        averageChargingPowerKw = powerText.toDoubleOrNull() ?: settings.averageChargingPowerKw
+                    )
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Save vehicle profile") }
+    }
+}
+
+@Composable
+private fun ActiveTripCard(
+    plan: RoutePlan,
+    currentLocation: Location?,
+    onCompleteStop: () -> Boolean,
+    onSkipStop: () -> Boolean,
+    onEndTrip: () -> Unit
+) {
+    val routePosition = currentLocation?.let { projectRoutePositionM(plan.route, it.latitude, it.longitude) } ?: 0
+    var nowEpochMs by remember(plan.id, routePosition) { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(plan.id, routePosition) {
+        while (true) {
+            nowEpochMs = System.currentTimeMillis()
+            delay(30_000L)
+        }
+    }
+    val eta = TripEtaEstimator.estimate(plan, routePosition, nowEpochMs)
+    val nextStop = plan.nextStop
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Active trip", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                Text("${(eta.progress * 100.0).roundToInt()}%", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            }
+            LinearProgressIndicator(
+                progress = { eta.progress.toFloat().coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(7.dp).clip(RoundedCornerShape(999.dp))
+            )
+            Text(
+                text = listOfNotNull(
+                    nextStop?.let { "Next: ${it.stationName.ifBlank { it.operatorName }}" },
+                    "ETA ${formatRouteClockTime(eta.destinationArrivalEpochMs)}",
+                    "Arrival SOC ${eta.projectedArrivalSocPercent.toInt()}%"
+                ).joinToString(" · "),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                if (nextStop != null) {
+                    OutlinedButton(onClick = { onCompleteStop() }, modifier = Modifier.weight(1f)) { Text("Complete stop") }
+                    OutlinedButton(onClick = { onSkipStop() }, modifier = Modifier.weight(1f)) { Text("Skip") }
+                }
+                OutlinedButton(onClick = onEndTrip, modifier = Modifier.weight(1f)) { Text("End trip") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RouteHeader(mode: WoladenMode, hasActiveTrip: Boolean, onToggleMode: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -498,6 +828,15 @@ private fun RouteHeader() {
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
+            OutlinedButton(onClick = onToggleMode, enabled = hasActiveTrip || mode == WoladenMode.PLAN) {
+                Text(
+                    if (mode == WoladenMode.TRIP) {
+                        stringResource(R.string.i18n_route_tripmode)
+                    } else {
+                        stringResource(R.string.i18n_route_planmode)
+                    }
+                )
+            }
         }
     }
     HorizontalDivider()
@@ -851,7 +1190,7 @@ private fun RouteStationRow(
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
-                        text = feature.properties.operatorName,
+                        text = feature.properties.stationName.ifBlank { feature.properties.operatorName },
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -953,51 +1292,25 @@ private suspend fun lookupRouteSuggestions(
 ): List<RoutePlaceSuggestion> {
     val normalizedQuery = query.trim()
     if (normalizedQuery.length < 2 || limit <= 0) return emptyList()
-    if (!Geocoder.isPresent()) return emptyList()
-
-    return withContext(Dispatchers.IO) {
-        @Suppress("DEPRECATION")
-        runCatching {
-            Geocoder(context, Locale.getDefault())
-                .getFromLocationName(normalizedQuery, limit)
-                .orEmpty()
-                .mapNotNull { address -> routeSuggestionFromAddress(address, normalizedQuery) }
-                .distinctBy { suggestion ->
-                    "${suggestion.title}:${(suggestion.endpoint.lat * 10_000).roundToInt()}:${(suggestion.endpoint.lon * 10_000).roundToInt()}"
-                }
-        }.getOrDefault(emptyList())
-    }
+    val application = context.applicationContext as? WoladenApplication ?: return emptyList()
+    return runCatching {
+        application.liveApiClient.geocodeAutocomplete(normalizedQuery, limit = limit)
+            .map(::routeSuggestionFromGeocode)
+            .distinctBy { suggestion ->
+                "${suggestion.title}:${(suggestion.endpoint.lat * 10_000).roundToInt()}:${(suggestion.endpoint.lon * 10_000).roundToInt()}"
+            }
+    }.getOrDefault(emptyList())
 }
 
-private fun routeSuggestionFromAddress(address: Address, fallback: String): RoutePlaceSuggestion? {
-    if (!address.hasLatitude() || !address.hasLongitude()) return null
-    val lat = address.latitude
-    val lon = address.longitude
-    if (!lat.isFinite() || !lon.isFinite()) return null
-
-    val title = firstNonBlank(
-        address.featureName,
-        address.locality,
-        address.subAdminArea,
-        address.adminArea,
-        address.getAddressLine(0),
-        fallback
-    ) ?: return null
-
-    val meta = listOf(
-        address.locality,
-        address.subAdminArea,
-        address.adminArea,
-        address.countryName
-    )
-        .mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }
+private fun routeSuggestionFromGeocode(result: GeocodeResult): RoutePlaceSuggestion {
+    val title = result.name.ifBlank { result.label }
+    val meta = listOf(result.locality, result.region, result.postalCode, result.country)
+        .filter { it.isNotBlank() }
         .filterNot { it.equals(title, ignoreCase = true) }
         .distinct()
         .joinToString(" · ")
-
-    val label = if (meta.isBlank()) title else "$title, $meta"
     return RoutePlaceSuggestion(
-        endpoint = RouteEndpoint(lat = lat, lon = lon, label = label),
+        endpoint = RouteEndpoint(lat = result.lat, lon = result.lon, label = result.label),
         title = title,
         meta = meta
     )
@@ -1072,6 +1385,10 @@ private fun formatRouteClockDuration(seconds: Int): String {
     if (seconds <= 0) return "00:00"
     val minutes = maxOf(1, (seconds / 60.0).roundToInt())
     return "%02d:%02d".format(Locale.getDefault(), minutes / 60, minutes % 60)
+}
+
+private fun formatRouteClockTime(epochMillis: Long): String {
+    return java.text.SimpleDateFormat("HH:mm", Locale.getDefault()).format(java.util.Date(epochMillis))
 }
 
 @Composable

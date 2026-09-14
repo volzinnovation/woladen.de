@@ -10,6 +10,7 @@ data class RouteEndpoint(
 
 data class RouteFilterPayload(
     val operator: String,
+    val operatorGroupIds: List<String>,
     val minPowerKw: Int,
     val minAmenitiesTotal: Int,
     val selectedAmenities: List<String>,
@@ -20,7 +21,8 @@ data class RouteFilterPayload(
     companion object {
         fun from(filterState: FilterState): RouteFilterPayload {
             return RouteFilterPayload(
-                operator = filterState.normalizedOperatorNames.singleOrNull().orEmpty(),
+                operator = "",
+                operatorGroupIds = filterState.normalizedOperatorNames.sorted(),
                 minPowerKw = filterState.minPowerKw.coerceAtLeast(0.0).toInt(),
                 minAmenitiesTotal = filterState.minAmenityCount.coerceAtLeast(0.0).roundToInt(),
                 selectedAmenities = filterState.selectedAmenities
@@ -69,4 +71,18 @@ data class RouteChargerResponse(
     val route: RouteSummary,
     val stations: List<RouteStationCandidate>,
     val source: String
+)
+
+data class GeocodeResult(
+    val id: String,
+    val label: String,
+    val name: String,
+    val lat: Double,
+    val lon: Double,
+    val country: String,
+    val countryCode: String,
+    val region: String,
+    val locality: String,
+    val postalCode: String,
+    val confidence: Double?
 )
