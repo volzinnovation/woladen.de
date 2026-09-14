@@ -22,8 +22,14 @@ extension ChargerProperties {
     }
 
     func matches(_ filterState: FilterState) -> Bool {
-        if !filterState.selectedOperatorNames.isEmpty && !filterState.selectedOperatorNames.contains(operatorName) {
-            return false
+        if !filterState.selectedOperatorNames.isEmpty {
+            if !operatorGroupIDs.isEmpty {
+                if filterState.selectedOperatorNames.isDisjoint(with: operatorGroupIDs) {
+                    return false
+                }
+            } else if !filterState.selectedOperatorNames.contains(operatorName) {
+                return false
+            }
         }
         if maxPowerKW < filterState.minPowerKW {
             return false

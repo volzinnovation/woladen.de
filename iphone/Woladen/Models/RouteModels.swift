@@ -23,6 +23,7 @@ struct RouteEndpoint: Codable, Equatable {
 
 struct RouteFilterPayload: Codable, Equatable {
     let `operator`: String
+    let operatorGroupIDs: [String]
     let minPowerKW: Int
     let minAmenitiesTotal: Int
     let selectedAmenities: [String]
@@ -32,6 +33,7 @@ struct RouteFilterPayload: Codable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case `operator`
+        case operatorGroupIDs = "operator_group_ids"
         case minPowerKW = "min_power_kw"
         case minAmenitiesTotal = "min_amenities_total"
         case selectedAmenities = "selected_amenities"
@@ -41,7 +43,8 @@ struct RouteFilterPayload: Codable, Equatable {
     }
 
     init(filter: FilterState) {
-        self.operator = filter.operatorName.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.operator = ""
+        self.operatorGroupIDs = filter.selectedOperatorNames.sorted()
         self.minPowerKW = max(0, Int(filter.minPowerKW.rounded()))
         self.minAmenitiesTotal = max(0, Int(filter.minAmenityCount.rounded()))
         self.selectedAmenities = filter.selectedAmenities
@@ -50,6 +53,18 @@ struct RouteFilterPayload: Codable, Equatable {
         self.amenityNameQuery = filter.amenityNameQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         self.availableOnly = false
         self.currentlyOpenOnly = filter.currentlyOpenOnly
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.operator = (try? container.decode(String.self, forKey: .operator)) ?? ""
+        self.operatorGroupIDs = (try? container.decode([String].self, forKey: .operatorGroupIDs)) ?? []
+        self.minPowerKW = (try? container.decode(Int.self, forKey: .minPowerKW)) ?? 50
+        self.minAmenitiesTotal = (try? container.decode(Int.self, forKey: .minAmenitiesTotal)) ?? 0
+        self.selectedAmenities = (try? container.decode([String].self, forKey: .selectedAmenities)) ?? []
+        self.amenityNameQuery = (try? container.decode(String.self, forKey: .amenityNameQuery)) ?? ""
+        self.availableOnly = (try? container.decode(Bool.self, forKey: .availableOnly)) ?? false
+        self.currentlyOpenOnly = (try? container.decode(Bool.self, forKey: .currentlyOpenOnly)) ?? false
     }
 }
 

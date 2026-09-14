@@ -47,6 +47,7 @@ targets:
     sources:
       - path: WoladenWidget
       - path: Shared
+      - path: Woladen/Models/OperatorModels.swift
       - path: Woladen/Resources/Localizable.xcstrings
         buildPhase: resources
     settings:

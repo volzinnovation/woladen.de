@@ -4,7 +4,6 @@ import CoreLocation
 final class ChargerRepository {
     struct SearchResult {
         let features: [GeoJSONFeature]
-        let operators: [OperatorEntry]
     }
 
     private let client: LiveAPIClient
@@ -19,13 +18,33 @@ final class ChargerRepository {
     }
 
     func loadData(center: CLLocationCoordinate2D, filterState: FilterState) async throws -> ChargerRepositoryLoadResult {
-        let result = try await searchCatalog(center: center, filter: filterState)
+        let catalogOperators = try? await operatorCatalog()
+        let effectiveFilter = filterState.canonicalized(using: catalogOperators)
+        let result = try await searchCatalog(center: center, filter: effectiveFilter)
         return ChargerRepositoryLoadResult(
             features: result.features,
-            operators: result.operators,
+            operators: catalogOperators,
+            filterState: effectiveFilter,
             sourceInfo: ActiveCatalogSourceInfo.catalogAPI,
             catalogCenter: center
         )
+    }
+
+    func operatorCatalog() async throws -> [OperatorEntry] {
+        if let cached = await cache.operatorCatalog(maxAge: .infoFresh) {
+            return cached
+        }
+        do {
+            let operators = try await client.operatorCatalog().operators
+            guard !operators.isEmpty else { throw LiveAPIError.invalidResponse }
+            await cache.storeOperatorCatalog(operators)
+            return operators
+        } catch {
+            if let stale = await cache.operatorCatalog(maxAge: .infoStale) {
+                return stale
+            }
+            throw error
+        }
     }
 
     func invalidateCache() async {
@@ -65,7 +84,7 @@ final class ChargerRepository {
             radiusM: radiusM,
             limit: limit,
             minPowerKW: Int((filter.minPowerKW * 10).rounded()),
-            operatorNames: filter.selectedOperatorNames.sorted()
+            operatorGroupIDs: filter.selectedOperatorNames.sorted()
         )
 
         if let cached = await cache.searchResult(for: key, maxAge: .searchFresh) {
@@ -74,39 +93,21 @@ final class ChargerRepository {
 
         if Self.isScreenshotMode, ProcessInfo.processInfo.environment["WOLADEN_SCREENSHOT_FORCE_FALLBACK"] == "1" {
             let fallbackFeatures = Self.screenshotFallbackFeatures(center: center)
-            let result = SearchResult(features: fallbackFeatures, operators: operators(from: fallbackFeatures))
+            let result = SearchResult(features: fallbackFeatures)
             await cache.storeSearchResult(result, for: key)
             return result
         }
 
         do {
-            let operatorNames = filter.selectedOperatorNames.sorted()
-            let responses: [CatalogSearchResponse]
-            if operatorNames.count <= 1 {
-                responses = [
-                    try await client.searchCatalog(
-                        center: center,
-                        radiusM: radiusM,
-                        limit: limit,
-                        minPowerKW: filter.minPowerKW,
-                        operatorName: filter.operatorName
-                    )
-                ]
-            } else {
-                var fetchedResponses: [CatalogSearchResponse] = []
-                for operatorName in operatorNames {
-                    fetchedResponses.append(
-                        try await client.searchCatalog(
-                            center: center,
-                            radiusM: radiusM,
-                            limit: limit,
-                            minPowerKW: filter.minPowerKW,
-                            operatorName: operatorName
-                        )
-                    )
-                }
-                responses = fetchedResponses
-            }
+            let responses = [
+                try await client.searchCatalog(
+                    center: center,
+                    radiusM: radiusM,
+                    limit: limit,
+                    minPowerKW: filter.minPowerKW,
+                    operatorGroupIDs: filter.selectedOperatorNames.sorted()
+                )
+            ]
             let features = uniqueFeatures(
                 responses.flatMap { response in
                     response.stations.map { $0.feature() }
@@ -119,18 +120,18 @@ final class ChargerRepository {
             }
             if Self.isScreenshotMode, screenshotFeatures.isEmpty {
                 let fallbackFeatures = Self.screenshotFallbackFeatures(center: center)
-                let result = SearchResult(features: fallbackFeatures, operators: operators(from: fallbackFeatures))
+                let result = SearchResult(features: fallbackFeatures)
                 await cache.storeSearchResult(result, for: key)
                 return result
             }
             let resultFeatures = Self.isScreenshotMode ? screenshotFeatures : features
-            let result = SearchResult(features: resultFeatures, operators: operators(from: resultFeatures))
+            let result = SearchResult(features: resultFeatures)
             await cache.storeSearchResult(result, for: key)
             return result
         } catch {
             if Self.isScreenshotMode {
                 let features = Self.screenshotFallbackFeatures(center: center)
-                let result = SearchResult(features: features, operators: operators(from: features))
+                let result = SearchResult(features: features)
                 await cache.storeSearchResult(result, for: key)
                 return result
             }
@@ -304,7 +305,8 @@ private extension ChargerRepository {
 
 struct ChargerRepositoryLoadResult {
     let features: [GeoJSONFeature]
-    let operators: [OperatorEntry]
+    let operators: [OperatorEntry]?
+    let filterState: FilterState
     let sourceInfo: ActiveCatalogSourceInfo
     let catalogCenter: CLLocationCoordinate2D
 }
@@ -330,7 +332,7 @@ private struct CatalogSearchCacheKey: Hashable {
     let radiusM: Int
     let limit: Int
     let minPowerKW: Int
-    let operatorNames: [String]
+    let operatorGroupIDs: [String]
 }
 
 private actor CatalogRepositoryCache {
@@ -352,10 +354,16 @@ private actor CatalogRepositoryCache {
     private var details: [String: DetailEntry] = [:]
     private var detailOrder: [String] = []
     private var infoSummaryEntry: InfoSummaryEntry?
+    private var operatorCatalogEntry: OperatorCatalogEntry?
 
     private struct InfoSummaryEntry {
         let storedAt: Date
         let summary: CatalogInfoSummary
+    }
+
+    private struct OperatorCatalogEntry {
+        let storedAt: Date
+        let operators: [OperatorEntry]
     }
 
     func searchResult(for key: CatalogSearchCacheKey, maxAge: TimeInterval) -> ChargerRepository.SearchResult? {
@@ -403,6 +411,18 @@ private actor CatalogRepositoryCache {
         infoSummaryEntry = InfoSummaryEntry(storedAt: Date(), summary: summary)
     }
 
+    func operatorCatalog(maxAge: TimeInterval) -> [OperatorEntry]? {
+        guard let entry = operatorCatalogEntry,
+              Date().timeIntervalSince(entry.storedAt) <= maxAge else {
+            return nil
+        }
+        return entry.operators
+    }
+
+    func storeOperatorCatalog(_ operators: [OperatorEntry]) {
+        operatorCatalogEntry = OperatorCatalogEntry(storedAt: Date(), operators: operators)
+    }
+
     func removeInfoSummary() {
         infoSummaryEntry = nil
     }
@@ -437,19 +457,6 @@ private extension ActiveCatalogSourceInfo {
             )
         )
     }
-}
-
-private func operators(from features: [GeoJSONFeature]) -> [OperatorEntry] {
-    let counts = features.reduce(into: [String: Int]()) { result, feature in
-        let name = feature.properties.operatorName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else { return }
-        result[name, default: 0] += 1
-    }
-    return counts
-        .map { OperatorEntry(name: $0.key, stations: $0.value) }
-        .sorted {
-            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-        }
 }
 
 private func uniqueFeatures(_ features: [GeoJSONFeature]) -> [GeoJSONFeature] {

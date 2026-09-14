@@ -87,6 +87,15 @@ struct FilterState: Codable, Equatable {
         }
     }
 
+    func canonicalized(using operators: [OperatorEntry]?) -> FilterState {
+        guard !selectedOperatorNames.isEmpty, let operators, !operators.isEmpty else { return self }
+        let migrated = OperatorEntry.canonicalIDs(for: selectedOperatorNames, using: operators)
+        guard migrated != selectedOperatorNames else { return self }
+        var copy = self
+        copy.selectedOperatorNames = migrated
+        return copy
+    }
+
     var activeCount: Int {
         var count = 0
         if !selectedOperatorNames.isEmpty { count += 1 }
@@ -101,7 +110,17 @@ struct FilterState: Codable, Equatable {
     }
 
     var activeDisplayLabels: [String] {
-        var labels = selectedOperatorNames.sorted {
+        buildActiveDisplayLabels(operatorEntries: [])
+    }
+
+    func activeDisplayLabels(using operatorEntries: [OperatorEntry]) -> [String] {
+        buildActiveDisplayLabels(operatorEntries: operatorEntries)
+    }
+
+    private func buildActiveDisplayLabels(operatorEntries: [OperatorEntry]) -> [String] {
+        var labels = selectedOperatorNames.map { selectedID in
+            operatorEntries.first(where: { $0.id == selectedID })?.name ?? selectedID
+        }.sorted {
             $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
         }
         let query = amenityNameQuery.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -143,8 +162,15 @@ struct FilterState: Codable, Equatable {
     }
 
     var activeDisplaySummary: String {
+        activeDisplaySummary(using: [])
+    }
+
+    func activeDisplaySummary(using operatorEntries: [OperatorEntry]) -> String {
         String(localized: "filters.selectedOnly")
-            .replacingOccurrences(of: "{labels}", with: activeDisplayLabels.joined(separator: " · "))
+            .replacingOccurrences(
+                of: "{labels}",
+                with: activeDisplayLabels(using: operatorEntries).joined(separator: " · ")
+            )
     }
 
     var clearableState: FilterState {

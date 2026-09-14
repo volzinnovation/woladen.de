@@ -1,8 +1,203 @@
 import Foundation
+import Combine
+import CoreLocation
 import XCTest
 @testable import Woladen
 
 final class LiveFeatureFormattingTests: XCTestCase {
+    func testWidgetKeepsCanonicalSelectionsWhenOperatorCatalogIsUnavailable() async throws {
+        let recorder = LiveAPIRequestRecorder()
+        LiveAPIMockURLProtocol.requestHandler = { request in
+            recorder.append(request)
+            let isOperators = request.url?.path == "/v1/catalog/operators"
+            let body = request.url?.path == "/v1/catalog/search"
+                ? #"{"stations":[{"station_id":"FR:ION:1","operator_name":"FR*ION","operator_group_ids":["ionity"],"latitude":48.85,"longitude":2.35,"max_power_kw":350}]}"#
+                : #"{"stations":[]}"#
+            return (HTTPURLResponse(url: request.url!, statusCode: isOperators ? 503 : 200, httpVersion: nil, headerFields: nil)!, Data(body.utf8))
+        }
+        defer { LiveAPIMockURLProtocol.requestHandler = nil }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [LiveAPIMockURLProtocol.self]
+        let client = WoladenWidgetAPIClient(session: URLSession(configuration: configuration))
+        let stations = try await client.nearestStations(
+            location: .init(latitude: 48.85, longitude: 2.35),
+            filter: WoladenWidgetFilter(selectedOperatorNames: ["ionity"], availableOnly: false)
+        )
+
+        XCTAssertEqual(stations.map(\.stationID), ["FR:ION:1"])
+        let search = try XCTUnwrap(recorder.requests.first { $0.url?.path == "/v1/catalog/search" })
+        let items = URLComponents(url: search.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        XCTAssertEqual(items.filter { $0.name == "operator_group_id" }.compactMap(\.value), ["ionity"])
+    }
+
+    func testWidgetCanonicalizesAliasesAndUnknownSelectionsBeforeSearching() async throws {
+        let previousFilter = WoladenWidgetStateStore.loadFilter()
+        defer { WoladenWidgetStateStore.saveFilter(previousFilter) }
+        let recorder = LiveAPIRequestRecorder()
+        LiveAPIMockURLProtocol.requestHandler = { request in
+            recorder.append(request)
+            let body: String
+            switch request.url?.path {
+            case "/v1/catalog/operators": body = fixedOperatorCatalogFixture
+            case "/v1/catalog/search":
+                body = #"{"stations":[{"station_id":"BE:TSL:1","operator_name":"BE*TSL","operator_group_ids":["tesla"],"latitude":50.85,"longitude":4.35,"max_power_kw":250}]}"#
+            default: body = #"{"stations":[]}"#
+            }
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data(body.utf8))
+        }
+        defer { LiveAPIMockURLProtocol.requestHandler = nil }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [LiveAPIMockURLProtocol.self]
+        let client = WoladenWidgetAPIClient(session: URLSession(configuration: configuration))
+        let location = CLLocation(latitude: 50.85, longitude: 4.35)
+
+        let matching = try await client.nearestStations(
+            location: location,
+            filter: WoladenWidgetFilter(selectedOperatorNames: ["tesla-belgium-bv"], availableOnly: false)
+        )
+        XCTAssertEqual(matching.map(\.stationID), ["BE:TSL:1"])
+        XCTAssertEqual(WoladenWidgetStateStore.loadFilter().selectedOperatorNames, ["tesla"])
+        _ = try await client.nearestStations(
+            location: location,
+            filter: WoladenWidgetFilter(selectedOperatorNames: ["retired-provider"], availableOnly: false)
+        )
+        XCTAssertTrue(WoladenWidgetStateStore.loadFilter().selectedOperatorNames.isEmpty)
+        let searches = recorder.requests.filter { $0.url?.path == "/v1/catalog/search" }
+        let queryGroups = searches.map { request in
+            (URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? [])
+                .filter { $0.name == "operator_group_id" }.compactMap(\.value)
+        }
+        XCTAssertEqual(queryGroups, [["tesla"], []])
+        XCTAssertTrue(recorder.requests.allSatisfy { $0.url?.host == "live-eu.woladen.de" })
+    }
+
+    func testEmptyOperatorCatalogPreservesSelectionsWithoutInventingOptions() async throws {
+        LiveAPIMockURLProtocol.requestHandler = { request in
+            let body = request.url?.path == "/v1/catalog/operators"
+                ? #"{"min_stations":0,"total_operators":0,"operators":[]}"#
+                : #"{"stations":[]}"#
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data(body.utf8))
+        }
+        defer { LiveAPIMockURLProtocol.requestHandler = nil }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [LiveAPIMockURLProtocol.self]
+        let repository = ChargerRepository(client: LiveAPIClient(
+            baseURL: URL(string: "https://api.example.test")!,
+            session: URLSession(configuration: configuration)
+        ))
+        let filter = FilterState(selectedOperatorNames: ["ionity"])
+        let loaded = try await repository.loadData(center: .init(latitude: 52.52, longitude: 13.40), filterState: filter)
+        XCTAssertNil(loaded.operators)
+        XCTAssertEqual(loaded.filterState, filter)
+    }
+
+    func testOperatorOptionsRemainFixedAcrossLocationsAndEmptyResults() async throws {
+        let recorder = LiveAPIRequestRecorder()
+        LiveAPIMockURLProtocol.requestHandler = { request in
+            recorder.append(request)
+            let body = request.url?.path == "/v1/catalog/operators"
+                ? fixedOperatorCatalogFixture
+                : #"{"stations":[]}"#
+            return (HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, Data(body.utf8))
+        }
+        defer { LiveAPIMockURLProtocol.requestHandler = nil }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [LiveAPIMockURLProtocol.self]
+        let repository = ChargerRepository(client: LiveAPIClient(
+            baseURL: URL(string: "https://api.example.test")!,
+            session: URLSession(configuration: configuration)
+        ))
+        let savedFilter = FilterState(selectedOperatorNames: ["IONITY GmbH", "Tesla Germany GmbH"])
+
+        let first = try await repository.loadData(
+            center: .init(latitude: 52.52, longitude: 13.40),
+            filterState: savedFilter
+        )
+        await repository.invalidateCache()
+        let second = try await repository.loadData(
+            center: .init(latitude: 48.85, longitude: 2.35),
+            filterState: first.filterState
+        )
+
+        XCTAssertTrue(first.features.isEmpty)
+        XCTAssertTrue(second.features.isEmpty)
+        XCTAssertEqual(first.operators?.map(\.id), ["ionity", "enbw", "tesla"])
+        XCTAssertEqual(second.operators, first.operators)
+        XCTAssertEqual(first.filterState.selectedOperatorNames, ["ionity", "tesla"])
+        let operatorRequests = recorder.requests.filter { $0.url?.path == "/v1/catalog/operators" }
+        XCTAssertEqual(operatorRequests.count, 1)
+        XCTAssertNil(operatorRequests.first?.url?.query)
+        let searchRequests = recorder.requests.filter { $0.url?.path == "/v1/catalog/search" }
+        XCTAssertEqual(searchRequests.count, 2)
+        for request in searchRequests {
+            let items = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            XCTAssertEqual(items.filter { $0.name == "operator_group_id" }.compactMap(\.value), ["ionity", "tesla"])
+            XCTAssertFalse(items.contains { $0.name == "operator" || $0.name == "country" })
+        }
+    }
+
+    func testUnavailableOperatorCatalogDoesNotCreateOptionsFromSearchResults() async throws {
+        LiveAPIMockURLProtocol.requestHandler = { request in
+            let catalogUnavailable = request.url?.path == "/v1/catalog/operators"
+            let body = catalogUnavailable ? "{}" : #"{"stations":[{"station_id":"DE:raw","operator_name":"DE*ABC","max_power_kw":150}]}"#
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: catalogUnavailable ? 503 : 200, httpVersion: nil, headerFields: nil)!,
+                Data(body.utf8)
+            )
+        }
+        defer { LiveAPIMockURLProtocol.requestHandler = nil }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [LiveAPIMockURLProtocol.self]
+        let repository = ChargerRepository(client: LiveAPIClient(
+            baseURL: URL(string: "https://api.example.test")!,
+            session: URLSession(configuration: configuration)
+        ))
+        let filter = FilterState(selectedOperatorNames: ["ionity"])
+        let loaded = try await repository.loadData(center: .init(latitude: 52.52, longitude: 13.40), filterState: filter)
+
+        XCTAssertEqual(loaded.features.count, 1)
+        XCTAssertNil(loaded.operators)
+        XCTAssertEqual(loaded.filterState, filter)
+    }
+
+    @MainActor
+    func testOperatorOptionsLoadWithoutLocationAndSurviveSearchFailure() async throws {
+        let previousFilter = FilterStateStore.load()
+        defer { FilterStateStore.save(previousFilter) }
+        LiveAPIMockURLProtocol.requestHandler = { request in
+            let isOperators = request.url?.path == "/v1/catalog/operators"
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: isOperators ? 200 : 503, httpVersion: nil, headerFields: nil)!,
+                Data((isOperators ? fixedOperatorCatalogFixture : "{}").utf8)
+            )
+        }
+        defer { LiveAPIMockURLProtocol.requestHandler = nil }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [LiveAPIMockURLProtocol.self]
+        let viewModel = AppViewModel(liveAPIClient: LiveAPIClient(
+            baseURL: URL(string: "https://api.example.test")!,
+            session: URLSession(configuration: configuration)
+        ))
+        let loaded = expectation(description: "Fixed operators load before location")
+        let subscription = viewModel.$operators.dropFirst().sink { operators in
+            if operators.count == 3 { loaded.fulfill() }
+        }
+        viewModel.loadIfNeeded(userLocation: nil)
+        await fulfillment(of: [loaded], timeout: 3)
+        subscription.cancel()
+        XCTAssertEqual(viewModel.operators.map(\.name), ["IONITY", "EnBW", "Tesla"])
+        XCTAssertTrue(viewModel.allFeatures.isEmpty)
+        viewModel.waitForLocation()
+        XCTAssertEqual(viewModel.operators.count, 3)
+
+        let failed = expectation(description: "Search fails independently")
+        let failureSubscription = viewModel.$loadError.compactMap { $0 }.sink { _ in failed.fulfill() }
+        viewModel.load(userLocation: .init(latitude: 52.52, longitude: 13.40))
+        await fulfillment(of: [failed], timeout: 3)
+        failureSubscription.cancel()
+        XCTAssertEqual(viewModel.operators.count, 3)
+    }
+
     func testLiveAPIClientDefaultsToEuropeanLiveAPIBase() {
         XCTAssertEqual(LiveAPIClient.defaultBaseURL.absoluteString, "https://live-eu.woladen.de")
         XCTAssertEqual(LiveAPIClient.openStaticSummaryPath, "/data/open_static_summary.json")
@@ -495,6 +690,8 @@ private final class LiveAPIRequestRecorder {
         lock.unlock()
     }
 }
+
+private let fixedOperatorCatalogFixture = #"{"min_stations":0,"total_operators":3,"operators":[{"id":"ionity","name":"IONITY","stations":0,"aliases":["IONITY GmbH"]},{"id":"enbw","name":"EnBW","stations":120,"aliases":["EnBW Energie Baden-Württemberg AG"]},{"id":"tesla","name":"Tesla","stations":0,"aliases":["Tesla Germany GmbH","tesla-belgium-bv"]}]}"#
 
 private final class LiveAPIMockURLProtocol: URLProtocol {
     static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?

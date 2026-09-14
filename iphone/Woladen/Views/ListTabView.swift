@@ -385,11 +385,11 @@ struct ListTabView: View {
     }
 
     private var activeFilterLabels: [String] {
-        viewModel.filterState.activeDisplayLabels
+        viewModel.filterState.activeDisplayLabels(using: viewModel.operators)
     }
 
     private var activeFilterSummaryText: String {
-        viewModel.filterState.activeDisplaySummary
+        viewModel.filterState.activeDisplaySummary(using: viewModel.operators)
     }
 
     private var hasClearableFilters: Bool {

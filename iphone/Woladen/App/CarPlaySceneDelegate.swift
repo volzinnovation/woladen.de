@@ -515,6 +515,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
     private var latestLocation: CLLocation?
     private var planningFeatures: [GeoJSONFeature] = []
     private var planningFilter = FilterStateStore.load()
+    private var planningOperators: [OperatorEntry] = []
     private var planningTemplate: CPListTemplate?
     private weak var planningDetailListTemplate: CPListTemplate?
     private var planningDetailFeature: GeoJSONFeature?
@@ -677,6 +678,14 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
 
     private func refreshPlanningStations() async {
         planningFilter = FilterStateStore.load()
+        if let operators = try? await repository.operatorCatalog() {
+            planningOperators = operators
+            let canonicalFilter = planningFilter.canonicalized(using: operators)
+            if canonicalFilter != planningFilter {
+                planningFilter = canonicalFilter
+                FilterStateStore.save(canonicalFilter)
+            }
+        }
         let locationCandidates = [latestLocation, locationManager.location].compactMap { $0 }
         guard let location = carPlayFreshestPlanningLocation(from: locationCandidates) else {
             latestLocation = nil
@@ -842,7 +851,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
 
     private func showFilterInformation(_ filter: FilterState) {
         guard let interfaceController else { return }
-        let labels = filter.activeDisplayLabels
+        let labels = filter.activeDisplayLabels(using: planningOperators)
         let items: [CPInformationItem]
         if labels.isEmpty {
             items = [CPInformationItem(

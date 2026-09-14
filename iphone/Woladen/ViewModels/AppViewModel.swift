@@ -59,11 +59,13 @@ final class AppViewModel: ObservableObject {
     private var liveSummaryRefreshTask: Task<Void, Never>?
     private var selectedFeatureRefreshTask: Task<Void, Never>?
     private var routeSearchTask: Task<Void, Never>?
+    private var operatorCatalogTask: Task<Void, Never>?
 
     init(liveAPIClient: LiveAPIClient = LiveAPIClient()) {
         self.liveAPIClient = liveAPIClient
         self.repository = ChargerRepository(liveAPIClient: liveAPIClient)
         startLiveSummaryRefreshLoop()
+        loadOperatorCatalog()
     }
 
     deinit {
@@ -72,6 +74,17 @@ final class AppViewModel: ObservableObject {
         liveSummaryRefreshTask?.cancel()
         selectedFeatureRefreshTask?.cancel()
         routeSearchTask?.cancel()
+        operatorCatalogTask?.cancel()
+    }
+
+    private func loadOperatorCatalog() {
+        operatorCatalogTask = Task { [weak self] in
+            guard let self,
+                  let operators = try? await self.repository.operatorCatalog(),
+                  !Task.isCancelled else { return }
+            self.operators = operators
+            self.filterState = self.filterState.canonicalized(using: operators)
+        }
     }
 
     func loadIfNeeded(userLocation: CLLocation?) {
@@ -102,7 +115,6 @@ final class AppViewModel: ObservableObject {
         if allFeatures.isEmpty {
             filterPool = []
             discoveredFeatures = []
-            operators = []
             activeCatalogInfo = nil
         }
     }
@@ -125,7 +137,11 @@ final class AppViewModel: ObservableObject {
             self.isLoading = false
             switch result {
             case .success(let loaded):
+                self.filterState = loaded.filterState
                 self.mergeCatalogFeatures(loaded.features, reset: resetResults)
+                if let operators = loaded.operators {
+                    self.operators = operators
+                }
                 self.activeCatalogInfo = loaded.sourceInfo
                 self.currentCatalogCenter = loaded.catalogCenter
                 self.loadError = nil
@@ -139,7 +155,6 @@ final class AppViewModel: ObservableObject {
                 if self.allFeatures.isEmpty {
                     self.filterPool = []
                     self.discoveredFeatures = []
-                    self.operators = []
                     self.activeCatalogInfo = nil
                     self.isAwaitingFirstLocationFix = false
                     self.resetLiveState()
@@ -359,6 +374,9 @@ final class AppViewModel: ObservableObject {
     func routeFiltersRequireRecalculation() -> Bool {
         guard let baseline = routeCalculatedFilters else { return false }
         let current = RouteFilterPayload(filter: routeEffectiveFilter())
+        if !baseline.operatorGroupIDs.isEmpty && current.operatorGroupIDs != baseline.operatorGroupIDs {
+            return true
+        }
         if !baseline.operator.isEmpty && current.operator != baseline.operator {
             return true
         }
@@ -731,7 +749,6 @@ final class AppViewModel: ObservableObject {
 
         allFeatures = orderedStationIDs.compactMap { byStationID[$0] }
         trimAccumulatedFeatures()
-        rebuildOperators()
     }
 
     private func mergeCatalogFeature(existing: GeoJSONFeature, incoming: GeoJSONFeature) -> GeoJSONFeature {
@@ -753,19 +770,6 @@ final class AppViewModel: ObservableObject {
             discoveredByID.removeValue(forKey: stationID)
         }
         discoveredFeatures = discoveredOrder.compactMap { discoveredByID[$0] }
-    }
-
-    private func rebuildOperators() {
-        let counts = allFeatures.reduce(into: [String: Int]()) { result, feature in
-            let name = feature.properties.operatorName.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !name.isEmpty else { return }
-            result[name, default: 0] += 1
-        }
-        operators = counts
-            .map { OperatorEntry(name: $0.key, stations: $0.value) }
-            .sorted {
-                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-            }
     }
 
     private func resetDiscoveredList() {
@@ -851,7 +855,6 @@ final class AppViewModel: ObservableObject {
             existing.properties.stationID == stationID ? feature : existing
         }
         trimAccumulatedFeatures()
-        rebuildOperators()
         if let selectedFeature, selectedFeature.properties.stationID == stationID {
             self.selectedFeature = feature
         }

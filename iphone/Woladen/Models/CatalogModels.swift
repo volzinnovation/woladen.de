@@ -25,6 +25,7 @@ struct CatalogStation: Decodable {
     let license: String
     let providerUID: String
     let operatorName: String
+    let operatorGroupIDs: Set<String>
     let stationName: String
     let address: String
     let postalCode: String
@@ -84,6 +85,8 @@ struct CatalogStation: Decodable {
         case license
         case providerUID = "provider_uid"
         case operatorName = "operator_name"
+        case operatorGroupIDs = "operator_group_ids"
+        case operatorGroupID = "operator_group_id"
         case stationName = "station_name"
         case address
         case postalCode = "postal_code"
@@ -144,6 +147,12 @@ struct CatalogStation: Decodable {
         license = container.decodeLossyString(forKey: .license)
         providerUID = container.decodeLossyString(forKey: .providerUID)
         operatorName = container.decodeLossyString(forKey: .operatorName)
+        let groupIDs = ((try? container.decode([String].self, forKey: .operatorGroupIDs)) ?? [])
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        let groupID = container.decodeLossyString(forKey: .operatorGroupID)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        operatorGroupIDs = Set(groupIDs.isEmpty && !groupID.isEmpty ? [groupID] : groupIDs)
         stationName = container.decodeLossyString(forKey: .stationName)
         address = container.decodeLossyString(forKey: .address)
         postalCode = container.decodeLossyString(forKey: .postalCode)
@@ -271,6 +280,7 @@ struct CatalogStation: Decodable {
             countryCode: countryCode,
             stationName: stationName,
             operatorName: firstNonEmpty(operatorName, stationName, "Unbekannter Betreiber"),
+            operatorGroupIDs: operatorGroupIDs,
             status: publicBundleStatus,
             maxPowerKW: effectiveMaxPower,
             chargingPointsCount: max(chargerTotal, 1),

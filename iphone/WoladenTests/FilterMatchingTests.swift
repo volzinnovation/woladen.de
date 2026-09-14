@@ -78,6 +78,103 @@ final class FilterMatchingTests: XCTestCase {
         XCTAssertFalse(other.matches(filter))
     }
 
+    func testOperatorSelectionsMigrateAliasesAndDiscardUnknownValues() throws {
+        let filter = try JSONDecoder().decode(
+            FilterState.self,
+            from: Data(#"{"selectedOperatorNames":["IONITY GmbH","TESLA","retired-provider"],"minPowerKW":150}"#.utf8)
+        )
+        let operators = [
+            OperatorEntry(id: "ionity", name: "IONITY", stations: 0, aliases: ["IONITY GmbH"]),
+            OperatorEntry(id: "tesla", name: "Tesla", stations: 5)
+        ]
+
+        let migrated = filter.canonicalized(using: operators)
+
+        XCTAssertEqual(migrated.selectedOperatorNames, ["ionity", "tesla"])
+        XCTAssertEqual(migrated.minPowerKW, 150)
+        XCTAssertEqual(migrated.activeDisplayLabels(using: operators).prefix(2), ["IONITY", "Tesla"])
+        let restored = try JSONDecoder().decode(FilterState.self, from: JSONEncoder().encode(migrated))
+        XCTAssertEqual(restored.selectedOperatorNames, ["ionity", "tesla"])
+    }
+
+    func testOperatorMigrationWaitsForAuthoritativeList() throws {
+        let filter = try JSONDecoder().decode(
+            FilterState.self,
+            from: Data(#"{"operatorName":"EnBW Energie Baden-Württemberg AG"}"#.utf8)
+        )
+        let operators = [
+            OperatorEntry(id: "enbw", name: "EnBW", stations: 0, aliases: ["EnBW Energie Baden-Württemberg AG"])
+        ]
+
+        XCTAssertEqual(filter.canonicalized(using: nil), filter)
+        XCTAssertEqual(filter.canonicalized(using: []), filter)
+        XCTAssertEqual(filter.canonicalized(using: operators).selectedOperatorNames, ["enbw"])
+    }
+
+    func testCanonicalOperatorIDTakesPrecedenceOverAnotherBrandsAlias() {
+        let operators = [
+            OperatorEntry(id: "ionity", name: "IONITY", stations: 0, aliases: ["tesla"]),
+            OperatorEntry(id: "tesla", name: "Tesla", stations: 0)
+        ]
+        let filter = FilterState(selectedOperatorNames: [" TESLA "])
+        XCTAssertEqual(filter.canonicalized(using: operators).selectedOperatorNames, ["tesla"])
+        XCTAssertEqual(filter.widgetFilter.canonicalized(using: operators).selectedOperatorNames, ["tesla"])
+        XCTAssertEqual(filter.widgetFilter.canonicalized(using: []), filter.widgetFilter)
+    }
+
+    func testCanonicalOperatorMatchesAcrossCountryAndTechnicalNames() throws {
+        let filter = FilterState(selectedOperatorNames: ["ionity", "enbw"], availableOnly: false)
+        for country in ["DE", "FR", "NO"] {
+            let stationJSON: [String: Any] = [
+                "station_id": "\(country):ION:123",
+                "country_code": country,
+                "operator_name": "\(country)*ION",
+                "operator_group_ids": [" ionity ", ""],
+                "operator_group_id": "tesla",
+                "max_power_kw": 350
+            ]
+            let station = try JSONDecoder().decode(
+                CatalogStation.self,
+                from: JSONSerialization.data(withJSONObject: stationJSON)
+            )
+            XCTAssertEqual(station.feature().properties.operatorGroupIDs, ["ionity"])
+            XCTAssertTrue(station.feature().properties.matches(filter))
+        }
+
+        let other = sampleProperties(operatorName: "IONITY", operatorGroupIDs: ["tesla"])
+        XCTAssertFalse(other.matches(filter), "Canonical membership takes precedence over a display name")
+    }
+
+    func testSingularOperatorGroupIsOnlyUsedWhenPluralGroupsAreEmpty() throws {
+        for (plural, expected) in [([" "], Set(["ionity"])), (["tesla"], Set(["tesla"]))] {
+            let json: [String: Any] = [
+                "station_id": "FR:ION:1", "operator": "IONITY", "operator_name": "IONITY",
+                "operator_group_ids": plural, "operator_group_id": " ionity "
+            ]
+            let data = try JSONSerialization.data(withJSONObject: json)
+            XCTAssertEqual(try JSONDecoder().decode(CatalogStation.self, from: data).operatorGroupIDs, expected)
+            XCTAssertEqual(try JSONDecoder().decode(ChargerProperties.self, from: data).operatorGroupIDs, expected)
+            XCTAssertEqual(try JSONDecoder().decode(WoladenWidgetCatalogStation.self, from: data).operatorGroupIDs, expected)
+        }
+    }
+
+    func testRouteFilterEncodesCanonicalOperatorsAndDecodesLegacyPlans() throws {
+        let filter = FilterState(selectedOperatorNames: ["tesla", "ionity"])
+        let payload = RouteFilterPayload(filter: filter)
+        let data = try JSONEncoder().encode(payload)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        XCTAssertEqual(json["operator_group_ids"] as? [String], ["ionity", "tesla"])
+        XCTAssertEqual(json["operator"] as? String, "")
+        XCTAssertEqual(try JSONDecoder().decode(RouteFilterPayload.self, from: data), payload)
+        let legacy = try JSONDecoder().decode(
+            RouteFilterPayload.self,
+            from: Data(#"{"operator":"IONITY","min_power_kw":150}"#.utf8)
+        )
+        XCTAssertEqual(legacy.operator, "IONITY")
+        XCTAssertTrue(legacy.operatorGroupIDs.isEmpty)
+    }
+
     func testAvailableOnlyRequiresKnownFreeChargingPoint() {
         let available = sampleProperties(occupancyTotalEVSEs: 4, occupancyAvailableEVSEs: 1)
         let occupied = sampleProperties(occupancyTotalEVSEs: 4, occupancyAvailableEVSEs: 0, occupancyOccupiedEVSEs: 4)
@@ -349,6 +446,7 @@ final class FilterMatchingTests: XCTestCase {
 
     private func sampleProperties(
         operatorName: String = "IONITY",
+        operatorGroupIDs: Set<String> = [],
         maxPowerKW: Double = 150,
         amenityExamples: [AmenityExample] = [],
         amenityCounts: [String: Int] = [:],
@@ -360,6 +458,7 @@ final class FilterMatchingTests: XCTestCase {
         ChargerProperties(
             stationID: "station-1",
             operatorName: operatorName,
+            operatorGroupIDs: operatorGroupIDs,
             status: "In Betrieb",
             maxPowerKW: maxPowerKW,
             chargingPointsCount: 4,

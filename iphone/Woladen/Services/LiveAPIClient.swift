@@ -98,7 +98,8 @@ final class LiveAPIClient {
         radiusM: Int,
         limit: Int,
         minPowerKW: Double,
-        operatorName: String
+        operatorName: String = "",
+        operatorGroupIDs: [String] = []
     ) async throws -> CatalogSearchResponse {
         var queryItems = [
             URLQueryItem(name: "lat", value: String(center.latitude)),
@@ -108,8 +109,14 @@ final class LiveAPIClient {
             URLQueryItem(name: "mode", value: "travel"),
             URLQueryItem(name: "min_power_kw", value: String(minPowerKW))
         ]
+        for groupID in operatorGroupIDs {
+            let trimmedGroupID = groupID.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmedGroupID.isEmpty {
+                queryItems.append(URLQueryItem(name: "operator_group_id", value: trimmedGroupID))
+            }
+        }
         let trimmedOperator = operatorName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedOperator.isEmpty {
+        if !trimmedOperator.isEmpty && operatorGroupIDs.isEmpty {
             queryItems.append(URLQueryItem(name: "operator", value: trimmedOperator))
         }
 
@@ -118,6 +125,14 @@ final class LiveAPIClient {
         }
 
         let request = makeRequest(url: url, method: "GET", timeout: Self.catalogSearchTimeout)
+        return try await send(request)
+    }
+
+    func operatorCatalog() async throws -> OperatorCatalog {
+        guard let url = endpointURL(path: "/v1/catalog/operators") else {
+            throw LiveAPIError.invalidBaseURL
+        }
+        let request = makeRequest(url: url, method: "GET", timeout: 10.0)
         return try await send(request)
     }
 

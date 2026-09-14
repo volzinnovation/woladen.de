@@ -23,6 +23,13 @@ struct WoladenWidgetFilter: Codable, Equatable {
     var amenityNameQuery = ""
     var availableOnly = true
     var currentlyOpenOnly = false
+
+    func canonicalized(using operators: [OperatorEntry]) -> WoladenWidgetFilter {
+        guard !operators.isEmpty else { return self }
+        var copy = self
+        copy.selectedOperatorNames = OperatorEntry.canonicalIDs(for: selectedOperatorNames, using: operators)
+        return copy
+    }
 }
 
 struct WoladenWidgetStation: Codable, Equatable, Identifiable {
@@ -166,6 +173,7 @@ struct WoladenWidgetAmenity: Decodable, Equatable {
 struct WoladenWidgetCatalogStation: Decodable, Equatable, Identifiable {
     let stationID: String
     let operatorName: String
+    let operatorGroupIDs: Set<String>
     let stationName: String
     let city: String
     let address: String
@@ -188,6 +196,8 @@ struct WoladenWidgetCatalogStation: Decodable, Equatable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case stationID = "station_id"
         case operatorName = "operator_name"
+        case operatorGroupIDs = "operator_group_ids"
+        case operatorGroupID = "operator_group_id"
         case stationName = "station_name"
         case city
         case address
@@ -210,6 +220,12 @@ struct WoladenWidgetCatalogStation: Decodable, Equatable, Identifiable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         stationID = (try? container.decode(String.self, forKey: .stationID)) ?? ""
         operatorName = (try? container.decode(String.self, forKey: .operatorName)) ?? ""
+        let groupIDs = ((try? container.decode([String].self, forKey: .operatorGroupIDs)) ?? [])
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        let groupID = ((try? container.decode(String.self, forKey: .operatorGroupID)) ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        operatorGroupIDs = Set(groupIDs.isEmpty && !groupID.isEmpty ? [groupID] : groupIDs)
         stationName = (try? container.decode(String.self, forKey: .stationName)) ?? ""
         city = (try? container.decode(String.self, forKey: .city)) ?? ""
         address = (try? container.decode(String.self, forKey: .address)) ?? ""
@@ -233,8 +249,12 @@ struct WoladenWidgetCatalogStation: Decodable, Equatable, Identifiable {
     }
 
     func matches(_ filter: WoladenWidgetFilter, now: Date = Date()) -> Bool {
-        if !filter.selectedOperatorNames.isEmpty && !filter.selectedOperatorNames.contains(operatorName) {
-            return false
+        if !filter.selectedOperatorNames.isEmpty {
+            if !operatorGroupIDs.isEmpty {
+                if filter.selectedOperatorNames.isDisjoint(with: operatorGroupIDs) { return false }
+            } else if !filter.selectedOperatorNames.contains(operatorName) {
+                return false
+            }
         }
         if maxPowerKW < filter.minPowerKW { return false }
         if filter.minAmenityCount > 0 && amenitiesTotal < Int(filter.minAmenityCount.rounded()) { return false }
@@ -319,6 +339,27 @@ extension WoladenWidgetCatalogStation {
 final class WoladenWidgetAPIClient {
     private let baseURL = URL(string: "https://live-eu.woladen.de")!
     private let decoder = JSONDecoder()
+    private let session: URLSession
+    private var cachedOperators: [OperatorEntry]?
+
+    init(session: URLSession = .shared) {
+        self.session = session
+    }
+
+    private func operatorCatalog() async throws -> [OperatorEntry] {
+        if let cachedOperators { return cachedOperators }
+        var request = URLRequest(url: baseURL.appending(path: "/v1/catalog/operators"))
+        request.timeoutInterval = 10
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        let operators = try decoder.decode(OperatorCatalog.self, from: data).operators
+        guard !operators.isEmpty else { throw URLError(.badServerResponse) }
+        cachedOperators = operators
+        return operators
+    }
 
     func nearestStations(
         location: CLLocation,
@@ -326,44 +367,49 @@ final class WoladenWidgetAPIClient {
         radiusM: Int = 20_000,
         limit: Int = 100
     ) async throws -> [WoladenWidgetCatalogStation] {
-        let operatorNames = filter.selectedOperatorNames.sorted()
-        let searchOperators: [String?] = operatorNames.isEmpty ? [nil] : operatorNames.map(Optional.some)
-        var byID: [String: WoladenWidgetCatalogStation] = [:]
-
-        for operatorName in searchOperators {
-            var components = URLComponents(
-                url: baseURL.appending(path: "/v1/catalog/search"),
-                resolvingAgainstBaseURL: false
-            )!
-            var items = [
-                URLQueryItem(name: "lat", value: String(location.coordinate.latitude)),
-                URLQueryItem(name: "lon", value: String(location.coordinate.longitude)),
-                URLQueryItem(name: "radius_m", value: String(radiusM)),
-                URLQueryItem(name: "limit", value: String(limit)),
-                URLQueryItem(name: "mode", value: "travel"),
-                URLQueryItem(name: "min_power_kw", value: String(filter.minPowerKW))
-            ]
-            if let operatorName { items.append(URLQueryItem(name: "operator", value: operatorName)) }
-            components.queryItems = items
-            var request = URLRequest(url: components.url!)
-            request.timeoutInterval = 20
-            request.setValue("application/json", forHTTPHeaderField: "Accept")
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                throw URLError(.badServerResponse)
-            }
-            let decoded = try decoder.decode(WoladenWidgetCatalogSearchResponse.self, from: data)
-            decoded.stations.forEach { byID[$0.stationID] = $0 }
+        let effectiveFilter: WoladenWidgetFilter
+        if !filter.selectedOperatorNames.isEmpty, let operators = try? await operatorCatalog() {
+            effectiveFilter = filter.canonicalized(using: operators)
+        } else {
+            effectiveFilter = filter
         }
+        if effectiveFilter != filter {
+            WoladenWidgetStateStore.saveFilter(effectiveFilter)
+        }
+        var components = URLComponents(
+            url: baseURL.appending(path: "/v1/catalog/search"),
+            resolvingAgainstBaseURL: false
+        )!
+        var items = [
+            URLQueryItem(name: "lat", value: String(location.coordinate.latitude)),
+            URLQueryItem(name: "lon", value: String(location.coordinate.longitude)),
+            URLQueryItem(name: "radius_m", value: String(radiusM)),
+            URLQueryItem(name: "limit", value: String(limit)),
+            URLQueryItem(name: "mode", value: "travel"),
+            URLQueryItem(name: "min_power_kw", value: String(effectiveFilter.minPowerKW))
+        ]
+        items.append(contentsOf: effectiveFilter.selectedOperatorNames.sorted().map {
+            URLQueryItem(name: "operator_group_id", value: $0)
+        })
+        components.queryItems = items
+        var request = URLRequest(url: components.url!)
+        request.timeoutInterval = 20
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        let decoded = try decoder.decode(WoladenWidgetCatalogSearchResponse.self, from: data)
+        let byID = Dictionary(decoded.stations.map { ($0.stationID, $0) }, uniquingKeysWith: { _, newer in newer })
 
         let filterWithoutAvailability = WoladenWidgetFilter(
-            selectedOperatorNames: filter.selectedOperatorNames,
-            minPowerKW: filter.minPowerKW,
-            minAmenityCount: filter.minAmenityCount,
-            selectedAmenities: filter.selectedAmenities,
-            amenityNameQuery: filter.amenityNameQuery,
+            selectedOperatorNames: effectiveFilter.selectedOperatorNames,
+            minPowerKW: effectiveFilter.minPowerKW,
+            minAmenityCount: effectiveFilter.minAmenityCount,
+            selectedAmenities: effectiveFilter.selectedAmenities,
+            amenityNameQuery: effectiveFilter.amenityNameQuery,
             availableOnly: false,
-            currentlyOpenOnly: filter.currentlyOpenOnly
+            currentlyOpenOnly: effectiveFilter.currentlyOpenOnly
         )
         var candidates = byID.values
             .filter { $0.matches(filterWithoutAvailability) }
@@ -385,7 +431,7 @@ final class WoladenWidgetAPIClient {
         }
 
         return candidates
-            .filter { $0.matches(filter) }
+            .filter { $0.matches(effectiveFilter) }
             .sorted { lhs, rhs in
                 let lhsDistance = lhs.distance(from: location)
                 let rhsDistance = rhs.distance(from: location)
@@ -405,7 +451,7 @@ final class WoladenWidgetAPIClient {
             request.httpBody = try JSONSerialization.data(withJSONObject: [
                 "station_ids": Array(stationIDs[start..<end])
             ])
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 throw URLError(.badServerResponse)
             }

@@ -79,6 +79,7 @@ struct ChargerProperties: Decodable {
     let countryCode: String
     let stationName: String
     let operatorName: String
+    let operatorGroupIDs: Set<String>
     let status: String
     let maxPowerKW: Double
     let chargingPointsCount: Int
@@ -132,6 +133,8 @@ struct ChargerProperties: Decodable {
         case countryCode = "country_code"
         case stationName = "station_name"
         case operatorName = "operator"
+        case operatorGroupIDs = "operator_group_ids"
+        case operatorGroupID = "operator_group_id"
         case status
         case maxPowerKW = "max_power_kw"
         case chargingPointsCount = "charging_points_count"
@@ -185,6 +188,7 @@ struct ChargerProperties: Decodable {
         countryCode: String = "",
         stationName: String = "",
         operatorName: String,
+        operatorGroupIDs: Set<String> = [],
         status: String,
         maxPowerKW: Double,
         chargingPointsCount: Int,
@@ -237,6 +241,7 @@ struct ChargerProperties: Decodable {
         self.countryCode = countryCode
         self.stationName = stationName
         self.operatorName = operatorName
+        self.operatorGroupIDs = operatorGroupIDs
         self.status = status
         self.maxPowerKW = maxPowerKW
         self.chargingPointsCount = chargingPointsCount
@@ -293,6 +298,12 @@ struct ChargerProperties: Decodable {
         countryCode = (try? container.decode(String.self, forKey: .countryCode)) ?? ""
         stationName = (try? container.decode(String.self, forKey: .stationName)) ?? ""
         operatorName = try container.decode(String.self, forKey: .operatorName)
+        let groupIDs = ((try? container.decode([String].self, forKey: .operatorGroupIDs)) ?? [])
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        let groupID = ((try? container.decode(String.self, forKey: .operatorGroupID)) ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        operatorGroupIDs = Set(groupIDs.isEmpty && !groupID.isEmpty ? [groupID] : groupIDs)
         status = (try? container.decode(String.self, forKey: .status)) ?? ""
         maxPowerKW = container.decodeLossyDouble(forKey: .maxPowerKW) ?? 0
         chargingPointsCount = Int(container.decodeLossyDouble(forKey: .chargingPointsCount) ?? 1)

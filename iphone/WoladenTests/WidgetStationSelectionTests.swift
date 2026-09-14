@@ -3,6 +3,19 @@ import CoreLocation
 @testable import Woladen
 
 final class WidgetStationSelectionTests: XCTestCase {
+    func testWidgetMatchesCanonicalOperatorGroups() throws {
+        let station = try makeStation(
+            stationID: "NO:ION:1",
+            latitude: 59.91,
+            longitude: 10.75,
+            operatorGroupIDs: ["ionity"]
+        )
+
+        XCTAssertTrue(station.matches(WoladenWidgetFilter(selectedOperatorNames: ["ionity", "enbw"])))
+        XCTAssertFalse(station.matches(WoladenWidgetFilter(selectedOperatorNames: ["tesla"])))
+        XCTAssertFalse(station.matches(WoladenWidgetFilter(selectedOperatorNames: ["Test Operator"])))
+    }
+
     func testAvailabilityFilterIsAppliedAfterLiveHydration() throws {
         let station = try makeStation(
             stationID: "station-a",
@@ -87,12 +100,14 @@ final class WidgetStationSelectionTests: XCTestCase {
         stationID: String,
         latitude: Double,
         longitude: Double,
+        operatorGroupIDs: [String] = [],
         availableEVSEs: Int = 1,
         totalEVSEs: Int = 4
     ) throws -> WoladenWidgetCatalogStation {
         let json: [String: Any] = [
             "station_id": stationID,
             "operator_name": "Test Operator",
+            "operator_group_ids": operatorGroupIDs,
             "station_name": "Test Station",
             "city": "Berlin",
             "address": "Teststraße 1",

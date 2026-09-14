@@ -11,7 +11,7 @@ struct FilterSheetView: View {
     let onApply: (FilterState) -> Void
 
     init(filter: FilterState, operators: [OperatorEntry], availableAmenityKeys: [String], onApply: @escaping (FilterState) -> Void) {
-        _draftFilter = State(initialValue: filter)
+        _draftFilter = State(initialValue: filter.canonicalized(using: operators.isEmpty ? nil : operators))
         self.operators = operators
         self.availableAmenityKeys = availableAmenityKeys
         self.onApply = onApply
@@ -32,6 +32,9 @@ struct FilterSheetView: View {
             footer
         }
         .background(Color(.systemBackground))
+        .onChange(of: operators) { _, updatedOperators in
+            draftFilter = draftFilter.canonicalized(using: updatedOperators)
+        }
     }
 
     private var header: some View {
@@ -121,9 +124,9 @@ struct FilterSheetView: View {
                         )
                         ForEach(sortedOperators) { entry in
                             operatorOptionRow(
-                                title: "\(entry.name) (\(entry.stations))",
-                                isSelected: draftFilter.selectedOperatorNames.contains(entry.name),
-                                action: { toggleOperator(entry.name) }
+                                title: entry.name,
+                                isSelected: draftFilter.selectedOperatorNames.contains(entry.id),
+                                action: { toggleOperator(entry.id) }
                             )
                         }
                     }
@@ -159,6 +162,9 @@ struct FilterSheetView: View {
             return String(localized: "filters.allOperators")
         }
         return draftFilter.selectedOperatorNames
+            .map { selectedID in
+                operators.first(where: { $0.id == selectedID })?.name ?? selectedID
+            }
             .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
             .joined(separator: " · ")
     }
