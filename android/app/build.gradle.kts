@@ -39,8 +39,10 @@ android {
         applicationId = "de.woladen.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 14
-        versionName = "1.3.1"
+        // Version 15 is the first release artifact built for the Android 16
+        // (API 36) Play requirement.
+        versionCode = 15
+        versionName = "1.3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "LIVE_API_BASE_URL", "\"${escapedBuildConfigString(liveApiBaseUrl)}\"")

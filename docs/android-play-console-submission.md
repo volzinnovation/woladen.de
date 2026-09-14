@@ -2,6 +2,20 @@
 
 Last reviewed: 2026-09-14
 
+## Android 16 target release
+
+The next Android release uses `compileSdk = 36` and `targetSdk = 36` and is
+version `1.3.2` (`versionCode 15`). Verify the generated artifact before
+uploading it to Play Console:
+
+```bash
+apkanalyzer manifest target-sdk android/app/build/outputs/apk/release/app-release.apk
+```
+
+The command must print `36`. Play Console still evaluates the target API of
+the artifact already published to production, so this version must be uploaded
+and promoted before the warning clears.
+
 This memo is specific to the current Android app in this repository and the current Google Play guidance as of the date above.
 
 ## Current app behavior
