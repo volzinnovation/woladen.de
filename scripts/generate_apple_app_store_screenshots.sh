@@ -18,6 +18,10 @@ SCREENSHOT_ROUTE_ORIGIN_LON="${SCREENSHOT_ROUTE_ORIGIN_LON:-9.182932}"
 SCREENSHOT_ROUTE_DESTINATION_LABEL="${SCREENSHOT_ROUTE_DESTINATION_LABEL:-Zürich}"
 SCREENSHOT_ROUTE_DESTINATION_LAT="${SCREENSHOT_ROUTE_DESTINATION_LAT:-47.376887}"
 SCREENSHOT_ROUTE_DESTINATION_LON="${SCREENSHOT_ROUTE_DESTINATION_LON:-8.541694}"
+SCREENSHOT_LANGUAGE="${SCREENSHOT_LANGUAGE:-}"
+SCREENSHOT_LOCALE="${SCREENSHOT_LOCALE:-}"
+SCREENSHOT_CITY="${SCREENSHOT_CITY:-}"
+SCREENSHOT_FORCE_FALLBACK="${SCREENSHOT_FORCE_FALLBACK:-}"
 
 declare -a SCREENS=(
   "01-list:list:"
@@ -26,6 +30,7 @@ declare -a SCREENS=(
   "04-favorites:favorites:$SCREENSHOT_FAVORITES"
   "05-route:route:"
   "06-info:info:"
+  "07-driving:driving:"
 )
 
 if [[ -n "${SCREENSHOT_SCENES:-}" ]]; then
@@ -102,6 +107,12 @@ prepare_simulator() {
   xcrun simctl bootstatus "$device_udid" -b
   xcrun simctl ui "$device_udid" appearance light
   xcrun simctl ui "$device_udid" content_size medium || true
+  if [[ -n "$SCREENSHOT_LANGUAGE" ]]; then
+    xcrun simctl spawn "$device_udid" defaults write NSGlobalDomain AppleLanguages -array "$SCREENSHOT_LANGUAGE"
+  fi
+  if [[ -n "$SCREENSHOT_LOCALE" ]]; then
+    xcrun simctl spawn "$device_udid" defaults write NSGlobalDomain AppleLocale "$SCREENSHOT_LOCALE"
+  fi
   xcrun simctl status_bar "$device_udid" clear || true
   xcrun simctl status_bar "$device_udid" override \
     --time 9:41 \
@@ -178,6 +189,22 @@ validate_screenshot_aspect() {
   esac
 }
 
+normalize_apple_screenshot_dimensions() {
+  local profile="$1"
+  local image_path="$2"
+
+  case "$profile" in
+    iphone-6.9)
+      # App Store Connect accepts 1284 x 2778 for the 6.9-inch portrait slot.
+      sips -z 2778 1284 "$image_path" >/dev/null
+      ;;
+    iphone-6.5)
+      # App Store Connect accepts 1242 x 2688 for the 6.5-inch portrait slot.
+      sips -z 2688 1242 "$image_path" >/dev/null
+      ;;
+  esac
+}
+
 install_app() {
   local device_udid="$1"
   local app_path="$DERIVED_DATA_DIR/Build/Products/Debug-iphonesimulator/Woladen.app"
@@ -207,6 +234,14 @@ capture_profile() {
   local scene
   local favorites
   local marker_path
+  local -a language_environment=()
+
+  if [[ -n "$SCREENSHOT_LANGUAGE" ]]; then
+    language_environment+=("SIMCTL_CHILD_AppleLanguages=($SCREENSHOT_LANGUAGE)")
+  fi
+  if [[ -n "$SCREENSHOT_LOCALE" ]]; then
+    language_environment+=("SIMCTL_CHILD_AppleLocale=$SCREENSHOT_LOCALE")
+  fi
 
   mkdir -p "$output_dir"
   rm -f "$output_dir"/*.png
@@ -248,6 +283,9 @@ capture_profile() {
       SIMCTL_CHILD_WOLADEN_SCREENSHOT_ROUTE_DESTINATION_LABEL="$SCREENSHOT_ROUTE_DESTINATION_LABEL" \
       SIMCTL_CHILD_WOLADEN_SCREENSHOT_ROUTE_DESTINATION_LAT="$SCREENSHOT_ROUTE_DESTINATION_LAT" \
       SIMCTL_CHILD_WOLADEN_SCREENSHOT_ROUTE_DESTINATION_LON="$SCREENSHOT_ROUTE_DESTINATION_LON" \
+      SIMCTL_CHILD_WOLADEN_SCREENSHOT_CITY="$SCREENSHOT_CITY" \
+      SIMCTL_CHILD_WOLADEN_SCREENSHOT_FORCE_FALLBACK="$SCREENSHOT_FORCE_FALLBACK" \
+      "${language_environment[@]}" \
       xcrun simctl launch --terminate-running-process "$device_udid" "$APP_BUNDLE_ID" >/dev/null
 
     wait_for_ready_marker "$marker_path"
@@ -257,6 +295,7 @@ capture_profile() {
     fi
     xcrun simctl io "$device_udid" screenshot --type=png "$output_dir/$name.png" >/dev/null
     validate_screenshot_aspect "$output_dir/$name.png" "$expected_aspect"
+    normalize_apple_screenshot_dimensions "$profile" "$output_dir/$name.png"
   done
 
   xcrun simctl terminate "$device_udid" "$APP_BUNDLE_ID" >/dev/null 2>&1 || true
