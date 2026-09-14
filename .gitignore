@@ -49,6 +49,8 @@ data/osm_pbf_cache/
 .playwright-test-results/
 Library/
 output/playwright/
+outputs/
+iphone/.derived/
 tmp/
 iphone/dist/
 ingestion.log
