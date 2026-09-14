@@ -47,7 +47,8 @@ export function routeFiltersPayload(filters = {}) {
     ROUTE_FILTER_DEFAULTS.minAmenityCount,
   );
   return {
-    operator: stringValue(source.operator),
+    operator: "",
+    operator_group_ids: stringValue(source.operator) ? [stringValue(source.operator)] : [],
     min_power_kw: Math.max(0, Math.round(minPowerKw)),
     min_amenities_total: Math.max(0, Math.round(minAmenityCount)),
     selected_amenities: normalizeAmenityKeys(

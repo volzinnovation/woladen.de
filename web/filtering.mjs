@@ -7,6 +7,17 @@ export function compareOperatorNames(left, right, locale) {
   return String(left).localeCompare(String(right), locale, { sensitivity: "accent" });
 }
 
+export function resolveOperatorGroupId(value, operators = []) {
+  const selected = String(value || "").trim();
+  if (!selected) return "";
+  const matches = (candidate) =>
+    String(candidate || "").localeCompare(selected, undefined, { sensitivity: "base" }) === 0;
+  const entries = Array.isArray(operators) ? operators : [];
+  const matchingEntry = entries.find((entry) => matches(entry.id)) ||
+    entries.find((entry) => [entry.name, ...(entry.aliases || [])].some(matches));
+  return matchingEntry?.id || (entries.length > 0 ? "" : selected);
+}
+
 export function normalizeAmenityNameQuery(value = "") {
   return String(value)
     .trim()
@@ -97,8 +108,21 @@ export function matchesFeatureFilters(feature, filters, options = {}) {
     ((current) =>
       Number(current.max_individual_power_kw ?? current.max_power_kw ?? 0));
 
-  if (filters?.operator && properties.operator !== filters.operator) {
-    return false;
+  if (filters?.operator) {
+    const groupIDs = Array.isArray(properties.operator_group_ids)
+      ? properties.operator_group_ids.map((value) => String(value || "").trim()).filter(Boolean)
+      : [];
+    const groupID = String(properties.operator_group_id || "").trim();
+    if (groupIDs.length === 0 && groupID) {
+      groupIDs.push(groupID);
+    }
+    if (groupIDs.length > 0) {
+      if (!groupIDs.includes(filters.operator)) {
+        return false;
+      }
+    } else if (properties.operator !== filters.operator) {
+      return false;
+    }
   }
 
   if (Number(getDisplayedMaxPowerKw(properties)) < Number(filters?.minPower ?? 50)) {

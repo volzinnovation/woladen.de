@@ -7,7 +7,9 @@ import {
   hasAvailableChargingPoint,
   matchesAmenityNameQuery,
   matchesFeatureFilters,
+  resolveOperatorGroupId,
 } from "./filtering.mjs";
+import { parseStoredFilterSettings, serializeStoredFilterSettings } from "./filter-settings.mjs";
 
 test("operator names sort alphabetically regardless of letter case", () => {
   const operators = ["Zunder", "chargecloud", "Allego", "be.ENERGISED"];
@@ -55,6 +57,97 @@ test("feature matcher combines provider, amenity type, power, and amenity-name q
     matchesFeatureFilters(feature, { ...filters, minAmenityCount: 9 }),
     false,
   );
+});
+
+test("feature matcher uses canonical operator group IDs when supplied", () => {
+  const feature = {
+    properties: {
+      operator: "IONITY",
+      operator_group_ids: ["ionity"],
+      max_power_kw: 150,
+    },
+  };
+
+  assert.equal(matchesFeatureFilters(feature, {
+    operator: "ionity",
+    minPower: 50,
+    amenities: new Set(),
+  }), true);
+  assert.equal(matchesFeatureFilters(feature, {
+    operator: "other-operator",
+    minPower: 50,
+    amenities: new Set(),
+  }), false);
+});
+
+test("brand filters match canonical groups across company names, CPO codes and countries", () => {
+  const stations = [
+    ["ionity", "IONITY GmbH", "DE", "DE:ION"],
+    ["ionity", "IONITY Holding GmbH & Co. KG", "NL", "NL:IOY"],
+    ["enbw", "EnBW mobility+ AG & Co. KG", "DE", "DE:EBW"],
+    ["enbw", "EnBW Energie Baden-Württemberg AG", "AT", "DE:EBW"],
+    ["tesla", "Tesla Belgium BV", "BE", "BE:TSL"],
+    ["tesla", "Tesla Motors Netherlands B.V.", "NL", "NL:TSL"],
+  ];
+
+  for (const [group, operator, country, key] of stations) {
+    for (const selected of ["ionity", "enbw", "tesla"]) {
+      const feature = {
+        properties: {
+          operator,
+          country_code: country,
+          operator_keys: [key],
+          operator_group_ids: [group],
+          max_power_kw: 150,
+        },
+      };
+      assert.equal(matchesFeatureFilters(feature, { operator: selected }), selected === group,
+        `${selected} / ${operator} / ${key}`);
+    }
+  }
+});
+
+test("singular operator groups work and canonical metadata takes precedence over display names", () => {
+  const filters = { operator: "ionity" };
+  const properties = { max_power_kw: 150, operator: "different display name", operator_group_id: " ionity " };
+  assert.equal(matchesFeatureFilters({ properties }, filters), true);
+  assert.equal(matchesFeatureFilters({ properties: { ...properties, operator_group_ids: [] } }, filters), true);
+  assert.equal(matchesFeatureFilters({ properties: {
+    ...properties,
+    operator: "ionity",
+    operator_group_ids: ["tesla"],
+  } }, filters), false);
+  assert.equal(matchesFeatureFilters({ properties: {
+    ...properties,
+    operator: "ionity",
+    operator_group_id: "tesla",
+  } }, filters), false);
+});
+
+test("saved company names and previous group IDs migrate through catalog aliases", () => {
+  const operators = [
+    { id: "ionity", name: "IONITY", aliases: ["IONITY GmbH"] },
+    { id: "enbw", name: "EnBW", aliases: ["EnBW mobility+ AG & Co. KG", "enbw-mobility-ag-co-kg"] },
+    { id: "tesla", name: "Tesla", aliases: ["Tesla Belgium BV", "tesla-belgium-bv"] },
+  ];
+  for (const entry of operators) {
+    for (const selection of [entry.id, entry.name, ...entry.aliases]) {
+      const operator = resolveOperatorGroupId(` ${selection.toUpperCase()} `, operators);
+      const restored = parseStoredFilterSettings(serializeStoredFilterSettings({ operator }));
+      assert.equal(restored.operator, entry.id);
+    }
+  }
+  assert.equal(resolveOperatorGroupId("", operators), "");
+  assert.equal(resolveOperatorGroupId("unknown-operator", operators), "");
+  assert.equal(resolveOperatorGroupId("ionity", null), "ionity");
+  assert.equal(resolveOperatorGroupId("unknown-operator", []), "unknown-operator");
+});
+
+test("canonical operator IDs take priority over another operator's alias", () => {
+  assert.equal(resolveOperatorGroupId("IONITY", [
+    { id: "other", name: "Other", aliases: ["IONITY"] },
+    { id: "ionity", name: "IONITY", aliases: [] },
+  ]), "ionity");
 });
 
 test("active filter count includes amenity-name query", () => {

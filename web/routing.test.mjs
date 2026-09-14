@@ -10,7 +10,7 @@ import {
 test("route filter payload matches backend route API fields", () => {
   assert.deepEqual(
     routeFiltersPayload({
-      operator: " IONITY ",
+      operator: " ionity ",
       minPower: 151,
       minAmenityCount: 5.6,
       amenities: new Set(["amenity_cafe", "bad", "amenity_cafe", "amenity_toilets"]),
@@ -19,7 +19,8 @@ test("route filter payload matches backend route API fields", () => {
       currentlyOpenOnly: true,
     }),
     {
-      operator: "IONITY",
+      operator: "",
+      operator_group_ids: ["ionity"],
       min_power_kw: 151,
       min_amenities_total: 6,
       selected_amenities: ["amenity_cafe", "amenity_toilets"],
@@ -28,6 +29,15 @@ test("route filter payload matches backend route API fields", () => {
       currently_open_only: true,
     },
   );
+});
+
+test("route requests use selected brand IDs without company or country restrictions", () => {
+  for (const operator of ["ionity", "enbw", "tesla"]) {
+    const payload = routeFiltersPayload({ operator });
+    assert.deepEqual(payload.operator_group_ids, [operator]);
+    assert.equal(payload.operator, "");
+  }
+  assert.deepEqual(routeFiltersPayload({ operator: "" }).operator_group_ids, []);
 });
 
 test("route filter payload ignores current availability for later trips", () => {

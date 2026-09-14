@@ -2,7 +2,8 @@ import {
   compareOperatorNames,
   countActiveFilters,
   matchesFeatureFilters,
-} from "./filtering.mjs?v=20260825-operator-sort1";
+  resolveOperatorGroupId,
+} from "./filtering.mjs?v=20260914-operator-groups2";
 import {
   DEFAULT_FILTER_SETTINGS,
   parseStoredFilterSettings,
@@ -64,7 +65,7 @@ import {
   normalizeRouteChargerResponse,
   normalizeRouteEndpoint,
   routeFiltersPayload,
-} from "./routing.mjs?v=20260626-routing-web1";
+} from "./routing.mjs?v=20260901-operator-groups1";
 import {
   CHARGE_PLAN_DEFAULTS,
   calculateChargeNeed,
@@ -1205,6 +1206,7 @@ const state = {
   },
   data: {
     openStaticSummaryData: null,
+    operatorCatalog: null,
   },
   views: {
     map: null, // Leaflet map instance
@@ -1667,12 +1669,55 @@ async function loadOpenStaticSummaryData() {
   );
 }
 
+async function loadOperatorCatalogData() {
+  if (!state.live.baseUrl) {
+    return null;
+  }
+  try {
+    const payload = await fetchJsonWithTimeout(
+      buildLiveApiUrl("/v1/catalog/operators"),
+      { cache: "no-store" },
+      LIVE_API_TIMEOUT_MS,
+    );
+    const operators = Array.isArray(payload?.operators)
+      ? payload.operators
+        .map((entry) => ({
+          id: String(entry?.id || "").trim(),
+          name: String(entry?.name || "").trim(),
+          stations: Math.max(0, Math.round(Number(entry?.stations || 0))),
+          aliases: Array.isArray(entry?.aliases)
+            ? entry.aliases.map((value) => String(value || "").trim()).filter(Boolean)
+            : [],
+        }))
+        .filter((entry) => entry.id && entry.name)
+      : [];
+    state.data.operatorCatalog = { ...payload, operators };
+    const selected = String(state.filters.operator || "").trim();
+    const groupId = resolveOperatorGroupId(selected, operators);
+    if (groupId !== selected) {
+      state.filters.operator = groupId;
+      saveFilters();
+    }
+    return state.data.operatorCatalog;
+  } catch (error) {
+    console.warn("Failed to load normative operator catalog", error);
+    state.data.operatorCatalog = null;
+    return null;
+  }
+}
+
 async function loadData() {
   try {
-    const openStaticSummaryData = await loadOpenStaticSummaryData();
-    state.data.openStaticSummaryData = openStaticSummaryData;
-
+    const [summaryResult] = await Promise.allSettled([
+      loadOpenStaticSummaryData(),
+      loadOperatorCatalogData(),
+    ]);
     populateOperators();
+    if (summaryResult.status === "rejected") {
+      throw summaryResult.reason;
+    }
+    const openStaticSummaryData = summaryResult.value;
+    state.data.openStaticSummaryData = openStaticSummaryData;
     setAppMeta(openStaticSummaryData);
     renderAmenityFilters(); // Render dynamic amenity filters
     await syncLocationPermissionState();
@@ -2545,6 +2590,9 @@ function routeFiltersRequireRecalculation() {
   }
   const current = routeFiltersPayload(routeEffectiveFilters());
   const baseline = state.route.calculatedFilters;
+  if (baseline.operator_group_ids?.length && JSON.stringify(current.operator_group_ids) !== JSON.stringify(baseline.operator_group_ids)) {
+    return true;
+  }
   if (baseline.operator && current.operator !== baseline.operator) {
     return true;
   }
@@ -3028,6 +3076,10 @@ function catalogStationToFeature(station) {
     station_id: normalizeStationId(station?.station_id || ""),
     operator: firstText(station?.operator_name, station?.operator, t("station.unknownOperator")),
     operator_name: firstText(station?.operator_name, station?.operator),
+    operator_group_id: firstText(station?.operator_group_id),
+    operator_group_ids: Array.isArray(station?.operator_group_ids)
+      ? station.operator_group_ids.map((value) => String(value || "").trim()).filter(Boolean)
+      : [],
     station_name: firstText(station?.station_name, station?.operator_name, station?.operator),
     address: firstText(station?.address),
     postcode: firstText(station?.postal_code, station?.postcode),
@@ -3224,6 +3276,7 @@ function catalogSearchQueryKey() {
     limit: CATALOG_SEARCH_LIMIT,
     mode: catalogSearchMode(),
     min_power_kw: Number.isFinite(minPower) ? minPower : DEFAULT_MIN_POWER_KW,
+    operator_group_id: state.filters.operator || "",
   });
 }
 
@@ -3257,6 +3310,7 @@ async function loadCatalogStationsForCurrentCenter({ force = false, reset = fals
         limit: CATALOG_SEARCH_LIMIT,
         mode: catalogSearchMode(),
         min_power_kw: Number.isFinite(minPowerKw) ? minPowerKw : DEFAULT_MIN_POWER_KW,
+        operator_group_id: state.filters.operator || "",
       }),
       {},
       LIVE_API_TIMEOUT_MS,
@@ -4261,25 +4315,24 @@ function renderDataSources(openStaticSummaryData) {
 
 function populateOperators() {
   const selectedOperator = state.filters.operator;
-  const operatorCounts = new Map();
-  getFilterSourceFeatures().forEach((feature) => {
-    const name = String(feature?.properties?.operator || "").trim();
-    if (!name) return;
-    operatorCounts.set(name, (operatorCounts.get(name) || 0) + 1);
-  });
-
-  const operators = Array.from(operatorCounts.entries())
-    .filter(([, stations]) => stations >= 1)
-    .map(([name]) => name)
-    .sort((left, right) => compareOperatorNames(left, right, getLocale()));
+  const normativeOperators = Array.isArray(state.data.operatorCatalog?.operators)
+    ? state.data.operatorCatalog.operators
+    : null;
+  // The filter is normative: the API-backed registry owns its labels and
+  // technical-ID expansion. Do not reconstruct options from the current
+  // result page; that would reintroduce raw provider/operator names whenever
+  // the registry endpoint is unavailable.
+  const operators = normativeOperators
+    ? [...normativeOperators].sort((left, right) => compareOperatorNames(left.name, right.name, getLocale()))
+    : [];
 
   els.filter.operator.querySelectorAll("option:not([value=''])").forEach((option) => {
     option.remove();
   });
   operators.forEach((op) => {
     const opt = document.createElement("option");
-    opt.value = op;
-    opt.textContent = op;
+    opt.value = op.id;
+    opt.textContent = op.name;
     els.filter.operator.appendChild(opt);
   });
   els.filter.operator.value = selectedOperator;
@@ -4954,7 +5007,7 @@ function initFilters() {
   // Operator
   els.filter.operator.addEventListener("change", (e) => {
     state.filters.operator = e.target.value;
-    updateFilters();
+    updateFilters({ reloadCatalog: true });
   });
 
   // Amenity name
@@ -5168,7 +5221,8 @@ function renderActiveFilterSummary(filterCount) {
 function getActiveFilterLabels(filters = state.filters) {
   const labels = [];
   if (filters.operator) {
-    labels.push(filters.operator);
+    const catalogEntry = state.data.operatorCatalog?.operators?.find((entry) => entry.id === filters.operator);
+    labels.push(catalogEntry?.name || filters.operator);
   }
   const amenityNameQuery = String(filters.amenityNameQuery || "").trim();
   if (amenityNameQuery) {
