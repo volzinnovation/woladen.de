@@ -33,12 +33,12 @@ val liveApiBaseUrl = "https://live-eu.woladen.de"
 
 android {
     namespace = "de.woladen.android"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "de.woladen.android"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 14
         versionName = "1.3.1"
 
@@ -98,6 +98,10 @@ android {
             assets.srcDirs("src/main/assets")
         }
     }
+    lint {
+        // Native strings are generated centrally; untranslated locales fall back to values/.
+        disable += "MissingTranslation"
+    }
 }
 
 dependencies {
@@ -116,8 +120,11 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
     implementation("org.maplibre.gl:android-sdk:12.3.1")
     implementation("androidx.documentfile:documentfile:1.0.1")
+    implementation("androidx.car.app:app:1.7.0")
+    implementation("androidx.car.app:app-projected:1.7.0")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("androidx.car.app:app-testing:1.7.0")
 
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")

@@ -18,6 +18,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.core.view.WindowCompat
 import de.woladen.android.service.LocationService
 import de.woladen.android.service.LocationAuthorizationStatus
+import de.woladen.android.app.WoladenApplication
 import de.woladen.android.store.FavoritesStore
 import de.woladen.android.ui.WoladenTheme
 import de.woladen.android.ui.WoladenAppScreen
@@ -38,7 +39,7 @@ class MainActivity : ComponentActivity() {
         )
         WindowCompat.setDecorFitsSystemWindows(window, false)
         locationService = LocationService(applicationContext)
-        favoritesStore = FavoritesStore(applicationContext)
+        favoritesStore = (application as WoladenApplication).favoritesStore
 
         val isDebuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         if (isDebuggable) {
@@ -91,6 +92,7 @@ class MainActivity : ComponentActivity() {
                 val observer = LifecycleEventObserver { _, event ->
                     if (event == Lifecycle.Event.ON_START) {
                         locationService.activate()
+                        favoritesStore.refreshFromDisk()
                     }
                 }
                 lifecycle.addObserver(observer)

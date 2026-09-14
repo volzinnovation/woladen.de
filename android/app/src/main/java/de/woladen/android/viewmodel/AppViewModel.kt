@@ -21,6 +21,7 @@ import de.woladen.android.model.RouteEndpoint
 import de.woladen.android.model.RouteFilterPayload
 import de.woladen.android.model.RouteSummary
 import de.woladen.android.model.matches
+import de.woladen.android.app.WoladenApplication
 import de.woladen.android.repository.ChargerRepository
 import de.woladen.android.service.LiveApiClient
 import de.woladen.android.service.lookupStationIdBatches
@@ -106,8 +107,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     var isLoadingRoute: Boolean by mutableStateOf(false)
         private set
 
-    private val liveApiClient = LiveApiClient()
-    private val repository = ChargerRepository(liveApiClient)
+    private val applicationServices = application as WoladenApplication
+    private val liveApiClient = applicationServices.liveApiClient
+    private val repository = applicationServices.chargerRepository
 
     private val maxVisibleChargers = 1_000
     private val maxKnownCatalogFeatures = 1_000

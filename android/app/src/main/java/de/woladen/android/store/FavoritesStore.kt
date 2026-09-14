@@ -34,6 +34,11 @@ class FavoritesStore(context: Context) {
     var favorites: Set<String> by mutableStateOf(items.keys)
         private set
 
+    /** Reloads the process-shared favorite state after a car or widget session writes it. */
+    fun refreshFromDisk() {
+        publish(loadItems())
+    }
+
     fun toggle(stationId: String) {
         val id = normalizeStationId(stationId)
         if (id.isBlank()) return

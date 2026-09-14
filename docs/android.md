@@ -1,16 +1,16 @@
-# Woladen Android App (OSMDroid)
+# Woladen Android App
 
 This folder contains an Android port of the iPhone app in `iphone/Woladen`.
 
 ## Stack
 
 - Kotlin + Jetpack Compose
-- OSMDroid (`org.osmdroid:osmdroid-android`)
+- MapLibre for the phone map and AndroidX Car App templates for Android Auto
 - API-backed catalog and live data from `https://live-eu.woladen.de`
 
 ## Behavior Parity With iPhone
 
-- Same tabs: `Liste`, `Karte`, `Favoriten`, `Info`
+- Same tabs: `Liste`, `Karte`, `Route`, `Favoriten`, `Info`
 - Same filter model: operator, min power, amenities
 - Same nearest-discovery map/list logic:
   - visible pool is seeded from current filter
@@ -25,6 +25,21 @@ This folder contains an Android port of the iPhone app in `iphone/Woladen`.
   - map/list tap opens detail sheet
   - detail mini-map shows station + amenity overlays
   - favorite toggle and navigation handoff actions
+
+## Android Auto
+
+The app registers as a point-of-interest app for Android Auto. The car screen
+shows up to six nearby fast chargers (20 km search radius), live availability,
+distance, power, price, and favorite chargers. Selecting a charger opens a
+compact detail screen with a favorite action and hands navigation to the car's
+navigation app through the standard `geo:` intent. Location permission is
+requested on the phone, and favorites use the same process-shared store as the
+phone UI. The car reads the same persisted phone filter preferences, including
+operator, minimum power, amenity, availability, and opening-hours filters.
+
+The Android Auto experience is intentionally a distraction-safe POI flow. It
+does not render turn-by-turn navigation; the navigation handoff remains the
+platform behavior used by the phone app as well.
 ## Data Source
 
 Catalog search, station detail, live summaries, live station detail, and bundle

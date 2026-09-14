@@ -1,6 +1,6 @@
 # Android Play Console Submission Checklist
 
-Last reviewed: 2026-03-28
+Last reviewed: 2026-09-14
 
 This memo is specific to the current Android app in this repository and the current Google Play guidance as of the date above.
 
@@ -18,7 +18,8 @@ Observed in the current codebase:
 - A privacy-policy page exists at `https://woladen.de/privacy.html`.
 - The app links to the privacy policy from the Info tab.
 - The app stores local favorites in `SharedPreferences`.
-- The app lets the user import a local data bundle via Android's Storage Access Framework.
+- The app loads catalog and live status from `https://live-eu.woladen.de`; it does not package a catalog fallback.
+- Android Auto exposes a point-of-interest charger finder with nearby/favorite stations, station details, and navigation handoff.
 - The app loads map tiles from `https://tile.openstreetmap.org/...`.
 - The app opens external links for:
   - Google Maps navigation
@@ -39,6 +40,8 @@ Code references:
 - `android/app/src/main/java/de/woladen/android/MainActivity.kt`
 - `android/app/src/main/java/de/woladen/android/service/LocationService.kt`
 - `android/app/src/main/java/de/woladen/android/store/FavoritesStore.kt`
+- `android/app/src/main/java/de/woladen/android/car/WoladenCarAppService.kt`
+- `android/app/src/main/java/de/woladen/android/car/WoladenNearbyScreen.kt`
 - `android/app/src/main/java/de/woladen/android/ui/MapTabView.kt`
 - `android/app/src/main/java/de/woladen/android/ui/components/OsmdroidMapViews.kt`
 - `android/app/src/main/java/de/woladen/android/ui/InfoTabView.kt`
