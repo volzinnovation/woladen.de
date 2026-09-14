@@ -442,7 +442,9 @@ private struct CarPlayStationContent {
     }
 
     var classificationAndStatusText: String {
-        "\(classificationText) · \(statusText)"
+        [classificationText, statusText]
+            .filter { !$0.isEmpty }
+            .joined(separator: " · ")
     }
 
     var headerSubtitle: String? {
@@ -792,8 +794,7 @@ final class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegat
 
     private func planningTitle(_ filter: FilterState) -> String {
         let nearby = String(localized: "carplay.nearby", defaultValue: "Laden in der Nähe")
-        let compact = filter.activeDisplayLabels.prefix(2).joined(separator: " · ")
-        return compact.isEmpty ? nearby : "\(nearby) · \(compact)"
+        return "woladen.de · \(nearby)"
     }
 
     private func configureFilterButton(on template: CPListTemplate, filter: FilterState) {
