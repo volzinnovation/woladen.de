@@ -85,7 +85,8 @@ fun StationDetailSheet(
     isFavorite: Boolean,
     favoritesStore: FavoritesStore,
     onToggleFavorite: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onStartStationTarget: (() -> Unit)? = null
 ) {
     val detailPoints = remember(feature.id, isFavorite) { buildDetailMapPoints(feature, isFavorite) }
     var showMiniMap by remember(feature.id) { mutableStateOf(false) }
@@ -190,7 +191,7 @@ fun StationDetailSheet(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                DetailActionRow(feature = feature)
+                DetailActionRow(feature = feature, onStartStationTarget = onStartStationTarget)
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -263,6 +264,7 @@ fun StationDetailPane(
     favoritesStore: FavoritesStore,
     onToggleFavorite: () -> Unit,
     onDismiss: () -> Unit,
+    onStartStationTarget: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val detailPoints = remember(feature.id, isFavorite) { buildDetailMapPoints(feature, isFavorite) }
@@ -350,7 +352,7 @@ fun StationDetailPane(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            DetailActionRow(feature = feature)
+            DetailActionRow(feature = feature, onStartStationTarget = onStartStationTarget)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -409,6 +411,7 @@ fun StationDetailWideDialog(
     favoritesStore: FavoritesStore,
     onToggleFavorite: () -> Unit,
     onDismiss: () -> Unit,
+    onStartStationTarget: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val detailPoints = remember(feature.id, isFavorite) { buildDetailMapPoints(feature, isFavorite) }
@@ -516,7 +519,7 @@ fun StationDetailWideDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        DetailActionRow(feature = feature)
+                        DetailActionRow(feature = feature, onStartStationTarget = onStartStationTarget)
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -745,7 +748,7 @@ private fun SummaryStatCard(
 }
 
 @Composable
-private fun DetailActionRow(feature: GeoJsonFeature) {
+private fun DetailActionRow(feature: GeoJsonFeature, onStartStationTarget: (() -> Unit)? = null) {
     val context = LocalContext.current
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -793,6 +796,18 @@ private fun DetailActionRow(feature: GeoJsonFeature) {
             ) {
                 Icon(Icons.Outlined.Phone, contentDescription = stringResource(R.string.i18n_detail_help))
                 Text(stringResource(R.string.i18n_detail_help), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        onStartStationTarget?.let { onStart ->
+            OutlinedButton(
+                onClick = onStart,
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 52.dp)
+                    .testTag("detail-start-trip-button")
+            ) {
+                Icon(Icons.Outlined.NearMe, contentDescription = null)
+                Text("Trip", maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

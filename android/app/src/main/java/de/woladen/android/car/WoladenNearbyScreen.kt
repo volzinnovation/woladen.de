@@ -26,6 +26,7 @@ import androidx.car.app.model.PlaceMarker
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import de.woladen.android.app.WoladenApplication
+import de.woladen.android.BuildConfig
 import de.woladen.android.model.GeoJsonFeature
 import de.woladen.android.model.RoutePlan
 import de.woladen.android.model.TripEtaEstimator
@@ -115,12 +116,14 @@ internal class WoladenNearbyScreen(carContext: CarContext) : Screen(carContext) 
         val nextStop = plan.nextStop
         val currentPosition = location?.let { projectRoutePositionM(plan.route, it.latitude, it.longitude) } ?: 0
         val eta = TripEtaEstimator.estimate(plan, currentPosition)
-        val soc = nextStop?.let { station ->
-            plan.windows.firstNotNullOfOrNull { window -> window.projectedArrivalSocByStationId[station.stationId] }
-        } ?: eta.projectedArrivalSocPercent
         val detail = listOfNotNull(
             nextStop?.let { "Next stop: ${it.stationName.ifBlank { it.operatorName }}" },
-            "Arrival SOC ${soc.toInt()}%",
+            if (plan.isStationTargetTrip) "Arrival SOC unavailable" else {
+                val soc = nextStop?.let { station ->
+                    plan.windows.firstNotNullOfOrNull { window -> window.projectedArrivalSocByStationId[station.stationId] }
+                } ?: eta.projectedArrivalSocPercent
+                "Arrival SOC ${soc.toInt()}%"
+            },
             "ETA ${formatEta(eta.destinationArrivalEpochMs)}",
             "${(eta.progress * 100.0).roundToInt()}% complete"
         ).joinToString(" • ")
@@ -346,6 +349,9 @@ internal fun isUsableCarLocation(
 /** Active trip controls available from the Android Auto surface. */
 internal class WoladenTripDetailScreen(carContext: CarContext) : Screen(carContext) {
     private val application = carContext.applicationContext as WoladenApplication
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var trafficEta: de.woladen.android.model.TrafficEtaResult? = null
+    private var trafficRequestInFlight = false
 
     override fun onGetTemplate(): Template {
         val plan = application.tripStore.activePlan
@@ -358,12 +364,32 @@ internal class WoladenTripDetailScreen(carContext: CarContext) : Screen(carConte
         }
         val location = lastKnownCarLocation(carContext)
         val routePosition = location?.let { projectRoutePositionM(plan.route, it.latitude, it.longitude) } ?: 0
-        val eta = TripEtaEstimator.estimate(plan, routePosition)
+        val nowEpochMs = System.currentTimeMillis()
+        val baseEta = TripEtaEstimator.estimate(plan, routePosition, nowEpochMs)
+        val eta = trafficEta?.let { TripEtaEstimator.applyTraffic(baseEta, plan, it, nowEpochMs) } ?: baseEta
+        if (BuildConfig.GOOGLE_TRAFFIC_ETA_ENABLED && !plan.isStationTargetTrip && !trafficRequestInFlight &&
+            (trafficEta == null || nowEpochMs / 1_000L - trafficEta!!.updatedAtEpochS > 60L)
+        ) {
+            trafficRequestInFlight = true
+            scope.launch {
+                val current = location?.let { de.woladen.android.model.RouteEndpoint(it.latitude, it.longitude, "Current location") } ?: plan.route.origin
+                val next = plan.nextStop?.let { de.woladen.android.model.RouteEndpoint(it.latitude, it.longitude, it.stationName) }
+                trafficEta = runCatching { application.liveApiClient.trafficEta(current, plan.route.destination, next) }.getOrNull()
+                trafficRequestInFlight = false
+                invalidate()
+            }
+        }
         val rows = mutableListOf<Row>()
         val nextStop = plan.nextStop
         rows += Row.Builder()
             .setTitle("Trip progress")
-            .addText("${(eta.progress * 100.0).roundToInt()}% • ETA ${formatEta(eta.destinationArrivalEpochMs)} • Arrival SOC ${eta.projectedArrivalSocPercent.toInt()}%")
+            .addText(
+                if (plan.isStationTargetTrip) {
+                    "${(eta.progress * 100.0).roundToInt()}% • ETA ${formatEta(eta.destinationArrivalEpochMs)} • Arrival SOC unavailable"
+                } else {
+                    "${(eta.progress * 100.0).roundToInt()}% • ETA ${formatEta(eta.destinationArrivalEpochMs)} • Arrival SOC ${eta.projectedArrivalSocPercent.toInt()}%${if (eta.trafficAdjusted) " • Traffic-aware" else ""}"
+                }
+            )
             .build()
         if (nextStop != null) {
             rows += Row.Builder()
@@ -479,6 +505,17 @@ internal class WoladenStationDetailScreen(
                 carContext.startCarApp(
                     Intent(CarContext.ACTION_NAVIGATE, Uri.parse("geo:${feature.latitude},${feature.longitude}"))
                 )
+            }
+            .build()
+        rows += Row.Builder()
+            .setTitle("Start trip to this charger")
+            .addText("Track progress and arrival in the car view")
+            .setOnClickListener {
+                application.tripStore.activateStationTarget(
+                    feature = feature,
+                    currentLocation = lastKnownCarLocation(carContext)
+                )
+                screenManager.push(WoladenTripDetailScreen(carContext))
             }
             .build()
         rows += Row.Builder()

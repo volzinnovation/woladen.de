@@ -60,6 +60,9 @@ data class VehicleProfile(
     val settings: VehicleEnergySettings = VehicleEnergySettings()
 )
 
+/** Provider handling for route planning, matching the iPhone's prefer/only modes. */
+enum class ProviderPreferenceMode { PREFER, ONLY }
+
 enum class WoladenMode { PLAN, TRIP }
 
 data class TripRouteSnapshot(
@@ -104,7 +107,8 @@ data class TripStationSnapshot(
     val providerCanonicalId: String?,
     val priceDisplay: String,
     val oftenBroken: Boolean,
-    val oftenOccupied: Boolean
+    val oftenOccupied: Boolean,
+    val operatorGroupIds: Set<String> = emptySet()
 ) {
     companion object {
         fun fromFeature(feature: GeoJsonFeature): TripStationSnapshot {
@@ -132,7 +136,8 @@ data class TripStationSnapshot(
                 providerCanonicalId = properties.providerCanonicalId,
                 priceDisplay = feature.displayPrice,
                 oftenBroken = feature.isOftenBrokenFromDailyAnalysis,
-                oftenOccupied = feature.isOftenOccupiedFromDailyAnalysis
+                oftenOccupied = feature.isOftenOccupiedFromDailyAnalysis,
+                operatorGroupIds = properties.operatorGroupIds
             )
         }
     }
@@ -169,8 +174,13 @@ data class RoutePlan(
     val stopSelections: List<TripStopSelection>,
     val state: RoutePlanState,
     val createdAtEpochMs: Long,
-    val updatedAtEpochMs: Long
+    val updatedAtEpochMs: Long,
+    val providerMode: ProviderPreferenceMode = ProviderPreferenceMode.PREFER,
+    val selectedProviderNames: List<String> = emptyList(),
+    val stationTargetId: String? = null
 ) {
+    val isStationTargetTrip: Boolean
+        get() = !stationTargetId.isNullOrBlank()
     val selectedStopIds: List<String>
         get() = stopSelections
             .filter { it.state == TripStopState.PLANNED }
@@ -218,6 +228,15 @@ data class TripEtaState(
     val projectedArrivalSocPercent: Double,
     val updatedAtEpochMs: Long,
     val trafficAdjusted: Boolean = false
+)
+
+data class TrafficEtaResult(
+    val destinationDurationS: Int,
+    val destinationStaticDurationS: Int,
+    val nextStopDurationS: Int?,
+    val nextStopStaticDurationS: Int?,
+    val trafficDelayS: Int,
+    val updatedAtEpochS: Long
 )
 
 /** Base ETA equivalent to the iPhone estimate when live traffic is unavailable. */
@@ -268,6 +287,22 @@ object TripEtaEstimator {
             updatedAtEpochMs = nowEpochMs
         )
     }
+
+    fun applyTraffic(base: TripEtaState, plan: RoutePlan, traffic: TrafficEtaResult, nowEpochMs: Long): TripEtaState {
+        val routeDistance = plan.route.distanceM.coerceAtLeast(0)
+        val secondsPerMeter = if (routeDistance > 0) plan.route.durationS.toDouble() / routeDistance else 0.0
+        val baseDriveSeconds = ((routeDistance - base.currentRoutePositionM) * secondsPerMeter).roundToIntSafe()
+        val chargingSeconds = (base.totalTravelTimeS - baseDriveSeconds).coerceAtLeast(0)
+        val totalSeconds = traffic.destinationDurationS.coerceAtLeast(0) + chargingSeconds
+        return base.copy(
+            nextStopArrivalEpochMs = traffic.nextStopDurationS?.let { nowEpochMs + it.coerceAtLeast(0) * 1_000L },
+            destinationArrivalEpochMs = nowEpochMs + totalSeconds * 1_000L,
+            nextStopTravelTimeS = traffic.nextStopDurationS,
+            totalTravelTimeS = totalSeconds,
+            updatedAtEpochMs = nowEpochMs,
+            trafficAdjusted = true
+        )
+    }
 }
 
 /** Return the nearest route position for a GPS fix using the saved polyline. */
@@ -315,11 +350,27 @@ object EnergyRoutePlanner {
         routeDistanceM: Int,
         stations: List<TripStationSnapshot>,
         settings: VehicleEnergySettings,
-        initialSocPercent: Double
+        initialSocPercent: Double,
+        providerMode: ProviderPreferenceMode = ProviderPreferenceMode.PREFER,
+        selectedProviderNames: List<String> = emptyList()
     ): List<ChargingWindow> {
         val value = settings.normalized
         val total = routeDistanceM.coerceAtLeast(0)
-        val sorted = stations.sortedBy { it.routePositionM }
+        val selectedProviders = selectedProviderNames.map(::normalizeProvider).filter { it.isNotBlank() }.toSet()
+        val providerFiltered = when {
+            providerMode != ProviderPreferenceMode.ONLY || selectedProviders.isEmpty() -> stations
+            else -> stations.filter { station ->
+                val groups = station.operatorGroupIds.map(::normalizeProvider)
+                normalizeProvider(station.operatorName) in selectedProviders || groups.any { it in selectedProviders }
+            }
+        }
+        val sorted = providerFiltered.sortedWith(
+            compareBy<TripStationSnapshot> { station ->
+                if (providerMode == ProviderPreferenceMode.PREFER && selectedProviders.isNotEmpty() &&
+                    (normalizeProvider(station.operatorName) in selectedProviders || station.operatorGroupIds.any { normalizeProvider(it) in selectedProviders })
+                ) 0 else 1
+            }.thenBy { it.routePositionM }
+        )
         val windows = mutableListOf<ChargingWindow>()
         var departurePosition = 0
         var departureSoc = initialSocPercent.coerceIn(0.0, 100.0)
@@ -356,4 +407,6 @@ object EnergyRoutePlanner {
         }
         return windows
     }
+
+    private fun normalizeProvider(value: String): String = value.trim().lowercase().replace(Regex("\\s+"), " ")
 }

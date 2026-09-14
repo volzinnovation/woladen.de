@@ -34,6 +34,7 @@ import de.woladen.android.model.RouteNearestPoint
 import de.woladen.android.model.RouteStationCandidate
 import de.woladen.android.model.RouteStationMetadata
 import de.woladen.android.model.RouteSummary
+import de.woladen.android.model.TrafficEtaResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -157,6 +158,40 @@ class LiveApiClient(
             writer.write(routeChargerRequestBody(origin, destination, filters))
         }
         parseRouteChargerResponse(readJsonResponse(connection))
+    }
+
+    suspend fun trafficEta(
+        current: RouteEndpoint,
+        destination: RouteEndpoint,
+        nextStop: RouteEndpoint? = null
+    ): TrafficEtaResult = withContext(Dispatchers.IO) {
+        check(BuildConfig.GOOGLE_TRAFFIC_ETA_ENABLED) { "Traffic ETA is disabled" }
+        val connection = openConnection(
+            path = "/v1/routes/traffic-eta",
+            method = "POST",
+            timeoutMs = TRAFFIC_ETA_TIMEOUT_MS
+        )
+        connection.setRequestProperty("Accept", "application/json")
+        connection.setRequestProperty("Content-Type", "application/json")
+        connection.doOutput = true
+        connection.outputStream.bufferedWriter().use { writer ->
+            writer.write(
+                JSONObject()
+                    .put("current", routeEndpointJson(current))
+                    .put("destination", routeEndpointJson(destination))
+                    .apply { nextStop?.let { put("next_stop", routeEndpointJson(it)) } }
+                    .toString()
+            )
+        }
+        val payload = readJsonResponse(connection)
+        TrafficEtaResult(
+            destinationDurationS = payload.optInt("destination_duration_s", 0).coerceAtLeast(0),
+            destinationStaticDurationS = payload.optInt("destination_static_duration_s", 0).coerceAtLeast(0),
+            nextStopDurationS = payload.optInt("next_stop_duration_s", -1).takeIf { it >= 0 },
+            nextStopStaticDurationS = payload.optInt("next_stop_static_duration_s", -1).takeIf { it >= 0 },
+            trafficDelayS = payload.optInt("traffic_delay_s", 0).coerceAtLeast(0),
+            updatedAtEpochS = payload.optLong("updated_at_epoch_s", System.currentTimeMillis() / 1_000L)
+        )
     }
 
     suspend fun geocodeAutocomplete(
@@ -944,6 +979,7 @@ class LiveApiClient(
         private const val CATALOG_DETAIL_TIMEOUT_MS = 4_500
         private const val CATALOG_SUMMARY_TIMEOUT_MS = 5_000
         private const val ROUTE_CHARGER_TIMEOUT_MS = 120_000
+        private const val TRAFFIC_ETA_TIMEOUT_MS = 8_000
     }
 }
 

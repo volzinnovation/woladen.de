@@ -66,6 +66,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import de.woladen.android.R
+import de.woladen.android.BuildConfig
 import de.woladen.android.model.AvailabilityStatus
 import de.woladen.android.model.GeoJsonFeature
 import de.woladen.android.model.GeocodeResult
@@ -76,6 +77,8 @@ import de.woladen.android.model.RoutePlan
 import de.woladen.android.model.TripEtaEstimator
 import de.woladen.android.model.TripStationSnapshot
 import de.woladen.android.model.VehicleEnergySettings
+import de.woladen.android.model.VehicleProfile
+import de.woladen.android.model.ProviderPreferenceMode
 import de.woladen.android.model.WoladenMode
 import de.woladen.android.model.projectRoutePositionM
 import de.woladen.android.model.StationCardState
@@ -268,7 +271,7 @@ fun RouteTabView(
     LaunchedEffect(tripStore.activePlanId, tripStore.mode) {
         val activePlan = tripStore.activePlan
         if (activePlan != null) currentPlanId = activePlan.id
-        if (activePlan != null && tripStore.mode == WoladenMode.TRIP && viewModel.routeSummary == null) {
+        if (activePlan != null && !activePlan.isStationTargetTrip && tripStore.mode == WoladenMode.TRIP && viewModel.routeSummary == null) {
             originEndpoint = activePlan.route.origin
             destinationEndpoint = activePlan.route.destination
             originText = activePlan.route.origin.label
@@ -383,6 +386,16 @@ fun RouteTabView(
                         routeError = viewModel.routeError
                     )
 
+                    if (viewModel.routeSummary == null && tripStore.mode == WoladenMode.TRIP && tripStore.activePlan?.isStationTargetTrip == true) {
+                        ActiveTripCard(
+                            plan = tripStore.activePlan!!,
+                            currentLocation = locationService.currentLocation,
+                            onCompleteStop = tripStore::completeNextStop,
+                            onSkipStop = tripStore::skipNextStop,
+                            onEndTrip = { tripStore.endTrip() }
+                        )
+                    }
+
                     if (viewModel.routeSummary == null && !viewModel.isLoadingRoute) {
                         SavedTripPlans(
                             plans = tripStore.sortedPlans,
@@ -395,7 +408,9 @@ fun RouteTabView(
                                 destinationText = plan.route.destination.label
                                 initialSocText = plan.route.initialSocPercent.toInt().toString()
                                 statusMessage = ""
-                                viewModel.searchRoute(plan.route.origin, plan.route.destination)
+                                if (!plan.isStationTargetTrip) {
+                                    viewModel.searchRoute(plan.route.origin, plan.route.destination)
+                                }
                             },
                             onDelete = tripStore::delete,
                             onStartTrip = { plan ->
@@ -431,6 +446,15 @@ fun RouteTabView(
                             initialSocText = initialSocText,
                             onInitialSocChange = { value -> initialSocText = value.filter(Char::isDigit).take(3) },
                             settings = tripStore.vehicleSettings,
+                            profiles = tripStore.vehicleProfiles,
+                            selectedProfileId = tripStore.selectedVehicleProfileId,
+                            onSelectProfile = tripStore::selectVehicleProfile,
+                            onAddProfile = tripStore::addVehicleProfile,
+                            onRenameProfile = tripStore::renameVehicleProfile,
+                            onDeleteProfile = tripStore::deleteVehicleProfile,
+                            providerMode = tripStore.providerMode,
+                            selectedProviderNames = tripStore.selectedProviderNames,
+                            onProviderPreferencesChanged = tripStore::updateProviderPreferences,
                             plan = currentPlan,
                             onSelectStop = { planId, stationId -> tripStore.selectStop(planId, stationId) },
                             onSettingsChanged = tripStore::updateVehicleSettings
@@ -639,6 +663,15 @@ private fun TripEnergyCard(
     initialSocText: String,
     onInitialSocChange: (String) -> Unit,
     settings: VehicleEnergySettings,
+    profiles: List<VehicleProfile>,
+    selectedProfileId: String,
+    onSelectProfile: (String) -> Boolean,
+    onAddProfile: (String, VehicleEnergySettings) -> VehicleProfile,
+    onRenameProfile: (String, String) -> Boolean,
+    onDeleteProfile: (String) -> Boolean,
+    providerMode: ProviderPreferenceMode,
+    selectedProviderNames: List<String>,
+    onProviderPreferencesChanged: (ProviderPreferenceMode, List<String>) -> Unit,
     plan: RoutePlan?,
     onSelectStop: (String, String) -> Boolean,
     onSettingsChanged: (VehicleEnergySettings) -> Unit
@@ -649,7 +682,9 @@ private fun TripEnergyCard(
         routeDistanceM = summary.distanceM,
         stations = stations.map(de.woladen.android.model.TripStationSnapshot.Companion::fromFeature),
         settings = settings,
-        initialSocPercent = initialSoc
+        initialSocPercent = initialSoc,
+        providerMode = providerMode,
+        selectedProviderNames = selectedProviderNames
     )
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -713,7 +748,22 @@ private fun TripEnergyCard(
                     }
                 }
             }
-            VehicleSettingsEditor(settings = settings, onSettingsChanged = onSettingsChanged)
+            VehicleSettingsEditor(
+                settings = settings,
+                profiles = profiles,
+                selectedProfileId = selectedProfileId,
+                onSelectProfile = onSelectProfile,
+                onAddProfile = onAddProfile,
+                onRenameProfile = onRenameProfile,
+                onDeleteProfile = onDeleteProfile,
+                onSettingsChanged = onSettingsChanged
+            )
+            ProviderPreferencesEditor(
+                availableProviders = stations.map { it.properties.operatorName }.filter { it.isNotBlank() }.distinct().sorted(),
+                mode = providerMode,
+                selectedProviders = selectedProviderNames,
+                onChanged = onProviderPreferencesChanged
+            )
         }
     }
 }
@@ -721,6 +771,12 @@ private fun TripEnergyCard(
 @Composable
 private fun VehicleSettingsEditor(
     settings: VehicleEnergySettings,
+    profiles: List<VehicleProfile>,
+    selectedProfileId: String,
+    onSelectProfile: (String) -> Boolean,
+    onAddProfile: (String, VehicleEnergySettings) -> VehicleProfile,
+    onRenameProfile: (String, String) -> Boolean,
+    onDeleteProfile: (String) -> Boolean,
     onSettingsChanged: (VehicleEnergySettings) -> Unit
 ) {
     var batteryText by remember(settings.batteryCapacityKWh) { mutableStateOf(settings.batteryCapacityKWh.toString()) }
@@ -728,8 +784,43 @@ private fun VehicleSettingsEditor(
     var reserveText by remember(settings.reserveSocPercent) { mutableStateOf(settings.reserveSocPercent.toString()) }
     var targetText by remember(settings.targetSocPercent) { mutableStateOf(settings.targetSocPercent.toString()) }
     var powerText by remember(settings.averageChargingPowerKw) { mutableStateOf(settings.averageChargingPowerKw.toString()) }
+    var profileName by remember(selectedProfileId, profiles) { mutableStateOf(profiles.firstOrNull { it.id == selectedProfileId }?.name.orEmpty()) }
+    var profileMenuOpen by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Text("Vehicle profile", style = MaterialTheme.typography.labelLarge)
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box {
+                OutlinedButton(onClick = { profileMenuOpen = true }) {
+                    Text(profiles.firstOrNull { it.id == selectedProfileId }?.name ?: "Vehicle")
+                }
+                androidx.compose.material3.DropdownMenu(expanded = profileMenuOpen, onDismissRequest = { profileMenuOpen = false }) {
+                    profiles.forEach { profile ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(profile.name) },
+                            onClick = { profileMenuOpen = false; onSelectProfile(profile.id) }
+                        )
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = profileName,
+                onValueChange = { profileName = it.take(32) },
+                label = { Text("Name") },
+                singleLine = true,
+                modifier = Modifier.widthIn(min = 140.dp, max = 220.dp)
+            )
+            OutlinedButton(onClick = { onRenameProfile(selectedProfileId, profileName) }) { Text("Rename") }
+            OutlinedButton(onClick = { onAddProfile(profileName, settings) }) { Text("Add") }
+            if (profiles.size > 1) {
+                IconButton(onClick = { onDeleteProfile(selectedProfileId) }) {
+                    Icon(Icons.Outlined.Delete, contentDescription = "Delete vehicle profile")
+                }
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             OutlinedTextField(batteryText, { batteryText = it.filter { c -> c.isDigit() || c == '.' }.take(6) }, label = { Text("Battery kWh") }, singleLine = true, modifier = Modifier.weight(1f))
             OutlinedTextField(consumptionText, { consumptionText = it.filter { c -> c.isDigit() || c == '.' }.take(6) }, label = { Text("Consumption") }, singleLine = true, modifier = Modifier.weight(1f))
@@ -757,6 +848,49 @@ private fun VehicleSettingsEditor(
 }
 
 @Composable
+private fun ProviderPreferencesEditor(
+    availableProviders: List<String>,
+    mode: ProviderPreferenceMode,
+    selectedProviders: List<String>,
+    onChanged: (ProviderPreferenceMode, List<String>) -> Unit
+) {
+    if (availableProviders.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Text("Provider preferences", style = MaterialTheme.typography.labelLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            listOf(ProviderPreferenceMode.PREFER to "Prefer", ProviderPreferenceMode.ONLY to "Only").forEach { (candidate, label) ->
+                OutlinedButton(
+                    onClick = { onChanged(candidate, selectedProviders) },
+                    colors = if (candidate == mode) ButtonDefaults.outlinedButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        contentColor = MaterialTheme.colorScheme.primary
+                    ) else ButtonDefaults.outlinedButtonColors()
+                ) { Text(label) }
+            }
+        }
+        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            availableProviders.forEach { provider ->
+                val selected = provider in selectedProviders
+                OutlinedButton(
+                    onClick = {
+                        val next = if (selected) selectedProviders - provider else selectedProviders + provider
+                        onChanged(mode, next)
+                    },
+                    colors = if (selected) ButtonDefaults.outlinedButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        contentColor = MaterialTheme.colorScheme.primary
+                    ) else ButtonDefaults.outlinedButtonColors(),
+                    modifier = Modifier.heightIn(min = 34.dp)
+                ) { Text(provider, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            }
+        }
+        if (mode == ProviderPreferenceMode.ONLY && selectedProviders.isEmpty()) {
+            Text("Select at least one provider for Only mode.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+@Composable
 private fun ActiveTripCard(
     plan: RoutePlan,
     currentLocation: Location?,
@@ -764,15 +898,26 @@ private fun ActiveTripCard(
     onSkipStop: () -> Boolean,
     onEndTrip: () -> Unit
 ) {
+    val context = LocalContext.current
+    val application = context.applicationContext as WoladenApplication
     val routePosition = currentLocation?.let { projectRoutePositionM(plan.route, it.latitude, it.longitude) } ?: 0
     var nowEpochMs by remember(plan.id, routePosition) { mutableStateOf(System.currentTimeMillis()) }
+    var trafficEta by remember(plan.id, routePosition) { mutableStateOf<de.woladen.android.model.TrafficEtaResult?>(null) }
     LaunchedEffect(plan.id, routePosition) {
         while (true) {
             nowEpochMs = System.currentTimeMillis()
+            if (BuildConfig.GOOGLE_TRAFFIC_ETA_ENABLED && !plan.isStationTargetTrip) {
+                val current = currentLocation?.let { RouteEndpoint(it.latitude, it.longitude, "Current location") } ?: plan.route.origin
+                val next = plan.nextStop?.let { RouteEndpoint(it.latitude, it.longitude, it.stationName) }
+                trafficEta = runCatching {
+                    application.liveApiClient.trafficEta(current, plan.route.destination, next)
+                }.getOrNull()
+            }
             delay(30_000L)
         }
     }
-    val eta = TripEtaEstimator.estimate(plan, routePosition, nowEpochMs)
+    val baseEta = TripEtaEstimator.estimate(plan, routePosition, nowEpochMs)
+    val eta = trafficEta?.let { TripEtaEstimator.applyTraffic(baseEta, plan, it, nowEpochMs) } ?: baseEta
     val nextStop = plan.nextStop
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -792,10 +937,13 @@ private fun ActiveTripCard(
                 text = listOfNotNull(
                     nextStop?.let { "Next: ${it.stationName.ifBlank { it.operatorName }}" },
                     "ETA ${formatRouteClockTime(eta.destinationArrivalEpochMs)}",
-                    "Arrival SOC ${eta.projectedArrivalSocPercent.toInt()}%"
+                    if (plan.isStationTargetTrip) "Arrival SOC unavailable" else "Arrival SOC ${eta.projectedArrivalSocPercent.toInt()}%"
                 ).joinToString(" · "),
                 style = MaterialTheme.typography.bodyMedium
             )
+            if (eta.trafficAdjusted) {
+                Text("Traffic-aware ETA", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 if (nextStop != null) {
                     OutlinedButton(onClick = { onCompleteStop() }, modifier = Modifier.weight(1f)) { Text("Complete stop") }

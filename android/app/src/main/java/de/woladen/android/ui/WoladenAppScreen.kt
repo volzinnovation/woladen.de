@@ -26,6 +26,7 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,6 +38,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -46,7 +48,9 @@ import androidx.compose.ui.unit.sp
 import de.woladen.android.R
 import de.woladen.android.model.FilterState
 import de.woladen.android.service.LocationService
+import de.woladen.android.app.WoladenApplication
 import de.woladen.android.store.FavoritesStore
+import de.woladen.android.store.TripStore
 import de.woladen.android.util.AmenityCatalog
 import de.woladen.android.viewmodel.AppViewModel
 
@@ -59,6 +63,8 @@ fun WoladenAppScreen(
     onRequestLocationPermission: () -> Unit
 ) {
     var showingFilter by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val tripStore = remember(context) { (context.applicationContext as WoladenApplication).tripStore }
 
     Box(
         modifier = Modifier
@@ -73,6 +79,7 @@ fun WoladenAppScreen(
                     viewModel = viewModel,
                     locationService = locationService,
                     favoritesStore = favoritesStore,
+                    tripStore = tripStore,
                     onRequestLocationPermission = onRequestLocationPermission,
                     onShowFilter = { showingFilter = true }
                 )
@@ -95,6 +102,14 @@ fun WoladenAppScreen(
                             favoritesStore.toggle(feature.properties.stationId)
                         },
                         onDismiss = {
+                            viewModel.clearSelectedFeature()
+                        },
+                        onStartStationTarget = {
+                            tripStore.activateStationTarget(
+                                feature = feature,
+                                alternatives = viewModel.routeDisplayFeatures(locationService.currentLocation),
+                                currentLocation = locationService.currentLocation
+                            )
                             viewModel.clearSelectedFeature()
                         }
                     )
@@ -156,6 +171,7 @@ private fun WideAppLayout(
     viewModel: AppViewModel,
     locationService: LocationService,
     favoritesStore: FavoritesStore,
+    tripStore: TripStore,
     onRequestLocationPermission: () -> Unit,
     onShowFilter: () -> Unit
 ) {
@@ -190,6 +206,14 @@ private fun WideAppLayout(
                         favoritesStore.toggle(feature.properties.stationId)
                     },
                     onDismiss = {
+                        viewModel.clearSelectedFeature()
+                    },
+                    onStartStationTarget = {
+                        tripStore.activateStationTarget(
+                            feature = feature,
+                            alternatives = viewModel.routeDisplayFeatures(locationService.currentLocation),
+                            currentLocation = locationService.currentLocation
+                        )
                         viewModel.clearSelectedFeature()
                     }
                 )

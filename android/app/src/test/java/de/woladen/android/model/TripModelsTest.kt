@@ -142,4 +142,38 @@ class TripModelsTest {
         assertEquals(listOf("first"), prepared.stopSelections.map { it.stationId })
     }
 
+    @Test
+    fun providerOnlyFiltersCandidatesAndPreferRanksPreferredFirst() {
+        val first = TripStationSnapshot(
+            stationId = "other", countryCode = "DE", stationName = "Other", operatorName = "Other",
+            city = "Berlin", address = "", latitude = 52.0, longitude = 13.1, maxPowerKw = 150.0,
+            chargingPointsCount = 4, routePositionM = 180_000, routeDetourM = 0,
+            availabilityStatus = AvailabilityStatus.FREE, availableEvses = 3, totalEvses = 4,
+            classification = "gold", reliabilityPercent = null, lastUnavailableAt = null, providerCanonicalId = null,
+            priceDisplay = "", oftenBroken = false, oftenOccupied = false
+        )
+        val preferred = first.copy(stationId = "preferred", operatorName = "Preferred", routePositionM = 200_000)
+        val settings = VehicleEnergySettings()
+        val only = EnergyRoutePlanner.build(500_000, listOf(first, preferred), settings, 80.0, ProviderPreferenceMode.ONLY, listOf("Preferred"))
+        assertTrue(only.isNotEmpty())
+        assertEquals(listOf("preferred"), only.first().candidateStationIds)
+        val prefer = EnergyRoutePlanner.build(500_000, listOf(first, preferred), settings, 80.0, ProviderPreferenceMode.PREFER, listOf("Preferred"))
+        assertEquals("preferred", prefer.first().candidateStationIds.first())
+    }
+
+    @Test
+    fun trafficEtaReplacesDriveDurationButKeepsChargingTime() {
+        val route = TripRouteSnapshot(
+            origin = RouteEndpoint(52.0, 13.0, "Origin"), destination = RouteEndpoint(52.0, 14.0, "Destination"),
+            distanceM = 100_000, durationS = 3_600, geometryCoordinates = listOf(listOf(13.0, 52.0), listOf(14.0, 52.0)),
+            calculatedAtEpochMs = 0L, filter = RouteFilterPayload("", emptyList(), 50, 0, emptyList(), "", false, false), initialSocPercent = 80.0
+        )
+        val plan = RoutePlan("p", "Trip", route, VehicleEnergySettings(), emptyList(), emptyList(), emptyList(), RoutePlanState.ACTIVE, 0L, 0L)
+        val base = TripEtaEstimator.estimate(plan, 0, 1_000_000L)
+        val adjusted = TripEtaEstimator.applyTraffic(base, plan, TrafficEtaResult(5_400, 3_600, null, null, 1_800, 1_000L), 2_000_000L)
+        assertTrue(adjusted.trafficAdjusted)
+        assertTrue(adjusted.destinationArrivalEpochMs > 2_000_000L)
+        assertEquals(5_400 + (base.totalTravelTimeS - 3_600), adjusted.totalTravelTimeS)
+    }
+
 }

@@ -30,6 +30,11 @@ fun escapedBuildConfigString(value: String): String =
     value.replace("\\", "\\\\").replace("\"", "\\\"")
 
 val liveApiBaseUrl = "https://live-eu.woladen.de"
+val googleTrafficEtaEnabled = (
+    project.findProperty("googleTrafficEtaEnabled")?.toString()
+        ?: System.getenv("WOLADEN_GOOGLE_TRAFFIC_ETA_ENABLED")
+        ?: "false"
+).toBoolean()
 
 android {
     namespace = "de.woladen.android"
@@ -46,6 +51,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "LIVE_API_BASE_URL", "\"${escapedBuildConfigString(liveApiBaseUrl)}\"")
+        buildConfigField("Boolean", "GOOGLE_TRAFFIC_ETA_ENABLED", googleTrafficEtaEnabled.toString())
         vectorDrawables {
             useSupportLibrary = true
         }

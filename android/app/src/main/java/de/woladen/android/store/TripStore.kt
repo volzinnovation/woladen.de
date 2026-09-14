@@ -1,6 +1,7 @@
 package de.woladen.android.store
 
 import android.content.Context
+import android.location.Location
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -18,17 +19,24 @@ import de.woladen.android.model.TripStationSnapshot
 import de.woladen.android.model.TripStopSelection
 import de.woladen.android.model.TripStopState
 import de.woladen.android.model.VehicleEnergySettings
+import de.woladen.android.model.VehicleProfile
+import de.woladen.android.model.ProviderPreferenceMode
 import de.woladen.android.model.WoladenMode
 import de.woladen.android.widget.WoladenTripWidgetProvider
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import kotlin.math.roundToInt
 
 private const val TRIP_PREFERENCES = "woladen.trip"
 private const val PLANS_KEY = "plans.v1"
 private const val ACTIVE_PLAN_KEY = "activePlanId.v1"
 private const val MODE_KEY = "mode.v1"
 private const val VEHICLE_KEY = "vehicle.v1"
+private const val VEHICLE_PROFILES_KEY = "vehicleProfiles.v1"
+private const val SELECTED_VEHICLE_PROFILE_KEY = "selectedVehicleProfile.v1"
+private const val PROVIDER_MODE_KEY = "providerMode.v1"
+private const val PROVIDER_NAMES_KEY = "providerNames.v1"
 private const val MAX_SAVED_PLANS = 20
 
 /** Persistent phone-side trip state shared by the route tab and car surfaces. */
@@ -51,6 +59,30 @@ class TripStore(context: Context) {
 
     var vehicleSettings: VehicleEnergySettings by mutableStateOf(loadVehicleSettings())
         private set
+
+    var vehicleProfiles: List<VehicleProfile> by mutableStateOf(loadVehicleProfiles(vehicleSettings))
+        private set
+
+    var selectedVehicleProfileId: String by mutableStateOf(
+        preferences.getString(SELECTED_VEHICLE_PROFILE_KEY, null)
+            ?.takeIf { id -> vehicleProfiles.any { it.id == id } }
+            ?: vehicleProfiles.first().id
+    )
+        private set
+
+    var providerMode: ProviderPreferenceMode by mutableStateOf(
+        preferences.getString(PROVIDER_MODE_KEY, null)?.let { runCatching { ProviderPreferenceMode.valueOf(it) }.getOrNull() }
+            ?: ProviderPreferenceMode.PREFER
+    )
+        private set
+
+    var selectedProviderNames: List<String> by mutableStateOf(
+        preferences.getStringSet(PROVIDER_NAMES_KEY, emptySet()).orEmpty().toList().sorted()
+    )
+        private set
+
+    val activeVehicleProfile: VehicleProfile
+        get() = vehicleProfiles.firstOrNull { it.id == selectedVehicleProfileId } ?: vehicleProfiles.first()
 
     val activePlan: RoutePlan?
         get() = activePlanId?.let { id -> plans.firstOrNull { it.id == id } }
@@ -85,8 +117,10 @@ class TripStore(context: Context) {
         val windows = EnergyRoutePlanner.build(
             routeDistanceM = route.distanceM,
             stations = snapshots,
-            settings = vehicleSettings,
-            initialSocPercent = route.initialSocPercent
+            settings = activeVehicleProfile.settings,
+            initialSocPercent = route.initialSocPercent,
+            providerMode = providerMode,
+            selectedProviderNames = selectedProviderNames
         )
         val existingSelections = existing?.stopSelections.orEmpty()
         val selectedByWindow = windows.map { window ->
@@ -100,34 +134,111 @@ class TripStore(context: Context) {
             id = existing?.id ?: UUID.randomUUID().toString(),
             name = "${origin.label} → ${destination.label}",
             route = route,
-            vehicleSettings = vehicleSettings.normalized,
+            vehicleSettings = activeVehicleProfile.settings.normalized,
             rawStations = snapshots,
             windows = selectedByWindow,
             stopSelections = existingSelections,
             state = existing?.state ?: RoutePlanState.DRAFT,
             createdAtEpochMs = existing?.createdAtEpochMs ?: now,
-            updatedAtEpochMs = now
+            updatedAtEpochMs = now,
+            providerMode = providerMode,
+            selectedProviderNames = selectedProviderNames
         )
         upsert(plan)
         return plan
     }
 
     fun updateVehicleSettings(settings: VehicleEnergySettings) {
-        vehicleSettings = settings.normalized
-        preferences.edit().putString(VEHICLE_KEY, TripJson.vehicleToJson(vehicleSettings).toString()).apply()
+        val normalized = settings.normalized
+        vehicleSettings = normalized
+        val updatedProfile = activeVehicleProfile.copy(settings = normalized)
+        vehicleProfiles = vehicleProfiles.map { if (it.id == updatedProfile.id) updatedProfile else it }
+        preferences.edit()
+            .putString(VEHICLE_KEY, TripJson.vehicleToJson(normalized).toString())
+            .putString(VEHICLE_PROFILES_KEY, TripJson.encodeVehicleProfiles(vehicleProfiles))
+            .apply()
         activePlan?.let { plan ->
-            val windows = EnergyRoutePlanner.build(
-                routeDistanceM = plan.route.distanceM,
-                stations = plan.rawStations,
-                settings = vehicleSettings,
-                initialSocPercent = plan.route.initialSocPercent
-            ).map { window ->
-                val selected = plan.stopSelections.firstOrNull {
-                    it.state == TripStopState.PLANNED && it.stationId in window.candidateStationIds
-                }?.stationId
-                window.copy(selectedStationId = selected)
+            if (plan.isStationTargetTrip) {
+                upsert(plan.copy(vehicleSettings = normalized, updatedAtEpochMs = System.currentTimeMillis()))
+            } else {
+                val windows = EnergyRoutePlanner.build(
+                    routeDistanceM = plan.route.distanceM,
+                    stations = plan.rawStations,
+                    settings = normalized,
+                    initialSocPercent = plan.route.initialSocPercent,
+                    providerMode = plan.providerMode,
+                    selectedProviderNames = plan.selectedProviderNames
+                ).map { window ->
+                    val selected = plan.stopSelections.firstOrNull {
+                        it.state == TripStopState.PLANNED && it.stationId in window.candidateStationIds
+                    }?.stationId
+                    window.copy(selectedStationId = selected)
+                }
+                upsert(plan.copy(vehicleSettings = normalized, windows = windows, updatedAtEpochMs = System.currentTimeMillis()))
             }
-            upsert(plan.copy(vehicleSettings = vehicleSettings, windows = windows, updatedAtEpochMs = System.currentTimeMillis()))
+        }
+    }
+
+    fun selectVehicleProfile(profileId: String): Boolean {
+        val profile = vehicleProfiles.firstOrNull { it.id == profileId } ?: return false
+        selectedVehicleProfileId = profile.id
+        vehicleSettings = profile.settings.normalized
+        preferences.edit()
+            .putString(SELECTED_VEHICLE_PROFILE_KEY, profile.id)
+            .putString(VEHICLE_KEY, TripJson.vehicleToJson(vehicleSettings).toString())
+            .apply()
+        activePlan?.let { plan ->
+            if (plan.isStationTargetTrip) {
+                upsert(plan.copy(vehicleSettings = vehicleSettings, updatedAtEpochMs = System.currentTimeMillis()))
+            } else {
+                val windows = EnergyRoutePlanner.build(plan.route.distanceM, plan.rawStations, vehicleSettings, plan.route.initialSocPercent, plan.providerMode, plan.selectedProviderNames)
+                upsert(plan.copy(vehicleSettings = vehicleSettings, windows = windows, updatedAtEpochMs = System.currentTimeMillis()))
+            }
+        }
+        return true
+    }
+
+    fun addVehicleProfile(name: String, settings: VehicleEnergySettings = vehicleSettings): VehicleProfile {
+        val profile = VehicleProfile(UUID.randomUUID().toString(), name.trim().ifBlank { "Vehicle ${vehicleProfiles.size + 1}" }, settings.normalized)
+        vehicleProfiles = (vehicleProfiles + profile).take(8)
+        preferences.edit().putString(VEHICLE_PROFILES_KEY, TripJson.encodeVehicleProfiles(vehicleProfiles)).apply()
+        selectVehicleProfile(profile.id)
+        return profile
+    }
+
+    fun renameVehicleProfile(profileId: String, name: String): Boolean {
+        val cleaned = name.trim()
+        if (cleaned.isBlank() || vehicleProfiles.none { it.id == profileId }) return false
+        vehicleProfiles = vehicleProfiles.map { if (it.id == profileId) it.copy(name = cleaned) else it }
+        preferences.edit().putString(VEHICLE_PROFILES_KEY, TripJson.encodeVehicleProfiles(vehicleProfiles)).apply()
+        return true
+    }
+
+    fun deleteVehicleProfile(profileId: String): Boolean {
+        if (vehicleProfiles.size <= 1 || vehicleProfiles.none { it.id == profileId }) return false
+        vehicleProfiles = vehicleProfiles.filterNot { it.id == profileId }
+        if (selectedVehicleProfileId == profileId) selectedVehicleProfileId = vehicleProfiles.first().id
+        preferences.edit()
+            .putString(VEHICLE_PROFILES_KEY, TripJson.encodeVehicleProfiles(vehicleProfiles))
+            .putString(SELECTED_VEHICLE_PROFILE_KEY, selectedVehicleProfileId)
+            .apply()
+        vehicleSettings = activeVehicleProfile.settings
+        selectVehicleProfile(selectedVehicleProfileId)
+        return true
+    }
+
+    fun updateProviderPreferences(mode: ProviderPreferenceMode, names: List<String>) {
+        providerMode = mode
+        selectedProviderNames = names.map { it.trim() }.filter { it.isNotBlank() }.distinct().sorted()
+        preferences.edit()
+            .putString(PROVIDER_MODE_KEY, mode.name)
+            .putStringSet(PROVIDER_NAMES_KEY, selectedProviderNames.toSet())
+            .apply()
+        activePlan?.let { plan ->
+            if (!plan.isStationTargetTrip) {
+                val windows = EnergyRoutePlanner.build(plan.route.distanceM, plan.rawStations, plan.vehicleSettings, plan.route.initialSocPercent, providerMode, selectedProviderNames)
+                upsert(plan.copy(windows = windows, providerMode = providerMode, selectedProviderNames = selectedProviderNames, updatedAtEpochMs = System.currentTimeMillis()))
+            }
         }
     }
 
@@ -185,21 +296,110 @@ class TripStore(context: Context) {
         return selectStop(planId, newStationId)
     }
 
-    fun completeNextStop(): Boolean = updateNextStop(TripStopState.COMPLETED)
+    fun completeNextStop(): Boolean {
+        if (activePlan?.isStationTargetTrip == true) {
+            endTrip(markCompleted = true)
+            return true
+        }
+        return updateNextStop(TripStopState.COMPLETED)
+    }
 
-    fun skipNextStop(): Boolean = updateNextStop(TripStopState.SKIPPED)
+    fun skipNextStop(): Boolean {
+        if (activePlan?.isStationTargetTrip == true) {
+            endTrip()
+            return true
+        }
+        return updateNextStop(TripStopState.SKIPPED)
+    }
 
     fun endTrip(markCompleted: Boolean = false) {
         val id = activePlanId
         if (id != null) {
-            val nextState = if (markCompleted) RoutePlanState.COMPLETED else RoutePlanState.DRAFT
-            plans = plans.map { current ->
-                if (current.id == id) current.copy(state = nextState, updatedAtEpochMs = System.currentTimeMillis()) else current
+            val active = plans.firstOrNull { it.id == id }
+            if (active?.isStationTargetTrip == true) {
+                plans = plans.filterNot { it.id == id }
+            } else {
+                val nextState = if (markCompleted) RoutePlanState.COMPLETED else RoutePlanState.DRAFT
+                plans = plans.map { current ->
+                    if (current.id == id) current.copy(state = nextState, updatedAtEpochMs = System.currentTimeMillis()) else current
+                }
             }
         }
         activePlanId = null
         mode = WoladenMode.PLAN
         persist()
+    }
+
+    /** Start a lightweight, standalone trip to one charger without requiring a destination route. */
+    fun activateStationTarget(
+        feature: GeoJsonFeature,
+        alternatives: List<GeoJsonFeature> = emptyList(),
+        currentLocation: Location? = null
+    ): Boolean {
+        val originLat = currentLocation?.latitude ?: feature.latitude
+        val originLon = currentLocation?.longitude ?: feature.longitude
+        val targetSnapshot = TripStationSnapshot.fromFeature(feature)
+        val targetDistance = distanceMeters(originLat, originLon, feature.latitude, feature.longitude)
+        val targetPosition = targetDistance.coerceAtLeast(1.0).toInt()
+        val candidateSnapshots = buildList {
+            add(targetSnapshot.copy(routePositionM = targetPosition, routeDetourM = 0))
+            alternatives.asSequence()
+                .filter { it.properties.stationId != feature.properties.stationId }
+                .map { alternative ->
+                    val distance = distanceMeters(originLat, originLon, alternative.latitude, alternative.longitude)
+                    TripStationSnapshot.fromFeature(alternative).copy(
+                        routePositionM = distance.coerceAtLeast(1.0).toInt(),
+                        routeDetourM = 0
+                    )
+                }
+                .filter { it.routePositionM <= targetPosition + 50_000 }
+                .sortedBy { it.routePositionM }
+                .take(8)
+                .forEach(::add)
+        }.distinctBy { it.stationId }.sortedBy { it.routePositionM }
+        val distanceM = targetPosition
+        val durationS = (distanceM / 13.9).roundToInt().coerceAtLeast(60)
+        val now = System.currentTimeMillis()
+        val route = TripRouteSnapshot(
+            origin = RouteEndpoint(originLat, originLon, "Current location"),
+            destination = RouteEndpoint(feature.latitude, feature.longitude, targetSnapshot.stationName.ifBlank { targetSnapshot.operatorName }),
+            distanceM = distanceM,
+            durationS = durationS,
+            geometryCoordinates = listOf(listOf(originLon, originLat), listOf(feature.longitude, feature.latitude)),
+            calculatedAtEpochMs = now,
+            filter = RouteFilterPayload("", emptyList(), 0, 0, emptyList(), "", false, false),
+            initialSocPercent = activeVehicleProfile.settings.reserveSocPercent
+        )
+        val window = de.woladen.android.model.ChargingWindow(
+            index = 0,
+            startPositionM = 0,
+            endPositionM = distanceM,
+            departurePositionM = 0,
+            departureSocPercent = route.initialSocPercent,
+            candidateStationIds = candidateSnapshots.map { it.stationId },
+            projectedArrivalSocByStationId = emptyMap(),
+            selectedStationId = feature.properties.stationId
+        )
+        val plan = RoutePlan(
+            id = UUID.randomUUID().toString(),
+            name = "To ${targetSnapshot.stationName.ifBlank { targetSnapshot.operatorName.ifBlank { "charger" } }}",
+            route = route,
+            vehicleSettings = activeVehicleProfile.settings.normalized,
+            rawStations = candidateSnapshots,
+            windows = listOf(window),
+            stopSelections = listOf(TripStopSelection(feature.properties.stationId, TripStopState.PLANNED, now)),
+            state = RoutePlanState.ACTIVE,
+            createdAtEpochMs = now,
+            updatedAtEpochMs = now,
+            providerMode = providerMode,
+            selectedProviderNames = selectedProviderNames,
+            stationTargetId = feature.properties.stationId
+        )
+        plans = plans.filterNot { it.isStationTargetTrip || it.state == RoutePlanState.ACTIVE } + plan
+        activePlanId = plan.id
+        mode = WoladenMode.TRIP
+        persist()
+        return true
     }
 
     fun delete(planId: String) {
@@ -260,6 +460,18 @@ class TripStore(context: Context) {
             runCatching { TripJson.vehicleFromJson(JSONObject(raw)) }.getOrNull()
         }?.normalized ?: VehicleEnergySettings()
     }
+
+    private fun loadVehicleProfiles(fallback: VehicleEnergySettings): List<VehicleProfile> {
+        val encoded = preferences.getString(VEHICLE_PROFILES_KEY, null)
+        val profiles = encoded?.let(TripJson::decodeVehicleProfiles).orEmpty()
+        return profiles.ifEmpty { listOf(VehicleProfile("default", "My car", fallback)) }
+    }
+}
+
+private fun distanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    val result = FloatArray(1)
+    Location.distanceBetween(lat1, lon1, lat2, lon2, result)
+    return result[0].toDouble()
 }
 
 internal object TripJson {
@@ -294,6 +506,31 @@ internal object TripJson {
         maximumDetourMinutes = json.optDouble("maximum_detour_minutes", 15.0)
     )
 
+    fun encodeVehicleProfiles(profiles: List<VehicleProfile>): String = JSONArray().apply {
+        profiles.forEach { profile ->
+            put(JSONObject().apply {
+                put("id", profile.id)
+                put("name", profile.name)
+                put("settings", vehicleToJson(profile.settings))
+            })
+        }
+    }.toString()
+
+    fun decodeVehicleProfiles(raw: String): List<VehicleProfile> = runCatching {
+        val values = JSONArray(raw)
+        buildList {
+            for (index in 0 until values.length()) {
+                val json = values.optJSONObject(index) ?: continue
+                val id = json.optString("id").takeIf { it.isNotBlank() } ?: continue
+                add(VehicleProfile(
+                    id = id,
+                    name = json.optString("name").ifBlank { "Vehicle" },
+                    settings = vehicleFromJson(json.optJSONObject("settings") ?: JSONObject()).normalized
+                ))
+            }
+        }
+    }.getOrDefault(emptyList())
+
     private fun planToJson(plan: RoutePlan): JSONObject = JSONObject().apply {
         put("id", plan.id)
         put("name", plan.name)
@@ -305,6 +542,9 @@ internal object TripJson {
         put("stations", JSONArray().apply { plan.rawStations.forEach { put(stationToJson(it)) } })
         put("windows", JSONArray().apply { plan.windows.forEach { put(windowToJson(it)) } })
         put("stops", JSONArray().apply { plan.stopSelections.forEach { put(stopToJson(it)) } })
+        put("provider_mode", plan.providerMode.name)
+        put("providers", JSONArray(plan.selectedProviderNames))
+        plan.stationTargetId?.let { put("station_target_id", it) }
     }
 
     private fun planFromJson(json: JSONObject): RoutePlan? {
@@ -319,7 +559,10 @@ internal object TripJson {
             stopSelections = decodeArray(json.optJSONArray("stops"), ::stopFromJson),
             state = runCatching { RoutePlanState.valueOf(json.optString("state")) }.getOrDefault(RoutePlanState.DRAFT),
             createdAtEpochMs = json.optLong("created_at", System.currentTimeMillis()),
-            updatedAtEpochMs = json.optLong("updated_at", System.currentTimeMillis())
+            updatedAtEpochMs = json.optLong("updated_at", System.currentTimeMillis()),
+            providerMode = runCatching { ProviderPreferenceMode.valueOf(json.optString("provider_mode")) }.getOrDefault(ProviderPreferenceMode.PREFER),
+            selectedProviderNames = strings(json.optJSONArray("providers")),
+            stationTargetId = json.optString("station_target_id").ifBlank { null }
         )
     }
 
@@ -400,6 +643,7 @@ internal object TripJson {
         put("price", station.priceDisplay)
         put("often_broken", station.oftenBroken)
         put("often_occupied", station.oftenOccupied)
+        put("operator_groups", JSONArray(station.operatorGroupIds))
     }
 
     private fun stationFromJson(json: JSONObject): TripStationSnapshot? {
@@ -414,7 +658,8 @@ internal object TripJson {
             availableEvses = json.optInt("available_evses", 0), totalEvses = json.optInt("total_evses", 0),
             classification = json.optString("classification"), reliabilityPercent = json.optNullableDouble("reliability"),
             lastUnavailableAt = json.optString("last_unavailable").ifBlank { null }, providerCanonicalId = json.optString("provider_id").ifBlank { null },
-            priceDisplay = json.optString("price"), oftenBroken = json.optBoolean("often_broken"), oftenOccupied = json.optBoolean("often_occupied")
+            priceDisplay = json.optString("price"), oftenBroken = json.optBoolean("often_broken"), oftenOccupied = json.optBoolean("often_occupied"),
+            operatorGroupIds = strings(json.optJSONArray("operator_groups")).toSet()
         )
     }
 
