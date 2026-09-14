@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="i18n_amenity_opening_closes_at">Closes at {time}</string>
+    <string name="i18n_amenity_opening_opens_at">Opens at {time}</string>
+    <string name="i18n_amenity_opening_closes_on_at">Closes {day} at {time}</string>
+    <string name="i18n_amenity_opening_opens_on_at">Opens {day} at {time}</string>
+</resources>

@@ -65,6 +65,7 @@ import de.woladen.android.model.LiveDetailNote
 import de.woladen.android.model.LiveEvseRow
 import de.woladen.android.model.availabilityStatus
 import de.woladen.android.model.displayPrice
+import de.woladen.android.model.formatAmenityOpeningHours
 import de.woladen.android.model.hasPrimaryDetailHighlights
 import de.woladen.android.model.liveEvseRows
 import de.woladen.android.model.occupancySourceLabel
@@ -216,7 +217,7 @@ fun StationDetailSheet(
                     Text(stringResource(R.string.i18n_amenity_nodetails), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     for (item in feature.properties.amenityExamples) {
-                        AmenityRow(item)
+                        AmenityRow(item, feature.properties.countryCode)
                     }
                 }
 
@@ -373,7 +374,7 @@ fun StationDetailPane(
                 Text(stringResource(R.string.i18n_amenity_nodetails), color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 for (item in feature.properties.amenityExamples) {
-                    AmenityRow(item)
+                    AmenityRow(item, feature.properties.countryCode)
                 }
             }
 
@@ -539,7 +540,7 @@ fun StationDetailWideDialog(
                             Text(stringResource(R.string.i18n_amenity_nodetails), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else {
                             for (item in feature.properties.amenityExamples) {
-                                AmenityRow(item)
+                                AmenityRow(item, feature.properties.countryCode)
                             }
                         }
 
@@ -882,7 +883,7 @@ private fun StatusPill(status: AvailabilityStatus) {
 }
 
 @Composable
-private fun AmenityRow(item: AmenityExample) {
+private fun AmenityRow(item: AmenityExample, countryCode: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top,
@@ -896,7 +897,7 @@ private fun AmenityRow(item: AmenityExample) {
 
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(item.name ?: AmenityCatalog.labelFor("amenity_${item.category}"))
-            val meta = metaForAmenity(item)
+            val meta = metaForAmenity(item, countryCode)
             if (meta.isNotEmpty()) {
                 Text(meta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -904,13 +905,13 @@ private fun AmenityRow(item: AmenityExample) {
     }
 }
 
-private fun metaForAmenity(item: AmenityExample): String {
+private fun metaForAmenity(item: AmenityExample, countryCode: String): String {
     val parts = mutableListOf<String>()
     if (item.distanceM != null) {
         parts += "~${item.distanceM.toInt()} m"
     }
     if (!item.openingHours.isNullOrBlank()) {
-        parts += item.openingHours
+        formatAmenityOpeningHours(item.openingHours, countryCode = countryCode)?.let(parts::add)
     }
     return parts.joinToString(" • ")
 }

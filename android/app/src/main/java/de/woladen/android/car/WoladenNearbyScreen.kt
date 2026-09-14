@@ -30,11 +30,13 @@ import de.woladen.android.model.GeoJsonFeature
 import de.woladen.android.model.availabilityStatus
 import de.woladen.android.model.availabilityCounts
 import de.woladen.android.model.displayPrice
+import de.woladen.android.model.formatAmenityOpeningHours
 import de.woladen.android.model.liveUpdatedLabel
 import de.woladen.android.model.occupancySummaryLabel
 import de.woladen.android.model.occupancySourceLabel
 import de.woladen.android.repository.ChargerRepository
 import de.woladen.android.store.FavoritesStore
+import de.woladen.android.util.AmenityCatalog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -366,6 +368,18 @@ internal class WoladenStationDetailScreen(
         }
         properties.topAmenities(2).takeIf { it.isNotEmpty() }?.let { amenities ->
             rows += Row.Builder().setTitle("Nearby").addText(amenities.joinToString(" • ") { "${it.count} ${it.key.removePrefix("amenity_")}" }).build()
+        }
+        properties.amenityExamples.take(2).forEach { amenity ->
+            val detail = listOfNotNull(
+                amenity.distanceM?.let { "~${it.roundToInt()} m" },
+                formatAmenityOpeningHours(amenity.openingHours, countryCode = properties.countryCode)
+            ).joinToString(" • ")
+            if (detail.isNotBlank()) {
+                rows += Row.Builder()
+                    .setTitle(amenity.name ?: AmenityCatalog.labelFor("amenity_${amenity.category}"))
+                    .addText(detail)
+                    .build()
+            }
         }
         if (loading) rows += Row.Builder().setTitle("Updating live status…").build()
         return ListTemplate.Builder()

@@ -36,6 +36,7 @@ data class GeoJsonPointGeometry(
 
 data class ChargerProperties(
     val stationId: String,
+    val countryCode: String = "",
     val operatorName: String,
     val status: String,
     val maxPowerKw: Double,

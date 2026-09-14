@@ -308,7 +308,8 @@ class ChargerRepository(
                 amenitiesTotal = amenitiesTotal,
                 amenitiesSource = "live-eu catalog",
                 amenityExamples = amenityExamples,
-                amenityCounts = amenityCounts
+                amenityCounts = amenityCounts,
+                countryCode = station.countryCode
             ),
             liveSummary = station.liveSummary
         )
